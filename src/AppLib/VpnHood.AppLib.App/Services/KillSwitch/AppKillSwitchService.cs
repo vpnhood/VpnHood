@@ -13,9 +13,8 @@ namespace VpnHood.AppLib.App.Services.KillSwitch;
 // through an error stop, a crash and a reboot, and only a person's disconnect lifts it, or the switch turned off,
 // or another app's take of the tunnel, which is a disconnect too.
 // Add no reconnect of the switch's own: a free session may need an ad, so the block waits for a person, unless
-// always on reconnects. Lockdown keeps it while disconnected too (an option, on by default; a hotel's Wi-Fi
-// sign-in needs it off): up by the settings' split at a person's disconnect, when the option is turned on and at
-// the app's start. Whether this app's block is up is the OS's word, read at each of those and at each session's
+// always on reconnects. Lockdown (KillSwitchMode.Lockdown) keeps it while disconnected too: up by the settings' split
+// at a person's disconnect, when lockdown is chosen and at the app's start. Whether this app's block is up is the OS's word, read at each of those and at each session's
 // end, never per state read: on Linux a read runs nft.
 internal sealed class AppKillSwitchService(VpnHoodApp app, IVpnKillSwitch killSwitch)
 {
@@ -23,16 +22,17 @@ internal sealed class AppKillSwitchService(VpnHoodApp app, IVpnKillSwitch killSw
     private volatile bool _isBlocking;
 
     // The kill switch as a connect runs with it: the person's, where the plan allows it.
-    public bool IsOn => app.UserSettings.KillSwitch && app.IsPremiumFeatureAllowed(AppFeature.KillSwitch);
+    public bool IsOn => app.UserSettings.KillSwitch != KillSwitchMode.Off &&
+                        app.IsPremiumFeatureAllowed(AppFeature.KillSwitch);
 
     // This app's block up with no session; a session's is its connect's, which the state shows already.
     public bool IsBlocking => _isBlocking && app.IsSessionless;
 
-    private bool IsLockdownOn => IsOn && app.UserSettings.KillSwitchLockdown;
+    private bool IsLockdownOn => IsOn && app.UserSettings.KillSwitch == KillSwitchMode.Lockdown;
 
     // The block as the OS kept it, through a crash and a reboot; one kept while disconnected is put back too, as
     // another app's disconnect or the way out may have lifted it. The way out is for an app that cannot run: one
-    // that runs turns the option off.
+    // that runs chooses another level.
     public Task Start()
     {
         return VhInvoker.TryInvokeAsync("start the kill switch", LogLevel.Error, () => IsLockdownOn
@@ -41,15 +41,16 @@ internal sealed class AppKillSwitchService(VpnHoodApp app, IVpnKillSwitch killSw
     }
 
     // Turned off, the block goes at once, one an error stop left too, which no session holds; the reconfigure takes
-    // it from a session. Turned on, the reconfigure puts a session's up. Kept while disconnected, the block with no
-    // session follows the settings: up at once, by the split as it is now, and lifted when that is turned off.
+    // it from a session. Turned on, the reconfigure puts a session's up. In lockdown, the block with no session
+    // follows the settings: up at once, by the split as it is now, and lifted when another level is chosen.
     public void ApplySettings(UserSettings oldUserSettings)
     {
         var userSettings = app.UserSettings;
-        if (oldUserSettings.KillSwitch && !userSettings.KillSwitch)
+        if (oldUserSettings.KillSwitch != KillSwitchMode.Off && userSettings.KillSwitch == KillSwitchMode.Off)
             _ = VhInvoker.TryInvokeAsync("lift the kill switch's block", LogLevel.Error,
                 () => Unblock(CancellationToken.None));
-        else if (userSettings.KillSwitch && (userSettings.KillSwitchLockdown || oldUserSettings.KillSwitchLockdown))
+        else if (userSettings.KillSwitch == KillSwitchMode.Lockdown ||
+                 oldUserSettings.KillSwitch == KillSwitchMode.Lockdown)
             _ = VhInvoker.TryInvokeAsync("keep the kill switch's block while disconnected", LogLevel.Error,
                 () => UpdateLockdown(CancellationToken.None));
     }

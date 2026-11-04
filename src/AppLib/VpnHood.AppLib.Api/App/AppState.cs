@@ -54,7 +54,6 @@ public class AppState
 
     // This app's kill switch block is up with no session: the internet is blocked but for the device-level split.
     // A person's disconnect lifts it, which a UI offers beside Connect (CanDisconnect is false, as the session
-    // is gone), but where it is kept while disconnected (UserSettings.KillSwitchLockdown): then only turning
-    // that or the switch off does.
+    // is gone), but where it is kept while disconnected (KillSwitchMode.Lockdown): then only another level does.
     public required bool IsKillSwitchBlocking { get; init; }
 }

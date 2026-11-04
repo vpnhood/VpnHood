@@ -233,22 +233,37 @@ internal sealed class UiDriver(Process process) : IDisposable
 
     // Best effort, and never a verdict: a picture is for a person to look at after the run. A
     // failure to take one is said out loud but changes no result.
+    // The window draws itself into the picture (PrintWindow's full content, which a composited window needs), so it
+    // needs neither the front nor the keyboard: whatever covers it is not in the picture, and the person typing in
+    // another window keeps typing there.
     public void TrySaveScreenshot(string path)
     {
         try {
+            process.Refresh();
+            var handle = process.MainWindowHandle;
             var bounds = Root.Current.BoundingRectangle;
-            if (bounds.IsEmpty || bounds.Width < 1 || bounds.Height < 1)
+            if (handle == IntPtr.Zero || bounds.IsEmpty || bounds.Width < 1 || bounds.Height < 1 ||
+                !GetWindowRect(handle, out var window))
                 return;
 
-            // the window in front, so the copy sees it rather than whatever covers it
-            SetForegroundWindow(process.MainWindowHandle);
-            Thread.Sleep(PollDelay);
+            using var whole = new Bitmap(window.Right - window.Left, window.Bottom - window.Top);
+            using (var graphics = Graphics.FromImage(whole)) {
+                var hdc = graphics.GetHdc();
+                try {
+                    if (!PrintWindow(handle, hdc, PrintWindowRenderFullContent))
+                        throw new InvalidOperationException("The window would not draw itself.");
+                }
+                finally {
+                    graphics.ReleaseHdc(hdc);
+                }
+            }
 
+            // the part the walk reads, as a copy from the screen took it: the window's frame and shadow left out
+            var crop = Rectangle.Intersect(new Rectangle(0, 0, whole.Width, whole.Height),
+                new Rectangle((int)bounds.X - window.Left, (int)bounds.Y - window.Top, (int)bounds.Width, (int)bounds.Height));
             Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
-            using var bitmap = new Bitmap((int)bounds.Width, (int)bounds.Height);
-            using var graphics = Graphics.FromImage(bitmap);
-            graphics.CopyFromScreen((int)bounds.X, (int)bounds.Y, 0, 0, bitmap.Size);
-            bitmap.Save(path, ImageFormat.Png);
+            using var picture = whole.Clone(crop, whole.PixelFormat);
+            picture.Save(path, ImageFormat.Png);
         }
         catch (Exception ex) {
             Console.WriteLine($"Could not save the picture '{path}': {ex.Message}");
@@ -351,8 +366,23 @@ internal sealed class UiDriver(Process process) : IDisposable
         }
     }
 
-    // the plain import on purpose: the generated one is unsafe code, and this is one call
-    [DllImport("user32.dll")]
+    private const uint PrintWindowRenderFullContent = 0x2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    // the plain imports on purpose: the generated ones are unsafe code, and these are two calls
+    [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
+    private static extern bool GetWindowRect(IntPtr hWnd, out NativeRect rect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool PrintWindow(IntPtr hWnd, IntPtr hdc, uint flags);
 }

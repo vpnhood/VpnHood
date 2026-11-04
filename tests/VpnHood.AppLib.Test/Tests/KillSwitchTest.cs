@@ -1,5 +1,6 @@
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Premium;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Utils;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -10,7 +11,7 @@ namespace VpnHood.AppLib.Test.Tests;
 // The kill switch as the app and its VPN service run it (IVpnKillSwitch), the OS's block played in memory:
 // up before a connect's adapter, pointed at each adapter start, kept through an error stop, lifted by a
 // person's disconnect, the switch turned off or another app's take of the tunnel, and fail-closed; kept while
-// disconnected where that is on.
+// disconnected in lockdown.
 [TestClass]
 public class KillSwitchTest : TestAppBase
 {
@@ -20,7 +21,7 @@ public class KillSwitchTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
-        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: true);
+        await using var app = CreateApp(CreateDevice(killSwitch), KillSwitchMode.UntilDisconnect);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
@@ -48,7 +49,7 @@ public class KillSwitchTest : TestAppBase
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
         var adapter = new BreakableVpnAdapter();
-        await using var app = CreateApp(CreateDevice(killSwitch, adapter: adapter), killSwitchOn: true);
+        await using var app = CreateApp(CreateDevice(killSwitch, adapter: adapter), KillSwitchMode.UntilDisconnect);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
@@ -64,15 +65,15 @@ public class KillSwitchTest : TestAppBase
         Assert.IsFalse(app.State.IsKillSwitchBlocking);
     }
 
-    // Kept while disconnected: a person's disconnect leaves the block up, by the settings' split with no session,
-    // and turning that off lifts it.
+    // Lockdown: a person's disconnect leaves the block up, by the settings' split with no session, and the level
+    // below lifts it.
     [TestMethod]
     public async Task Lockdown_keeps_the_block_after_a_persons_disconnect()
     {
         await using var server = await TestHelper.CreateServer();
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
-        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: true, killSwitchLockdown: true);
+        await using var app = CreateApp(CreateDevice(killSwitch), KillSwitchMode.Lockdown);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
@@ -84,43 +85,29 @@ public class KillSwitchTest : TestAppBase
         Assert.AreNotSame(sessionRules, killSwitch.Rules);
         Assert.IsTrue(app.State.IsKillSwitchBlocking);
 
-        app.UserSettings.KillSwitchLockdown = false;
+        app.UserSettings.KillSwitch = KillSwitchMode.UntilDisconnect;
         app.SettingsService.Save();
         await AssertEqualsWait(false, () => killSwitch.IsUp);
         await AssertEqualsWait(false, () => app.State.IsKillSwitchBlocking);
     }
 
-    // Kept while disconnected, turned on with no session: the block goes up at once; the switch turned off lifts it.
+    // Lockdown chosen with no session: the block goes up at once; the switch turned off lifts it.
     [TestMethod]
-    public async Task Lockdown_turned_on_while_disconnected_blocks_at_once()
+    public async Task Lockdown_chosen_while_disconnected_blocks_at_once()
     {
         var killSwitch = new TestVpnKillSwitch();
-        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: true);
+        await using var app = CreateApp(CreateDevice(killSwitch), KillSwitchMode.UntilDisconnect);
         Assert.IsFalse(killSwitch.IsUp);
 
-        app.UserSettings.KillSwitchLockdown = true;
+        app.UserSettings.KillSwitch = KillSwitchMode.Lockdown;
         app.SettingsService.Save();
         await AssertEqualsWait(true, () => killSwitch.IsUp);
         await AssertEqualsWait(true, () => app.State.IsKillSwitchBlocking);
 
-        app.UserSettings.KillSwitch = false;
+        app.UserSettings.KillSwitch = KillSwitchMode.Off;
         app.SettingsService.Save();
         await AssertEqualsWait(false, () => killSwitch.IsUp);
         await AssertEqualsWait(false, () => app.State.IsKillSwitchBlocking);
-    }
-
-    // Kept while disconnected by default: the switch alone turned on with no session blocks at once.
-    [TestMethod]
-    public async Task Lockdown_is_on_by_default()
-    {
-        var killSwitch = new TestVpnKillSwitch();
-        await using var app = TestAppHelper.CreateClientApp(device: CreateDevice(killSwitch));
-        Assert.IsTrue(app.UserSettings.KillSwitchLockdown);
-
-        app.UserSettings.KillSwitch = true;
-        app.SettingsService.Save();
-        await AssertEqualsWait(true, () => killSwitch.IsUp);
-        await AssertEqualsWait(true, () => app.State.IsKillSwitchBlocking);
     }
 
     [TestMethod]
@@ -130,7 +117,7 @@ public class KillSwitchTest : TestAppBase
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
         var adapter = new BreakableVpnAdapter();
-        await using var app = CreateApp(CreateDevice(killSwitch, adapter: adapter), killSwitchOn: true);
+        await using var app = CreateApp(CreateDevice(killSwitch, adapter: adapter), KillSwitchMode.UntilDisconnect);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
@@ -138,7 +125,7 @@ public class KillSwitchTest : TestAppBase
         await app.WaitForState(AppConnectionState.None, TestCt);
         Assert.IsTrue(killSwitch.IsUp);
 
-        app.UserSettings.KillSwitch = false;
+        app.UserSettings.KillSwitch = KillSwitchMode.Off;
         app.SettingsService.Save();
         await AssertEqualsWait(false, () => killSwitch.IsUp);
     }
@@ -153,7 +140,7 @@ public class KillSwitchTest : TestAppBase
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
         var tunnelLock = new TestVpnTunnelLock();
-        await using var app = CreateApp(CreateDevice(killSwitch, tunnelLock), killSwitchOn: true);
+        await using var app = CreateApp(CreateDevice(killSwitch, tunnelLock), KillSwitchMode.UntilDisconnect);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
@@ -173,8 +160,7 @@ public class KillSwitchTest : TestAppBase
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
         var tunnelLock = new TestVpnTunnelLock();
-        await using var app = CreateApp(CreateDevice(killSwitch, tunnelLock), killSwitchOn: true,
-            killSwitchLockdown: true);
+        await using var app = CreateApp(CreateDevice(killSwitch, tunnelLock), KillSwitchMode.Lockdown);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
@@ -193,17 +179,17 @@ public class KillSwitchTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
-        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: false);
+        await using var app = CreateApp(CreateDevice(killSwitch), KillSwitchMode.Off);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
         Assert.IsFalse(killSwitch.IsUp);
 
-        app.UserSettings.KillSwitch = true;
+        app.UserSettings.KillSwitch = KillSwitchMode.UntilDisconnect;
         app.SettingsService.Save();
         await AssertEqualsWait(true, () => killSwitch.IsUp);
 
-        app.UserSettings.KillSwitch = false;
+        app.UserSettings.KillSwitch = KillSwitchMode.Off;
         app.SettingsService.Save();
         await AssertEqualsWait(false, () => killSwitch.IsUp);
     }
@@ -218,7 +204,7 @@ public class KillSwitchTest : TestAppBase
             BlockException = new UnauthorizedAccessException("The firewall refused the block.")
         };
         var device = CreateDevice(killSwitch);
-        await using var app = CreateApp(device, killSwitchOn: true);
+        await using var app = CreateApp(device, KillSwitchMode.UntilDisconnect);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // the state settles a moment after the connect's failure, later under load
@@ -236,7 +222,7 @@ public class KillSwitchTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch { IsOtherAppBlocking = true };
-        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: false);
+        await using var app = CreateApp(CreateDevice(killSwitch), KillSwitchMode.Off);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         await app.Disconnect();
@@ -260,7 +246,7 @@ public class KillSwitchTest : TestAppBase
         token.IsPublic = true; // a CONNECT-style profile: premium comes from a code alone
         var killSwitch = new TestVpnKillSwitch();
         var premium = new AppPremiumOptions { Features = [AppFeature.KillSwitch], AllowImportAccessCode = true };
-        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: true, premium);
+        await using var app = CreateApp(CreateDevice(killSwitch), KillSwitchMode.UntilDisconnect, premium);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
@@ -275,7 +261,7 @@ public class KillSwitchTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = await TestHelper.CreateAccessToken(server);
         var killSwitch = new TestVpnKillSwitch();
-        await using var app = CreateApp(CreateDevice(killSwitch), killSwitchOn: true);
+        await using var app = CreateApp(CreateDevice(killSwitch), KillSwitchMode.UntilDisconnect);
         app.UserSettings.DebugData1 = DebugCommands.NullCapture;
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
@@ -293,16 +279,14 @@ public class KillSwitchTest : TestAppBase
         };
     }
 
-    private VpnHoodApp CreateApp(TestDevice device, bool killSwitchOn, AppPremiumOptions? premium = null,
-        bool killSwitchLockdown = false)
+    private VpnHoodApp CreateApp(TestDevice device, KillSwitchMode killSwitch, AppPremiumOptions? premium = null)
     {
         var appOptions = TestAppHelper.CreateAppOptions();
         if (premium != null)
             appOptions.Premium = premium;
 
         var app = TestAppHelper.CreateClientApp(appOptions, device);
-        app.UserSettings.KillSwitch = killSwitchOn;
-        app.UserSettings.KillSwitchLockdown = killSwitchLockdown;
+        app.UserSettings.KillSwitch = killSwitch;
         app.SettingsService.Save();
         return app;
     }

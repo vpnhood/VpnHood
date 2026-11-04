@@ -108,6 +108,7 @@ public class UiPageWalkTest
     [DataRow("DnsItem", "DNS")]
     [DataRow("PrivacyItem", "Privacy")]
     [DataRow("AlwaysOnItem", "Always On")]
+    [DataRow("KillSwitchItem", "Kill Switch")]
     public void SettingsRowOpensItsPage(string control, string expectedTitle)
     {
         OpenSettings();

@@ -336,7 +336,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         IsConnectEnabled = connectionState == AppConnectionState.None || state.CanDisconnect;
         IsReconnectRequired = state.IsReconnectRequired && IsConnected;
         IsKillSwitchBlocking = state.IsKillSwitchBlocking;
-        IsKillSwitchLockdown = VhApp.UserSettings.KillSwitchLockdown;
+        IsKillSwitchLockdown = VhApp.UserSettings.KillSwitch == KillSwitchMode.Lockdown;
         SystemBarsTopHeight = state.SystemBarsInfo.TopHeight;
         SystemBarsBottomHeight = state.SystemBarsInfo.BottomHeight;
 

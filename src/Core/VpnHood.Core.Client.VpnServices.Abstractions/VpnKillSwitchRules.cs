@@ -23,7 +23,7 @@ public class VpnKillSwitchRules
     public required IReadOnlyList<IPAddress> DnsServers { get; init; }
 
     // By the person's settings, with no session: a connect's block until its adapter starts, and the app's own
-    // while disconnected with the block kept (UserSettings.KillSwitchLockdown). The server's own exclusions come
+    // while disconnected with the block kept (the app's KillSwitchMode.Lockdown). The server's own exclusions come
     // only with a session, and so does its DNS plan, so no resolver passes, nor the LAN unless the person's split
     // leaves it out - the replies to an inbound connection too, SSH's into a locked-down box.
     public static VpnKillSwitchRules CreateBySettings(string adapterName,

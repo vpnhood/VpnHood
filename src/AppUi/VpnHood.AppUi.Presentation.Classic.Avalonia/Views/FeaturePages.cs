@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Settings;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -66,9 +67,8 @@ public static class FeaturePages
     // the page names them as a person finds them.
     private const string KillSwitchOffEntryName = "Turn off kill switch";
 
-    // the app's own switch where the app keeps a kill switch itself (a desktop's), with the way out a person needs
-    // if the app cannot open while the internet is blocked, and the block kept while disconnected as an option of
-    // it; else the steps to the device's setting (Android's). No button for the way out: the window reads
+    // the app's own levels where the app keeps a kill switch itself (a desktop's), with the way out a person needs
+    // if the app cannot open while the internet is blocked; else the steps to the device's setting (Android's). No button for the way out: the window reads
     // everything from the service, so it does not open while the service is down. Linux's names the command too,
     // as the right-click action is there only where pkexec is.
     public static FeaturePageView KillSwitch(MainView host)
@@ -80,20 +80,19 @@ public static class FeaturePages
                 Title = S.KillSwitchColored,
                 Description = S.KillSwitchDesc,
                 Image = "kill-switch.webp",
-                Kind = FeaturePageKind.Switch,
-                SwitchTitle = S.KillSwitch,
-                SwitchDescription = features.OsType switch {
+                Kind = FeaturePageKind.Choice,
+                Choices = [
+                    KillSwitchChoice(KillSwitchMode.Off, S.Off, null),
+                    KillSwitchChoice(KillSwitchMode.UntilDisconnect, S.KillSwitchUntilDisconnect,
+                        S.KillSwitchUntilDisconnectDesc),
+                    KillSwitchChoice(KillSwitchMode.Lockdown, S.KillSwitchLockdown, S.KillSwitchLockdownDesc)
+                ],
+                ChoiceNote = features.OsType switch {
                     AppOsType.Windows => S.KillSwitchWayOutWindows(appName, $"{appName} - {KillSwitchOffEntryName}"),
                     AppOsType.Linux when features.KillSwitchOffScriptPath != null =>
                         S.KillSwitchWayOutLinux(appName, KillSwitchOffEntryName, $"sudo {features.KillSwitchOffScriptPath}"),
                     _ => null
                 },
-                IsSwitchOn = VhApp.UserSettings.KillSwitch,
-                SwitchAction = isOn => SetKillSwitch(isOn, CancellationToken.None),
-                SubSwitchTitle = S.KillSwitchLockdown,
-                SubSwitchDescription = S.KillSwitchLockdownDesc,
-                IsSubSwitchOn = VhApp.UserSettings.KillSwitchLockdown,
-                SubSwitchAction = isOn => SetKillSwitchLockdown(isOn, CancellationToken.None),
                 IsPremium = VhApp.IsPremiumFeature(AppFeature.KillSwitch)
             });
         }
@@ -109,17 +108,20 @@ public static class FeaturePages
         });
     }
 
-    private static async Task SetKillSwitch(bool isOn, CancellationToken cancellationToken)
+    private static FeaturePageChoice KillSwitchChoice(KillSwitchMode mode, string title, string? description)
     {
-        var settings = VhApp.UserSettings;
-        settings.KillSwitch = isOn;
-        await VhApp.SaveUserSettings(settings, cancellationToken);
+        return new FeaturePageChoice {
+            Title = title,
+            Description = description,
+            IsChosen = VhApp.UserSettings.KillSwitch == mode,
+            Action = () => SetKillSwitch(mode, CancellationToken.None)
+        };
     }
 
-    private static async Task SetKillSwitchLockdown(bool isOn, CancellationToken cancellationToken)
+    private static async Task SetKillSwitch(KillSwitchMode mode, CancellationToken cancellationToken)
     {
         var settings = VhApp.UserSettings;
-        settings.KillSwitchLockdown = isOn;
+        settings.KillSwitch = mode;
         await VhApp.SaveUserSettings(settings, cancellationToken);
     }
 

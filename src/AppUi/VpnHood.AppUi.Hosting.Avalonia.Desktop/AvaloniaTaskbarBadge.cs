@@ -61,7 +61,11 @@ internal sealed class AvaloniaTaskbarBadge : IDisposable
         if (_disposed)
             return;
 
-        var shown = (Badge: AvaloniaConnectionBadge.ForState(state), Text: Strings.Current.ConnectionStateText(state.ConnectionState));
+        var badge = AvaloniaConnectionBadge.ForState(state);
+        var text = badge == DesktopConnectionBadge.Blocked
+            ? Strings.Current.KillSwitchBlockingMsg
+            : Strings.Current.ConnectionStateText(state.ConnectionState);
+        var shown = (Badge: badge, Text: text);
         if (_shown == shown)
             return;
 

@@ -30,10 +30,15 @@
           </StackPanel>
         </Border>
 
-        <!-- a setting the app keeps itself: its switch in place of the steps, and an option of its own under it,
-             shown while it is on -->
+        <!-- a setting the app keeps itself: its switch in place of the steps, or its levels as radios with a note
+             under them -->
         <controls:SettingsToggleItem x:Name="SwitchItem" Margin="0" IsVisible="False" Toggled="OnSwitchToggled" />
-        <controls:SettingsToggleItem x:Name="SubSwitchItem" Margin="0" IsVisible="False" Toggled="OnSubSwitchToggled" />
+        <Border x:Name="ChoiceCard" Classes="card-on-grad" Padding="4,8" IsVisible="False">
+          <StackPanel Spacing="4">
+            <StackPanel x:Name="ChoiceRows" />
+            <TextBlock x:Name="ChoiceNoteText" Classes="body-small" TextWrapping="Wrap" Margin="12,4,12,4" IsVisible="False" />
+          </StackPanel>
+        </Border>
 
         <!-- the pitch, where the feature is sold -->
         <Border x:Name="PremiumCard" Classes="card-on-grad" Padding="16,12" IsVisible="False">

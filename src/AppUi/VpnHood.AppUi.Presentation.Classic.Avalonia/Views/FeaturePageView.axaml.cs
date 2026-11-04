@@ -13,22 +13,22 @@ public partial class FeaturePageView : UserControl, IPage
     private readonly MainView _host;
     private readonly Func<Task>? _action;
     private readonly Func<bool, Task>? _switchAction;
-    private readonly Func<bool, Task>? _subSwitchAction;
+    private readonly List<(FeaturePageChoice Choice, OptionRow Row)> _choiceRows = [];
 
     public FeaturePageView(MainView host, FeaturePageOptions options)
     {
         _host = host;
         _action = options.Action;
         _switchAction = options.SwitchAction;
-        _subSwitchAction = options.SubSwitchAction;
         InitializeComponent();
 
         Header.SetLargeTitle(TitleText, options.Title);
         DescriptionText.Text = options.Description;
         DescriptionText.IsVisible = options.Description != null;
         AppImage.SetSource(FeatureImage, AppAssets.ImagePath(options.Image));
-        // shorter on a TV: 240px of art above the controls is a third of a 720 panel
-        FeatureImage.MaxHeight = VhApp.IsTvUi ? 140 : 240;
+        // shorter on a TV: 240px of art above the controls is a third of a 720 panel; and shorter on a Choice page,
+        // whose levels would otherwise start below a phone's first screen
+        FeatureImage.MaxHeight = options.Kind == FeaturePageKind.Choice ? 120 : VhApp.IsTvUi ? 140 : 240;
 
         switch (options.Kind) {
             case FeaturePageKind.CloakMode:
@@ -43,13 +43,25 @@ public partial class FeaturePageView : UserControl, IPage
                 SwitchItem.Title = options.SwitchTitle ?? "";
                 SwitchItem.Description = options.SwitchDescription;
                 SwitchItem.IsOn = options.IsSwitchOn;
-                SubSwitchItem.Title = options.SubSwitchTitle ?? "";
-                SubSwitchItem.Description = options.SubSwitchDescription;
-                SubSwitchItem.IsOn = options.IsSubSwitchOn;
-                ShowSubSwitch();
                 break;
 
-            case FeaturePageKind.Switch:
+            case FeaturePageKind.Choice when !options.IsPremium || VhApp.IsPremiumUser:
+                ChoiceCard.IsVisible = true;
+                foreach (var choice in options.Choices) {
+                    var row = new OptionRow {
+                        Title = choice.Title,
+                        Description = choice.Description,
+                        IsChecked = choice.IsChosen
+                    };
+                    row.Clicked += (_, _) => Choose(choice);
+                    _choiceRows.Add((choice, row));
+                    ChoiceRows.Children.Add(row);
+                }
+                ChoiceNoteText.Text = options.ChoiceNote;
+                ChoiceNoteText.IsVisible = options.ChoiceNote != null;
+                break;
+
+            case FeaturePageKind.Switch or FeaturePageKind.Choice:
                 PremiumCard.IsVisible = true;
                 break;
 
@@ -91,6 +103,8 @@ public partial class FeaturePageView : UserControl, IPage
     {
         if (ActionButton.IsVisible) ActionButton.LandFocus();
         else if (SwitchItem.IsVisible) SwitchItem.FindFirstButton()?.LandFocus();
+        else if (ChoiceCard.IsVisible && _choiceRows.Count > 0)
+            (_choiceRows.FirstOrDefault(x => x.Row.IsChecked).Row ?? _choiceRows[0].Row).LandFocus();
         else if (OkButton.IsVisible && CloakCard.IsVisible) OkButton.LandFocus();
         else if (PremiumButton.IsVisible && PremiumCard.IsVisible) PremiumButton.LandFocus();
         else if (TurnOffButton.IsVisible && PrivateDnsCard.IsVisible) TurnOffButton.LandFocus();
@@ -120,17 +134,26 @@ public partial class FeaturePageView : UserControl, IPage
     {
         try {
             await Toggle(SwitchItem, _switchAction);
-            ShowSubSwitch();
         }
         catch (Exception ex) {
             await this.ReportError(ex);
         }
     }
 
-    private async void OnSubSwitchToggled(object? sender, EventArgs e)
+    // the mark follows the setting; a level that could not be written leaves the marks as they were
+    private async void Choose(FeaturePageChoice choice)
     {
         try {
-            await Toggle(SubSwitchItem, _subSwitchAction);
+            try {
+                await choice.Action();
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+                return;
+            }
+
+            foreach (var (rowChoice, row) in _choiceRows)
+                row.IsChecked = ReferenceEquals(rowChoice, choice);
         }
         catch (Exception ex) {
             await this.ReportError(ex);
@@ -148,12 +171,6 @@ public partial class FeaturePageView : UserControl, IPage
             switchItem.IsOn = !switchItem.IsOn;
             await _host.ProcessError(ex);
         }
-    }
-
-    // the option goes with its switch
-    private void ShowSubSwitch()
-    {
-        SubSwitchItem.IsVisible = _subSwitchAction != null && SwitchItem.IsVisible && SwitchItem.IsOn;
     }
 
     private void OnSkipClick(object? sender, RoutedEventArgs e)

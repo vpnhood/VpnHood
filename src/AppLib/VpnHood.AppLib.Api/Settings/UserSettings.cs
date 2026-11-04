@@ -19,14 +19,9 @@ public class UserSettings
     // before anyone signs in, and again after a failure.
     public bool AlwaysOn { get; set; }
 
-    // Where the device has a kill switch (IDevice.KillSwitch): nothing leaves outside the tunnel from a
-    // connect until a person disconnects, through an error stop, a crash and a reboot.
-    public bool KillSwitch { get; set; }
+    // Where the device has a kill switch (IDevice.KillSwitch)
+    public KillSwitchMode KillSwitch { get; set; }
 
-    // With the kill switch on, its block stays after a person's disconnect too, by these settings' split, and goes
-    // up at once when this is turned on while disconnected; only turning this or the switch off lifts it. On by
-    // default; a hotel's Wi-Fi sign-in page needs it off first.
-    public bool KillSwitchLockdown { get; set; } = true;
     public SplitTunnelingSettings SplitTunneling { get; set; } = new();
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; }

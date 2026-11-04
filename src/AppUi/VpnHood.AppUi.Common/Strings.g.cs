@@ -760,10 +760,16 @@ public sealed partial class Strings
     /// <summary>If {appName} won't open while the internet is blocked, right-click {appName} in the app menu and choose "{actionName}...</summary>
     public string KillSwitchWayOutLinux(object appName, object actionName, object command) => Get("KILL_SWITCH_WAY_OUT_LINUX", ("appName", appName), ("actionName", actionName), ("command", command));
 
+    /// <summary>Block if the VPN drops</summary>
+    public string KillSwitchUntilDisconnect => Get("KILL_SWITCH_UNTIL_DISCONNECT");
+
+    /// <summary>Disconnecting yourself lifts the block.</summary>
+    public string KillSwitchUntilDisconnectDesc => Get("KILL_SWITCH_UNTIL_DISCONNECT_DESC");
+
     /// <summary>Keep blocking after you disconnect</summary>
     public string KillSwitchLockdown => Get("KILL_SWITCH_LOCKDOWN");
 
-    /// <summary>Nothing goes online without the VPN, even after you disconnect it. Turn this off to sign in to Wi-Fi at a hotel or an...</summary>
+    /// <summary>Nothing goes online without the VPN, even after you disconnect it. To sign in to Wi-Fi at a hotel or an airport, choo...</summary>
     public string KillSwitchLockdownDesc => Get("KILL_SWITCH_LOCKDOWN_DESC");
 
     /// <summary>Notifications</summary>

@@ -7,11 +7,11 @@ using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
-// The connection's state in a badge - a tick, an exclamation mark, a cross - which carries no brand, so a
-// fork has nothing more to supply. The tray's three pictures are the app's own icon (AvaloniaAppIcon) with
-// the badge on its lower right; with no icon, the badge alone, still a picture a person finds. Each is an
-// icon file of every size a tray takes at its scalings: Windows' picks the one nearest its own (16 px at
-// 100%), Linux's the largest, which it scales. The taskbar button's overlay is the badge alone, which
+// The connection's state in a badge - a tick, an exclamation mark, a cross, and the kill switch's block as a
+// no-entry sign - which carries no brand, so a fork has nothing more to supply. The tray's pictures are the app's
+// own icon (AvaloniaAppIcon) with the badge on its lower right; with no icon, the badge alone, still a picture a
+// person finds. Each is an icon file of every size a tray takes at its scalings: Windows' picks the one nearest
+// its own (16 px at 100%), Linux's the largest, which it scales. The taskbar button's overlay is the badge alone, which
 // Windows lays on the app's icon itself (AvaloniaTaskbarBadge).
 internal static class AvaloniaConnectionBadge
 {
@@ -20,10 +20,11 @@ internal static class AvaloniaConnectionBadge
     private static readonly Color ConnectingColor = Color.FromRgb(0xD5, 0xA4, 0x10);
     private static readonly Color DisconnectedColor = Color.FromRgb(0xDA, 0x24, 0x2A);
 
-    // connected; idle; and on its way between them, an unstable connection too
+    // connected; idle, behind the kill switch's block or not; and on its way between them, an unstable connection too
     public static DesktopConnectionBadge ForState(AppState state)
     {
         return state.ConnectionState == AppConnectionState.Connected ? DesktopConnectionBadge.Connected
+            : state.IsKillSwitchBlocking ? DesktopConnectionBadge.Blocked
             : state.IsIdle ? DesktopConnectionBadge.Disconnected
             : DesktopConnectionBadge.Connecting;
     }
@@ -45,6 +46,7 @@ internal static class AvaloniaConnectionBadge
         return badge switch {
             DesktopConnectionBadge.Connected => Draw(appIcon, size, ConnectedColor, DrawTick),
             DesktopConnectionBadge.Connecting => Draw(appIcon, size, ConnectingColor, DrawExclamationMark),
+            DesktopConnectionBadge.Blocked => Draw(appIcon, size, DisconnectedColor, DrawBar),
             _ => Draw(appIcon, size, DisconnectedColor, DrawCross)
         };
     }
@@ -93,6 +95,12 @@ internal static class AvaloniaConnectionBadge
     {
         context.DrawLine(pen, At(badge, 0.33, 0.33), At(badge, 0.67, 0.67));
         context.DrawLine(pen, At(badge, 0.67, 0.33), At(badge, 0.33, 0.67));
+    }
+
+    // the no-entry sign's bar: wider than the cross, so the two read apart at a tray's 16 px
+    private static void DrawBar(DrawingContext context, Rect badge, IPen pen)
+    {
+        context.DrawLine(pen, At(badge, 0.27, 0.5), At(badge, 0.73, 0.5));
     }
 
     private static Point At(Rect badge, double x, double y)

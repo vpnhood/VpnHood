@@ -4,6 +4,7 @@ using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App;
+using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Hosting.Avalonia.Desktop;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppLib.Api.WebHost;
@@ -27,7 +28,8 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // its paywall - against a stand-in account (DevAccountProvider) that sells sample plans and charges
 // no one, and whose email sign-in asks for a second factor when the email holds "2fa"
 // (DevAuthenticationProvider); with --tv, as Google TV or Apple TV shows them. Connecting needs the WinDivert driver, so a
-// plain run shows the walk and the pairing; run elevated to connect as well.
+// plain run shows the walk and the pairing; run elevated to connect as well. "--no-activate" makes a window that never
+// takes the keyboard (NoActivateAvaloniaApp), as the UI smoke test runs it.
 internal static class Program
 {
     [STAThread]
@@ -127,12 +129,20 @@ internal static class Program
             // store's zip beside this executable, which the build placed there (the same files
             // the web server serves at /assets/). It runs in the window a desktop head shows it
             // in, which is also the app's UI context: a store's sign-in and purchase ask for one.
-            AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, app.Api, app.UiAssetProvider, useTray: false,
-                keepRunningWhileConnected: false, shell: null, startHidden: false, CancellationToken.None);
+            if (args.Contains("--no-activate"))
+                RunUi<NoActivateAvaloniaApp>(args, app);
+            else
+                RunUi<ClassicAvaloniaApp>(args, app);
         }
         finally {
             app.Dispose();
         }
+    }
+
+    private static void RunUi<TUi>(string[] args, VpnHoodApp app) where TUi : Application, IAvaloniaUi, new()
+    {
+        AvaloniaDesktopHost.Run<TUi>(args, app.Api, app.UiAssetProvider, useTray: false,
+            keepRunningWhileConnected: false, shell: null, startHidden: false, CancellationToken.None);
     }
 
     // the word after a flag, "--storage other"; null when the flag is absent or ends the line

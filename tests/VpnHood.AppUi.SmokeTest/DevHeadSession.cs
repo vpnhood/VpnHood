@@ -9,7 +9,8 @@ namespace VpnHood.AppUi.SmokeTest;
 // The Avalonia dev head, run for a walk. It takes "--storage", so the run gets a folder of its
 // own and nothing an installed client wrote is read, changed or deleted; the folder is made fresh,
 // so every walk is a first run and sees what a new install sees, the terms page included.
-// "--connect" asks for the Connect product's look, which is the one most people meet.
+// "--connect" asks for the Connect product's look, which is the one most people meet. "--no-activate" keeps the
+// keyboard where it is: a person goes on typing in another window while the walk runs.
 internal sealed class DevHeadSession : IDisposable
 {
     // Named for what it is, and never anything else, because this folder gets deleted.
@@ -36,7 +37,7 @@ internal sealed class DevHeadSession : IDisposable
         // --sample-key gives the run a server profile, without which the location row raises a
         // notice instead of opening a page. It reaches no server; the walk never connects.
         var driver = UiDriver.Start(executablePath,
-            ["--connect", "--sample-key", "--storage", StorageFolderName], TimeSpan.FromSeconds(90));
+            ["--connect", "--sample-key", "--no-activate", "--storage", StorageFolderName], TimeSpan.FromSeconds(90));
 
         return new DevHeadSession(driver, storageFolderPath);
     }

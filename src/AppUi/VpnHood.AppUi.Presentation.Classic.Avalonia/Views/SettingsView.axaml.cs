@@ -85,7 +85,7 @@ public partial class SettingsView : UserControl, IPage
         KillSwitchItem.IsVisible = isKillSwitchSupported || intents.IsKillSwitchSettingsSupported;
         if (isKillSwitchSupported) {
             KillSwitchItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.KillSwitch);
-            KillSwitchItem.SetStatus(settings.KillSwitch, s.On, s.Off);
+            KillSwitchItem.SetStatus(settings.KillSwitch != KillSwitchMode.Off, s.On, s.Off);
         }
         AlwaysOnItem.Title = s.AlwaysOn;
         AlwaysOnItem.Subtitle = s.AlwaysOnDesc;

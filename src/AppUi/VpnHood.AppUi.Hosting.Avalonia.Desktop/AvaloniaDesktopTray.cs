@@ -33,6 +33,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
     private readonly WindowIcon _connectedIcon;
     private readonly WindowIcon _connectingIcon;
     private readonly WindowIcon _disconnectedIcon;
+    private readonly WindowIcon _blockedIcon;
     private readonly NativeMenuItem _openItem;
     private readonly NativeMenuItem _connectItem;
     private readonly NativeMenuItem _disconnectItem;
@@ -53,6 +54,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
             _connectedIcon = AvaloniaConnectionBadge.Create(appIcon, DesktopConnectionBadge.Connected);
             _connectingIcon = AvaloniaConnectionBadge.Create(appIcon, DesktopConnectionBadge.Connecting);
             _disconnectedIcon = AvaloniaConnectionBadge.Create(appIcon, DesktopConnectionBadge.Disconnected);
+            _blockedIcon = AvaloniaConnectionBadge.Create(appIcon, DesktopConnectionBadge.Blocked);
         }
         finally {
             foreach (var picture in appIcon)
@@ -148,6 +150,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         _trayIcon.Icon = AvaloniaConnectionBadge.ForState(state) switch {
             DesktopConnectionBadge.Connected => _connectedIcon,
             DesktopConnectionBadge.Connecting => _connectingIcon,
+            DesktopConnectionBadge.Blocked => _blockedIcon,
             _ => _disconnectedIcon
         };
         _trayIcon.ToolTipText = state.IsKillSwitchBlocking

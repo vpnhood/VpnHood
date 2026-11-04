@@ -20,12 +20,10 @@ public sealed record FeaturePageOptions
     public bool IsSwitchOn { get; init; }
     public Func<bool, Task>? SwitchAction { get; init; }
 
-    // a Switch page's second switch, under the first and shown while that is on: an option of the feature's own
-    // (the kill switch's block while disconnected)
-    public string? SubSwitchTitle { get; init; }
-    public string? SubSwitchDescription { get; init; }
-    public bool IsSubSwitchOn { get; init; }
-    public Func<bool, Task>? SubSwitchAction { get; init; }
+    // a Choice page's: the setting's levels as radios, in place of a switch, and a note under them (the kill switch's
+    // way out)
+    public IReadOnlyList<FeaturePageChoice> Choices { get; init; } = [];
+    public string? ChoiceNote { get; init; }
 
     // opened on its own by what the person just did, not chosen: it ends with OK, since the back
     // button would read as undoing that (cloak mode's page, when Cloak is first turned on)

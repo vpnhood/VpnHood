@@ -40,7 +40,7 @@ public static class ArrowKeyScroll
     // the scroller's own keys only: one from a control inside it is that control's
     private static void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not ScrollViewer scroller || e.Source != scroller)
+        if (sender is not ScrollViewer scroller || !ReferenceEquals(e.Source, scroller))
             return;
 
         var step = scroller.Viewport.Height * 0.75;

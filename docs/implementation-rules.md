@@ -78,8 +78,8 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     thread (`OnCreate`, `FinishedLaunching`, `Main`), where a blocked task freezes the start if anything
     below awaits without `ConfigureAwait(false)`.
 18. A LINQ query ends in its own `.ToArray()` or `.ToList()`, never in a collection expression: no
-    `[.. query]`, and ReSharper's `UseCollectionExpression` hint on such a line is left as it is. A
-    spread takes what is a collection already.
+    `[.. query]`. ReSharper's `UseCollectionExpression`, which asks for just that, is off in
+    `VpnHood.sln.DotSettings`. A spread takes what is a collection already.
 
 ## Design
 

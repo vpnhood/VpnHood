@@ -136,7 +136,7 @@ public partial class ProxyEditDialog : DialogBase
     // fill runs before the dialog is loaded.
     private void OnFieldChanged(object? sender, TextChangedEventArgs e)
     {
-        if (sender == HostBox && IsLoaded)
+        if (ReferenceEquals(sender, HostBox) && IsLoaded)
             _isHostEdited = true;
 
         HostError.Text = HostRule;

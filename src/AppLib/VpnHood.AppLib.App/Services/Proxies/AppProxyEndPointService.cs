@@ -271,7 +271,6 @@ public class AppProxyEndPointService(
             return;
 
         // resolve all host with domain name
-        // ReSharper disable once UseCollectionExpression
         proxyEndPointInfos = proxyEndPointInfos.Where(x => x.CountryCode is null).ToArray();
         var hostCountries = await _hostCountryResolver
             .GetHostCountries(proxyEndPointInfos.Select(x => x.EndPoint.Host), cancellationToken).Vhc();

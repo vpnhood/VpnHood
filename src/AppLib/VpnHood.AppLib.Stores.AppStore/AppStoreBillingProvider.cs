@@ -49,7 +49,6 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
         var products = await CallBridge(() => _bridge.LoadProducts(productIds, cancellationToken), cancellationToken).Vhc();
 
         // subscriptions are all this app sells; StoreKit gives subscription terms to no other type
-        // ReSharper disable once UseCollectionExpression
         return products
             .Where(product => product.Subscription != null)
             .Select(ToSubscriptionPlan)

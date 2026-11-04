@@ -73,7 +73,7 @@ internal sealed class WindowsVpnPluginAppServiceListener : IMessageListener
             throw new InvalidDataException("The app's message carries no request.");
 
         var response = await messageHandler(request, cancellationToken).Vhc();
-        await args.Request.SendResponseAsync(new ValueSet { [WindowsVpnPluginAppService.MessageKey] = response.ToArray() }).AsTask().Vhc();
+        await args.Request.SendResponseAsync(new ValueSet { [WindowsVpnPluginAppService.MessageKey] = response.ToArray() }).AsTask(cancellationToken).Vhc();
     }
 
     public void Dispose()

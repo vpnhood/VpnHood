@@ -15,7 +15,6 @@ using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
-using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;

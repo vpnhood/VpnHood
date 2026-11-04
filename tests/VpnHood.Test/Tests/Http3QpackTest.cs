@@ -389,7 +389,7 @@ public class Http3QpackTest
             Http3Qpack.ReadSection(reader, block.Count, new Http3ServerOptions(), TestContext.CancellationToken));
     }
 
-    private async Task<IReadOnlyList<KeyValuePair<string, string>>> ReadHeaders(byte[] block,
+    private static async Task<IReadOnlyList<KeyValuePair<string, string>>> ReadHeaders(byte[] block,
         CancellationToken cancellationToken) =>
         (await ReadSection(block, new Http3ServerOptions(), cancellationToken)).Fields;
 

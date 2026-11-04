@@ -597,7 +597,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private static IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<VpnProfileInfo> infos)
     {
         var currentId = VhApp.CurrentVpnProfileInfo?.VpnProfileId;
-        // ReSharper disable once UseCollectionExpression
         return infos
             .Select(x => {
                 var isSingleLocation = x.LocationInfos.Count < 2;

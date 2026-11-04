@@ -224,7 +224,7 @@ public class IosDevice : IDevice
     private static async Task MigrateExtraVpnManagers(IEnumerable<NETunnelProviderManager> managers,
         NETunnelProviderManager vpnManager)
     {
-        foreach (var manager in managers.Where(x => x != vpnManager)) {
+        foreach (var manager in managers.Where(x => !ReferenceEquals(x, vpnManager))) {
             try {
                 await manager.RemoveFromPreferencesAsync().Vhc();
             }

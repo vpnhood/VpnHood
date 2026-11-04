@@ -1,4 +1,4 @@
-# Latest
+# v9.1.866
 
 * Fix: Online games that send large packets, such as Counter-Strike 2 and Dota 2 on Steam, work through VpnHoodServer; it dropped every packet over 1280 bytes. The apps need their next release for it; older apps work as before
 * Improve: VpnHoodServer sends its status to its access manager over IPv4 and IPv6 in turn, so the manager sees when either of the server's addresses changes, as a home connection's often does

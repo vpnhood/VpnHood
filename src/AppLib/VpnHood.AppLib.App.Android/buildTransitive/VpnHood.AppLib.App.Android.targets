@@ -9,7 +9,8 @@
 	     keeps it, and answers for all of this itself. Set here, after the SDK's defaults, which leave
 	     AndroidManifest unset for a head with none. The SDK reads it as a path under the head's folder
 	     ($(ProjectDir)$(AndroidManifest)), which a package's file is not - the NuGet cache may even be on
-	     another drive - so the head gets a copy in its obj before the SDK first reads it.
+	     another drive - so the head gets a copy in its obj before the SDK first reads it: in a build, or in
+	     InstallAndroidDependencies (GetAndroidDependencies), which reads it with no build before it.
 
 	     The build settings - the oldest Android, the runtime ids, the trimming - stay in each head: the SDK
 	     reads them before any targets file of a package, and a props file comes before the head says it is
@@ -18,7 +19,7 @@
 		<AndroidManifest>$(IntermediateOutputPath)vh\AndroidManifest.xml</AndroidManifest>
 		<_VhAndroidSharedManifest>true</_VhAndroidSharedManifest>
 	</PropertyGroup>
-	<Target Name="VhCopyAndroidManifest" BeforeTargets="_GetAndroidPackageName" Condition="'$(_VhAndroidSharedManifest)' == 'true'">
+	<Target Name="VhCopyAndroidManifest" BeforeTargets="_GetAndroidPackageName;GetAndroidDependencies" Condition="'$(_VhAndroidSharedManifest)' == 'true'">
 		<Copy SourceFiles="$(MSBuildThisFileDirectory)AndroidManifest.xml" DestinationFiles="$(AndroidManifest)" SkipUnchangedFiles="true" />
 		<ItemGroup>
 			<FileWrites Include="$(AndroidManifest)" />

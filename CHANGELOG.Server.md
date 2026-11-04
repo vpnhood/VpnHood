@@ -1,3 +1,8 @@
+# Latest
+
+* Fix: Online games that send large packets, such as Counter-Strike 2 and Dota 2 on Steam, work through VpnHoodServer; it dropped every packet over 1280 bytes. The apps need their next release for it; older apps work as before
+* Improve: VpnHoodServer sends its status to its access manager over IPv4 and IPv6 in turn, so the manager sees when either of the server's addresses changes, as a home connection's often does
+
 # v9.1.864
 
 * Update: VpnHoodServer runs on .NET 11, which needs an x64 processor with SSE4.2 and POPCNT (x86-64-v2), as every x64 processor of the last ten years has. Some VPS providers hide them behind a basic virtual processor, which Linux names "Common KVM processor"; there the server stops as soon as it starts, with "The current CPU is missing one or more of the following instruction sets". `grep -qw sse4_2 /proc/cpuinfo && grep -qw popcnt /proc/cpuinfo && echo Supported || echo "Not supported"` checks a machine; on "Not supported", ask the provider to set the CPU type to `host` or `x86-64-v2`. ARM64 is not affected.

@@ -97,8 +97,13 @@ a PNG.
      with its tile's delete icon.
 6. **Submission options:** **Don't publish this submission until I select Publish now**, so a
    submission that passes certification waits for you. The page also asks, required, why the app
-   needs `networkingVpnProvider`, in at most 500 characters: what the plug-in does with it, and that
-   in an AppContainer it is the app's only way to provide a VPN.
+   needs `networkingVpnProvider`, in at most 500 characters: who publishes it, with your website and
+   support email; what the plug-in does with it; and that in an AppContainer it is the app's only way
+   to provide a VPN.
+   - **No GitHub link.** The reviewers want a working support contact or a developer website in the
+     reason itself, and a GitHub link counts as neither. This project's own CLIENT app was refused
+     under Store Policies 10.6.3 for a reason whose only link was its GitHub repository, with a
+     listing that already showed the account's website and support email.
 7. **Additional Testing Information** (under **Supplemental info**): the notes for certification —
    how a tester adds the key and connects — and the key itself under **Credentials**, never in the
    notes, which Partner Center asks to hold none. A stored credential shows masked from then on.
@@ -123,7 +128,10 @@ handle cards to PCI DSS.
 ## 7. The first release
 
 1. **Certification** usually takes a few hours and at most three business days; the restricted
-   capability's reason is read then, and a refusal names the policy it failed.
+   capability's reason is read then, and a refusal names the policy it failed. Its report is on the
+   product's page (**View report**). The draft stays: fix what the report names and **Resubmit for
+   certification**; a fix outside the package needs no new build. A refused capability is reconsidered
+   only on new or expanded information in its reason: the same text is refused again.
 2. **The publish waits for you** (step 5, Submission options): once certified, **Publish now** on the
    product's page releases it.
 3. **Usage data asks first.** Microsoft wants the person's opt-in, in the app, before personal

@@ -58,6 +58,8 @@ internal static class AutomationNames
     private static void SetName(Control control, string words)
     {
         if ((!control.GetValue(IsFromWordsProperty) && control.IsSet(AutomationProperties.NameProperty)) ||
+            // Avalonia declares it non-null, but a control without a label answers null
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             AutomationProperties.GetLabeledBy(control) != null)
             return;
 

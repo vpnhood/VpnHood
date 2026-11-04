@@ -10,7 +10,7 @@ internal sealed class Http3SynchronousReadHoldingStream(CancellationToken lifeti
 
     public void ReleaseRead() => _released.Set();
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         _started.TrySetResult();
         _released.Wait(lifetimeToken);

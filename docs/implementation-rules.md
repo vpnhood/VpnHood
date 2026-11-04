@@ -77,14 +77,17 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     the start or behind a sync property. Every head starts the app from such an entry point on the main
     thread (`OnCreate`, `FinishedLaunching`, `Main`), where a blocked task freezes the start if anything
     below awaits without `ConfigureAwait(false)`.
+18. A LINQ query ends in its own `.ToArray()` or `.ToList()`, never in a collection expression: no
+    `[.. query]`, and ReSharper's `UseCollectionExpression` hint on such a line is left as it is. A
+    spread takes what is a collection already.
 
 ## Design
 
-18. The access-manager protocol needs to be compatible one way only: the access manager is updated
+19. The access-manager protocol needs to be compatible one way only: the access manager is updated
     first, so a new server may count on it, but the access manager keeps supporting old servers.
-19. The access manager is under heavy load: rather a cost on the server than more requests to it.
+20. The access manager is under heavy load: rather a cost on the server than more requests to it.
     After an outage, the waiting requests are merged, never queued up to bombard it.
-20. The service opens no UI and no links; the UI does, as on iOS.
-21. A Debug build's name must stand out.
-22. An updater runs apart from what it updates, as a standalone script: an app that fails to run
+21. The service opens no UI and no links; the UI does, as on iOS.
+22. A Debug build's name must stand out.
+23. An updater runs apart from what it updates, as a standalone script: an app that fails to run
     must still get the release that fixes it.

@@ -14,6 +14,6 @@ public static class IosNoBackupFolder
         using var url = NSUrl.FromFilename(folderPath);
         if (!url.SetResource(NSUrl.IsExcludedFromBackupKey, NSNumber.FromBoolean(true), out var error))
             VhLogger.Instance.LogError("Could not keep a folder out of the backups. Path: {Path}, Error: {Error}",
-                folderPath, error?.LocalizedDescription);
+                folderPath, error.LocalizedDescription);
     }
 }

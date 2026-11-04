@@ -18,7 +18,6 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
 {
     private const string UpdaterFileName = "vhupdate.ps1";
     private readonly string _installRootPath;
-    private readonly string _instanceName;
 
     private WindowsAppUpdaterProvider(string installRootPath, string instanceName, Uri updateInfoUrl,
         Version appVersion)
@@ -26,7 +25,7 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
             appVersion)
     {
         _installRootPath = installRootPath;
-        _instanceName = instanceName;
+        TaskName = $"{instanceName}Updater";
     }
 
     /// <summary>
@@ -48,7 +47,7 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
         return new WindowsAppUpdaterProvider(installRootPath, paths.InstanceName, updateInfoUrl, appVersion);
     }
 
-    private string TaskName => $"{_instanceName}Updater";
+    private string TaskName { get; }
     private static string SchTasksPath => Path.Combine(Environment.SystemDirectory, "schtasks.exe");
 
     // the task's choice, which the setup makes and keeps: its XML's Enabled, which only a disabled task says

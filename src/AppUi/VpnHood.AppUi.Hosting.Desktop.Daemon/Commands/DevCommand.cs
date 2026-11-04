@@ -46,7 +46,7 @@ internal static class DevCommand
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "{InstanceName} could not run.", platform.Paths.InstanceName);
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            await CliPrinter.Error(ex.Message).Vhc();
             return 1;
         }
     }

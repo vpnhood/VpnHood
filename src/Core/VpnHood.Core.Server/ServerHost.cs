@@ -73,13 +73,13 @@ public class ServerHost : IAsyncDisposable
         _tcpListenerHost = new TcpListenerHost(
             sessionManager: _sessionManager,
             unauthenticatedConnections: unauthenticatedConnections,
-            cancellationToken: _cancellationTokenSource.Token,
+            serverCancellationToken: _cancellationTokenSource.Token,
             processNewConnection: ProcessNewConnection);
         _quicListenerHost = new QuicListenerHost(
             quicServer: quicServer,
             sessionManager: _sessionManager,
             unauthenticatedConnections: unauthenticatedConnections,
-            cancellationToken: _cancellationTokenSource.Token,
+            serverCancellationToken: _cancellationTokenSource.Token,
             processNewConnection: ProcessNewConnection);
         _udpListenerHost = new UdpListenerHost(_sessionManager);
     }
@@ -621,7 +621,7 @@ public class ServerHost : IAsyncDisposable
             IsTcpProxySupported = session.AllowTcpProxy,
             StartPadding = ServerInitialStreamPadding.ShouldAdvertise(session, streamConnection),
             // no UDP means no QUIC either, so a client reads only one of them for each
-            IsQuicPacketSupported = session.AllowQuicPacket && session.AllowUdpPacket,
+            IsQuicPacketSupported = session is { AllowQuicPacket: true, AllowUdpPacket: true },
             IsUdpPacketSupported = session.AllowUdpPacket,
             ClientPublicAddress = clientIp,
             ClientCountry = sessionResponseEx.ClientCountry,

@@ -91,7 +91,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
             ? File
                 .ReadAllLines("/etc/os-release")
                 .Select(line => line.Split('=', 2))
-                .Where(split => split.Length == 2 && split[0] == "PRETTY_NAME")
+                .Where(split => split is ["PRETTY_NAME", _])
                 .Select(split => split[1].Replace("\"", "").Trim())
                 .FirstOrDefault()
             : null;

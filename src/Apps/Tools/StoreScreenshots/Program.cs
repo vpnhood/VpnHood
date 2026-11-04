@@ -103,7 +103,7 @@ internal static class Program
         var view = window.Content as MainView ?? throw new InvalidOperationException("The window does not hold the UI's main view.");
 
         var runner = new ShotRunner(options, window, view, log);
-        Dispatcher.UIThread.Post(async () => lifetime.Shutdown(await runner.RunAsync()), DispatcherPriority.Background);
+        _ = Dispatcher.UIThread.InvokeAsync(async () => lifetime.Shutdown(await runner.RunAsync()), DispatcherPriority.Background);
         return lifetime.Start(args);
     }
 }

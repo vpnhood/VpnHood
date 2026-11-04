@@ -43,11 +43,15 @@ internal static class AppTiles
         using var canvas = new SKCanvas(bitmap);
 
         // the list clips its avatars to a circle itself, so the tile is drawn square
-        using var background = new SKPaint { Shader = Shader(app.Background), IsAntialias = true };
+        using var background = new SKPaint();
+        background.Shader = Shader(app.Background);
+        background.IsAntialias = true;
         canvas.DrawRect(new SKRect(0, 0, Size, Size), background);
 
         using var font = new SKFont(typeface, Size * 0.52f);
-        using var foreground = new SKPaint { Shader = Shader(app.Foreground), IsAntialias = true };
+        using var foreground = new SKPaint();
+        foreground.Shader = Shader(app.Foreground);
+        foreground.IsAntialias = true;
         var letter = app.AppName[..1].ToUpperInvariant();
         var width = font.MeasureText(letter, out var bounds);
         canvas.DrawText(letter, (Size - width) / 2, Size / 2f - bounds.MidY, font, foreground);

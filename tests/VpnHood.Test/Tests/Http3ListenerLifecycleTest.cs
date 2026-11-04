@@ -281,7 +281,7 @@ public class Http3ListenerLifecycleTest : TestBase
             if (Interlocked.Increment(ref _writeCount) == 1)
                 return; // Initial SETTINGS completes before the client GOAWAY is read.
             Assert.AreEqual((byte)7, buffer.Span[0], "The blocked write must be the final GOAWAY frame.");
-            using var registration = cancellationToken.Register(() =>
+            await using var registration = cancellationToken.Register(() =>
                 _finalWriteCancelled.TrySetResult(Volatile.Read(ref _nativeCloseCode)));
             _finalWriteStarted.TrySetResult();
             try {

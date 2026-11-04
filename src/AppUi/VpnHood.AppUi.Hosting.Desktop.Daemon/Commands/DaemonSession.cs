@@ -25,7 +25,7 @@ internal static class DaemonSession
             return 130; // the shell's own code for a command a person interrupted
         }
         catch (Exception ex) {
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            await CliPrinter.Error(ex.Message).Vhc();
             return 1;
         }
     }

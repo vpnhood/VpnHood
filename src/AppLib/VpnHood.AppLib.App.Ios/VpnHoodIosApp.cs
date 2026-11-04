@@ -64,6 +64,8 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
     // container path, the app's and the extension's IPC folder, is stable for the whole session.
     private static IosDevice CreateDevice(IosInitParams initParams, string appName)
     {
+        // the binding declares it non-null, but iOS answers nil for a group the entitlements lack
+        // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
         var groupContainerPath = NSFileManager.DefaultManager.GetContainerUrl(initParams.AppGroupId)?.Path
             ?? throw new InvalidOperationException(
                 $"The App Group {initParams.AppGroupId} has no container: add it to the entitlements and the " +

@@ -274,8 +274,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task An_address_added_after_the_close_is_removed_at_once()
     {
-        var netConfigurationProvider = new TestNetConfigurationProvider();
-        netConfigurationProvider.AddHold.IsHeld = true;
+        var netConfigurationProvider = new TestNetConfigurationProvider { AddHold = { IsHeld = true } };
         var netConfigurationService = new NetConfigurationService(netConfigurationProvider);
 
         // an add under way, held at the provider, when the close runs

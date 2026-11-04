@@ -25,7 +25,7 @@ public class Http3StreamReaderTest
     [TestMethod]
     public async Task Stopping_inspection_joins_the_native_read_before_releasing_its_buffer()
     {
-        using var source = new Http3PendingReadStream();
+        await using var source = new Http3PendingReadStream();
         await using var reader = new Http3StreamReader(source);
         reader.BeginBodyInspection(64 * 1024);
         byte[] callerBuffer = [0x11, 0x22];
@@ -45,7 +45,7 @@ public class Http3StreamReaderTest
     [TestMethod]
     public async Task A_new_pending_read_after_response_submission_stops_without_waiting_for_peer_input()
     {
-        using var source = new Http3PendingReadStream();
+        await using var source = new Http3PendingReadStream();
         var quic = new Http3RecordingQuicStream(Stream.Null);
         await using var reader = new Http3StreamReader(source, quic: quic);
         reader.BeginBodyInspection(64 * 1024);
@@ -99,7 +99,7 @@ public class Http3StreamReaderTest
     [TestMethod]
     public async Task A_completed_response_aborts_the_next_pending_native_read()
     {
-        using var source = new Http3PendingReadStream();
+        await using var source = new Http3PendingReadStream();
         var quic = new Http3RecordingQuicStream(Stream.Null);
         await using var reader = new Http3StreamReader(source, quic: quic);
         reader.BeginBodyInspection(64 * 1024);
@@ -120,7 +120,7 @@ public class Http3StreamReaderTest
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
-        using var source = new Http3SynchronousReadHoldingStream(lifetime.Token);
+        await using var source = new Http3SynchronousReadHoldingStream(lifetime.Token);
         await using var reader = new Http3StreamReader(source);
         reader.BeginBodyInspection(64 * 1024);
         byte[] callerBuffer = [0x11, 0x22];
@@ -160,7 +160,7 @@ public class Http3StreamReaderTest
     [DataRow(true, 16384)]
     public async Task Only_request_readers_grow_after_consuming_a_full_buffer(bool allowBufferGrowth, int nextReadSize)
     {
-        using var source = new Http3ReadSizeRecordingStream(4097);
+        await using var source = new Http3ReadSizeRecordingStream(4097);
         await using var reader = new Http3StreamReader(source, allowBufferGrowth);
         await reader.Discard(4097, TestContext.CancellationToken);
 

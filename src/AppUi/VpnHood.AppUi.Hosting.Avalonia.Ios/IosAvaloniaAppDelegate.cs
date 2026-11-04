@@ -21,6 +21,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Ios;
 public abstract class IosAvaloniaAppDelegate<TUi> : AvaloniaAppDelegate<TUi>
     where TUi : Application, IAvaloniaUi, new()
 {
+    // ReSharper disable once NotAccessedField.Local
     private NSObject? _foregroundObserver; // kept for the app's life, as the observation is
 
     // A file or a link the app is opened with - an access key's, as the head's Info.plist declares - goes to the UI,

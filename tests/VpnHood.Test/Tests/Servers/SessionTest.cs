@@ -140,7 +140,7 @@ public class SessionTest : TestBase
         using var session = CreateSession(accessManager, netFilter, new SessionOptions {
             AllowTcpPacket = allowTcpPacket, AllowUdpPacket = allowUdpPacket, AllowQuicPacket = allowQuicPacket
         });
-        using var channel = new TestPacketChannel();
+        await using var channel = new TestPacketChannel();
         session.Tunnel.AddChannel(channel);
 
         foreach (var port in new[] { 1234, 443, 80, 53 })

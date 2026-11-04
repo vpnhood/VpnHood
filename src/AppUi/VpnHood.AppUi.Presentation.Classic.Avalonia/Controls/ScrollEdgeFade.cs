@@ -55,7 +55,7 @@ public static class ScrollEdgeFade
             return;
 
         var current = (presenter.OpacityMask as LinearGradientBrush)?.EndPoint.Point.Y ?? 0;
-        if (current == band)
+        if (Math.Abs(current - band) < 0.5) // both in whole pixels
             return;
 
         presenter.OpacityMask = band == 0 ? null : new LinearGradientBrush {

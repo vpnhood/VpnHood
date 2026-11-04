@@ -81,11 +81,14 @@ internal static class WindowsUiRelaunch
         }
     }
 
-    // as install-client-close.ps1 writes it
+    // as install-client-close.ps1 writes it, and only JSON makes one
+    // ReSharper disable once ClassNeverInstantiated.Local
     private sealed class ClosedUi
     {
+        // ReSharper disable UnusedAutoPropertyAccessor.Local
         public int SessionId { get; init; }
         public bool IsTray { get; init; }
+        // ReSharper restore UnusedAutoPropertyAccessor.Local
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

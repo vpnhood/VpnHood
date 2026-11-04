@@ -16,7 +16,7 @@ internal sealed class Http3InlineAbortQuicStream(Stream output) : MemoryStream, 
     public long? ReadAbortCode { get; private set; }
     public long? WriteAbortCode { get; private set; }
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         HasPendingRead = true;

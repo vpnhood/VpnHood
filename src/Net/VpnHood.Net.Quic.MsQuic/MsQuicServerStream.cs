@@ -63,6 +63,5 @@ internal sealed class MsQuicServerStream(QuicStream stream) : Stream, IQuicStrea
 
         // The native close may outlive this deadline; it owns its remaining resources until it finishes.
         await stream.TryDisposeAsync(TimeSpan.FromSeconds(5)).Vhc();
-        GC.SuppressFinalize(this);
     }
 }

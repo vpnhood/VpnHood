@@ -52,6 +52,7 @@ internal static class DaemonCommand
 
         DaemonChannelServer? channel = null;
         IAppWebHost? localWebHost = null;
+        // ReSharper disable once AccessToModifiedClosure
         EventHandler onRestarted = (_, _) => Publish(channel, localWebHost);
         try {
             // Bind now rather than wait for the first caller: the window and the commands ask the

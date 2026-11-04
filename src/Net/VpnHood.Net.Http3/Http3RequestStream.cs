@@ -93,8 +93,9 @@ internal sealed class Http3RequestStream(Http3StreamReader reader, IQuicStream q
                     }
                 }
                 else if (type == 1) {
-                    if (!await ReadTrailers(reader, length, trailersSeen, headerBudget, options,
-                            cancellationToken).Vhc())
+                    if (trailersSeen)
+                        throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
+                    if (!await ReadTrailers(reader, length, headerBudget, options, cancellationToken).Vhc())
                         return;
                     trailersSeen = true;
                 }
@@ -116,12 +117,10 @@ internal sealed class Http3RequestStream(Http3StreamReader reader, IQuicStream q
         }
     }
 
-    private static async Task<bool> ReadTrailers(Http3StreamReader reader, long length, bool trailersSeen,
+    private static async Task<bool> ReadTrailers(Http3StreamReader reader, long length,
         Http3HeaderBudget headerBudget, Http3ServerOptions options,
         CancellationToken cancellationToken)
     {
-        if (trailersSeen)
-            throw new Http3ProtocolException(Http3Protocol.FrameUnexpected);
         var trailerHeaders = new Http3RequestHeaders(trailers: true, options.MaxRequestLineBytes);
         var section = await Http3Qpack.ReadSection(reader, length, trailerHeaders.Append,
             options, headerBudget, cancellationToken).Vhc();

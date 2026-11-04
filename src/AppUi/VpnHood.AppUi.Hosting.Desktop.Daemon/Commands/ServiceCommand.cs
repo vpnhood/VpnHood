@@ -64,7 +64,7 @@ internal static class ServiceCommand
             return 130;
         }
         catch (Exception ex) {
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            await CliPrinter.Error(ex.Message).Vhc();
             return 1;
         }
     }

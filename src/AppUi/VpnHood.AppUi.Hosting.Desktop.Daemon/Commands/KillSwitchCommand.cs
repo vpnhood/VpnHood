@@ -48,7 +48,7 @@ internal static class KillSwitchCommand
                 return await platform.RunKillSwitchOffScript(scriptPath, cancellationToken).Vhc();
             }
             catch (Exception ex) when (ex is not OperationCanceledException) {
-                await Console.Error.WriteLineAsync(ex.Message).Vhc();
+                await CliPrinter.Error(ex.Message).Vhc();
                 return 1;
             }
         }

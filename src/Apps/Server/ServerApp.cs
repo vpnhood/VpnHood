@@ -45,6 +45,7 @@ public class ServerApp : IDisposable
     private readonly Lazy<IAccessManager> _accessManager;
     private readonly CommandListener _commandListener;
     private readonly CancellationTokenSource _stopCts = new(); // never disposed: a late stop must not hit a disposed source
+    // ReSharper disable once NotAccessedField.Local
     private IReadOnlyList<PosixSignalRegistration> _signalRegistrations = []; // held for the process's life: a collected one unregisters
     private VpnHoodServer? _vpnHoodServer;
     private IVpnAdapter? _vpnAdapter;
@@ -264,7 +265,7 @@ public class ServerApp : IDisposable
             // Returns once the server has exited, as systemd expects of ExecStop: right after it,
             // systemd signals every process left in the unit, the cleanup's ip and iptables too.
             if (!await WaitForInstanceExit(TimeSpan.FromSeconds(30), cancellationToken).Vhc()) {
-                Console.Error.WriteLine("The server has not stopped within 30 seconds.");
+                await Console.Error.WriteLineAsync("The server has not stopped within 30 seconds.".AsMemory(), cancellationToken).Vhc();
                 return 1;
             }
 
@@ -429,6 +430,7 @@ public class ServerApp : IDisposable
             VhLogger.Instance.LogError(ex, "Could not stop the server cleanly.");
         }
 
+        // ReSharper disable once MethodHasAsyncOverload
         server.Dispose();
     }
 

@@ -220,7 +220,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                     isBinary = webSocketHeader.IsBinary;
                     if (!webSocketHeader.IsFinal)
                         _fragmentedBinary = isBinary;
-                    if (webSocketHeader.PayloadLength == 0 && !webSocketHeader.IsFinal)
+                    if (webSocketHeader is { PayloadLength: 0, IsFinal: false })
                         continue;
                 }
 

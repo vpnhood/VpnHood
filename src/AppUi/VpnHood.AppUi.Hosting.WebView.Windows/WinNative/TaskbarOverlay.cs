@@ -34,6 +34,8 @@ internal sealed class TaskbarOverlay
     public void OnButtonCreated()
     {
         if (_taskbar == null) {
+            // a COM object: the cast is its QueryInterface
+            // ReSharper disable once SuspiciousTypeConversion.Global
             var taskbar = (ITaskbarList3)new TaskbarList();
             taskbar.HrInit();
             _taskbar = taskbar;
@@ -43,7 +45,7 @@ internal sealed class TaskbarOverlay
     }
 
     [ComImport, Guid("56FDF344-FD6D-11d0-958A-006097C9A090"), ClassInterface(ClassInterfaceType.None)]
-    private class TaskbarList { }
+    private class TaskbarList;
 
     // ITaskbarList, ITaskbarList2 and ITaskbarList3 in their table's order, as far as SetOverlayIcon
     [ComImport, Guid("ea1afb91-9e28-4b86-90e9-9e9f8a5eefaf"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

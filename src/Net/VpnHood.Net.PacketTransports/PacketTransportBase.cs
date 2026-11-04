@@ -180,7 +180,7 @@ public abstract class PacketTransportBase : IPacketTransport
         return _blockingTimeout is { } blockingTimeout ? new CancellationTokenSource(blockingTimeout) : null;
     }
 
-    private readonly object _singlePacketLock = new();
+    private readonly Lock _singlePacketLock = new();
     private IpPacket[] _singlePacketBuffer = new IpPacket[1];
 
     public bool SendPacketQueued(IpPacket ipPacket)

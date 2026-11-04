@@ -96,6 +96,7 @@ internal sealed class DaemonApiHandler : DelegatingHandler
         timeout.CancelAfter(TokenChangeWait);
 
         var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        // ReSharper disable once AccessToModifiedClosure
         void OnChanged(object? sender, EventArgs e) => changed.TrySetResult();
 
         _answerProvider.Changed += OnChanged;

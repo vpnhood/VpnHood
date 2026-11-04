@@ -29,7 +29,7 @@ namespace VpnHood.Core.Client;
 /// Request flow:
 /// <list type="number">
 ///   <item>Try to reuse a free pooled stream from <see cref="ConnectorService.GetFreeConnection"/>.</item>
-///   <item>On failure or no free connection, open a fresh stream via <see cref="ConnectorService.GetConnectionToServer"/>.</item>
+///   <item>On failure or no free connection, open a fresh stream via <c>ConnectorService.GetConnectionToServer</c>.</item>
 ///   <item>Serialize the request, write it to the stream, read back the <see cref="VpnHood.Core.Common.Messaging.SessionResponse"/>.</item>
 /// </list>
 /// </para>

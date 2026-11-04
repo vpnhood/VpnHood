@@ -399,15 +399,15 @@ public class VpnProfileTest : TestAppBase
             new VpnProfileUpdateParams { SelectedLocation = "US/*" });
         Assert.AreEqual("US/*", app.State.VpnProfile?.SelectedLocationInfo?.ServerLocation);
         CollectionAssert.AreEquivalent(new[] { "#tag1", "~#tag2" },
-            app.State.VpnProfile?.SelectedLocationInfo?.Tags.ToArray());
+            app.State.VpnProfile?.SelectedLocationInfo?.Tags?.ToArray());
 
         app.VpnProfileService.Update(vpnProfile.VpnProfileId,
             new VpnProfileUpdateParams { SelectedLocation = "US/california" });
-        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.VpnProfile?.SelectedLocationInfo?.Tags.ToArray());
+        CollectionAssert.AreEquivalent(new[] { "#tag1", "#tag2" }, app.State.VpnProfile?.SelectedLocationInfo?.Tags?.ToArray());
 
         app.VpnProfileService.Update(vpnProfile.VpnProfileId,
             new VpnProfileUpdateParams { SelectedLocation = "US/texas" });
-        CollectionAssert.AreEquivalent(new[] { "#tag1" }, app.State.VpnProfile?.SelectedLocationInfo?.Tags.ToArray());
+        CollectionAssert.AreEquivalent(new[] { "#tag1" }, app.State.VpnProfile?.SelectedLocationInfo?.Tags?.ToArray());
 
         // test three regin
         token = CreateToken();
@@ -416,13 +416,13 @@ public class VpnProfileTest : TestAppBase
         app.UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
         app.VpnProfileService.Update(vpnProfile.VpnProfileId,
             new VpnProfileUpdateParams { SelectedLocation = "FR/paris" });
-        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.VpnProfile?.SelectedLocationInfo?.Tags.ToArray());
+        CollectionAssert.AreEquivalent(new[] { "#p1", "#p2" }, app.State.VpnProfile?.SelectedLocationInfo?.Tags?.ToArray());
 
         app.VpnProfileService.Update(vpnProfile.VpnProfileId,
             new VpnProfileUpdateParams { SelectedLocation = "*/*" });
         app.Settings.Save();
         CollectionAssert.AreEquivalent(new[] { "~#p1", "~#p2", "~#z1", "~#z2" },
-            app.State.VpnProfile?.SelectedLocationInfo?.Tags.ToArray());
+            app.State.VpnProfile?.SelectedLocationInfo?.Tags?.ToArray());
     }
 
     [TestMethod]

@@ -28,8 +28,11 @@ public class AppTrackerService
     ];
 
     private readonly AppSettingsService _settingsService;
+    // what the build asks for, not the value of the property that reads each, so no backing field of it
+    // ReSharper disable ReplaceWithFieldKeyword
     private readonly bool _isLicenseAgreementRequired;
     private readonly bool _isOptInRequired;
+    // ReSharper restore ReplaceWithFieldKeyword
     private readonly string _clientId;
     private readonly Lock _firstLaunchLock = new();
 

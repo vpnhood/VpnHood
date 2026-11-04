@@ -220,6 +220,8 @@ public class QuickLaunchTileService : TileService
         using var adWaitCts = new CancellationTokenSource();
         EventHandler stateChanged = (_, _) => {
             if (_vpnServiceManager.ConnectionInfo.ClientState is ClientState.WaitingForAd)
+                // a handler under way may outlive the using: the wait is over then, and TryCancel takes a disposed source
+                // ReSharper disable once AccessToDisposedClosure
                 adWaitCts.TryCancel();
         };
 

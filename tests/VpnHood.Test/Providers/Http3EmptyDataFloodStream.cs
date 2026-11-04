@@ -4,7 +4,7 @@ internal sealed class Http3EmptyDataFloodStream(byte[] prefix) : MemoryStream(pr
 {
     public int FloodBytesProvided { get; private set; }
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (Position < Length)

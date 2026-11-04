@@ -109,7 +109,7 @@ public partial class Http3FrontTest
     {
         const string name = "trailer-burst-data-after-trailers";
         byte[] bytes = [.. BuildLiteralRequest(ValidationHeaders()),
-            .. BuildLiteralRequest([.. Enumerable.Repeat(("x", ""), 8)]), .. Frame(0, [1])];
+            .. BuildLiteralRequest(Enumerable.Repeat(("x", ""), 8).ToArray()), .. Frame(0, [1])];
         await AssertFreshBurstOutcomes(name, bytes, 0x105, TestContext.CancellationToken);
     }
 
@@ -230,7 +230,7 @@ public partial class Http3FrontTest
         var headers = octets ? CreateSizedFields(ValidationHeaders(), 32000, 8) : CreateCountedHeaders();
         IReadOnlyList<(string Name, string Value)> trailers = octets
             ? CreateSizedFields([], total - 32000, 8)
-            : [.. Enumerable.Repeat(("x", ""), total - headers.Count)];
+            : Enumerable.Repeat(("x", ""), total - headers.Count).ToArray();
         return [.. BuildLiteralRequest(headers), .. BuildLiteralRequest(trailers)];
     }
 

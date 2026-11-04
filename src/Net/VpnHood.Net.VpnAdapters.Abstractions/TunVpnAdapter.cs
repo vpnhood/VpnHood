@@ -924,7 +924,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // On the pool: the lock is free, so the restart's stop would run here, inside a start's end
             if (IsStarted && _keepStarted) {
                 var keepStartedToken = _keepStartedCts.Token; // this run's, not a later one's
-                _ = Task.Run(() => RunRestart(keepStartedToken));
+                _ = Task.Run(() => RunRestart(keepStartedToken), keepStartedToken);
             }
         }
         catch (Exception ex) {

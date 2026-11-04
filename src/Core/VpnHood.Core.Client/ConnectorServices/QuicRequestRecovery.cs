@@ -66,7 +66,7 @@ internal sealed class QuicRequestRecovery(
         var connection = await tcpConnectionFactory.CreateConnection(
             connectionId + ":clock", isTcpPacketChannel: false, onConnectAttempt: null, cancellationToken).Vhc();
         // The probe's deadline also closes the socket during a pending read or graceful TLS close.
-        using var closeOnCancellation = cancellationToken.Register(connection.Dispose);
+        await using var closeOnCancellation = cancellationToken.Register(connection.Dispose);
         try {
             var pathBase = vpnEndPoint.PathBase?.Trim('/');
             var path = string.IsNullOrEmpty(pathBase) ? "/" : $"/{pathBase}/";

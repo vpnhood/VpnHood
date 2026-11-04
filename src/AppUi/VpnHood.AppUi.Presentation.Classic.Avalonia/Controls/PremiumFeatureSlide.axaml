@@ -13,7 +13,7 @@
         <Image ui:AppImage.Source="images/rocket-smoke.webp" Stretch="Uniform" VerticalAlignment="Top" Height="77" Margin="0,108,0,0" />
       </Grid>
     </Viewbox>
-    <Image x:Name="SlideImage" MaxHeight="200" Stretch="Uniform" Margin="0,0,0,20" />
+    <Image x:Name="SlideImage" Grid.Row="0" MaxHeight="200" Stretch="Uniform" Margin="0,0,0,20" />
     <TextBlock x:Name="TitleText" Grid.Row="1" Classes="h3" TextAlignment="Center" Margin="0,0,0,8" />
     <TextBlock x:Name="DescriptionText" Grid.Row="2" Classes="label-large" Opacity="0.7" TextWrapping="Wrap" TextAlignment="Center" Margin="12,0" />
   </Grid>

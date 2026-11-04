@@ -15,9 +15,9 @@ internal sealed class Http3PendingWriteStream(CancellationToken lifetimeToken) :
 
     public void ReleaseWrite() => _released.TrySetResult();
 
-    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        using var registration = cancellationToken.Register(OnCanceled);
+        await using var registration = cancellationToken.Register(OnCanceled);
         _started.TrySetResult();
         try {
             // Native cancellation may finish after its signal; ownership lasts until completion.

@@ -23,7 +23,7 @@ public class Http3AdmissionTest
     public async Task A_filter_cannot_delay_a_known_request_frame_waiting_for_more_bytes(int type)
     {
         byte[] wire = [(byte)type];
-        using var source = new Http3AdmissionTestStream(wire);
+        await using var source = new Http3AdmissionTestStream(wire);
         var filter = new Http3PendingStreamFilter();
         var admission = await Http3Admission.Read(source, Context, filter, 4096, TestContext.CancellationToken);
         await using var replay = admission.Stream;
@@ -47,7 +47,7 @@ public class Http3AdmissionTest
             _ => throw new ArgumentOutOfRangeException(nameof(encodedLength))
         };
         wire[^1] = 3;
-        using var source = new Http3AdmissionTestStream(wire);
+        await using var source = new Http3AdmissionTestStream(wire);
         var filter = new Http3PendingStreamFilter();
         var admission = await Http3Admission.Read(source, Context, filter, 4096, TestContext.CancellationToken);
         await using var replay = admission.Stream;
@@ -66,7 +66,7 @@ public class Http3AdmissionTest
     {
         var frame = Http3Protocol.Frame(0x21, new byte[payloadLength]);
         byte[] wire = [.. frame, 0, 0];
-        using var source = new Http3AdmissionTestStream(wire);
+        await using var source = new Http3AdmissionTestStream(wire);
         var filter = new Http3PendingStreamFilter();
         var admission = await Http3Admission.Read(source, Context, filter, 4096, TestContext.CancellationToken);
         await using var replay = admission.Stream;
@@ -82,7 +82,7 @@ public class Http3AdmissionTest
     public async Task A_filter_cannot_wait_past_its_prefix_limit_inside_an_unknown_frame()
     {
         byte[] wire = [0x21, 0x40, 0x40, 1, 2, 3];
-        using var source = new Http3AdmissionTestStream(wire);
+        await using var source = new Http3AdmissionTestStream(wire);
         var filter = new Http3PendingStreamFilter();
         var admission = await Http3Admission.Read(source, Context, filter, 4, TestContext.CancellationToken);
         await using var replay = admission.Stream;

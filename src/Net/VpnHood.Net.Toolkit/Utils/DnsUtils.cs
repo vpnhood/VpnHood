@@ -16,8 +16,10 @@ public static class DnsUtils
     public static IReadOnlyList<IPAddress> GetNetworkDnsServers()
     {
         var dnsServers = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(x => x.OperationalStatus == OperationalStatus.Up &&
-                        x.NetworkInterfaceType is not (NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel))
+            .Where(x => x is {
+                OperationalStatus: OperationalStatus.Up,
+                NetworkInterfaceType: not (NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel)
+            })
             .Select(x => x.GetIPProperties())
             .Where(x => x.GatewayAddresses.Count > 0)
             .SelectMany(x => x.DnsAddresses)
@@ -40,7 +42,7 @@ public static class DnsUtils
 
         return File.ReadAllLines(filePath)
             .Select(x => x.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
-            .Where(x => x.Length >= 2 && x[0] == "nameserver")
+            .Where(x => x is ["nameserver", _, ..])
             .Select(x => IPAddress.TryParse(x[1], out var address) ? address : null)
             .OfType<IPAddress>()
             .Where(x => !IPAddress.IsLoopback(x))

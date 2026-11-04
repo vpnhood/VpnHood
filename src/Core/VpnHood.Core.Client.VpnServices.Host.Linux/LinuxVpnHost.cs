@@ -34,9 +34,11 @@ public static class LinuxVpnHost
 
             // A signal - the unit's stop, Ctrl+C, a terminal's hang-up - ends the session as a disconnect does, and
             // the process with it; the signals are held for the run, as a collected one unregisters.
+            // ReSharper disable AccessToDisposedClosure
             using var sigTerm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context => OnSignal(context, vpnService));
             using var sigInt = PosixSignalRegistration.Create(PosixSignal.SIGINT, context => OnSignal(context, vpnService));
             using var sigHup = PosixSignalRegistration.Create(PosixSignal.SIGHUP, context => OnSignal(context, vpnService));
+            // ReSharper restore AccessToDisposedClosure
 
             vpnService.OnConnect();
             await vpnService.Stopped.Vhc();

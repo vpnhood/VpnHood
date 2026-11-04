@@ -72,7 +72,7 @@ internal sealed class DevHeadSession : IDisposable
         var path = Path.Combine(directory, ExecutableName);
         if (!File.Exists(path))
             throw new FileNotFoundException(
-                $"The dev head is not built. Run: dotnet build src/Apps/Tools/AvaloniaUI.Dev", path);
+                "The dev head is not built. Run: dotnet build src/Apps/Tools/AvaloniaUI.Dev", path);
 
         return path;
     }

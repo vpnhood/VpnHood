@@ -20,7 +20,7 @@ namespace VpnHood.Core.Server.Listeners;
 internal class TcpListenerHost(
     SessionManager sessionManager,
     UnauthenticatedConnections unauthenticatedConnections,
-    CancellationToken cancellationToken,
+    CancellationToken serverCancellationToken,
     Func<IStreamConnection, Action, CancellationToken, Task> processNewConnection)
     : IAsyncDisposable
 {
@@ -72,7 +72,7 @@ internal class TcpListenerHost(
                     VhLogger.Format(ipEndPoint));
                 var tcpListener = new TcpListener(ipEndPoint);
                 tcpListener.Start();
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var cts = CancellationTokenSource.CreateLinkedTokenSource(serverCancellationToken);
                 var task = ListenTask(tcpListener, cts.Token);
                 _listeners.Add(new TcpListenerEntry(tcpListener, task, cts));
                 endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Tcp, EndPoint = ipEndPoint });

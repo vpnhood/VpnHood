@@ -14,15 +14,11 @@ public interface IAuthenticationExternalProvider : IDisposable
     /// </summary>
     public string ProviderId { get; }
 
-    /// <param name="uiContext">
-    /// The window, or null where none is open: a provider that shows a sheet throws
-    /// <c>UiContextNotAvailableException</c> without one.
-    /// </param>
+    // uiContext: the window, or null where none is open: a provider that shows a sheet throws
+    // UiContextNotAvailableException without one.
     public Task<string> SignIn(IUiContext? uiContext, bool isSilentLogin, CancellationToken cancellationToken);
 
-    /// <param name="uiContext">
-    /// The window, or null where none is open: a provider that needs one throws
-    /// <c>UiContextNotAvailableException</c>.
-    /// </param>
+    // uiContext: the window, or null where none is open: a provider that needs one throws
+    // UiContextNotAvailableException.
     public Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken);
 }

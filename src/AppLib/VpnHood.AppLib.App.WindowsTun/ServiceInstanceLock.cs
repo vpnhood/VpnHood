@@ -62,6 +62,7 @@ internal sealed class ServiceInstanceLock : IDisposable
             return;
 
         // a full count throws, as after a release by another process; the handles go all the same
+        // ReSharper disable once AccessToDisposedClosure
         VhInvoker.TryInvoke("release the service's instance lock", LogLevel.Warning, () => _semaphore.Release());
         _semaphore.Dispose();
         _namespace.Dispose();

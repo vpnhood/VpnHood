@@ -528,7 +528,7 @@ public partial class Http3FrontTest
         AssertSame(name, expected, actual);
     }
 
-    private async Task AssertResponseMatches(string name, byte[] request, byte[] controlSuffix,
+    private static async Task AssertResponseMatches(string name, byte[] request, byte[] controlSuffix,
         byte[]? extraOneWay, CancellationToken cancellationToken, byte[]? initialControlBytes = null)
     {
         var probe = CreateProbe();

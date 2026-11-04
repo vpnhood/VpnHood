@@ -141,7 +141,7 @@
          layout's. -->
     <!-- ReSharper disable Xaml.MissingGridIndex -->
     <Panel x:Name="UpdateNoticeLayer" Container.Name="Notice" Container.Sizing="Width">
-      <Border x:Name="UpdateNotice" Classes="update-notice update-alert" IsVisible="False">
+      <Border x:Name="UpdateNotice" Classes="update-notice" IsVisible="False">
         <Grid x:Name="UpdateNoticeContent" ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
           <TextBlock x:Name="UpdateNoticeIcon" Classes="mdi update-icon" />
           <StackPanel Classes="update-texts" Spacing="4">

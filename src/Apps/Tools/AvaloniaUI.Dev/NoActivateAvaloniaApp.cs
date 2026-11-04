@@ -80,6 +80,7 @@ internal sealed class NoActivateAvaloniaApp : ClassicAvaloniaApp
             _lastForeignForeground = GetForegroundWindow();
             isWatching = SetWinEventHook(EventSystemForeground, EventSystemForeground, IntPtr.Zero, ForegroundChanged,
                 0, 0, WinEventOutOfContext) != IntPtr.Zero;
+            // ReSharper disable once AccessToDisposedClosure
             started.Set();
             if (!isWatching)
                 return;

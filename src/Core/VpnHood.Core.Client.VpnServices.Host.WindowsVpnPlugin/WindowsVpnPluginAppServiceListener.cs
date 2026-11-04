@@ -46,27 +46,34 @@ internal sealed class WindowsVpnPluginAppServiceListener : IMessageListener
     // A WinRT event handler: an exception escaping it takes down the VPN host.
     private async void OnRequestReceived(AppServiceConnection sender, AppServiceRequestReceivedEventArgs args)
     {
-        var deferral = args.GetDeferral();
         try {
-            // A listener the app's connection made before its session waits for that session's start; unanswered once the
-            // session has ended, so the app finds no session at its next request.
-            await Task.WhenAny(_startedTcs.Task, _disposedTcs.Task).Vhc();
-            var messageHandler = _messageHandler;
-            if (messageHandler is null)
-                return;
-
-            if (!args.Request.Message.TryGetValue(WindowsVpnPluginAppService.MessageKey, out var value) || value is not byte[] request)
-                throw new InvalidDataException("The app's message carries no request.");
-
-            var response = await messageHandler(request, CancellationToken.None).Vhc();
-            await args.Request.SendResponseAsync(new ValueSet { [WindowsVpnPluginAppService.MessageKey] = response.ToArray() }).AsTask().Vhc();
+            var deferral = args.GetDeferral();
+            try {
+                await AnswerRequest(args, CancellationToken.None).Vhc();
+            }
+            finally {
+                deferral.Complete();
+            }
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not answer the app's request.");
         }
-        finally {
-            deferral.Complete();
-        }
+    }
+
+    private async Task AnswerRequest(AppServiceRequestReceivedEventArgs args, CancellationToken cancellationToken)
+    {
+        // A listener the app's connection made before its session waits for that session's start; unanswered once the
+        // session has ended, so the app finds no session at its next request.
+        await Task.WhenAny(_startedTcs.Task, _disposedTcs.Task).Vhc();
+        var messageHandler = _messageHandler;
+        if (messageHandler is null)
+            return;
+
+        if (!args.Request.Message.TryGetValue(WindowsVpnPluginAppService.MessageKey, out var value) || value is not byte[] request)
+            throw new InvalidDataException("The app's message carries no request.");
+
+        var response = await messageHandler(request, cancellationToken).Vhc();
+        await args.Request.SendResponseAsync(new ValueSet { [WindowsVpnPluginAppService.MessageKey] = response.ToArray() }).AsTask().Vhc();
     }
 
     public void Dispose()

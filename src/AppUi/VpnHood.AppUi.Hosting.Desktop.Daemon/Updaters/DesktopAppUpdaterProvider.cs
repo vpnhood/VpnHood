@@ -32,9 +32,6 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     protected const string MissedFileName = "update.missed";
 
     private static readonly HttpClient HttpClient = new();
-    private readonly string _updatesPath = updatesPath;
-    private readonly string _missedPath = missedPath;
-    private readonly Version _appVersion = appVersion;
     private readonly Lock _stateLock = new();
 
     // this service's update, for one release: a restart forgets it, as an install ends it
@@ -148,7 +145,7 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     public async Task RetryMissedUpdate(CancellationToken cancellationToken)
     {
         try {
-            if (!File.Exists(_missedPath) || !await IsAutomaticUpdateOn(cancellationToken).Vhc())
+            if (!File.Exists(missedPath) || !await IsAutomaticUpdateOn(cancellationToken).Vhc())
                 return;
 
             VhLogger.Instance.LogInformation("Running the updater again: its last run could not reach the server.");
@@ -163,7 +160,7 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     private string? FindDownload()
     {
         string? newestPath = null;
-        var newestVersion = _appVersion;
+        var newestVersion = appVersion;
         foreach (var (path, version) in EnumerateDownloads(isPartIncluded: false)) {
             if (version > newestVersion) {
                 newestPath = path;
@@ -179,10 +176,10 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     // version.
     private IEnumerable<(string Path, Version Version)> EnumerateDownloads(bool isPartIncluded)
     {
-        if (!Directory.Exists(_updatesPath))
+        if (!Directory.Exists(updatesPath))
             yield break;
 
-        foreach (var path in Directory.EnumerateFiles(_updatesPath)) {
+        foreach (var path in Directory.EnumerateFiles(updatesPath)) {
             var fileName = Path.GetFileName(path);
             if ((isPartIncluded || !fileName.EndsWith(".part", StringComparison.OrdinalIgnoreCase)) &&
                 Version.TryParse(fileName.Split('-')[0], out var version))
@@ -227,7 +224,7 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
                 // an update installed: its package goes, and none newer, which the updater may have downloaded since
                 // the feed was read
                 if (!isBusy)
-                    RemoveDownloads(_appVersion, isVersionIncluded: true);
+                    RemoveDownloads(appVersion, isVersionIncluded: true);
                 return AppUpdateState.None;
             }
 
@@ -309,7 +306,7 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     // per release, named as the feed names it
     private string GetPackagePath(AppRelease release)
     {
-        return Path.Combine(_updatesPath, $"{release.Version}-{Path.GetFileName(release.PackageUrl.AbsolutePath)}");
+        return Path.Combine(updatesPath, $"{release.Version}-{Path.GetFileName(release.PackageUrl.AbsolutePath)}");
     }
 
     // A cut download keeps its .part, which the next Update continues by a range request; a server that ignores the
@@ -323,7 +320,7 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         var partPath = packagePath + ".part";
         try {
             VhLogger.Instance.LogInformation("Downloading the update. Version: {Version}", release.Version);
-            Directory.CreateDirectory(_updatesPath);
+            Directory.CreateDirectory(updatesPath);
             RemoveDownloads(release.Version, isVersionIncluded: false);
 
             var partBytes = File.Exists(partPath) ? new FileInfo(partPath).Length : 0;

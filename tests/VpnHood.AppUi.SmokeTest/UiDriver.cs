@@ -337,9 +337,7 @@ internal sealed class UiDriver(Process process) : IDisposable
     {
         try {
             var current = element.Current;
-            return !current.IsOffscreen
-                   && current.BoundingRectangle.Width >= 1
-                   && current.BoundingRectangle.Height >= 1;
+            return current is { IsOffscreen: false, BoundingRectangle: { Width: >= 1, Height: >= 1 } };
         }
         catch (ElementNotAvailableException) {
             // it went away between the search and the question, so it is not there to touch

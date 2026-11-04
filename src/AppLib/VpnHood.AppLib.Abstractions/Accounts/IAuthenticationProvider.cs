@@ -41,16 +41,12 @@ public interface IAuthenticationProvider : IDisposable
     /// </summary>
     void InvalidateAccessToken(string accessToken);
 
-    /// <param name="uiContext">
-    /// The window, or null where none is open, as in the desktop service: the portal's password form
-    /// needs none; a method that shows a sheet (Google, Apple) throws
-    /// <c>UiContextNotAvailableException</c> without one.
-    /// </param>
+    // uiContext: the window, or null where none is open, as in the desktop service: the portal's password
+    // form needs none; a method that shows a sheet (Google, Apple) throws UiContextNotAvailableException
+    // without one.
     Task<SignInResult> SignIn(IUiContext? uiContext, SignInOptions signInOptions, CancellationToken cancellationToken);
 
-    /// <param name="uiContext">
-    /// The window, or null where none is open. The session ends either way; what only a window can
-    /// clear on the device is left.
-    /// </param>
+    // uiContext: the window, or null where none is open. The session ends either way; what only a window
+    // can clear on the device is left.
     Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken);
 }

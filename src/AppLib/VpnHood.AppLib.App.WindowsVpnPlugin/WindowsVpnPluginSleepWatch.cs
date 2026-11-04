@@ -19,6 +19,7 @@ internal sealed class WindowsVpnPluginSleepWatch : IDisposable
     private readonly Action _onWake;
     private readonly Action<bool> _onDisplayChanged;
     // the callback and its parameters live as long as the registrations: Windows calls back through them
+    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
     private readonly DeviceNotifyCallbackRoutine _callback;
     private readonly IntPtr _parameters;
     private readonly IntPtr _registration;

@@ -22,7 +22,7 @@ internal class AndroidWebViewClient(Func<string?> localToken) : WebViewClient
                _mainHost.Equals(new Uri(url).Host, StringComparison.OrdinalIgnoreCase);
     }
 
-    public override bool ShouldOverrideUrlLoading(NativeWebView? webView, string? url)
+    private bool ShouldOverrideUrl(NativeWebView? webView, string? url)
     {
         if (webView == null || url == null || IsMainHost(url))
             return false;
@@ -51,7 +51,7 @@ internal class AndroidWebViewClient(Func<string?> localToken) : WebViewClient
     // used for Window.Open such as SendReport
     public override bool ShouldOverrideUrlLoading(NativeWebView? webView, IWebResourceRequest? request)
     {
-        return ShouldOverrideUrlLoading(webView, request?.Url?.ToString());
+        return ShouldOverrideUrl(webView, request?.Url?.ToString());
     }
 
     public override void OnPageStarted(NativeWebView? view, string? url, Bitmap? favicon)

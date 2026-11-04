@@ -62,10 +62,8 @@ public class AppAdManager(
         return consentProvider.ShowPrivacyOptions(uiContext, cancellationToken);
     }
 
-    /// <param name="uiContext">
-    /// The window, or null where none is open: a build without ads refuses the server either way, and
-    /// one with ads throws <see cref="ShowAdNoUiException" />.
-    /// </param>
+    // uiContext: the window, or null where none is open: a build without ads refuses the server either
+    // way, and one with ads throws ShowAdNoUiException.
     public async Task ShowAd(
         IUiContext? uiContext,
         string sessionId,

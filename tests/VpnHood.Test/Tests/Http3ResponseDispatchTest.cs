@@ -13,8 +13,8 @@ public class Http3ResponseDispatchTest
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
-        using var output = new Http3PendingWriteStream(lifetime.Token);
-        using var quic = new Http3InlineAbortQuicStream(output);
+        await using var output = new Http3PendingWriteStream(lifetime.Token);
+        await using var quic = new Http3InlineAbortQuicStream(output);
         var options = new Http3ServerOptions();
         await using var input = new Http3StreamReader(quic, quic: quic);
         input.BeginBodyInspection(options.MaxBodyInspectionBytes);
@@ -51,13 +51,13 @@ public class Http3ResponseDispatchTest
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
-        using var output = new Http3PendingWriteStream(lifetime.Token);
+        await using var output = new Http3PendingWriteStream(lifetime.Token);
         var quic = new Http3RecordingQuicStream(output);
         // Two trailer fields follow three initial fields. Only the final trailer exceeds the
         // hard count of four. Its native read starts before response submission and completes
         // while the final response write is still pending.
         byte[] trailers = [0, 0, 0x21, (byte)'x', 0, 0x21, (byte)'x', 0];
-        using var source = new Http3GatedReadStream();
+        await using var source = new Http3GatedReadStream();
         await using var reader = new Http3StreamReader(source, quic: quic);
         reader.BeginBodyInspection(64 * 1024);
         var options = new Http3ServerOptions { MaxHeaderCount = 2 };
@@ -147,7 +147,7 @@ public class Http3ResponseDispatchTest
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
         using var releaseAbort = new ManualResetEventSlim();
         var abortStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var output = new Http3PendingWriteStream(lifetime.Token);
+        await using var output = new Http3PendingWriteStream(lifetime.Token);
         var quic = new Http3RecordingQuicStream(output);
         var options = new Http3ServerOptions();
         await using var input = new Http3StreamReader(Stream.Null, quic: quic);
@@ -188,7 +188,7 @@ public class Http3ResponseDispatchTest
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
         using var headers = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        using var output = new Http3PendingWriteStream(lifetime.Token);
+        await using var output = new Http3PendingWriteStream(lifetime.Token);
         var quic = new Http3RecordingQuicStream(output);
         var options = new Http3ServerOptions();
         await using var input = new Http3StreamReader(Stream.Null, quic: quic);
@@ -316,7 +316,7 @@ public class Http3ResponseDispatchTest
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
         using var headers = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
-        using var output = new Http3PendingWriteStream(lifetime.Token);
+        await using var output = new Http3PendingWriteStream(lifetime.Token);
         var quic = new Http3RecordingQuicStream(output);
         var options = new Http3ServerOptions();
         await using var input = new Http3StreamReader(Stream.Null, quic: quic);
@@ -348,7 +348,7 @@ public class Http3ResponseDispatchTest
     public async Task A_buffered_connection_error_still_closes_the_connection_after_response_fin_submission()
     {
         var gate = new Http3RequestTestGate();
-        using var output = new Http3SignaledOutputStream(gate);
+        await using var output = new Http3SignaledOutputStream(gate);
         var quic = new Http3RecordingQuicStream(output);
         var failures = new List<Exception>();
         var options = new Http3ServerOptions();
@@ -421,7 +421,7 @@ public class Http3ResponseDispatchTest
         lifetime.CancelAfter(TimeSpan.FromSeconds(5));
         using var headers = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
         using var output = new MemoryStream();
-        using var source = new Http3PendingReadStream();
+        await using var source = new Http3PendingReadStream();
         var quic = new Http3RecordingQuicStream(output);
         var failures = new List<Exception>();
         var options = new Http3ServerOptions();

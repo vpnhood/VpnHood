@@ -4,7 +4,7 @@ internal sealed class Http3ReadSizeRecordingStream(int length) : MemoryStream(ne
 {
     public List<int> ReadSizes { get; } = [];
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         ReadSizes.Add(buffer.Length);
         return base.ReadAsync(buffer, cancellationToken);

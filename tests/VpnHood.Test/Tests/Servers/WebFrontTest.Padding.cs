@@ -63,7 +63,7 @@ public partial class WebFrontTest
         Assert.IsFalse(upgradeResponse.Headers.Contains("X-WebSocketMasking"));
 
         // Reading below the wrapper exposes text padding that WebSocketStream normally discards.
-        using var writer = new WebSocketStream(proxyTls, "padding-proxy", false, false, standardMasking);
+        await using var writer = new WebSocketStream(proxyTls, "padding-proxy", false, false, standardMasking);
         for (var streamIndex = 0; streamIndex < 2; streamIndex++)
             await AssertProxyStreamPadding(writer, proxyTls, helloResponse, enabled && standardMasking,
                 streamIndex, TestCt);
@@ -95,7 +95,7 @@ public partial class WebFrontTest
         while (true) {
             Assert.IsTrue(next.IsBinary || next.IsText);
             Assert.IsTrue(next.MaskKey.IsEmpty);
-            if (next.IsBinary && next.PayloadLength == 0)
+            if (next is { IsBinary: true, PayloadLength: 0 })
                 break;
 
             var payload = new byte[(int)next.PayloadLength];

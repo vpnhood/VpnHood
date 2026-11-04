@@ -13,7 +13,7 @@ public class Http3RequestStreamTest
     {
         // Static GET/https/path plus a literal authority. Subsequent zero bytes form empty DATA frames.
         byte[] headers = [1, 18, 0, 0, 0xd1, 0xd7, 0xc1, 0x50, 11, .. "example.com"u8];
-        using var source = new Http3EmptyDataFloodStream(headers);
+        await using var source = new Http3EmptyDataFloodStream(headers);
         using var output = new MemoryStream();
         var quic = new Http3RecordingQuicStream(output);
         await using var reader = new Http3StreamReader(source, allowBufferGrowth: true, quic: quic);
@@ -87,7 +87,7 @@ public class Http3RequestStreamTest
         deadline.CancelAfter(TimeSpan.FromSeconds(5));
         byte[] headers = [1, 18, 0, 0, 0xd1, 0xd7, 0xc1, 0x50, 11, .. "example.com"u8];
         var gate = new Http3RequestTestGate();
-        using var source = new Http3GatedRequestStream(headers, [], gate);
+        await using var source = new Http3GatedRequestStream(headers, [], gate);
         using var output = new MemoryStream();
         var quic = new Http3RecordingQuicStream(output);
         await using var reader = new Http3StreamReader(source, allowBufferGrowth: true, quic: quic);

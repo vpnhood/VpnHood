@@ -308,7 +308,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     {
         lock (_lock) {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            _watchdogTimer ??= new Timer(_ => _ = RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
+            _watchdogTimer ??= new Timer(state => _ = RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
         }
     }
 

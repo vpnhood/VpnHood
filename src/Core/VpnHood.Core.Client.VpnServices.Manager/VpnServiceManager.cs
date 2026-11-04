@@ -69,8 +69,8 @@ public class VpnServiceManager : IDisposable
 
     public bool IsStarted => _startState.IsInitializing || ConnectionInfo.IsStarted();
 
-    /// <param name="uiContext">The caller's window, which asks the person for the VPN permission when
-    /// the OS needs that (Android); null when it has none, and then a missing permission fails.</param>
+    // uiContext: the caller's window, which asks the person for the VPN permission when the OS needs that
+    // (Android); null when it has none, and then a missing permission fails.
     public async Task Start(IUiContext? uiContext, VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         // before the start: the stop waits for an older start's Disposed, which it writes only while it owns the state
@@ -135,7 +135,7 @@ public class VpnServiceManager : IDisposable
     /// Start the VPN service from its last persisted configuration without touching it — the same
     /// bootstrap always-on uses. Check IsConfigured before calling.
     /// </summary>
-    /// <param name="uiContext">The caller's window, as Start takes it.</param>
+    // uiContext: the caller's window, as Start takes it.
     public async Task StartFromLastConfig(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);

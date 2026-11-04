@@ -25,6 +25,7 @@ internal sealed partial class QuickLaunchView : IFrameworkViewSource, IFramework
     public void Uninitialize() { }
 
     // the scheme to this package alone, whatever else claims it
+    // ReSharper disable once AsyncVoidMethod
     private static async void OnActivated(CoreApplicationView sender, IActivatedEventArgs args)
     {
         CoreWindow.GetForCurrentThread().Activate();

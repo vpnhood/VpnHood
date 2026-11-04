@@ -58,7 +58,7 @@ public class PacketChannelTest : TestBase
     [TestMethod]
     public async Task Channel_whose_lifespan_ends_is_disconnecting_and_sends_its_close()
     {
-        using var channel = new TestPacketChannel(lifespan: TimeSpan.Zero);
+        await using var channel = new TestPacketChannel(lifespan: TimeSpan.Zero);
         channel.Start();
 
         // the lifetime job finds the lifespan over: its close goes out, and the tunnel picks the channel no more
@@ -69,7 +69,7 @@ public class PacketChannelTest : TestBase
     [TestMethod]
     public async Task Close_received_makes_the_channel_disconnecting_with_no_answer()
     {
-        using var channel = new TestPacketChannel();
+        await using var channel = new TestPacketChannel();
         channel.Start();
 
         var memory = ToMemory(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
@@ -89,7 +89,7 @@ public class PacketChannelTest : TestBase
     [TestMethod]
     public async Task Open_channel_outlives_its_lifetime_checks()
     {
-        using var channel = new TestPacketChannel();
+        await using var channel = new TestPacketChannel();
         channel.Start();
 
         // the lifetime job runs at once, then every second
@@ -100,7 +100,7 @@ public class PacketChannelTest : TestBase
     [TestMethod]
     public async Task Channel_closed_by_its_owner_sends_its_close_and_still_delivers()
     {
-        using var channel = new TestPacketChannel();
+        await using var channel = new TestPacketChannel();
         channel.Start();
         var receivedPorts = new List<int>();
         channel.PacketReceived += (_, ipPacket) => {
@@ -121,7 +121,7 @@ public class PacketChannelTest : TestBase
     [TestMethod]
     public async Task Channel_closed_before_its_start_stays_disconnecting()
     {
-        using var channel = new TestPacketChannel();
+        await using var channel = new TestPacketChannel();
         channel.Close();
         channel.Start();
 
@@ -132,24 +132,24 @@ public class PacketChannelTest : TestBase
     [TestMethod]
     public async Task Close_after_the_first_sends_nothing_more()
     {
-        using var closedTwice = new TestPacketChannel();
+        await using var closedTwice = new TestPacketChannel();
         closedTwice.Start();
         closedTwice.Close();
         closedTwice.Close();
 
-        using var closedThenReceived = new TestPacketChannel();
+        await using var closedThenReceived = new TestPacketChannel();
         closedThenReceived.Start();
         closedThenReceived.Close();
         closedThenReceived.Receive(BuildClose());
 
         // the peer's close first: no answer
-        using var receivedThenClosed = new TestPacketChannel();
+        await using var receivedThenClosed = new TestPacketChannel();
         receivedThenClosed.Start();
         receivedThenClosed.Receive(BuildClose());
         receivedThenClosed.Close();
 
         // closed before its lifespan ends, which a later lifetime check meets
-        using var closedThenLifespan = new TestPacketChannel(lifespan: TimeSpan.FromMilliseconds(500));
+        await using var closedThenLifespan = new TestPacketChannel(lifespan: TimeSpan.FromMilliseconds(500));
         closedThenLifespan.Start();
         closedThenLifespan.Close();
 
@@ -167,9 +167,9 @@ public class PacketChannelTest : TestBase
     [TestMethod]
     public async Task Concurrent_closes_send_one_close_at_most()
     {
-        using var closed = new TestPacketChannel();
+        await using var closed = new TestPacketChannel();
         closed.Start();
-        using var raced = new TestPacketChannel();
+        await using var raced = new TestPacketChannel();
         raced.Start();
 
         // closes released together: owners' closes racing each other, one of which sends the close; and owners'
@@ -213,7 +213,7 @@ public class PacketChannelTest : TestBase
         var gracefulTimeout = TransportDefaults.TcpGracefulTimeout;
         TransportDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(1);
         try {
-            using var channel = new TestPacketChannel();
+            await using var channel = new TestPacketChannel();
             channel.Start();
             channel.Close();
 

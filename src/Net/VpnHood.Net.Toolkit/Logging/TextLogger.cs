@@ -19,7 +19,7 @@ public sealed class TextLogger(
     private static readonly Func<string, Exception?, string> TextFormatter = (text, _) => text;
     private readonly LoggerExternalScopeProvider _scopeProvider = new();
 
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull
     {
         return _scopeProvider.Push(state);
     }

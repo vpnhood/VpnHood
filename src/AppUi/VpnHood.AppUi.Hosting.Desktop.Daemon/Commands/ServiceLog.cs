@@ -30,11 +30,11 @@ internal static class ServiceLog
             return follow ? 0 : 130;
         }
         catch (DaemonRefusedException ex) {
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            await CliPrinter.Error(ex.Message).Vhc();
             return 1;
         }
         catch (Exception ex) {
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            await CliPrinter.Error(ex.Message).Vhc();
             return await platform.Instance.ShowOfflineLog(follow, lines, cancellationToken).Vhc();
         }
     }

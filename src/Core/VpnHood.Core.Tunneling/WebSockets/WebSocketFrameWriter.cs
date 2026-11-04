@@ -136,7 +136,7 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
         var writeGate = Volatile.Read(ref _writeGate);
         if (writeGate == null)
             return false;
-        if (!writeGate.Wait(0))
+        if (!await writeGate.WaitAsync(0, cancellationToken).Vhc())
             return true;
         try {
             if (_stopped || _disposed)

@@ -149,9 +149,23 @@ internal sealed class LocalTcpConnection(
     /// </summary>
     public void CloseFromApp(LocalTcpStack stack)
     {
-        var reset = false;
+        if (CloseAppSide() is not { } reset)
+            return;
+
+        if (reset) {
+            Abort();
+            return;
+        }
+
+        CompleteNetToApp();
+        TryStartFin(stack);
+    }
+
+    // Whether the close resets the connection at once; null when it was closed already.
+    private bool? CloseAppSide()
+    {
         lock (_seqLock) {
-            if (_disposed || _closedFlag) return;
+            if (_disposed || _closedFlag) return null;
             _readSideClosed = true;
             _appToNetCompleted = true;
             // the orphan's idle clock starts here, not at the idle sweep after the close (PollIdle)
@@ -162,17 +176,10 @@ internal sealed class LocalTcpConnection(
             // then the FIN goes first and the RST follows the ACK of the tail (TryHandleIncoming). The unread
             // bytes leave the pipe total now either way; nobody will read them.
             var discarded = _receiveWindow.ClearUnread();
-            reset = discarded > 0 && _sndUna == _sndNxt;
+            var reset = discarded > 0 && _sndUna == _sndNxt;
             _resetPending = discarded > 0 && !reset;
+            return reset;
         }
-
-        if (reset) {
-            Abort();
-            return;
-        }
-
-        CompleteNetToApp();
-        TryStartFin(stack);
     }
 
     /// <summary>

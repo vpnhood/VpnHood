@@ -131,7 +131,7 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
             Reject();
 
         var rented = octets.Length > 256 ? ArrayPool<byte>.Shared.Rent(octets.Length) : null;
-        Span<byte> bytes = rented is null ? stackalloc byte[octets.Length] : rented;
+        Span<byte> bytes = rented ?? stackalloc byte[octets.Length];
         try {
             var count = Encoding.Latin1.GetBytes(octets.AsSpan(), bytes);
             return HeaderEncoding.GetString(bytes[..count]);

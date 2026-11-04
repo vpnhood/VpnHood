@@ -121,10 +121,10 @@ public partial class Http3FrontTest
     public async Task Header_and_trailer_counts_during_a_held_application_preserve_the_selected_response(int totalCount)
     {
         var headers = CreateCountedHeaders();
-        IReadOnlyList<(string Name, string Value)> trailers = [
-            .. Enumerable.Repeat(("x", ""), totalCount - headers.Count - 1),
-            (ReferenceRequestGate.MarkerName, "1")
-        ];
+        IReadOnlyList<(string Name, string Value)> trailers = Enumerable
+            .Repeat(("x", ""), totalCount - headers.Count - 1)
+            .Append((ReferenceRequestGate.MarkerName, "1"))
+            .ToArray();
         Assert.AreEqual(totalCount, headers.Count + trailers.Count);
         await AssertTrailersDuringHeldApplication($"headers-and-trailers-count-{totalCount}",
             BuildLiteralRequest(headers), BuildLiteralRequest(trailers), [],
@@ -137,7 +137,7 @@ public partial class Http3FrontTest
     public async Task Data_after_trailers_during_a_held_application_closes_the_connection()
     {
         var headers = BuildLiteralRequest(ValidationHeaders());
-        byte[] tail = [.. BuildLiteralRequest([.. Enumerable.Repeat(("x", ""), 8)]), .. Frame(0, [1])];
+        byte[] tail = [.. BuildLiteralRequest(Enumerable.Repeat(("x", ""), 8).ToArray()), .. Frame(0, [1])];
         // No marker releases the reference application before its parser reaches the invalid DATA frame.
         var expected = await ObserveTrailersBeforeDispatch(headers, tail, [], TestContext.CancellationToken);
         var actual = await ObserveTrailersDuringHeldApplication(headers, tail, [], TestContext.CancellationToken);
@@ -184,8 +184,8 @@ public partial class Http3FrontTest
         var headers = octets ? CreateSizedFields(ValidationHeaders(), 32000, 8) : CreateCountedHeaders();
         IReadOnlyList<(string Name, string Value)> prefixFields = octets
             ? CreateMarkedTrailerFields(65536 - 32000)
-            : [.. Enumerable.Repeat(("x", ""), 200 - headers.Count - 1),
-                (ReferenceRequestGate.MarkerName, "1")];
+            : Enumerable.Repeat(("x", ""), 200 - headers.Count - 1)
+                .Append((ReferenceRequestGate.MarkerName, "1")).ToArray();
         // The reference can select 431 before dispatch; a held application has already selected 401.
         var trailers = BuildLiteralRequest([.. prefixFields, ("x", "")]);
         byte[] tail = [0x21, (byte)'x', 0];
@@ -212,14 +212,14 @@ public partial class Http3FrontTest
     ];
 
     private static IReadOnlyList<(string Name, string Value)> CreateCountedHeaders() =>
-        [.. ValidationHeaders(), .. Enumerable.Repeat(("x", ""), 50 - ValidationHeaders().Count)];
+        ValidationHeaders().Concat(Enumerable.Repeat(("x", ""), 50 - ValidationHeaders().Count)).ToArray();
 
     private static IReadOnlyList<(string Name, string Value)> CreateMarkedTrailerFields(int decodedBytes)
     {
         var marker = (ReferenceRequestGate.MarkerName, "1");
         var fields = CreateSizedFields([marker], decodedBytes, 8);
         // The selector releases dispatch only after the final field has updated both shared totals.
-        return [.. fields.Skip(1), marker];
+        return fields.Skip(1).Append(marker).ToArray();
     }
 
     private async Task AssertTrailersDuringHeldApplication(string name, byte[] headers, byte[] trailers, byte[] lateTail,

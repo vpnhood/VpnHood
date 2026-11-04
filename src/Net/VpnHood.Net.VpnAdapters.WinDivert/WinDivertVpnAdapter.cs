@@ -184,7 +184,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
             "ReadPacket with buffer should not be called when ReadPacket has the override.");
     }
 
-    protected override IpPacket? ReadPacket(int mtu)
+    protected override IpPacket ReadPacket(int mtu)
     {
         if (_device == null)
             throw new InvalidOperationException("Device is not initialized.");

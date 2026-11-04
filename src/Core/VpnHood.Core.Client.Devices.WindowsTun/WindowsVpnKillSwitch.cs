@@ -85,6 +85,7 @@ public sealed class WindowsVpnKillSwitch(string owner, string? serviceName) : IV
                 var filters = CreateFilters(rules, tunnelLuid, native);
                 InTransaction(engine, () => {
                     Delete(engine);
+                    // ReSharper disable once AccessToDisposedClosure
                     Add(engine, filters, native);
                 });
 
@@ -244,7 +245,7 @@ public sealed class WindowsVpnKillSwitch(string owner, string? serviceName) : IV
 
                 if (serviceUser != IntPtr.Zero)
                     filters.Add(new FilterSpec($"the service, {name}", layerKey, WeightService, true, [
-                        native.SecurityDescriptorCondition(WfpNative.ConditionAleUserId, serviceUser)
+                        NativeMemory.SecurityDescriptorCondition(WfpNative.ConditionAleUserId, serviceUser)
                     ]));
 
                 if (tunnelLuid != null)
@@ -442,7 +443,7 @@ public sealed class WindowsVpnKillSwitch(string owner, string? serviceName) : IV
             return Struct(new WfpNative.FwpByteBlob { Size = size, Data = sd });
         }
 
-        public WfpNative.FwpmFilterCondition SecurityDescriptorCondition(Guid fieldKey, IntPtr sdBlob)
+        public static WfpNative.FwpmFilterCondition SecurityDescriptorCondition(Guid fieldKey, IntPtr sdBlob)
         {
             return new WfpNative.FwpmFilterCondition {
                 FieldKey = fieldKey,

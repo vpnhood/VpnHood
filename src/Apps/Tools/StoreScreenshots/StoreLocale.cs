@@ -19,6 +19,6 @@ internal sealed class StoreLocale
     // The folder this locale installs into on a store, or null where the store lacks the language.
     public string? FolderFor(string store)
     {
-        return Stores.TryGetValue(store, out var folder) ? folder : Tag;
+        return Stores.GetValueOrDefault(store, Tag);
     }
 }

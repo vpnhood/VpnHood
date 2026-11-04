@@ -77,8 +77,8 @@ internal static class AdMobConsent
         get {
             var consentInformation = UserMessagingPlatform.GetConsentInformation(Application.Context);
             return consentInformation.ConsentStatus == ConsentInformationConsentStatus.Obtained &&
-                   consentInformation.PrivacyOptionsRequirementStatus?
-                       .Equals(ConsentInformationPrivacyOptionsRequirementStatus.Required) == true;
+                   consentInformation.PrivacyOptionsRequirementStatus
+                       .Equals(ConsentInformationPrivacyOptionsRequirementStatus.Required);
         }
     }
 

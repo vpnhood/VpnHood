@@ -231,7 +231,7 @@ internal sealed class Http3ResponseDispatch(IQuicStream quic,
             // failed transport callback replace that failure while the request scope unwinds.
         }
         finally {
-            _headerCancellation.Dispose();
+            await _headerCancellation.DisposeAsync().Vhc();
             _writeCancellation?.Dispose();
         }
     }

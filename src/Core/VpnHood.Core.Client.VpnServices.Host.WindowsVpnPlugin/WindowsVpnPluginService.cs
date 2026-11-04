@@ -364,7 +364,7 @@ internal sealed class WindowsVpnPluginService : IVpnServiceHandler
     private static async Task WaitForChannelStart(Task<WindowsVpnPluginAdapter> adapterTask)
     {
         var adapter = await adapterTask.Vhc();
-        await adapter.Started.Vhc();
+        await adapter.StartedTask.Vhc();
     }
 
     private static TaskCompletionSource<WindowsVpnPluginAdapter> NewAdapterTcs() =>

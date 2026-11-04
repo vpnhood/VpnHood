@@ -36,8 +36,8 @@ public static class AppImage
 
     private static async void OnSourceChanged(AvaloniaObject target, AvaloniaPropertyChangedEventArgs e)
     {
-        var path = e.NewValue as string;
         try {
+            var path = e.NewValue as string;
             Apply(target, null);
             if (path == null)
                 return;
@@ -47,7 +47,7 @@ public static class AppImage
                 Apply(target, bitmap);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not load the image. Path: {Path}", path);
+            VhLogger.Instance.LogError(ex, "Could not load the image. Path: {Path}", e.NewValue);
         }
     }
 

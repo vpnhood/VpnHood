@@ -91,7 +91,7 @@ internal static class UiCommand
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "The window ended with an error.");
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            await CliPrinter.Error(ex.Message).Vhc();
             return 1;
         }
     }

@@ -106,7 +106,7 @@ public class TunnelMtuTest : TestBase
                                ?? throw new InvalidOperationException("The receiver has no local endpoint.");
         using var transmitter = new UdpChannelTransmitter(new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)),
             new IgnoringDatagramHandler());
-        using var channel = new RoutedUdpPacketChannel(new UdpRoute(transmitter, receiverEndPoint));
+        await using var channel = new RoutedUdpPacketChannel(new UdpRoute(transmitter, receiverEndPoint));
 
         var source = IPEndPoint.Parse("10.255.0.2:5000");
         var destination = IPEndPoint.Parse("198.18.0.1:27015");

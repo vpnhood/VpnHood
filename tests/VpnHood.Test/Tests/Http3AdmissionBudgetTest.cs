@@ -83,7 +83,7 @@ public class Http3AdmissionBudgetTest : TestBase
         await waiting.WriteAsync("G"u8.ToArray(), cancellationToken);
         await using var current = await Connect(endPoint, token, certificateHash, cancellationToken);
         var eviction = await Assert.ThrowsExactlyAsync<QuicException>(async () => {
-            await waiting.ReadAsync(new byte[1], cancellationToken);
+            _ = await waiting.ReadAsync(new byte[1], cancellationToken);
         });
         Assert.AreEqual(QuicError.ConnectionAborted, eviction.QuicError);
         Assert.AreEqual(Http3Protocol.ExcessiveLoad, eviction.ApplicationErrorCode);
@@ -101,7 +101,7 @@ public class Http3AdmissionBudgetTest : TestBase
             "X-ProtocolVersion: 15\r\nX-BinaryStream: None\r\nContent-Length: 0\r\n\r\n"), cancellationToken);
         unsigned.CompleteWrites();
         var rejection = await Assert.ThrowsExactlyAsync<QuicException>(async () => {
-            await unsigned.ReadAsync(new byte[16], cancellationToken);
+            _ = await unsigned.ReadAsync(new byte[16], cancellationToken);
         });
         Assert.AreEqual(QuicError.StreamAborted, rejection.QuicError);
         Assert.AreEqual(Http3Protocol.RequestIncomplete, rejection.ApplicationErrorCode);

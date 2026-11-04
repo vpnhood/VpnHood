@@ -142,7 +142,7 @@ public sealed class WindowsVpnPluginDevice : IDevice
             return await WaitForDial(dialTask, cancellationToken).Vhc();
         }
         catch (TimeoutException) {
-            dialCts.Cancel();
+            await dialCts.CancelAsync().Vhc();
             throw;
         }
     }

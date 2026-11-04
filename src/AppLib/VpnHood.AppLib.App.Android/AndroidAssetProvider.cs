@@ -22,7 +22,7 @@ public class AndroidAssetProvider(Context context) : IAssetProvider
             ?? throw new InvalidOperationException("The Android context has no asset manager.");
 
         try {
-            return Task.FromResult<Stream>(assets.Open(assetPath));
+            return Task.FromResult(assets.Open(assetPath));
         }
         catch (Java.IO.FileNotFoundException ex) {
             throw new AssetNotFoundException(assetPath, ex);

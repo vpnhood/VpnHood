@@ -131,13 +131,12 @@ public partial class SettingsView : UserControl, IPage
 
     private async void OnAutomaticUpdatesToggled(object? sender, EventArgs e)
     {
-        var isOn = AutomaticUpdatesItem.IsOn;
-        AutomaticUpdatesItem.IsDisabled = true;
         try {
-            await VhApp.Api.App.SetAutomaticUpdate(isOn, CancellationToken.None);
+            AutomaticUpdatesItem.IsDisabled = true;
+            await VhApp.Api.App.SetAutomaticUpdate(AutomaticUpdatesItem.IsOn, CancellationToken.None);
         }
         catch (Exception ex) {
-            AutomaticUpdatesItem.IsOn = !isOn;
+            AutomaticUpdatesItem.IsOn = !AutomaticUpdatesItem.IsOn;
             await this.ReportError(ex);
         }
         finally {

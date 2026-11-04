@@ -125,8 +125,8 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
     // the answer the screen gave; a finish it did not make itself - the system's - is a leave
     private static AssetVideoResult ReadResult(ActivityResultEventArgs args)
     {
-        return args.ResultCode == Result.Ok && args.Data != null
-            ? (AssetVideoResult)args.Data.GetIntExtra(ResultExtra, (int)AssetVideoResult.Left)
+        return args is { ResultCode: Result.Ok, Data: { } data }
+            ? (AssetVideoResult)data.GetIntExtra(ResultExtra, (int)AssetVideoResult.Left)
             : AssetVideoResult.Left;
     }
 

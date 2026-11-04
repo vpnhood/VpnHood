@@ -28,7 +28,12 @@ internal class WebServerListener(string name, IPAddress address, int port, Func<
 
     // The listener's own state. CavemanTcp clears it when its accept loop exits, so false means
     // the listener is gone (or was never started).
-    public bool IsListening => _server?.IsListening == true;
+    public bool IsListening {
+        get {
+            lock (_lock)
+                return _server?.IsListening == true;
+        }
+    }
 
     // The lock serializes the state transitions: the initial start, the watchdog and a caller's
     // recovery can all drive them from different threads. The listener socket is bound and listening

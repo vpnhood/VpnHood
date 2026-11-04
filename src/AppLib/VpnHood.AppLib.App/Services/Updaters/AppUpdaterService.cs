@@ -31,10 +31,8 @@ public class AppUpdaterService : IDisposable
     // it may yet install unseen
     private bool _isAutomaticUpdateOn = true;
 
-    /// <param name="isConnected">
-    /// Whether the VPN is connected: a filtered network may reach the store only through the tunnel,
-    /// so the store's "none" counts only then.
-    /// </param>
+    // isConnected: whether the VPN is connected: a filtered network may reach the store only through the
+    // tunnel, so the store's "none" counts only then.
     public AppUpdaterService(string storageFolderPath, Version appVersion,
         AppUpdaterOptions updateOptions, Func<bool> isConnected)
     {
@@ -223,11 +221,9 @@ public class AppUpdaterService : IDisposable
         }
     }
 
-    /// <param name="uiContext">
-    /// The window, or null where none is open, as in the desktop service: the feed needs none, and a
-    /// store's updater that needs one leaves the check for a call that has it.
-    /// </param>
-    /// <returns>What the check found, which a check the person asked for tells them.</returns>
+    // uiContext: the window, or null where none is open, as in the desktop service: the feed needs none,
+    // and a store's updater that needs one leaves the check for a call that has it.
+    // Returns what the check found, which a check the person asked for tells them.
     public async Task<VersionCheckResult> CheckForUpdate(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
     {
         // check if the version check is already in progress

@@ -30,6 +30,7 @@ public static class DesktopHost
     public static int Run(string[] args, DesktopInitParams initParams, IDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
+        // ReSharper disable once AccessToDisposedClosure
         var run = Task.Run(() => RunAsync(args, initParams, platform, mainThread, CancellationToken.None));
 
         // A signal's forced end completes the run without waiting for its command (the parser's
@@ -37,6 +38,7 @@ public static class DesktopHost
         // still holds this thread - which would keep the process alive for good. The process then
         // ends the way the run did.
         run.ContinueWith(completed => {
+            // ReSharper disable once AccessToDisposedClosure
             if (mainThread.IsBusy)
                 Environment.Exit(completed.IsCompletedSuccessfully ? completed.Result : 1);
         }, TaskScheduler.Default);
@@ -93,7 +95,8 @@ public static class DesktopHost
     public static async Task<int> HostDaemonStoppedBySignal(DaemonRun run, CancellationToken cancellationToken)
     {
         using var quickClose = new CancellationTokenSource();
-        using var registration = cancellationToken.Register(() => quickClose.CancelAfter(SignalGracefulCloseTimeout));
+        // ReSharper disable once AccessToDisposedClosure
+        await using var registration = cancellationToken.Register(() => quickClose.CancelAfter(SignalGracefulCloseTimeout));
         return await run(cancellationToken, quickClose.Token).Vhc();
     }
 }

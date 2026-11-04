@@ -51,7 +51,9 @@ internal static class DesktopUiWindow
     {
         using var serviceNewer = new CancellationTokenSource();
         using var uiCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serviceNewer.Token);
-        void OnNewerServiceAnswered(object? sender, EventArgs e) => serviceNewer.Cancel();
+        // a handler under way may outlive the using: the window is over then, and TryCancel takes a disposed source
+        // ReSharper disable once AccessToDisposedClosure
+        void OnNewerServiceAnswered(object? sender, EventArgs e) => serviceNewer.TryCancel();
         connection.NewerServiceAnswered += OnNewerServiceAnswered;
 
         // on the host's main thread, which a window needs; this waits until the UI ends
@@ -68,6 +70,7 @@ internal static class DesktopUiWindow
             IsQuickLaunch = isQuickLaunch
         };
         try {
+            // ReSharper disable once AccessToDisposedClosure
             await mainThread.Run(() => initParams.Ui.Run(uiParams, uiCancellation.Token)).Vhc();
         }
         finally {

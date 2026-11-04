@@ -83,7 +83,7 @@ public sealed class LocalTcpStackTest
         tcpStack.ProcessIncoming(badAckPacket);
         Assert.AreEqual(2, sentPackets.Count(p => p.ExtractTcp().Synchronize), "a wrong ack keeps drawing the SYN-ACK");
 
-        var wasAccepted = await Task.WhenAny(acceptTask, Task.Delay(200)) == acceptTask;
+        var wasAccepted = await Task.WhenAny(acceptTask, Task.Delay(200, TestCt)) == acceptTask;
         Assert.IsFalse(wasAccepted, "Connection must not be accepted until the SYN-ACK is acknowledged.");
 
         // A later valid ACK should still complete the half-open connection.
@@ -470,13 +470,13 @@ public sealed class LocalTcpStackTest
             await foreach (var stream in listener.AcceptAllAsync(TestCt)) {
                 var buffer = new byte[1024];
                 while (true) {
-                    var bytesRead = await stream.Stream.ReadAsync(buffer, 0, buffer.Length);
+                    var bytesRead = await stream.Stream.ReadAsync(buffer, 0, buffer.Length, TestCt);
                     if (bytesRead == 0) break;
-                    await stream.Stream.WriteAsync(buffer, 0, bytesRead);
+                    await stream.Stream.WriteAsync(buffer, 0, bytesRead, TestCt);
                 }
                 break;
             }
-        });
+        }, TestCt);
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
@@ -688,11 +688,11 @@ public sealed class LocalTcpStackTest
         _ = Task.Run(async () => {
             await foreach (var c in listener.AcceptAllAsync(TestCt))
                 accepted[c.RemoteEndPoint.Port] = c;
-        });
+        }, TestCt);
 
         // Conn A, then let it sit idle past the threshold.
         DoHandshake(tcpStack, sentPackets, lockObj, clientPort: 1001, clientSeq: 1000);
-        await Task.Delay(120);
+        await Task.Delay(120, TestCt);
         // Conn B, freshly active (idle ~0) -> protected. A stays the most idle.
         DoHandshake(tcpStack, sentPackets, lockObj, clientPort: 1002, clientSeq: 2000);
 
@@ -738,7 +738,7 @@ public sealed class LocalTcpStackTest
         var acceptLoop = Task.Run(async () => {
             await foreach (var _ in listener.AcceptAllAsync(TestCt)) { }
             completed = true;
-        });
+        }, TestCt);
 
         Assert.IsTrue(tcpStack.StopListening(new IpEndPointValue(ServerIp, ServerPort)));
 
@@ -766,7 +766,7 @@ public sealed class LocalTcpStackTest
         tcpStack.OnPacketSend = p => { lock (lockObj) sentPackets.Add(p); };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        _ = Task.Run(async () => { await foreach (var _ in listener.AcceptAllAsync(TestCt)) { } });
+        _ = Task.Run(async () => { await foreach (var _ in listener.AcceptAllAsync(TestCt)) { } }, TestCt);
 
         DoHandshake(tcpStack, sentPackets, lockObj, clientPort: 1001, clientSeq: 1000);
         DoHandshake(tcpStack, sentPackets, lockObj, clientPort: 1002, clientSeq: 2000);
@@ -897,7 +897,7 @@ public sealed class LocalTcpStackTest
             stack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + i, ServerIp, ServerPort, syn: true, seq: 1000));
         Assert.HasCount(1, log.Lines(marker), "a burst of failures makes one line");
 
-        await Task.Delay(1100);
+        await Task.Delay(1100, TestCt);
         stack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort + 5, ServerIp, ServerPort, syn: true, seq: 1000));
         var lines = log.Lines(marker);
         Assert.HasCount(2, lines);
@@ -926,7 +926,7 @@ public sealed class LocalTcpStackTest
                 if (clients.Count == 3) break;
             }
             return clients;
-        });
+        }, TestCt);
 
         // A: stale ack numbers; B: current ACKs; C: current acks at a sequence out of the window
         const int portA = ClientPort, portB = ClientPort + 1, portC = ClientPort + 2;
@@ -1013,7 +1013,7 @@ public sealed class LocalTcpStackTest
                 if (clients.Count == 2) break;
             }
             return clients;
-        });
+        }, TestCt);
         DoHandshake(tcpStack, sent, sync, ClientPort, 1000);
         DoHandshake(tcpStack, sent, sync, ClientPort + 1, 1000);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
@@ -1054,7 +1054,7 @@ public sealed class LocalTcpStackTest
                 if (clients.Count == 2) break;
             }
             return clients;
-        });
+        }, TestCt);
 
         var otherServer = IPAddress.Parse("10.0.0.9");
         foreach (var (ip, port, clientPort) in new[] { (ServerIp, ServerPort, ClientPort), (otherServer, 443, ClientPort + 1) }) {
@@ -1243,7 +1243,7 @@ public sealed class LocalTcpStackTest
                 if (clients.Count == count) break;
             }
             return clients;
-        });
+        }, TestCt);
         for (var i = 0; i < count; i++)
             DoHandshake(tcpStack, sent, sync, ClientPort + i, 1000);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -1659,7 +1659,7 @@ public sealed class LocalTcpStackTest
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             syn: true, ack: true, seq: 1001, ackNum: serverSeq + 1));
-        await Task.Delay(100);
+        await Task.Delay(100, TestCt);
         Assert.IsFalse(acceptTask.IsCompleted, "no connection is accepted");
         Assert.IsTrue(Snapshot(sent, sync).Single().ExtractTcp() is { Acknowledgment: true, Synchronize: false }, "a challenge ACK");
 
@@ -1704,7 +1704,7 @@ public sealed class LocalTcpStackTest
                 .ToArray();
             using var gate = new Barrier(workers);
             var threads = syns.Select(syn => new Thread(() => {
-                gate.SignalAndWait();
+                gate.SignalAndWait(TestCt);
                 tcpStack.ProcessIncoming(syn);
             })).ToArray();
             foreach (var thread in threads) thread.Start();

@@ -47,7 +47,7 @@ public sealed class LossRecoveryTest
 
         // Server sends data; the test peer NEVER acks it (the segment was "dropped by the TUN").
         var payload = "tail-loss"u8.ToArray();
-        await stream.Stream.WriteAsync(payload);
+        await stream.Stream.WriteAsync(payload, TestCt);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await WaitForCondition(() => {
@@ -286,7 +286,7 @@ public sealed class LossRecoveryTest
         // segments: 536 + 64) and the writer parks on it.
         var payload = new byte[2000];
         RandomNumberGenerator.Fill(payload);
-        var writeTask = stream.Stream.WriteAsync(payload, 0, payload.Length);
+        var writeTask = stream.Stream.WriteAsync(payload, 0, payload.Length, TestCt);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await WaitForCondition(() => {
@@ -385,7 +385,7 @@ public sealed class LossRecoveryTest
         // Write more than the ring holds; the initial ring-filling burst is "dropped by the TUN".
         var payload = new byte[6000];
         RandomNumberGenerator.Fill(payload);
-        var writeTask = stream.Stream.WriteAsync(payload, 0, payload.Length);
+        var writeTask = stream.Stream.WriteAsync(payload, 0, payload.Length, TestCt);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
         await WaitForCondition(() => {
@@ -462,11 +462,11 @@ public sealed class LossRecoveryTest
         var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
         lock (sync) sent.Clear();
 
-        var writeTask = stream.Stream.WriteAsync(new byte[3000]).AsTask(); // fills the ring, then parks
-        await Task.Delay(1300); // RTO at 300 ms, backed off to 600 ms: at most 3 retransmissions
+        var writeTask = stream.Stream.WriteAsync(new byte[3000], TestCt).AsTask(); // fills the ring, then parks
+        await Task.Delay(1300, TestCt); // RTO at 300 ms, backed off to 600 ms: at most 3 retransmissions
 
         lock (sync) {
-            var first = sent.Where(p => p.ExtractTcp().Payload.Length > 0 && p.ExtractTcp().SequenceNumber == serverSeq + 1).Count();
+            var first = sent.Count(p => p.ExtractTcp().Payload.Length > 0 && p.ExtractTcp().SequenceNumber == serverSeq + 1);
             Assert.IsGreaterThanOrEqualTo(2, first, "the RTO retransmits the first segment");
             Assert.IsLessThanOrEqualTo(4, first, "no probe-interval retransmissions beside the RTO");
         }
@@ -509,8 +509,8 @@ public sealed class LossRecoveryTest
         }
 
         // four segments; the first is lost, and the three after it draw three duplicate ACKs before its RTO deadline
-        await client.Stream.WriteAsync(new byte[400]);
-        await Task.Delay(600);
+        await client.Stream.WriteAsync(new byte[400], TestCt);
+        await Task.Delay(600, TestCt);
         Assert.HasCount(1, CopiesOfTheFirst(), "no retransmission before the duplicate ACKs");
         for (var i = 0; i < 3; i++)
             tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
@@ -542,7 +542,7 @@ public sealed class LossRecoveryTest
         var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
         lock (sync) sent.Clear();
 
-        await stream.Stream.WriteAsync(new byte[5 * 536]); // five segments (default MSS 536)
+        await stream.Stream.WriteAsync(new byte[5 * 536], TestCt); // five segments (default MSS 536)
         for (var i = 0; i < 9; i++)
             tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
                 ack: true, seq: 1001, ackNum: serverSeq + 1));
@@ -576,7 +576,7 @@ public sealed class LossRecoveryTest
         // window 0 (a real receiver discards out-of-window bytes). The RTO fires in this period too.
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
-        var writeTask = stream.Stream.WriteAsync(new byte[2000]).AsTask();
+        var writeTask = stream.Stream.WriteAsync(new byte[2000], TestCt).AsTask();
         var probesAcked = 0;
         var deadline = Stopwatch.StartNew();
         while (deadline.ElapsedMilliseconds < 1000) {
@@ -585,7 +585,7 @@ public sealed class LossRecoveryTest
             for (; probesAcked < probes; probesAcked++)
                 tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
                     ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
-            await Task.Delay(10);
+            await Task.Delay(10, TestCt);
         }
         Assert.IsGreaterThanOrEqualTo(3, probesAcked, "the zero-window period produced probes");
 
@@ -625,15 +625,15 @@ public sealed class LossRecoveryTest
         var sent = new List<IpPacket>();
         object sync = new();
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
-        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        var (stream, _) = await EstablishAsync(tcpStack, sent, sync);
 
-        var writeTask = stream.Stream.WriteAsync(new byte[3000]).AsTask(); // fills the ring, then parks
+        var writeTask = stream.Stream.WriteAsync(new byte[3000], TestCt).AsTask(); // fills the ring, then parks
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await WaitForCondition(() => { lock (sync) return sent.Sum(p => p.ExtractTcp().Payload.Length) >= 1072; }, cts.Token, 2000);
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, rst: true, seq: 1001));
 
-        await Assert.ThrowsExactlyAsync<IOException>(() => writeTask.WaitAsync(TimeSpan.FromSeconds(2)));
+        await Assert.ThrowsExactlyAsync<IOException>(() => writeTask.WaitAsync(TimeSpan.FromSeconds(2), TestCt));
     }
 
     /// <summary>Tail and FIN lost together: once the partial ACKs reach the FIN, it is retransmitted at once.</summary>
@@ -651,7 +651,7 @@ public sealed class LossRecoveryTest
         var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
         lock (sync) sent.Clear();
 
-        await stream.Stream.WriteAsync(new byte[2 * 536]); // two segments
+        await stream.Stream.WriteAsync(new byte[2 * 536], TestCt); // two segments
         await stream.DisposeAsync(); // FIN at serverSeq + 1073; all three "lost"
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await WaitForCondition(() => {
@@ -704,7 +704,7 @@ public sealed class LossRecoveryTest
             RetransmitMaxTimeout = TimeSpan.FromSeconds(2)
         });
         var (stream, serverSeq, sentOffsets) = await LoseFiveSegmentsAsync(tcpStack);
-        await stream.Stream.WriteAsync(new byte[536]);
+        await stream.Stream.WriteAsync(new byte[536], TestCt);
         CollectionAssert.AreEqual(new[] { 2680 }, sentOffsets(), "segment 6, sent after the loss");
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
@@ -796,7 +796,7 @@ public sealed class LossRecoveryTest
         lock (sync) sent.Clear();
 
         // Put unacked data in flight so the dup-ACK machinery is armed.
-        await stream.Stream.WriteAsync("dup-ack-probe"u8.ToArray());
+        await stream.Stream.WriteAsync("dup-ack-probe"u8.ToArray(), TestCt);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await WaitForCondition(() => { lock (sync) return sent.Any(p => p.ExtractTcp().Payload.Length > 0); },
             cts.Token);
@@ -1111,15 +1111,15 @@ public sealed class LossRecoveryTest
             ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
         lock (sync) sent.Clear();
 
-        var writeTask = stream.Stream.WriteAsync("blocked-write"u8.ToArray()).AsTask();
-        await Task.Delay(100); // let the writer park
+        var writeTask = stream.Stream.WriteAsync("blocked-write"u8.ToArray(), TestCt).AsTask();
+        await Task.Delay(100, TestCt); // let the writer park
 
         // Dispose (graceful close) while the write is parked, then reopen the window.
         await stream.DisposeAsync();
         await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => writeTask, "the dispose interrupted the write");
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1, window: 65535));
-        await Task.Delay(200);
+        await Task.Delay(200, TestCt);
 
         lock (sync) {
             var fin = sent.FirstOrDefault(p => p.ExtractTcp().Finish);
@@ -1203,7 +1203,7 @@ public sealed class LossRecoveryTest
         var (client, _) = await EstablishAsync(tcpStack, sent, sync);
         lock (sync) sent.Clear();
 
-        var readTask = client.Stream.ReadAsync(new byte[16]).AsTask();
+        var readTask = client.Stream.ReadAsync(new byte[16], TestCt).AsTask();
 
         tcpStack.DropAllConnections();
 
@@ -1212,7 +1212,7 @@ public sealed class LossRecoveryTest
         Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         Assert.AreEqual(0, await readTask.WaitAsync(cts.Token), "a parked read ends with EOF");
-        await Assert.ThrowsExactlyAsync<IOException>(async () => await client.Stream.WriteAsync(new byte[8]));
+        await Assert.ThrowsExactlyAsync<IOException>(async () => await client.Stream.WriteAsync(new byte[8], TestCt));
     }
 
     /// <summary>
@@ -1234,7 +1234,7 @@ public sealed class LossRecoveryTest
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, fin: true, seq: 1001, ackNum: serverSeq + 1));
-        Assert.AreEqual(0, await client.Stream.ReadAsync(new byte[8]), "the app sees EOF");
+        Assert.AreEqual(0, await client.Stream.ReadAsync(new byte[8], TestCt), "the app sees EOF");
         lock (sync) sent.Clear();
 
         await client.DisposeAsync(); // our FIN; the peer's ACK is "lost"
@@ -1269,14 +1269,14 @@ public sealed class LossRecoveryTest
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
 
-        await client.Stream.WriteAsync(new byte[100]); // never acknowledged
+        await client.Stream.WriteAsync(new byte[100], TestCt); // never acknowledged
         await client.DisposeAsync();
 
         // The peer's app is suspended: every 100 ms an ACK that acknowledges nothing, window 0.
         for (var i = 0; i < 15 && tcpStack.Diagnostics.ConnectionCount > 0; i++) {
             tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
                 ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
-            await Task.Delay(100);
+            await Task.Delay(100, TestCt);
         }
 
         Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "an orphan making no progress is reclaimed");
@@ -1298,7 +1298,7 @@ public sealed class LossRecoveryTest
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
 
-        await client.Stream.WriteAsync(new byte[100]); // the tail: [serverSeq+1, serverSeq+101)
+        await client.Stream.WriteAsync(new byte[100], TestCt); // the tail: [serverSeq+1, serverSeq+101)
         await client.DisposeAsync(); // FIN at serverSeq+101
         lock (sync) sent.Clear();
 
@@ -1333,7 +1333,7 @@ public sealed class LossRecoveryTest
 
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: new byte[1000])); // never read
-        await client.Stream.WriteAsync(new byte[100]); // the tail, unacknowledged
+        await client.Stream.WriteAsync(new byte[100], TestCt); // the tail, unacknowledged
         lock (sync) sent.Clear();
         await client.DisposeAsync();
         lock (sync) {
@@ -1369,7 +1369,7 @@ public sealed class LossRecoveryTest
         // The peer closes its window; our write parks and probes with one byte, which the peer rejects (no ACK).
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
-        var writeTask = client.Stream.WriteAsync(new byte[10]).AsTask();
+        var writeTask = client.Stream.WriteAsync(new byte[10], TestCt).AsTask();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await WaitForCondition(() => { lock (sync) return sent.Any(p => p.ExtractTcp().Payload.Length == 1); }, cts.Token, 2000);
         lock (sync) sent.Clear();
@@ -1428,12 +1428,12 @@ public sealed class LossRecoveryTest
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
 
-        await client.Stream.WriteAsync(new byte[100]); // never acknowledged
+        await client.Stream.WriteAsync(new byte[100], TestCt); // never acknowledged
         await client.DisposeAsync();
         for (var i = 0; i < 6; i++) {
             tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
                 ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
-            await Task.Delay(100);
+            await Task.Delay(100, TestCt);
         }
         lock (sync) sent.Clear();
 
@@ -1461,12 +1461,12 @@ public sealed class LossRecoveryTest
         tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
         var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
 
-        await client.Stream.WriteAsync(new byte[100]); // never acknowledged
+        await client.Stream.WriteAsync(new byte[100], TestCt); // never acknowledged
         await client.DisposeAsync();
         for (var i = 0; i < 6; i++) {
             tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
                 ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
-            await Task.Delay(100);
+            await Task.Delay(100, TestCt);
         }
         lock (sync) sent.Clear();
 
@@ -1524,7 +1524,7 @@ public sealed class LossRecoveryTest
         var (client, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
 
         // 1000 bytes out and acked
-        await client.Stream.WriteAsync(new byte[1000]);
+        await client.Stream.WriteAsync(new byte[1000], TestCt);
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1 + 1000));
 
@@ -1564,8 +1564,8 @@ public sealed class LossRecoveryTest
             Assert.AreEqual(1001u, challenge.AcknowledgmentNumber);
             sent.Clear();
         }
-        var readTask = client.Stream.ReadAsync(new byte[100]).AsTask();
-        await Task.Delay(100);
+        var readTask = client.Stream.ReadAsync(new byte[100], TestCt).AsTask();
+        await Task.Delay(100, TestCt);
         Assert.IsFalse(readTask.IsCompleted, "its data and FIN were dropped");
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -1593,8 +1593,8 @@ public sealed class LossRecoveryTest
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             psh: true, seq: 1001, payload: payload));
         var buffer = new byte[100];
-        var readTask = client.Stream.ReadAsync(buffer).AsTask();
-        await Task.Delay(100);
+        var readTask = client.Stream.ReadAsync(buffer, TestCt).AsTask();
+        await Task.Delay(100, TestCt);
         lock (sync) Assert.IsEmpty(sent, "a segment without the ACK bit is dropped unanswered");
         Assert.IsFalse(readTask.IsCompleted, "nothing reached the app");
 
@@ -1619,7 +1619,7 @@ public sealed class LossRecoveryTest
         var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
         lock (sync) sent.Clear();
 
-        await stream.Stream.WriteAsync(new byte[5 * 536]);
+        await stream.Stream.WriteAsync(new byte[5 * 536], TestCt);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await WaitForCondition(() => {
             lock (sync) return sent.Count(p => p.ExtractTcp().SequenceNumber == serverSeq + 1 && p.ExtractTcp().Payload.Length > 0) >= 2;

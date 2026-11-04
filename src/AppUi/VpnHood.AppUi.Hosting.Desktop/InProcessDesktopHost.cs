@@ -23,6 +23,7 @@ public static class InProcessDesktopHost
     public static int Run(string[] args, DesktopInitParams initParams, IInProcessDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
+        // ReSharper disable once AccessToDisposedClosure
         var run = Task.Run(() => RunAsync(args, initParams, platform, mainThread, CancellationToken.None));
         mainThread.RunUntil(run);
         return run.GetAwaiter().GetResult();

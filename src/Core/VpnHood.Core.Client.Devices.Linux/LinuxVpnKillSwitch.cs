@@ -123,7 +123,7 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
             return null;
 
         var tables = await OsUtils.ExecuteCommandAsync(nftPath, "list tables", cancellationToken).Vhc();
-        if (!tables.Split('\n').Any(x => x.Trim() == $"table inet {TableName}"))
+        if (tables.Split('\n').All(x => x.Trim() != $"table inet {TableName}"))
             return null;
 
         return await OsUtils.ExecuteCommandAsync(nftPath, $"list table inet {TableName}", cancellationToken).Vhc();
@@ -262,8 +262,10 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
     private static async Task<string> GetCgroupPath(CancellationToken cancellationToken)
     {
         var lines = await File.ReadAllLinesAsync("/proc/self/cgroup", cancellationToken).Vhc();
-        var line = lines.FirstOrDefault(x => x.StartsWith("0::", StringComparison.Ordinal));
-        var path = line?[3..].Trim('/');
+        var path = lines
+            .Where(x => x.StartsWith("0::", StringComparison.Ordinal))
+            .Select(x => x[3..].Trim('/'))
+            .FirstOrDefault();
         if (string.IsNullOrEmpty(path))
             throw new NotSupportedException("The kill switch needs the service in a cgroup v2 group of its own.");
 

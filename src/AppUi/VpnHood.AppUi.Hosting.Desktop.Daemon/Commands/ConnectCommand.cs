@@ -71,7 +71,7 @@ internal static class ConnectCommand
 
             default:
                 // the app's own account of it, which is what the window would be showing
-                await Console.Error.WriteLineAsync(
+                await CliPrinter.Error(
                     state.LastError?.Message ?? $"Not connected. State: {state.ConnectionState}").Vhc();
                 return 1;
         }

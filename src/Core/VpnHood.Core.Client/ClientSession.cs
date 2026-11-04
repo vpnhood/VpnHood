@@ -31,7 +31,6 @@ namespace VpnHood.Core.Client;
 
 internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 {
-    private readonly ISocketFactory _socketFactory;
     private readonly IVpnAdapter _vpnAdapter;
     private readonly NetFilter _netFilter;
     private readonly Tunnel _tunnel;
@@ -92,7 +91,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _useTcpProxy = options.UseTcpProxy;
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
-        _socketFactory = options.SocketFactory;
         _domainFilteringService = options.DomainFilteringService;
         Config = config;
         Info = options.SessionInfo;
@@ -113,7 +111,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         // its UDP: the count starts at random, below 2⁶³, so it never wraps under the server's freshness mark
         _udpChannel = Config.HostUdpEndPoint is { } hostUdpEndPoint
-            ? new ClientUdpPacketChannel(_socketFactory, hostUdpEndPoint, Config.Transport.UdpChannelBufferSize,
+            ? new ClientUdpPacketChannel(options.SocketFactory, hostUdpEndPoint, Config.Transport.UdpChannelBufferSize,
                 Config.SessionId, Config.SessionKey.Span,
                 firstSendSequenceNumber: BinaryPrimitives.ReadUInt64LittleEndian(RandomNumberGenerator.GetBytes(8)) >> 1,
                 _trafficMeter)
@@ -132,7 +130,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // delegator
-        _proxyManager = new ProxyManager(_socketFactory, new ProxyManagerOptions {
+        _proxyManager = new ProxyManager(options.SocketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
             PacketProxyCallbacks = null,
             UdpTimeout = TransportDefaults.UdpTimeout,
@@ -152,7 +150,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             sessionId: Config.SessionId,
             sessionKey: Config.SessionKey,
             domainFilterService: options.DomainFilteringService,
-            socketFactory: _socketFactory,
+            socketFactory: options.SocketFactory,
             tunnel: _tunnel,
             trafficMeter: _trafficMeter,
             tcpConnectTimeout: Config.Transport.TcpConnectTimeout,

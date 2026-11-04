@@ -409,7 +409,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             _disconnectException = exception;
 
             // a start still on its way - waiting for the tunnel, say - ends too, rather than connecting after
-            _connectCts.TryCancel();
+            await _connectCts.TryCancelAsync().Vhc();
 
             // the block stays as it is: lifting it is a person's disconnect's, the app's; this connect changes
             // it no more, not even by a re-point under way, which may otherwise land after that lift

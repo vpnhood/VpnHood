@@ -412,8 +412,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         return Sessions
             .Values
             .Where(x =>
-                x is { IsDisposed: false } &&
-                x.Response.ErrorCode == SessionErrorCode.Ok && // a closed one goes through disposal
+                x is { IsDisposed: false, Response.ErrorCode: SessionErrorCode.Ok } && // a closed one goes through disposal
                 x.LastActivityTime < minSessionActivityTime)
             .ToArray(); // make sure make a copy to avoid modification in the loop
     }

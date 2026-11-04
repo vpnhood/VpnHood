@@ -70,21 +70,21 @@ public sealed class DaemonConnection : IAsyncDisposable
     private sealed class DaemonApiUrlProvider : IDesktopApiUrlProvider, IDisposable
     {
         private readonly IDaemonAnswerProvider _answerProvider;
-        private Uri _last;
 
         public DaemonApiUrlProvider(IDaemonAnswerProvider answerProvider)
         {
             _answerProvider = answerProvider;
-            _last = answerProvider.Current?.ApiUrl ?? throw new InvalidOperationException("The service has not answered.");
+            Current = answerProvider.Current?.ApiUrl ?? throw new InvalidOperationException("The service has not answered.");
             _answerProvider.Changed += OnChanged;
         }
 
         public Uri Current {
             get {
                 if (_answerProvider.Current?.ApiUrl is { } url)
-                    _last = url;
-                return _last;
+                    field = url;
+                return field;
             }
+            private init;
         }
 
         public event EventHandler? Changed;

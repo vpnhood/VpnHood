@@ -91,7 +91,7 @@ public class DaemonConnectionTest
         await using var server = await Serve(channel, Answer(4711, "t1"));
 
         await using var stream = await channel.Connect(TestCt);
-        await stream.WriteAsync(Enumerable.Repeat((byte)'a', 5000).ToArray());
+        await stream.WriteAsync(Enumerable.Repeat((byte)'a', 5000).ToArray(), TestCt);
         Assert.IsTrue(await IsClosed(stream, TimeSpan.FromSeconds(2)), "closed long before the silent caller's time");
     }
 
@@ -104,7 +104,7 @@ public class DaemonConnectionTest
         await Assert.ThrowsAsync<Exception>(() => DaemonChannelClient.AskOnce(channel, TestCt),
             "the caller whose accept failed is lost");
 
-        var answer = await DaemonChannelClient.AskOnce(channel, TestCt).WaitAsync(Wait);
+        var answer = await DaemonChannelClient.AskOnce(channel, TestCt).WaitAsync(Wait, TestCt);
         Assert.AreEqual(4711, answer.ApiUrl?.Port, "the next is answered");
     }
 
@@ -240,7 +240,7 @@ public class DaemonConnectionTest
         var error = await Assert.ThrowsAsync<Exception>(() => connection.Api.App.Log(TestCt));
         var messages = string.Join(" | ", Unwrap(error).Select(x => x.Message));
         StringAssert.Contains(messages, "held by another program");
-        await Task.Delay(200);
+        await Task.Delay(200, TestCt);
         Assert.AreEqual(0, api.Requests.Count, "the request never went out");
 
         // the process the channel named is what the check is given

@@ -20,14 +20,14 @@ public class TcpMessageTest
                 var listenerTask = listener.Start(Echo, TestCt);
                 await AssertEcho(client, "first");
                 listener.Dispose();
-                await listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
+                await listenerTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
             }
 
             using (var listener = new TcpMessageListener(configFolder)) {
                 var listenerTask = listener.Start(Echo, TestCt);
                 await AssertEcho(client, "second");
                 listener.Dispose();
-                await listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
+                await listenerTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
             }
         }
         finally {

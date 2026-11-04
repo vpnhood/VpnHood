@@ -26,7 +26,7 @@ internal sealed class InitialStreamPadding
     }
 
     public CancellationToken CancellationToken { get; }
-    public bool CanPadData => !_stop.IsCancellationRequested && _remainingWrites > 0;
+    public bool CanPadData => !CancellationToken.IsCancellationRequested && _remainingWrites > 0;
 
     // The frame writer holds its gate while cover can still share this budget and the transport.
     // This class owns padding policy and its lifetime; frame encoding and serialization stay in the writer.
@@ -51,7 +51,7 @@ internal sealed class InitialStreamPadding
         // The server enables padding before connecting to the destination. A slow connect must not
         // consume the window before its first session response is written.
         var started = _started ??= Stopwatch.GetTimestamp();
-        if (_stop.IsCancellationRequested || Stopwatch.GetElapsedTime(started).TotalMilliseconds >= MaximumLifetimeMilliseconds ||
+        if (CancellationToken.IsCancellationRequested || Stopwatch.GetElapsedTime(started).TotalMilliseconds >= MaximumLifetimeMilliseconds ||
             _remainingBytes < 142) {
             _remainingWrites = 0;
             return 0;

@@ -8,7 +8,7 @@ internal sealed class Http3PendingReadStream : MemoryStream
 
     public Task WaitForRead(CancellationToken cancellationToken) => _started.Task.WaitAsync(cancellationToken);
 
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         _started.TrySetResult();
         try {

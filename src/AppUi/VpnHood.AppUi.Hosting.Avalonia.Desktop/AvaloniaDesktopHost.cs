@@ -89,7 +89,8 @@ public static class AvaloniaDesktopHost
         // (keepRunningWhileConnected), until the VPN is down. Otherwise it ends the run, as the run's own
         // end and the system's shutdown close it.
         Size? hiddenSize = null;
-        window.Closing += (_, e) => {
+        window.Closing += (sender, e) => {
+            // ReSharper disable once AccessToDisposedClosure
             var isToTray = trayArea?.IsShown == true;
             if (e.CloseReason != WindowCloseReason.WindowClosing || (!isToTray && !keepRunningWhileConnected))
                 return;

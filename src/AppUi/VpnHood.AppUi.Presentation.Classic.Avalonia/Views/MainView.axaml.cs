@@ -260,7 +260,7 @@ public partial class MainView : UserControl
     // page is still in it while it fades
     private void OnPageGotFocus(object? sender, FocusChangedEventArgs e)
     {
-        if (Host.Content is IPage page && page is Visual root && e.NewFocusedElement is Control control && root.IsVisualAncestorOf(control))
+        if (Host.Content is IPage page and Visual root && e.NewFocusedElement is Control control && root.IsVisualAncestorOf(control))
             _lastFocus.AddOrUpdate(page, control);
     }
 
@@ -432,7 +432,7 @@ public partial class MainView : UserControl
             return;
         }
 
-        if (Host.Content is IPage page and Control root && !root.IsKeyboardFocusWithin) {
+        if (Host.Content is IPage page and Control { IsKeyboardFocusWithin: false }) {
             page.FocusDefault();
             AwaitFocus(page);
         }
@@ -627,7 +627,6 @@ public partial class MainView : UserControl
         _updateNoticeVersionStatus = status.VersionStatus;
         var isDeprecated = status.VersionStatus == VersionStatus.Deprecated;
         UpdateNotice.Classes.Set("update-warning", isDeprecated);
-        UpdateNotice.Classes.Set("update-alert", !isDeprecated);
         UpdateNoticeIcon.Text = isDeprecated ? Mdi.AlertCircle : Mdi.Update;
         UpdateNoticeText.Text = isDeprecated
             ? Strings.Current.VersionIsDeprecated(VhApp.Descriptor.AppName)

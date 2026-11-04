@@ -890,8 +890,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    /// <param name="uiContext">The caller's window, which asks the person for the VPN permission and
-    /// for notifications; null when it has none, and then a missing permission fails and nothing is asked.</param>
+    // uiContext: the caller's window, which asks the person for the VPN permission and for notifications;
+    // null when it has none, and then a missing permission fails and nothing is asked.
     public async Task Connect(IUiContext? uiContext, ConnectOptions? connectOptions,
         CancellationToken cancellationToken)
     {

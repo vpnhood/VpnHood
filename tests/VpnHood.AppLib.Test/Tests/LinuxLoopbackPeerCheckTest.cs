@@ -20,8 +20,8 @@ public class LinuxLoopbackPeerCheckTest
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         using var client = new TcpClient(AddressFamily.InterNetwork);
-        await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
-        using var accepted = await listener.AcceptSocketAsync();
+        await client.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port, TestCt);
+        using var accepted = await listener.AcceptSocketAsync(TestCt);
 
         var local = client.Client.LocalEndPoint as IPEndPoint ?? throw new InvalidOperationException("no local end");
         var remote = client.Client.RemoteEndPoint as IPEndPoint ?? throw new InvalidOperationException("no remote end");

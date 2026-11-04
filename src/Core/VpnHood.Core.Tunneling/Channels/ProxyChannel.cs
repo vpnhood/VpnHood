@@ -120,7 +120,7 @@ public class ProxyChannel : IProxyChannel
             _isClosing = true; // before the host stream goes: the alive check must not take this for an error
 
             // the other pump's wait on the speed limit ends at once: its bytes have nowhere to go
-            _throttleCancellationTokenSource.TryCancel();
+            await _throttleCancellationTokenSource.TryCancelAsync().Vhc();
 
             // ends the tunnel's logical stream with its peer and closes the host, which ends both pumps
             await Task.WhenAll(

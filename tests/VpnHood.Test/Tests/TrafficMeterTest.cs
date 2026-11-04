@@ -104,7 +104,7 @@ public class TrafficMeterTest : TestBase
         tcpListener.Stop();
 
         await using var serverConnection = new TcpStreamConnection(serverTcpClient, connectionName: "tunnel", isServer: true);
-        using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
+        await using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             RequestTime = DateTime.UtcNow,
             StreamConnection = serverConnection,
             Blocking = false,

@@ -147,9 +147,9 @@ public class Http3TrailerScheduleTest
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(5));
         var gate = new Http3RequestTestGate();
-        using var source = new Http3GatedRequestStream(headers, tail, gate, holdTailUntilResponse,
+        await using var source = new Http3GatedRequestStream(headers, tail, gate, holdTailUntilResponse,
             responseReleaseBytes, maximumRead);
-        using var output = new Http3SignaledOutputStream(gate);
+        await using var output = new Http3SignaledOutputStream(gate);
         var quic = new Http3RecordingQuicStream(output);
         await using var reader = new Http3StreamReader(source, allowBufferGrowth: true, quic: quic);
         var errors = new List<Exception>();

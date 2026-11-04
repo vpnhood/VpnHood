@@ -12,7 +12,7 @@ internal sealed class Http3GatedReadStream : MemoryStream
 
     public void Release(byte[] bytes) => _released.TrySetResult(bytes);
 
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (_delivered) {
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);

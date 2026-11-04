@@ -368,7 +368,7 @@ public class PortalTest
             UserId = ExternalUid.ToString(),
             ExpiresAt = DateTime.UtcNow.AddDays(-1),
             ProviderId = AuthProviders.Google
-        }));
+        }), TestCt);
         _portal.Enqueue(SignInRoute, SignInData(accessToken: "new-account-token"));
         var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
         using var authenticationProvider = CreateAuthenticationProvider(externalProvider);

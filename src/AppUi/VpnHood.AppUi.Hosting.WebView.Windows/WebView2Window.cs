@@ -48,7 +48,7 @@ internal sealed class WebView2Window
         };
 
         controller.Bounds = ToRectangle(Window.ClientRect);
-        controller.IsVisible = Window.IsVisible && !Window.IsMinimized;
+        controller.IsVisible = Window is { IsVisible: true, IsMinimized: false };
         _controller = controller;
 
         // the focus the window got before the page was there to take it

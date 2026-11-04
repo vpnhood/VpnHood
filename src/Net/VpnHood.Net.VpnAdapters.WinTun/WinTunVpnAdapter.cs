@@ -412,10 +412,10 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return OsUtils.ExecuteCommandAsync("powershell.exe", ps, cancellationToken);
     }
 
-    private static string ExecutePowerShellCommand(string command, TimeSpan timeout)
+    private static void ExecutePowerShellCommand(string command, TimeSpan timeout)
     {
         var ps = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"{command}\"";
-        return OsUtils.ExecuteCommand("powershell.exe", ps, timeout);
+        OsUtils.ExecuteCommand("powershell.exe", ps, timeout);
     }
 
     protected override void WaitForTunRead()

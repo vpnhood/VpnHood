@@ -224,7 +224,7 @@ public class Http3QpackTest
     public async Task Streaming_fields_survive_fragmentation_without_consuming_the_next_frame(int fragmentSize)
     {
         var block = Convert.FromHexString("0000d1d7c1508cf1e3c2e5f23a6ba0ab90f4ff");
-        using var stream = new FragmentedReadStream([.. block, 0x40, 0x7f], fragmentSize);
+        await using var stream = new FragmentedReadStream([.. block, 0x40, 0x7f], fragmentSize);
         await using var reader = new Http3StreamReader(stream);
         var section = await Http3Qpack.ReadSection(reader, block.Length, new Http3ServerOptions(), TestContext.CancellationToken);
         Assert.IsTrue(section.Completed);
@@ -245,7 +245,7 @@ public class Http3QpackTest
         foreach (var suffix in suffixes) {
             byte[] block = [.. valid, .. suffix];
             for (var fragment = 1; fragment <= block.Length; fragment++) {
-                using var stream = new FragmentedReadStream([.. block, 0x40, 0x7f], fragment);
+                await using var stream = new FragmentedReadStream([.. block, 0x40, 0x7f], fragment);
                 await using var reader = new Http3StreamReader(stream);
                 var observed = new List<KeyValuePair<string, string>>();
                 var read = Http3Qpack.ReadSection(reader, block.Length, observed.Add,
@@ -271,7 +271,7 @@ public class Http3QpackTest
         var bytes = new List<byte> { 0, 0, 0xd1, 0x21, (byte)'x' };
         AppendInteger(bytes, 0, 7, 32768);
         bytes.AddRange(Enumerable.Repeat((byte)'a', valueBytesReceived));
-        using var stream = new FragmentedReadStream(bytes.ToArray(), 1);
+        await using var stream = new FragmentedReadStream(bytes.ToArray(), 1);
         await using var reader = new Http3StreamReader(stream);
         var section = await Http3Qpack.ReadSection(reader, 1024 * 1024, new Http3ServerOptions(),
             TestContext.CancellationToken);
@@ -287,7 +287,7 @@ public class Http3QpackTest
     {
         var bytes = new List<byte> { 0, 0, 0x21, (byte)'x' };
         AppendInteger(bytes, 0, 7, 32769);
-        using var stream = new FragmentedReadStream(bytes.ToArray(), 1);
+        await using var stream = new FragmentedReadStream(bytes.ToArray(), 1);
         await using var reader = new Http3StreamReader(stream);
         await Assert.ThrowsExactlyAsync<Http3QpackException>(() =>
             Http3Qpack.ReadSection(reader, 1024 * 1024, new Http3ServerOptions(), TestContext.CancellationToken));
@@ -297,7 +297,7 @@ public class Http3QpackTest
     [TestMethod]
     public async Task An_invalid_reference_is_rejected_before_the_rest_of_a_large_frame_arrives()
     {
-        using var stream = new FragmentedReadStream([0, 0, 0], 1);
+        await using var stream = new FragmentedReadStream([0, 0, 0], 1);
         await using var reader = new Http3StreamReader(stream);
         await Assert.ThrowsExactlyAsync<Http3QpackException>(() =>
             Http3Qpack.ReadSection(reader, 1024 * 1024, new Http3ServerOptions(), TestContext.CancellationToken));
@@ -308,7 +308,7 @@ public class Http3QpackTest
     [TestMethod]
     public async Task Fin_before_any_complete_field_remains_incomplete()
     {
-        using var stream = new FragmentedReadStream([0], 1);
+        await using var stream = new FragmentedReadStream([0], 1);
         await using var reader = new Http3StreamReader(stream);
         await Assert.ThrowsExactlyAsync<EndOfStreamException>(() =>
             Http3Qpack.ReadSection(reader, 5, new Http3ServerOptions(), TestContext.CancellationToken));
@@ -319,7 +319,7 @@ public class Http3QpackTest
     [DataRow(new byte[] { 0, 0, 0xd1, 0x21, 0x41, 0 })]
     public async Task Malformed_complete_fields_are_rejected_even_before_the_section_finishes(byte[] prefix)
     {
-        using var stream = new FragmentedReadStream(prefix, 1);
+        await using var stream = new FragmentedReadStream(prefix, 1);
         await using var reader = new Http3StreamReader(stream);
         var headers = new Http3RequestHeaders(trailers: false, new Http3ServerOptions().MaxRequestLineBytes);
         var exception = await Assert.ThrowsExactlyAsync<Http3ProtocolException>(() =>
@@ -337,7 +337,7 @@ public class Http3QpackTest
         bool exceedsRequestLimits)
     {
         byte[] block = [0, 0, .. Enumerable.Repeat((byte)0xc1, count)];
-        using var stream = new FragmentedReadStream(block, 7);
+        await using var stream = new FragmentedReadStream(block, 7);
         await using var reader = new Http3StreamReader(stream);
         var section = await Http3Qpack.ReadSection(reader, block.Length, new Http3ServerOptions(),
             TestContext.CancellationToken);
@@ -350,7 +350,7 @@ public class Http3QpackTest
     public async Task The_201st_complete_field_exceeds_the_eager_parsing_allowance()
     {
         byte[] block = [0, 0, .. Enumerable.Repeat((byte)0xc1, 201)];
-        using var stream = new FragmentedReadStream(block, 7);
+        await using var stream = new FragmentedReadStream(block, 7);
         await using var reader = new Http3StreamReader(stream);
         var exception = await Assert.ThrowsExactlyAsync<Http3ProtocolException>(() =>
             Http3Qpack.ReadSection(reader, block.Length, new Http3ServerOptions(), TestContext.CancellationToken));
@@ -365,7 +365,7 @@ public class Http3QpackTest
         bool exceedsRequestLimits)
     {
         var block = CreateLiteralField("x", new string('a', valueLength));
-        using var stream = new FragmentedReadStream(block, 19);
+        await using var stream = new FragmentedReadStream(block, 19);
         await using var reader = new Http3StreamReader(stream);
         var section = await Http3Qpack.ReadSection(reader, block.Length, new Http3ServerOptions(),
             TestContext.CancellationToken);
@@ -383,7 +383,7 @@ public class Http3QpackTest
         var block = new List<byte> { 0, 0, 0x21, (byte)'x' };
         AppendInteger(block, 0x80, 7, (ulong)encoded.Length);
         block.AddRange(encoded);
-        using var stream = new FragmentedReadStream(block.ToArray(), 31);
+        await using var stream = new FragmentedReadStream(block.ToArray(), 31);
         await using var reader = new Http3StreamReader(stream);
         await Assert.ThrowsExactlyAsync<Http3QpackException>(() =>
             Http3Qpack.ReadSection(reader, block.Count, new Http3ServerOptions(), TestContext.CancellationToken));
@@ -393,7 +393,7 @@ public class Http3QpackTest
         CancellationToken cancellationToken) =>
         (await ReadSection(block, new Http3ServerOptions(), cancellationToken)).Fields;
 
-    private async Task<Http3FieldSection> ReadSection(byte[] block, Http3ServerOptions options,
+    private static async Task<Http3FieldSection> ReadSection(byte[] block, Http3ServerOptions options,
         CancellationToken cancellationToken)
     {
         using var stream = new MemoryStream(block);

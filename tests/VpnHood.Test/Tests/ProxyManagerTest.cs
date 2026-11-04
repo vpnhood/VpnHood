@@ -153,7 +153,7 @@ public class ProxyManagerTest
         var hostOut = new System.IO.Pipelines.Pipe();
         var tunnelIn = new System.IO.Pipelines.Pipe();
         var tunnelOut = new System.IO.Pipelines.Pipe();
-        using var channel = new ProxyChannel("throttled-channel",
+        await using var channel = new ProxyChannel("throttled-channel",
             new TestStreamConnection(new DuplexStream(hostIn.Reader.AsStream(), hostOut.Writer.AsStream())),
             new TestStreamConnection(new DuplexStream(tunnelIn.Reader.AsStream(), tunnelOut.Writer.AsStream())),
             new TransferBufferSize(4096, 4096), trafficMeter);

@@ -31,7 +31,7 @@ internal sealed class ShotRunner(ShotOptions options, Window window, MainView vi
         }
         catch (Exception ex) {
             Report();
-            Console.Error.WriteLine($"FAILED    {ex.Message}");
+            await Console.Error.WriteLineAsync($"FAILED    {ex.Message}");
             return 1;
         }
     }
@@ -183,7 +183,7 @@ internal sealed class ShotRunner(ShotOptions options, Window window, MainView vi
         return text.Length > 300 ? text[..300] : text;
     }
 
-    private void Report()
+    private static void Report()
     {
         var unmocked = UnmockedCalls.All;
         if (unmocked.Count > 0)

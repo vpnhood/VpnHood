@@ -118,7 +118,7 @@ public class WindowsDaemonChannelTest
                 pipe.Connect(5000);
             }
 
-            var answer = await DaemonChannelClient.AskOnce(channel, TestCt).WaitAsync(TimeSpan.FromSeconds(10));
+            var answer = await DaemonChannelClient.AskOnce(channel, TestCt).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
             Assert.AreEqual(Environment.ProcessId, answer.ProcessId, "an administrator is still answered");
         }
         finally {

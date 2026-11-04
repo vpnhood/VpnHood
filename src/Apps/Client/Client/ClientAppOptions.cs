@@ -25,6 +25,7 @@ public static class ClientAppOptions
         // bring-your-own-key: none unless the build names one, but a Debug build starts with the
         // engine's sample
         var defaultAccessKey = appConfigs.DefaultAccessKey ??
+                               // ReSharper disable once HeuristicUnreachableCode
                                (AppConstants.IsDebugMode ? ClientOptions.SampleAccessKey : null);
         return new AppOptions(context, AppConstants.IsDebugMode) {
             PackageTitle = AppConstants.PackageTitle,

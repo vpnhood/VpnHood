@@ -61,7 +61,7 @@ public partial class Http3FrontTest
 
     private static byte[] BuildPostHeaderBurst(string layout, byte[] headers)
     {
-        IReadOnlyList<(string Name, string Value)> trailerFields = [.. Enumerable.Repeat(("x", ""), 8)];
+        IReadOnlyList<(string Name, string Value)> trailerFields = Enumerable.Repeat(("x", ""), 8).ToArray();
         var trailers = BuildLiteralRequest(trailerFields);
         // RC3 Http3Stream checks DATA length, FIN, frame order, trailer callbacks and QPACK separately.
         // https://github.com/dotnet/aspnetcore/blob/v11.0.0-rc.3.26522.148/src/Servers/Kestrel/Core/src/Internal/Http3/Http3Stream.cs

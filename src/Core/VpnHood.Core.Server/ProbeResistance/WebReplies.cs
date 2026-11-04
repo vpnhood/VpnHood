@@ -157,11 +157,11 @@ internal static class WebReplies
             if (remaining.StartsWith("../", StringComparison.Ordinal)) index += 3;
             else if (remaining.StartsWith("./", StringComparison.Ordinal)) index += 2;
             else if (remaining.StartsWith("/./", StringComparison.Ordinal)) index += 2;
-            else if (remaining.SequenceEqual("/.")) {
+            else if (remaining is "/.") {
                 output.Append('/');
                 break;
             }
-            else if (remaining.StartsWith("/../", StringComparison.Ordinal) || remaining.SequenceEqual("/..")) {
+            else if (remaining.StartsWith("/../", StringComparison.Ordinal) || remaining is "/..") {
                 var lastSlash = output.Length - 1;
                 while (lastSlash >= 0 && output[lastSlash] != '/')
                     lastSlash--;
@@ -172,7 +172,7 @@ internal static class WebReplies
                 }
                 index += 3;
             }
-            else if (remaining.SequenceEqual(".") || remaining.SequenceEqual("..")) break;
+            else if (remaining is "." or "..") break;
             else {
                 var next = input.IndexOf('/', index + 1);
                 if (next < 0) next = input.Length;

@@ -11,7 +11,7 @@ namespace VpnHood.App.StoreScreenshots;
 // the working files of both kept, because the first is what a wrong pixel is chased in. Each
 // picture is a process of its own (Child), several at a time; nothing here depends on the order
 // they finish in, so a run of eight at once writes the same bytes as a run of one.
-internal static partial class GenerateCommand
+internal static class GenerateCommand
 {
     public static int Run(IReadOnlyList<string> args, CancellationToken cancellationToken)
     {

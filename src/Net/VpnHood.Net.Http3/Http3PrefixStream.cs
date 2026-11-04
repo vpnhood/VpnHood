@@ -13,7 +13,7 @@ internal sealed class Http3PrefixStream(Stream source, byte[] prefix, int count)
     private byte[]? _prefix = prefix;
     private int _offset;
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (Volatile.Read(ref _prefix) != null) {

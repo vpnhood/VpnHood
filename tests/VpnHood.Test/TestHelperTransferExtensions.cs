@@ -357,10 +357,10 @@ public static class TestHelperTransferExtensions
             CertificateRevocationCheckMode = X509RevocationMode.NoCheck
         };
         if (ipAddress != null) {
-            handler.ConnectCallback = async (_, cancellationToken) => {
+            handler.ConnectCallback = async (_, connectToken) => {
                 var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 try {
-                    await socket.ConnectAsync(new IPEndPoint(ipAddress, uri.Port), cancellationToken);
+                    await socket.ConnectAsync(new IPEndPoint(ipAddress, uri.Port), connectToken);
                     return new NetworkStream(socket, ownsSocket: true);
                 }
                 catch {

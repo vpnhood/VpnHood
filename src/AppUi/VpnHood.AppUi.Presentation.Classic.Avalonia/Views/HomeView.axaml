@@ -254,7 +254,7 @@
       <!-- The TV's corner, under the rows in either layout: the language, which no other page on
            a TV offers, and the account (for a build with one) - both wanted about once, so neither
            takes a row. The last row's Down lands here. -->
-      <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8"
+      <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8"
                   HorizontalAlignment="Right" Margin="0,12,0,0" IsVisible="{Binding IsTv}">
         <Button x:Name="LanguageButton" Classes="config-pill" Click="OnLanguageClick"
                 AutomationProperties.Name="{Binding Language, Source={x:Static res:Strings.Current}}">

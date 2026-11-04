@@ -4,7 +4,7 @@ internal sealed class Http3AdmissionTestStream(IReadOnlyList<byte> bytes) : Memo
 {
     public int ReadCount { get; private set; }
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (buffer.IsEmpty)

@@ -114,7 +114,7 @@ public class ServerUdpChannelTest : TestBase
         var tcpChannelCount = dom.ServerSession.TcpChannelCount;
 
         // genuine, from another socket, with seq 0: never above a seq the client has sent
-        using var replayer = UdpTestUtil.CreateClientChannel(hostUdpEndPoint, dom.ServerSession.SessionId,
+        await using var replayer = UdpTestUtil.CreateClientChannel(hostUdpEndPoint, dom.ServerSession.SessionId,
             dom.ServerSession.SessionKey, firstSendSequenceNumber: 0);
         replayer.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
         await Task.Delay(500, TestCt);
@@ -212,7 +212,7 @@ public class ServerUdpChannelTest : TestBase
         Assert.IsNotNull(clientSession.UdpChannel);
 
         // the datagram at the seq the client's next request carries, from a socket of the test's
-        using var sender = UdpTestUtil.CreateClientChannel(hostUdpEndPoint, dom.ServerSession.SessionId,
+        await using var sender = UdpTestUtil.CreateClientChannel(hostUdpEndPoint, dom.ServerSession.SessionId,
             dom.ServerSession.SessionKey, firstSendSequenceNumber: clientSession.UdpChannel.NextSendSequenceNumber);
         sender.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
         await VhTestUtil.AssertEqualsWait(true, () => dom.ServerSession.Tunnel.UseUdp, cancellationToken: TestCt);

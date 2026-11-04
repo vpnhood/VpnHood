@@ -36,6 +36,8 @@ public class WindowsDesktopPaths(string appId) : IAppDesktopPaths
             ? throw new InvalidOperationException("This app is built without a VPN host (VhAppVpnHostName).")
             : _vpnHostName) + ".exe");
 
+    // the host's name, not the path the property answers, so no backing field of it
+    // ReSharper disable once ReplaceWithFieldKeyword
     private readonly string? _vpnHostName = Assembly.GetEntryAssembly()?
         .GetCustomAttributes<AssemblyMetadataAttribute>()
         .FirstOrDefault(x => x.Key == "VhAppVpnHostName")?.Value;

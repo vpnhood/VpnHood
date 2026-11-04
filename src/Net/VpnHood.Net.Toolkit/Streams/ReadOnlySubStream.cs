@@ -125,6 +125,7 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
 
     // The window has to be a window of something readable and seekable, and has to lie inside it:
     // a range running past the end of the source would read short at some unrelated later moment.
+    // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
     private static Stream Validate(Stream source, long start, long length)
     {
         ArgumentNullException.ThrowIfNull(source);

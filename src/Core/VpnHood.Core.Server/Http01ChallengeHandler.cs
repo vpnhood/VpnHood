@@ -84,7 +84,7 @@ public class Http01ChallengeHandler : IDisposable
     // serves HTTPS alone and keeps port 80 for its certificate
     private async Task HandleRequest(TcpClient client, CancellationToken cancellationToken)
     {
-        using var connection = new TcpStreamConnection(client, connectionName: "http01", isServer: true);
+        await using var connection = new TcpStreamConnection(client, connectionName: "http01", isServer: true);
         var reset = false;
         IPEndPointPair? endPoints = null;
         try {

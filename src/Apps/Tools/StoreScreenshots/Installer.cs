@@ -7,7 +7,7 @@ namespace VpnHood.App.StoreScreenshots;
 // A store folder is a deliverable, never a partial: a missing file fails the install rather than
 // leaving a hole for the uploader to ship, and a numbered file the set no longer produces is
 // deleted - a set that shrank would otherwise keep shipping the screen it dropped.
-internal static partial class Installer
+internal static class Installer
 {
     public static void Install(StoreConfig config, PlatformSpec platform, IReadOnlyList<DeviceSpec> devices,
         string finalDir, string installRoot)

@@ -15,6 +15,6 @@ public interface IBillingApi
     Task<bool> RestorePurchase(CancellationToken cancellationToken);
 
     /// <summary>Open the store's manage-subscriptions surface. Offer it only while the subscription's
-    /// <see cref="Abstractions.Accounts.Subscription.Management" /> is Available.</summary>
+    /// <c>Subscription.Management</c> is Available.</summary>
     Task OpenSubscriptionManagement(CancellationToken cancellationToken);
 }

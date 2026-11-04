@@ -47,6 +47,7 @@ public sealed class VpnPluginBridge : IVpnPlugIn
     public void GetKeepAlivePayload(VpnChannel channel, out VpnPacketBuffer keepAlivePacket)
     {
 #nullable disable
+        // ReSharper disable once AssignNullToNotNullAttribute
         keepAlivePacket = null;
 #nullable restore
     }

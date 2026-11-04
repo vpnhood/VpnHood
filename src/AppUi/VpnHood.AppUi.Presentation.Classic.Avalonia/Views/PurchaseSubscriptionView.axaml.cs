@@ -63,7 +63,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
             return;
 
         var direction = e.Key == Key.Left ? NavigationDirection.Left : NavigationDirection.Right;
-        if (TopLevel.GetTopLevel(this)?.FocusManager?.FindNextElement(direction) != null)
+        if (TopLevel.GetTopLevel(this)?.FocusManager.FindNextElement(direction) != null)
             return;
 
         Carousel.SlideToward(direction);

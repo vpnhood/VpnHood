@@ -383,7 +383,7 @@ public partial class WebFrontTest : TestBase
         await client.ConnectAsync((IPEndPoint)listener.LocalEndpoint, TestCt);
         using var accepted = await listener.AcceptTcpClientAsync(TestCt);
         using var stream = new MemoryStream();
-        using var connection = new TcpStreamConnection(accepted, stream, "test", isServer: true);
+        await using var connection = new TcpStreamConnection(accepted, stream, "test", isServer: true);
         accepted.Dispose();
         connection.Reset();
         Assert.IsFalse(stream.CanRead);

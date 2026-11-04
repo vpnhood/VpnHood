@@ -19,7 +19,7 @@ internal class QuicListenerHost(
     IQuicServer? quicServer,
     SessionManager sessionManager,
     UnauthenticatedConnections unauthenticatedConnections,
-    CancellationToken cancellationToken,
+    CancellationToken serverCancellationToken,
     Func<IStreamConnection, CancellationToken, Task> processNewConnection)
     : IAsyncDisposable, IQuicCertificateSelector
 {
@@ -75,8 +75,8 @@ internal class QuicListenerHost(
                     throw new NotSupportedException("QUIC is not supported on this platform.");
 
                 var listenerOptions = QuicListenerOptionsFactory.Create(ipEndPoint, this);
-                var listener = await quicServer.ListenAsync(listenerOptions, cancellationToken).Vhc();
-                var entry = new QuicListenerEntry(listener, cancellationToken);
+                var listener = await quicServer.ListenAsync(listenerOptions, serverCancellationToken).Vhc();
+                var entry = new QuicListenerEntry(listener, serverCancellationToken);
                 entry.ListenerTask = ListenTask(entry, entry.Token);
                 _listeners.Add(entry);
                 endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Quic, EndPoint = ipEndPoint });

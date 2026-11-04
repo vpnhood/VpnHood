@@ -20,7 +20,7 @@ public class WebSocketPaddingTest
     [DataRow(true)]
     public async Task Preserved_payload_keeps_the_written_mask_on_completion_or_failure(bool cancel)
     {
-        using var source = new BlockingWriteStream(block: cancel);
+        await using var source = new BlockingWriteStream(block: cancel);
         var writer = new WebSocketStream(source, "preserved", false, false, useStandardMasking: true);
         var data = Encoding.ASCII.GetBytes("caller-owned payload");
         var buffer = new byte[writer.PreserveWriteBufferLength + data.Length];
@@ -48,7 +48,7 @@ public class WebSocketPaddingTest
     [DataRow(true, true)]
     public async Task Data_bypasses_the_gate_when_cover_is_absent_or_finished(bool padding, bool preserved)
     {
-        using var source = new RecordingStream([0x82, 0]);
+        await using var source = new RecordingStream([0x82, 0]);
         await using var stream = new WebSocketStream(source, "no-cover-gate", false, true, useStandardMasking: true);
         if (padding) {
             stream.EnableInitialPadding();
@@ -79,7 +79,7 @@ public class WebSocketPaddingTest
     [TestMethod]
     public async Task Data_waits_for_cover_and_a_queued_write_survives_cover_completion()
     {
-        using var source = new PausedWriteStream(pausedWrite: 2);
+        await using var source = new PausedWriteStream(pausedWrite: 2);
         await using var stream = new WebSocketStream(source, "cover-order", false, true, useStandardMasking: true);
         stream.EnableInitialPadding();
         await stream.WriteAsync(new byte[] { 1 }, TestCt);
@@ -103,7 +103,7 @@ public class WebSocketPaddingTest
     [TestMethod]
     public async Task Large_writes_are_not_copied_into_padding_and_expired_padding_stays_off()
     {
-        using var source = new RecordingStream([0x82, 0]);
+        await using var source = new RecordingStream([0x82, 0]);
         var writer = new WebSocketStream(source, "bounded", false, false, useStandardMasking: true);
         writer.EnableInitialPadding();
         var large = new byte[writer.PreserveWriteBufferLength + 65536];
@@ -120,7 +120,7 @@ public class WebSocketPaddingTest
     [TestMethod]
     public async Task A_slow_destination_does_not_consume_padding_before_the_first_response()
     {
-        using var source = new RecordingStream([0x82, 0]);
+        await using var source = new RecordingStream([0x82, 0]);
         var writer = new WebSocketStream(source, "slow-connect", false, true, useStandardMasking: true);
         writer.EnableInitialPadding();
         await Task.Delay(2100, TestCt);
@@ -137,7 +137,7 @@ public class WebSocketPaddingTest
     [DataRow(true, true)]
     public async Task Padding_and_data_share_a_write_and_round_trip(bool isServer, bool preserved)
     {
-        using var source = new RecordingStream([0x82, 0]);
+        await using var source = new RecordingStream([0x82, 0]);
         var writer = new WebSocketStream(source, "padding", false, isServer, useStandardMasking: true);
         writer.EnableInitialPadding();
         var data = Encoding.ASCII.GetBytes("the inner TLS hello and the proxy request");
@@ -160,7 +160,7 @@ public class WebSocketPaddingTest
         Assert.IsTrue(first[1].Payload.All(x => x is >= 32 and <= 126));
         Assert.AreEqual(!isServer, !first[1].Header.MaskKey.IsEmpty);
 
-        using var readerSource = new RecordingStream(writes.SelectMany(x => x).ToArray());
+        await using var readerSource = new RecordingStream(writes.SelectMany(x => x).ToArray());
         var reader = new WebSocketStream(readerSource, "reader", false, !isServer, useStandardMasking: true);
         var received = new byte[data.Length];
         // Small reads exercise mask offsets across multiple reads of the same frame.
@@ -174,7 +174,7 @@ public class WebSocketPaddingTest
     [TestMethod]
     public async Task Idle_gaps_have_bounded_cover_and_then_stop()
     {
-        using var source = new RecordingStream([0x82, 0]);
+        await using var source = new RecordingStream([0x82, 0]);
         var stream = new WebSocketStream(source, "idle", false, true, useStandardMasking: true);
         stream.EnableInitialPadding();
         await stream.WriteAsync(new byte[] { 1 }, TestCt);
@@ -196,7 +196,7 @@ public class WebSocketPaddingTest
     [TestMethod]
     public async Task Budget_ends_and_reused_streams_require_fresh_opt_in()
     {
-        using var source = new RecordingStream([0x82, 0, 0x82, 0, 0x82, 0]);
+        await using var source = new RecordingStream([0x82, 0, 0x82, 0, 0x82, 0]);
         var first = new WebSocketStream(source, "first", false, true, useStandardMasking: true);
         first.EnableInitialPadding();
         for (var i = 0; i < 20; i++)
@@ -243,7 +243,7 @@ public class WebSocketPaddingTest
             Frame(0, true, "fgh", masked: isServer),
             Frame(2, true, "", masked: isServer)
         }.SelectMany(x => x).ToArray();
-        using var source = new RecordingStream(input);
+        await using var source = new RecordingStream(input);
         var stream = new WebSocketStream(source, "fragments", false, isServer, useStandardMasking: true);
         var received = new byte[8];
         await stream.ReadExactlyAsync(received, TestCt);
@@ -258,7 +258,7 @@ public class WebSocketPaddingTest
     {
         var payload = new byte[2];
         BinaryPrimitives.WriteUInt16BigEndian(payload, 1000);
-        using var source = new RecordingStream(Frame(8, true, Encoding.Latin1.GetString(payload), masked: true));
+        await using var source = new RecordingStream(Frame(8, true, Encoding.Latin1.GetString(payload), masked: true));
         var stream = new WebSocketStream(source, "close", false, true, useStandardMasking: true);
         Assert.AreEqual(0, await stream.ReadAsync(new byte[1], TestCt));
         Assert.AreEqual((ushort)1000, stream.CloseStatus);
@@ -273,7 +273,7 @@ public class WebSocketPaddingTest
     [DataRow(0, true, 1)]
     public async Task Invalid_control_or_continuation_frames_fail(int opcode, bool final, int length)
     {
-        using var source = new RecordingStream(Frame((byte)opcode, final, new string('x', length), masked: false));
+        await using var source = new RecordingStream(Frame((byte)opcode, final, new string('x', length), masked: false));
         var stream = new WebSocketStream(source, "invalid", false, false, useStandardMasking: true);
         await Assert.ThrowsExactlyAsync<InvalidDataException>(() => stream.ReadAsync(new byte[1], TestCt).AsTask());
         Assert.IsFalse(stream.CanReuse);
@@ -283,12 +283,12 @@ public class WebSocketPaddingTest
     [TestMethod]
     public async Task Legacy_mask_headers_preserve_the_old_unmasked_payload()
     {
-        using var source = new RecordingStream([0x82, 0]);
+        await using var source = new RecordingStream([0x82, 0]);
         var writer = new WebSocketStream(source, "legacy", false, false);
         var data = Encoding.ASCII.GetBytes("legacy data");
         await writer.WriteAsync(data, TestCt);
         await writer.DisposeAsync();
-        using var readerSource = new RecordingStream(source.Snapshot().SelectMany(x => x).ToArray());
+        await using var readerSource = new RecordingStream(source.Snapshot().SelectMany(x => x).ToArray());
         var reader = new WebSocketStream(readerSource, "legacy", false, true);
         var received = new byte[data.Length];
         await reader.ReadExactlyAsync(received, TestCt);
@@ -301,7 +301,7 @@ public class WebSocketPaddingTest
     [DataRow(true)]
     public async Task Cancellation_and_quick_dispose_release_an_inflight_padded_write(bool quickDispose)
     {
-        using var source = new BlockingWriteStream();
+        await using var source = new BlockingWriteStream();
         var writer = new WebSocketStream(source, "cancel", false, true, useStandardMasking: true);
         writer.EnableInitialPadding();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
@@ -321,7 +321,7 @@ public class WebSocketPaddingTest
     [DataRow(true)]
     public async Task Closing_cancels_an_inflight_gap_frame_and_prevents_reuse(bool quickDispose)
     {
-        using var source = new BlockingWriteStream(allowedWrites: 1);
+        await using var source = new BlockingWriteStream(allowedWrites: 1);
         var writer = new WebSocketStream(source, "gap-close", false, true, useStandardMasking: true);
         writer.EnableInitialPadding();
         await writer.WriteAsync(new byte[] { 1 }, TestCt);
@@ -342,7 +342,7 @@ public class WebSocketPaddingTest
     [DataRow(true)]
     public async Task Cover_failure_stops_data_when_the_transport_owner_closes_without_reuse(bool quickDispose)
     {
-        using var source = new BlockingWriteStream(allowedWrites: 1);
+        await using var source = new BlockingWriteStream(allowedWrites: 1);
         var writer = new WebSocketStream(source, "owner-close", false, true, useStandardMasking: true);
         await using var connection = new ReusableStreamConnection(new TestStreamConnection(source), writer, null);
         writer.EnableInitialPadding();
@@ -366,7 +366,7 @@ public class WebSocketPaddingTest
     [DataRow(true)]
     public async Task Close_waits_for_an_inflight_data_frame_without_interleaving(bool graceful)
     {
-        using var source = new PausedWriteStream();
+        await using var source = new PausedWriteStream();
         await using var stream = new WebSocketStream(source, "close-order", false, true, useStandardMasking: true);
         var data = Encoding.ASCII.GetBytes("the complete real frame must precede the close");
         var buffer = new byte[stream.PreserveWriteBufferLength + data.Length];

@@ -10,14 +10,13 @@ namespace VpnHood.Net.TcpStack;
 /// </summary>
 internal sealed class RetransmitBuffer(int capacity)
 {
-    private readonly int _capacity = capacity;
     private byte[]? _buffer;
     private int _start; // the index of the byte at SndUna
 
     /// <summary>The unacknowledged bytes.</summary>
     public int Length { get; private set; }
 
-    public int Free => _capacity - Length;
+    public int Free => capacity - Length;
 
     /// <summary>Appends the segment being sent at SndNxt. It must fit in <see cref="Free"/>, which the senders keep to: an
     /// overflow would wrap over unacknowledged bytes and corrupt what is retransmitted, so it is refused instead.</summary>
@@ -26,9 +25,9 @@ internal sealed class RetransmitBuffer(int capacity)
         if (segment.Length == 0) return;
         if (segment.Length > Free)
             throw new InvalidOperationException($"The retransmit buffer has {Free} bytes free for a segment of {segment.Length}.");
-        _buffer ??= new byte[_capacity];
-        var writeIndex = (_start + Length) % _capacity;
-        var firstChunk = Math.Min(segment.Length, _capacity - writeIndex);
+        _buffer ??= new byte[capacity];
+        var writeIndex = (_start + Length) % capacity;
+        var firstChunk = Math.Min(segment.Length, capacity - writeIndex);
         segment[..firstChunk].CopyTo(_buffer.AsSpan(writeIndex));
         if (firstChunk < segment.Length)
             segment[firstChunk..].CopyTo(_buffer.AsSpan(0));
@@ -45,7 +44,7 @@ internal sealed class RetransmitBuffer(int capacity)
             _start = 0;
         }
         else {
-            _start = (_start + acked) % _capacity;
+            _start = (_start + acked) % capacity;
             Length -= acked;
         }
     }
@@ -57,8 +56,8 @@ internal sealed class RetransmitBuffer(int capacity)
         if (length <= 0) return [];
         var buffer = _buffer ?? throw new InvalidOperationException("The retransmit buffer holds bytes but was never allocated.");
         var copy = new byte[length];
-        var readIndex = (_start + offset) % _capacity;
-        var firstChunk = Math.Min(length, _capacity - readIndex);
+        var readIndex = (_start + offset) % capacity;
+        var firstChunk = Math.Min(length, capacity - readIndex);
         Array.Copy(buffer, readIndex, copy, 0, firstChunk);
         if (firstChunk < length)
             Array.Copy(buffer, 0, copy, firstChunk, length - firstChunk);

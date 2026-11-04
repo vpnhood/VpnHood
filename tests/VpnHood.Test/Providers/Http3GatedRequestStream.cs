@@ -7,7 +7,7 @@ internal sealed class Http3GatedRequestStream(byte[] headers, byte[] tail, Http3
     public int TailBytesProvided { get; private set; }
     public bool PendingReadEnded { get; private set; }
 
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (Position < Length)
             return await base.ReadAsync(buffer, cancellationToken);

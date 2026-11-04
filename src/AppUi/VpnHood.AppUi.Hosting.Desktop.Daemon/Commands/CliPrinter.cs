@@ -37,6 +37,12 @@ internal static class CliPrinter
         return Console.Out.WriteLineAsync(text.AsMemory(), cancellationToken);
     }
 
+    // A failure, which a cancel is often the cause of, so it takes no token that would drop the line
+    public static Task Error(string text)
+    {
+        return Console.Error.WriteLineAsync(text.AsMemory(), CancellationToken.None);
+    }
+
     // Bytes as a person reads them. The app's own UI does this in the browser; a shell has no
     // formatter to borrow.
     public static string Bytes(long value)

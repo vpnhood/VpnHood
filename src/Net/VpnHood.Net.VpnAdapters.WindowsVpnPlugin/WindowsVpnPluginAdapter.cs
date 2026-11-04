@@ -57,7 +57,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     private volatile bool _closed = true;
     private TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public Task Started => _started.Task;
+    public Task StartedTask => _started.Task;
     public override bool IsAppFilterSupported => false;
     public override bool IsNatSupported(IpVersion ipVersion) => false;
 
@@ -170,7 +170,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
             dnsAssignment = new VpnDomainNameAssignment();
             dnsAssignment.DomainNameList.Add(new VpnDomainNameInfo(
                 ".", VpnDomainNameType.Suffix, _dnsServers.Select(x => new HostName(x.ToString())).ToList(),
-                Array.Empty<HostName>()));
+                []));
         }
 
         vpnChannel.StartWithMainTransport(

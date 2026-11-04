@@ -79,7 +79,7 @@ public class ReusableStreamConnection : IStreamConnection
 
             // a quick close that came meanwhile has closed the transport
             if (Interlocked.Exchange(ref _transportTaken, true)) {
-                nextStream.Dispose();
+                await nextStream.DisposeAsync().Vhc();
                 return;
             }
 

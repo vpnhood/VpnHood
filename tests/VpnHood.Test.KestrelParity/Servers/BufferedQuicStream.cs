@@ -21,7 +21,7 @@ internal sealed class BufferedQuicStream(Stream stream, IQuicStream quic, byte[]
     public ValueTask WriteFinal(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken) =>
         quic.WriteFinal(buffer, cancellationToken);
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (_prefix.IsEmpty) {

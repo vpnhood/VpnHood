@@ -31,7 +31,7 @@ public class StatusCommandTest
     {
         var line = Describe(AppUpdateStage.Downloading, downloadedBytes: 5_000_000, totalBytes: null);
         StringAssert.StartsWith(line, "downloading 9.0.950: ");
-        Assert.IsFalse(line?.EndsWith('%'), line);
+        Assert.IsFalse(line.EndsWith('%'), line);
     }
 
     [TestMethod]

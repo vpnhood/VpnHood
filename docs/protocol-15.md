@@ -74,6 +74,9 @@ current source under a new package version. Compatibility with HTTP versions 8â€
    server profile, after users have updated. The server then rejects older versions before a body
    or upgrade, closing that entry path. At a minimum of 15 or higher, an older app gets the plain
    401 with no update message. Setting 15 too soon disconnects older clients.
+4. Protocol 14 and older are supported until April 2027: update all apps and servers by then.
+   While its minimum is below 15, a server logs a warning at each configuration, and each farm's
+   page in MANAGER shows one until it is dismissed.
 
 HTTP authentication version and binary session version are separate. A protocol-15 HTTP client
 can negotiate a binary session version from 8 through 15 with an access manager. Subsequent

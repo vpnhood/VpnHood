@@ -5,11 +5,13 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.Test.Providers;
 
 // A sink of the process log that keeps the level of each line logged with an exception whose message CreateMessage
-// made. The log can not drop a sink, so one serves the whole run, and a test finds its own lines by its message
+// made, and the text of each warning. The log can not drop a sink, so one serves the whole run, and a test finds its
+// own lines by its message
 public sealed class TestLogCapture : ILoggerProvider, ILogger
 {
     private const string MessagePrefix = "Test log capture: ";
     private readonly ConcurrentQueue<(LogLevel LogLevel, string Message)> _entries = new();
+    private readonly ConcurrentQueue<string> _warnings = new();
     public static TestLogCapture Instance { get; } = Create();
 
     private static TestLogCapture Create()
@@ -25,6 +27,8 @@ public sealed class TestLogCapture : ILoggerProvider, ILogger
     public IReadOnlyList<LogLevel> GetLevels(string message) =>
         _entries.Where(x => x.Message == message).Select(x => x.LogLevel).ToArray();
 
+    public IReadOnlyList<string> GetWarnings() => _warnings.ToArray();
+
     public ILogger CreateLogger(string categoryName) => this;
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     public bool IsEnabled(LogLevel logLevel) => true;
@@ -34,6 +38,9 @@ public sealed class TestLogCapture : ILoggerProvider, ILogger
     {
         if (exception?.Message.StartsWith(MessagePrefix, StringComparison.Ordinal) == true)
             _entries.Enqueue((logLevel, exception.Message));
+
+        if (logLevel == LogLevel.Warning)
+            _warnings.Enqueue(formatter(state, exception));
     }
 
     public void Dispose()

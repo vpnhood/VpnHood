@@ -716,6 +716,23 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    [DataRow(null, ServerHost.MinProtocolVersion, true)]
+    [DataRow(14, 14, true)]
+    [DataRow(15, 15, false)]
+    public async Task A_server_below_the_proofs_protocol_warns_that_probe_resistance_is_off(int? minClientProtocolVersion,
+        int effectiveVersion, bool expectedWarning)
+    {
+        var logCapture = TestLogCapture.Instance; // before the server logs
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.MinClientProtocolVersion = minClientProtocolVersion;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+
+        var isWarned = logCapture.GetWarnings().Any(x => x.StartsWith(
+            $"Advanced probe resistance is off: MinClientProtocolVersion is {effectiveVersion}.", StringComparison.Ordinal));
+        Assert.AreEqual(expectedWarning, isWarned);
+    }
+
+    [TestMethod]
     public void Merge_config()
     {
         var oldServerConfig = new ServerConfig();

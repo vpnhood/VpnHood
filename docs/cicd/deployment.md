@@ -287,8 +287,9 @@ Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE
 `pub/lib/Initialize-CiIosSigning.ps1` materializes the cert/profiles into a CI keychain at build time
 (writing `.user/<app>/ios/ios_signing.json`); `pub/lib/Publish-IosApp.ps1` produces the `.ipa` +
 `<PackageTitle>-ios.json`, and with the Apple TV's profiles `<PackageTitle>-tvos.ipa`, which the upload
-job sends to the same App Store record as an Apple TV build. The Apple TV app has no json of its own: it
-is the same head, and checks the iOS one for its updates.
+job sends to the same App Store record as an Apple TV build when the caller sets `publish_appletv`
+(off by default). The Apple TV app has no json of its own: it is the same head, and checks the iOS one
+for its updates.
 
 #### Obtaining the Apple-issued iOS assets (fork checklist)
 

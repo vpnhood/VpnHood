@@ -149,8 +149,9 @@
 	     and images are the app's own SVGs, reframed by their viewBox: the background covering its frame,
 	     the logo whole in the middle of its frame, the banner covering the 1920x720 that shows - so what a
 	     banner shows must lie within the middle 55% of its height - and, wide, the margins beside it
-	     too. actool draws each at every size and scale tvOS asks for, as it draws any vector image of a
-	     catalog; the App Store's icon alone the build draws, at its one scale. -->
+	     too. actool draws a top shelf image at every size and scale tvOS asks for, as it draws any vector
+	     image of a catalog; the icons' layers the build draws, at their own scales, as App Store Connect
+	     refuses a stack with a vector layer ("has an invalid layer", 90522). -->
 	<UsingTask TaskName="VhWriteTvIcon" TaskFactory="RoslynCodeTaskFactory"
 	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
 		<ParameterGroup>
@@ -240,49 +241,57 @@ Action<string, string, string> write = (path, content, replaced) => {
 // an image actool draws at every scale tvOS has
 Action<string, string, string> imageSet = (path, name, svg) => {
     write(path + "/" + name + ".svg", svg, path + "/" + name + ".png");
+    File.Delete(Path.Combine(outputDir, path, name + "@2x.png"));
     write(path + "/Contents.json",
         "{ \"images\" : [ { \"filename\" : \"" + name + ".svg\", \"idiom\" : \"tv\" } ], " + info + " }", null);
 };
 
-// The App Store's icon is 1280x768 at 1x alone, but actool draws an SVG at every scale tvOS has, whatever scale
-// a set names, which would put a 2x of it in the app (2.6 MB tvOS never shows). So its layers go in as PNGs at
-// that size, drawn by macOS's own SVG renderer, actool's (sips). A build that runs elsewhere - from Windows, with
-// a paired Mac - has no sips and keeps the SVGs, and the 2x.
+// An icon's layers go in as PNGs at the scales it has, drawn by macOS's own SVG renderer, actool's (sips): actool
+// keeps an SVG in the catalog as a vector image, which App Store Connect refuses in a stack, and draws it at every
+// scale tvOS has, whatever a set names, which would give the 1x App Store icon a 2x (2.6 MB tvOS never shows). A
+// build that runs elsewhere - from Windows, with a paired Mac - has no sips and keeps the SVGs: fine to run the
+// app, not to publish it.
 var sips = "/usr/bin/sips";
 var drawsPngs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && File.Exists(sips);
-Action<string, string, string, int, int> pngImageSet = (path, name, svg, width, height) => {
+Action<string, string, string, int, int, int[]> pngImageSet = (path, name, svg, width, height, scales) => {
     var svgPath = Path.Combine(outputDir, "svg", path, name + ".svg");
-    var pngPath = Path.Combine(outputDir, path, name + ".png");
-    if (save(svgPath, svg) || !File.Exists(pngPath)) {
-        Directory.CreateDirectory(Path.GetDirectoryName(pngPath));
-        var startInfo = new ProcessStartInfo(sips,
-            "-s format png -z " + height + " " + width + " \"" + svgPath + "\" --out \"" + pngPath + "\"") {
-            UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true
-        };
-        using (var process = Process.Start(startInfo)) {
-            process.StandardOutput.ReadToEnd();
-            var error = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-            if (process.ExitCode != 0 || !File.Exists(pngPath))
-                throw new InvalidOperationException("sips could not draw " + svgPath + ": " + error);
+    var svgChanged = save(svgPath, svg);
+    var images = new List<string>();
+    foreach (var scale in scales) {
+        var fileName = scale == 1 ? name + ".png" : name + "@" + scale + "x.png";
+        var pngPath = Path.Combine(outputDir, path, fileName);
+        if (svgChanged || !File.Exists(pngPath)) {
+            Directory.CreateDirectory(Path.GetDirectoryName(pngPath));
+            var startInfo = new ProcessStartInfo(sips,
+                "-s format png -z " + height * scale + " " + width * scale + " \"" + svgPath + "\" --out \"" + pngPath + "\"") {
+                UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            using (var process = Process.Start(startInfo)) {
+                process.StandardOutput.ReadToEnd();
+                var error = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+                if (process.ExitCode != 0 || !File.Exists(pngPath))
+                    throw new InvalidOperationException("sips could not draw " + svgPath + ": " + error);
+            }
         }
+
+        add(path + "/" + fileName);
+        images.Add("{ \"filename\" : \"" + fileName + "\", \"idiom\" : \"tv\", \"scale\" : \"" + scale + "x\" }");
     }
 
     File.Delete(Path.Combine(outputDir, path, name + ".svg"));
-    add(path + "/" + name + ".png");
-    write(path + "/Contents.json", "{ \"images\" : [ { \"filename\" : \"" + name + ".png\", \"idiom\" : \"tv\", \"scale\" : \"1x\" } ], " +
-        info + " }", null);
+    write(path + "/Contents.json", "{ \"images\" : [ " + string.Join(", ", images) + " ], " + info + " }", null);
 };
 
-Action<string, int, int, bool> imageStack = (path, width, height, oneScale) => {
+Action<string, int, int, int[]> imageStack = (path, width, height, scales) => {
     write(path + "/Contents.json",
         "{ \"layers\" : [ { \"filename\" : \"Front.imagestacklayer\" }, { \"filename\" : \"Back.imagestacklayer\" } ], " + info + " }", null);
     foreach (var layer in new[] { "Front", "Back" }) {
         var svg = layer == "Front" ? reframe(foreground, width, height, false) : reframe(background, width, height, true);
         var imageSetPath = path + "/" + layer + ".imagestacklayer/Content.imageset";
         write(path + "/" + layer + ".imagestacklayer/Contents.json", "{ " + info + " }", null);
-        if (oneScale && drawsPngs)
-            pngImageSet(imageSetPath, layer.ToLowerInvariant(), svg, width, height);
+        if (drawsPngs)
+            pngImageSet(imageSetPath, layer.ToLowerInvariant(), svg, width, height, scales);
         else
             imageSet(imageSetPath, layer.ToLowerInvariant(), svg);
     }
@@ -296,8 +305,8 @@ write(brand + "/Contents.json", "{ \"assets\" : [ " +
     "{ \"filename\" : \"Top Shelf Image Wide.imageset\", \"idiom\" : \"tv\", \"role\" : \"top-shelf-image-wide\", \"size\" : \"2320x720\" }, " +
     "{ \"filename\" : \"Top Shelf Image.imageset\", \"idiom\" : \"tv\", \"role\" : \"top-shelf-image\", \"size\" : \"1920x720\" } ], " +
     info + " }", null);
-imageStack(brand + "/App Icon.imagestack", 400, 240, false);
-imageStack(brand + "/App Icon - App Store.imagestack", 1280, 768, true);
+imageStack(brand + "/App Icon.imagestack", 400, 240, new[] { 1, 2 });
+imageStack(brand + "/App Icon - App Store.imagestack", 1280, 768, new[] { 1 });
 imageSet(brand + "/Top Shelf Image Wide.imageset", "top_shelf_wide", wideTopShelf(banner));
 imageSet(brand + "/Top Shelf Image.imageset", "top_shelf", reframe(banner, 1920, 720, true));
 Files = files.ToArray();
@@ -316,6 +325,19 @@ Files = files.ToArray();
 			<ImageAsset Include="@(_VhTvIconFile)" />
 			<FileWrites Include="@(_VhTvIconFile)" />
 		</ItemGroup>
+	</Target>
+
+	<!-- App Store Connect refuses a framework whose Info.plist has no CFBundleVersion, and HarfBuzzSharp's tvOS
+	     framework has none (8.3.1.5, the line Avalonia takes; the fix would be its 14, with SkiaSharp 4). The
+	     bundle's copy gets one here, after the copy and before the signing. -->
+	<Target Name="VhFrameworkBundleVersion" AfterTargets="_CopyDirectoriesToBundle"
+	        Condition="'$(VhAppIsTvos)' == 'true' And $([MSBuild]::IsOSPlatform('OSX'))">
+		<ItemGroup>
+			<_VhFrameworkPlist Include="@(_DirectoriesToPublish->'%(TargetDirectory)/Info.plist')"
+			                   Condition="'%(_DirectoriesToPublish.PublishFolderType)' == 'AppleFramework'" />
+		</ItemGroup>
+		<Exec Condition="'@(_VhFrameworkPlist)' != ''"
+		      Command="/usr/bin/plutil -extract CFBundleVersion raw -o /dev/null &quot;%(_VhFrameworkPlist.FullPath)&quot; &gt;/dev/null 2&gt;&amp;1 || /usr/bin/plutil -insert CFBundleVersion -string 1 &quot;%(_VhFrameworkPlist.FullPath)&quot;" />
 	</Target>
 
 	<!-- The app's launch colour: what iOS's launch screen and Android's cold start show before any of the

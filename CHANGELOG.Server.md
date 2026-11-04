@@ -1,3 +1,7 @@
+# Latest
+
+* Improve: VpnHoodServer logs a warning while advanced probe resistance is off, that is, while `MinClientProtocolVersion` is below 15. Protocol 14 and older are supported until April 2027, so update all apps and servers by then
+
 # v9.1.866
 
 * Fix: Online games that send large packets, such as Counter-Strike 2 and Dota 2 on Steam, work through VpnHoodServer; it dropped every packet over 1280 bytes. The apps need their next release for it; older apps work as before

@@ -20,7 +20,8 @@ internal static class ClientRequestAuthenticator
             return false;
 
         // Compatibility (2026-10): old clients have no header proof. An administrator ends this
-        // exception by raising MinClientProtocolVersion to 15 once those clients have been updated.
+        // exception by raising MinClientProtocolVersion to 15 once those clients have been updated;
+        // drop when protocol 14 and older end in April 2027.
         if (protocolVersion < RequestProof.ProtocolVersion)
             return true;
 

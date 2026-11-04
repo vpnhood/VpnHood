@@ -49,6 +49,12 @@ on:
         type: boolean
         required: false
         default: true
+      # The Apple TV app beside the iPhone's, when its signing is set: off until the Apple TV app
+      # is released.
+      publish_appletv:
+        type: boolean
+        required: false
+        default: false
       rollout:
         type: string
         required: false
@@ -296,9 +302,14 @@ jobs:
         shell: bash
         run: |
           set -e
-          # The iPhone's .ipa, and the Apple TV's beside it when its signing is set (<title>-tvos.ipa).
+          # The iPhone's .ipa, and the Apple TV's beside it when its signing is set (<title>-tvos.ipa)
+          # and publish_appletv asks for it.
           IPA=$(ls ios/*-ios.ipa 2>/dev/null | head -n1 || true)
-          echo "TV_IPA_PATH=$(ls ios/*-tvos.ipa 2>/dev/null | head -n1 || true)" >> $GITHUB_ENV
+          if [ "${{ inputs.publish_appletv }}" = "true" ]; then
+            echo "TV_IPA_PATH=$(ls ios/*-tvos.ipa 2>/dev/null | head -n1 || true)" >> $GITHUB_ENV
+          else
+            echo "TV_IPA_PATH=" >> $GITHUB_ENV
+          fi
           if [ -z "$IPA" ]; then
             if [ -n "$APPLE_DISTRIBUTION_CERT_BASE64" ]; then
               echo "::error title=iOS upload has no .ipa::A signed App Store build was intended (upload key + distribution cert set) but build-ios produced no .ipa. This is a real signing/build failure."

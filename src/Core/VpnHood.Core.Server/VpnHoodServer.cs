@@ -24,6 +24,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.ProbeResistance;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Common.Configuration;
 
@@ -245,6 +246,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
+            WarnIfProbeResistanceIsOff();
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
             _socketFactory.TcpKernelBufferSize = serverConfig.SessionOptions.TcpKernelBufferSize;
             _configureAndSendStatusJob.Interval = serverConfig.UpdateStatusIntervalValue < serverConfig.SessionOptions.SyncIntervalValue
@@ -374,6 +376,20 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         catch {
             return null;
         }
+    }
+
+    // Compatibility (2026-11): a minimum below the proof's protocol takes older apps' requests with no proof; drop
+    // when protocol 14 and older end in April 2027, as the server's own minimum is then the proof's protocol
+    private void WarnIfProbeResistanceIsOff()
+    {
+        if (ServerHost.MinClientProtocolVersion >= RequestProof.ProtocolVersion)
+            return;
+
+        VhLogger.Instance.LogWarning(
+            "Advanced probe resistance is off: {Setting} is {MinClientProtocolVersion}. Set it to {ProofVersion} once " +
+            "your users' apps are updated. Protocol 14 and older are supported until April 2027, so update all apps " +
+            "and servers by then.",
+            nameof(SessionOptions.MinClientProtocolVersion), ServerHost.MinClientProtocolVersion, RequestProof.ProtocolVersion);
     }
 
     private async Task ConfigureSwapMemory(long? sizeMb, CancellationToken cancellationToken)

@@ -10,6 +10,10 @@ namespace VpnHood.Test.Tests.Servers;
 [TestClass]
 public class ConfigErrorTrackerTest : TestBase
 {
+    // RecordError stamps the error before it writes the strike file, and the pause counts from that
+    // stamp: under a suite's load 100 ms were gone by the time it returned, so IsPaused was false
+    private static readonly TimeSpan RecordErrorWindow = TimeSpan.FromSeconds(1);
+
     private static ConfigErrorTracker CreateTracker(string storagePath,
         TimeSpan? strikeDuration = null,
         TimeSpan? retryInterval = null) =>
@@ -89,7 +93,7 @@ public class ConfigErrorTrackerTest : TestBase
         var storagePath = CreateTempStorage();
         try {
             WriteStrikeFile(storagePath, DateTime.UtcNow.AddDays(-30));
-            var tracker = CreateTracker(storagePath, retryInterval: TimeSpan.FromMilliseconds(100));
+            var tracker = CreateTracker(storagePath, retryInterval: RecordErrorWindow);
 
             // IsPaused is false before any RecordError in this process
             Assert.IsFalse(tracker.IsPaused,
@@ -103,7 +107,7 @@ public class ConfigErrorTrackerTest : TestBase
                 "IsPaused should return true immediately after RecordError.");
 
             // After RetryInterval elapses: allowed
-            await Task.Delay(150, TestCt);
+            await Task.Delay(RecordErrorWindow + TimeSpan.FromMilliseconds(100), TestCt);
             Assert.IsFalse(tracker.IsPaused,
                 "IsPaused should return false after RetryInterval has elapsed.");
         }
@@ -118,7 +122,7 @@ public class ConfigErrorTrackerTest : TestBase
         var storagePath = CreateTempStorage();
         try {
             WriteStrikeFile(storagePath, DateTime.UtcNow.AddDays(-30));
-            var tracker = CreateTracker(storagePath, retryInterval: TimeSpan.FromMilliseconds(100));
+            var tracker = CreateTracker(storagePath, retryInterval: RecordErrorWindow);
 
             // Before RecordError, IsPaused is false
             Assert.IsFalse(tracker.IsPaused);
@@ -128,7 +132,7 @@ public class ConfigErrorTrackerTest : TestBase
             Assert.IsTrue(tracker.IsPaused);
 
             // After RetryInterval elapses: allowed
-            await Task.Delay(150, TestCt);
+            await Task.Delay(RecordErrorWindow + TimeSpan.FromMilliseconds(100), TestCt);
             Assert.IsFalse(tracker.IsPaused, "IsPaused should return false after RetryInterval has elapsed.");
 
             // Calling IsPaused again is still false (idempotent — time hasn't changed)
@@ -243,9 +247,7 @@ public class ConfigErrorTrackerTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfigureException = new Exception("persistent bad config");
 
-        await using var server = CreateServer(accessManager,
-            configureInterval: TimeSpan.FromMilliseconds(100),
-            retryInterval: TimeSpan.FromMilliseconds(100));
+        await using var server = CreateServer(accessManager, configureInterval: TimeSpan.FromMilliseconds(100));
 
         // Act: start the server — IsPaused is false, configure runs and fails, RecordError activates pause
         await server.Start(TestCt);

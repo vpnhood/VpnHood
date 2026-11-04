@@ -10,7 +10,7 @@ using VpnHood.AppLib.Api.Premium;
 namespace VpnHood.App.StoreScreenshots;
 
 // The web UI engine's fixture.json, read as the app's API would answer it: the whole document is
-// the AppInfo that Configure returns (features, state, settings, profiles, languages), and
+// the AppInfo that Configure returns (descriptor, state, settings, profiles, languages), and
 // installedApps beside it is what GetInstalledApps returns. The same file, so the two renderers
 // draw the same mocked app and a change to the fixture reaches both.
 //
@@ -91,24 +91,24 @@ internal sealed class StoreFixture
 
     private static void FillDefaults(JsonObject root, List<string> filled)
     {
-        var features = Section(root, "features");
+        var descriptor = Section(root, "descriptor");
 
-        var missing = ProductIdentity.Where(path => ValueAt(features, path) is null).ToArray();
+        var missing = ProductIdentity.Where(path => ValueAt(descriptor, path) is null).ToArray();
         if (missing.Length > 0)
             throw new InvalidOperationException(
-                $"The fixture does not say which product it is: features has no {string.Join(", ", missing)}. " +
+                $"The fixture does not say which product it is: descriptor has no {string.Join(", ", missing)}. " +
                 "Add them from the product's options builder (src/Apps/<product>/<product>/<Product>AppOptions.cs, or " +
                 "src/Apps/Tools/AvaloniaUI.Dev/Program.cs for a whole product at once). They are never " +
                 "filled in here: a screenshot wearing the other product's theme or logo looks right and is wrong.");
 
-        Fill(features, "companyName", "VpnHood", filled, "features");
+        Fill(descriptor, "companyName", "VpnHood", filled, "descriptor");
         // a premium tier that gates nothing: the fixture's own premiumFeatures: [] in the old shape
-        Fill(features, "premium", new JsonObject(), filled, "features");
-        Fill(features, "authProviderIds", new JsonArray(), filled, "features");
-        Fill(features, "isLicenseAgreementRequired", false, filled, "features");
-        Fill(features, "isRemoteAccessSupported", false, filled, "features");
+        Fill(descriptor, "premium", new JsonObject(), filled, "descriptor");
+        Fill(descriptor, "authProviderIds", new JsonArray(), filled, "descriptor");
+        Fill(descriptor, "isLicenseAgreementRequired", false, filled, "descriptor");
+        Fill(descriptor, "isRemoteAccessSupported", false, filled, "descriptor");
         // both products ship the IP-location data, so their store pages show the country split
-        Fill(features, "isSplitCountrySupported", true, filled, "features");
+        Fill(descriptor, "isSplitCountrySupported", true, filled, "descriptor");
 
         var intents = Section(root, "intentFeatures");
         Fill(intents, "isWebBrowserSupported", true, filled, "intentFeatures");

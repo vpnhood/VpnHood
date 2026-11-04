@@ -76,10 +76,10 @@ public class AppApiClientTest : TestAppBase
         using var http = await CreateHttpClient(app);
         var api = VpnHoodApiHttpFactory.Create(http);
 
-        // the configuration, whole: the features, the state, the settings, the profiles, the languages
+        // the configuration, whole: the descriptor, the state, the settings, the profiles, the languages
         var config = await api.App.Configure(new ConfigParams { AvailableCultures = ["en", "fa"] }, TestCt);
-        Assert.AreEqual(app.Features.AppId, config.Features.AppId);
-        Assert.IsTrue(config.Features.IsSplitCountrySupported, "the test app has the IP-location data");
+        Assert.AreEqual(app.Descriptor.AppId, config.Descriptor.AppId);
+        Assert.IsTrue(config.Descriptor.IsSplitCountrySupported, "the test app has the IP-location data");
         Assert.IsFalse(config.IsRemote, "loopback is the app's own web view");
         Assert.AreEqual(1, config.VpnProfileInfos.Count);
         Assert.AreEqual(token.TokenId, config.VpnProfileInfos[0].TokenId);

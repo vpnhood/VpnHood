@@ -18,7 +18,7 @@ namespace VpnHood.AppLib.App.VpnProfiles;
 // built once, at the end.
 internal static class ServerLocationItemBuilder
 {
-    public static ServerLocationItem[] Build(VpnProfile vpnProfile, AppFeatures appFeatures)
+    public static ServerLocationItem[] Build(VpnProfile vpnProfile, AppDescriptor appDescriptor)
     {
         var clientCountry = AppRegionInfo.CurrentRegion.Name;
         var token = vpnProfile.Token;
@@ -34,7 +34,7 @@ internal static class ServerLocationItemBuilder
         var isManaged = drafts.Any(x => x.Tags.Contains(ServerRegisteredTags.Premium)) || policy != null;
         if (isManaged) {
             foreach (var draft in drafts)
-                RecalculateOptions(draft, policy, vpnProfile.IsPremium, appFeatures); // treat non-public as premium
+                RecalculateOptions(draft, policy, vpnProfile.IsPremium, appDescriptor); // treat non-public as premium
         }
 
         // show unblockable only if the policy is set
@@ -62,7 +62,7 @@ internal static class ServerLocationItemBuilder
     }
 
     private static void RecalculateOptions(LocationDraft draft, Core.Common.Tokens.ClientPolicy? policy,
-        bool isPremium, AppFeatures appFeatures)
+        bool isPremium, AppDescriptor appDescriptor)
     {
         var tags = draft.Tags;
         var options = new ServerLocationOptions {
@@ -86,7 +86,7 @@ internal static class ServerLocationItemBuilder
             return;
         }
 
-        var isRewardedAdSupported = appFeatures.IsRewardedAdSupported;
+        var isRewardedAdSupported = appDescriptor.IsRewardedAdSupported;
         options.Normal = options.HasFree ? policy.Normal : null;
         options.NormalByRewardedAd = options.HasFree && isRewardedAdSupported ? policy.NormalByRewardedAd : null;
 
@@ -102,8 +102,8 @@ internal static class ServerLocationItemBuilder
         // issued the token and knows nothing about how this build was shipped, so what it offers is
         // intersected with what the build permits — otherwise a head advertises a route that ends on
         // an empty purchase page, or none at all.
-        var premium = appFeatures.Premium;
-        var isPurchasableHere = premium != null && (appFeatures.IsBillingSupported ||
+        var premium = appDescriptor.Premium;
+        var isPurchasableHere = premium != null && (appDescriptor.IsBillingSupported ||
                                                     (premium.IsPurchaseUrlSupported && policy.PurchaseUrl != null));
         options.PremiumByPurchase = policy.PremiumByPurchase && isPurchasableHere;
         options.PremiumByCode = policy.PremiumByCode && premium?.AllowImportAccessCode == true;

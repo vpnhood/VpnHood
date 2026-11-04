@@ -52,7 +52,7 @@ public class NoBackupStorageTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions(storagePath: storagePath,
             noBackupStoragePath: Path.Combine(root, "no_backup", "app"));
         await using (var app = TestAppHelper.CreateClientApp(appOptions))
-            Assert.AreEqual(AppUtils.CreateClientId(appOptions.AppId, installId), app.Features.ClientId);
+            Assert.AreEqual(AppUtils.CreateClientId(appOptions.AppId, installId), app.Descriptor.ClientId);
         Assert.IsFalse(ReadSettings(settingsFilePath).ContainsKey("ClientId"));
     }
 
@@ -81,7 +81,7 @@ public class NoBackupStorageTest : TestAppBase
             noBackupStoragePath: noBackupStoragePath);
         await using var app = TestAppHelper.CreateClientApp(appOptions);
         app.Settings.Save();
-        return app.Features.ClientId;
+        return app.Descriptor.ClientId;
     }
 
     private static JsonObject ReadSettings(string settingsFilePath)

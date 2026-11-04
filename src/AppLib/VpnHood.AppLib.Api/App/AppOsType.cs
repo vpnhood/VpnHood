@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib.Api.App;
 
-// The OS the app process is running on, published to the UI through AppFeatures.
+// The OS the app process is running on, published to the UI through AppDescriptor.
 //
 // The UI needs this because some content is only legal//useful on certain platforms: an App Store
 // build may not point at another mobile platform's store or advertise a download it cannot offer

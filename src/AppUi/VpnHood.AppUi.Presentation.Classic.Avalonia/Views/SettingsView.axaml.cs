@@ -53,7 +53,7 @@ public partial class SettingsView : UserControl, IPage
 
         AutomaticUpdatesItem.Title = s.AutomaticUpdates;
         AutomaticUpdatesItem.Description = s.AutomaticUpdatesDesc;
-        AutomaticUpdatesItem.IsVisible = VhApp.Features.IsAutomaticUpdateSupported;
+        AutomaticUpdatesItem.IsVisible = VhApp.Descriptor.IsAutomaticUpdateSupported;
         AppSection.IsVisible = true;
 
         ConnectivitySection.Title = s.Connectivity;
@@ -81,7 +81,7 @@ public partial class SettingsView : UserControl, IPage
         KillSwitchItem.Title = s.KillSwitch;
         KillSwitchItem.Subtitle = s.KillSwitchDesc;
         // the app's own switch (a desktop's), or the device's setting (Android's), whose state the app cannot read
-        var isKillSwitchSupported = VhApp.Features.IsKillSwitchSupported;
+        var isKillSwitchSupported = VhApp.Descriptor.IsKillSwitchSupported;
         KillSwitchItem.IsVisible = isKillSwitchSupported || intents.IsKillSwitchSettingsSupported;
         if (isKillSwitchSupported) {
             KillSwitchItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.KillSwitch);
@@ -92,7 +92,7 @@ public partial class SettingsView : UserControl, IPage
         AlwaysOnItem.IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn);
         // the app's own switch (a desktop's service), or the device's setting (Android's), whose state
         // the app cannot read
-        var alwaysOnSupport = VhApp.Features.AlwaysOnSupport;
+        var alwaysOnSupport = VhApp.Descriptor.AlwaysOnSupport;
         AlwaysOnItem.IsVisible = alwaysOnSupport != AlwaysOnSupport.None;
         if (alwaysOnSupport == AlwaysOnSupport.App)
             AlwaysOnItem.SetStatus(settings.AlwaysOn, s.On, s.Off);

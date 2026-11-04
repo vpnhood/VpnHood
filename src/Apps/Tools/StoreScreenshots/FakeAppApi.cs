@@ -26,7 +26,7 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken)
     {
         Info = new AppInfo {
-            Features = Info.Features,
+            Descriptor = Info.Descriptor,
             IntentFeatures = Info.IntentFeatures,
             State = Info.State,
             UserSettings = userSettings,

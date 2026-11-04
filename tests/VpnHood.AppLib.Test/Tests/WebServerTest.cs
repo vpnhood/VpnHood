@@ -249,7 +249,7 @@ public class WebServerTest : TestAppBase
         using var http = new HttpClient();
 
         StringAssert.Contains(await http.GetStringAsync(localUrl),
-            $"<title>{app.Features.AppName}|/assets/{app.Features.LogoAssetPath}</title>");
+            $"<title>{app.Descriptor.AppName}|/assets/{app.Descriptor.LogoAssetPath}</title>");
     }
 
     [TestMethod]

@@ -40,14 +40,14 @@ public class VpnEngineTest : TestAppBase
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions, device);
 
-        Assert.IsFalse(app.Features.IsProxySupported);
-        Assert.IsFalse(app.Features.IsKillSwitchSupported);
-        Assert.IsFalse(app.Features.IsAdSupported);
-        Assert.IsFalse(app.Features.IsRewardedAdSupported);
-        Assert.AreEqual(AlwaysOnSupport.None, app.Features.AlwaysOnSupport);
-        Assert.IsFalse(app.Features.IsQuicSupported);
-        Assert.IsFalse(app.Features.AllowEndPointStrategy);
-        CollectionAssert.DoesNotContain(app.Features.ChannelProtocols.ToArray(), ChannelProtocol.Quic);
+        Assert.IsFalse(app.Descriptor.IsProxySupported);
+        Assert.IsFalse(app.Descriptor.IsKillSwitchSupported);
+        Assert.IsFalse(app.Descriptor.IsAdSupported);
+        Assert.IsFalse(app.Descriptor.IsRewardedAdSupported);
+        Assert.AreEqual(AlwaysOnSupport.None, app.Descriptor.AlwaysOnSupport);
+        Assert.IsFalse(app.Descriptor.IsQuicSupported);
+        Assert.IsFalse(app.Descriptor.AllowEndPointStrategy);
+        CollectionAssert.DoesNotContain(app.Descriptor.ChannelProtocols.ToArray(), ChannelProtocol.Quic);
     }
 
     [TestMethod]
@@ -59,9 +59,9 @@ public class VpnEngineTest : TestAppBase
         };
         await using var app = TestAppHelper.CreateClientApp(device: device);
 
-        Assert.IsTrue(app.Features.IsProxySupported);
-        Assert.IsTrue(app.Features.IsKillSwitchSupported);
-        Assert.AreEqual(AlwaysOnSupport.App, app.Features.AlwaysOnSupport);
+        Assert.IsTrue(app.Descriptor.IsProxySupported);
+        Assert.IsTrue(app.Descriptor.IsKillSwitchSupported);
+        Assert.AreEqual(AlwaysOnSupport.App, app.Descriptor.AlwaysOnSupport);
     }
 
     [TestMethod]

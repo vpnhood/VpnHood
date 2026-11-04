@@ -6,7 +6,7 @@ namespace VpnHood.AppLib.App.WebHosting;
 // differently: the local one on loopback, which this device loads from, and the remote one on the
 // LAN addresses, which a phone pairs with. One shape for both, so the app asks the same questions of
 // either. A head hands in an IAppWebHostFactory through AppOptions; a head that hands in none has no
-// web host, AppFeatures.IsRemoteAccessSupported is false, and the pairing calls throw.
+// web host, AppDescriptor.IsRemoteAccessSupported is false, and the pairing calls throw.
 //
 // This and its factory are one contract in two types - nobody implements either alone - so they live
 // together, and next to the app whose API they serve rather than among the providers a head supplies.

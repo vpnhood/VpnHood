@@ -35,7 +35,7 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
     // build is let out
     public Task<bool> CanLeave(CancellationToken cancellationToken)
     {
-        return Task.FromResult(_isDismissed || _remaining <= 0 || VhApp.Features.IsDebugMode);
+        return Task.FromResult(_isDismissed || _remaining <= 0 || VhApp.Descriptor.IsDebugMode);
     }
 
     private void Tick()
@@ -77,7 +77,7 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
 
     private async Task Dismiss(bool learnMore, CancellationToken cancellationToken)
     {
-        if (_remaining > 0 && !VhApp.Features.IsDebugMode)
+        if (_remaining > 0 && !VhApp.Descriptor.IsDebugMode)
             return;
 
         _isDismissed = true;

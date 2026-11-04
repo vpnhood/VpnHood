@@ -112,7 +112,7 @@ public class AndroidAppMainActivityHandler
     protected virtual void ImportAccessKey(string accessKey)
     {
         var profiles = VpnHoodApp.Instance.VpnProfileService.List();
-        var profileInfo = VpnHoodApp.Instance.VpnProfileService.ImportAccessKey(accessKey).ToInfo(VpnHoodApp.Instance.Features);
+        var profileInfo = VpnHoodApp.Instance.VpnProfileService.ImportAccessKey(accessKey).ToInfo(VpnHoodApp.Instance.Descriptor);
 
         // the key's server becomes the chosen one; the save keeps it, and moves the configuration time,
         // on which a UI reads the servers and the settings again

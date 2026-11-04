@@ -17,7 +17,7 @@ public partial class LearnMoreView : UserControl, IPage
 
         var s = Strings.Current;
         AddSection(s.LearnMoreFreeServersDisruptions1, s.LearnMoreFreeServersDisruptions2);
-        AddSection(s.LearnMoreFreeServersDisruptions3, s.LearnMoreFreeServersDisruptions4(VhApp.Features.AppName));
+        AddSection(s.LearnMoreFreeServersDisruptions3, s.LearnMoreFreeServersDisruptions4(VhApp.Descriptor.AppName));
         AddSection(s.LearnMoreFreeServersDisruptions5, s.LearnMoreFreeServersDisruptions6);
         AddSection(s.LearnMoreFreeServersDisruptions7, s.LearnMoreFreeServersDisruptions8);
         AddTitle(s.LearnMoreFreeServersDisruptions9);

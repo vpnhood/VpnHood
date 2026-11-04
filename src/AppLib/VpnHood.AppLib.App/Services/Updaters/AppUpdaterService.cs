@@ -148,7 +148,7 @@ public class AppUpdaterService : IDisposable
         return updater.CompleteUpdate(release, uiContext, cancellationToken);
     }
 
-    // The updater whose automatic update the settings turn on and off (AppFeatures.IsAutomaticUpdateSupported)
+    // The updater whose automatic update the settings turn on and off (AppDescriptor.IsAutomaticUpdateSupported)
     private ProviderUpdaters.IAppUpdaterProvider? AutomaticUpdater =>
         _updateOptions.UpdaterProvider is { IsAutomaticUpdateSupported: true } updater ? updater : null;
 

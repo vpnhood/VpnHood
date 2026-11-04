@@ -114,7 +114,7 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
 
     // What a paired phone loads, built on the app itself - so the head
     // hands in a factory rather than an instance. Null means this head runs no web host, and
-    // AppFeatures.IsRemoteAccessSupported says so before a UI offers the pairing screen.
+    // AppDescriptor.IsRemoteAccessSupported says so before a UI offers the pairing screen.
     public IAppWebHostFactory? WebHostFactory { get; set; }
 
     public bool? LogAnonymous { get; set; } =

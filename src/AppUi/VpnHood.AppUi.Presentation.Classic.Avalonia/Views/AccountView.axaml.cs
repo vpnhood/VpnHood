@@ -256,7 +256,7 @@ public partial class AccountView : UserControl, IPage
     private async void OnManageClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (!VhApp.Features.IsBillingSupported)
+            if (!VhApp.Descriptor.IsBillingSupported)
                 return;
             ManageButton.IsEnabled = false;
             try {

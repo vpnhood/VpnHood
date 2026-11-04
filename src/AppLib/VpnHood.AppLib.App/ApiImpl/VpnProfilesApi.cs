@@ -11,13 +11,13 @@ internal sealed class VpnProfilesApi(VpnHoodApp app) : IVpnProfilesApi
     public Task<VpnProfileInfo> AddByAccessKey(string accessKey, CancellationToken cancellationToken)
     {
         var vpnProfile = app.VpnProfileService.ImportAccessKey(accessKey);
-        return Task.FromResult(vpnProfile.ToInfo(app.Features));
+        return Task.FromResult(vpnProfile.ToInfo(app.Descriptor));
     }
 
     public Task<VpnProfileInfo> Get(Guid vpnProfileId, CancellationToken cancellationToken)
     {
         var vpnProfile = app.VpnProfileService.Get(vpnProfileId);
-        return Task.FromResult(vpnProfile.ToInfo(app.Features));
+        return Task.FromResult(vpnProfile.ToInfo(app.Descriptor));
     }
 
     public Task<string> GetAccessCode(Guid vpnProfileId, CancellationToken cancellationToken)

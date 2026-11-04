@@ -33,17 +33,17 @@ public class VpnProfileService
     /// </summary>
     private readonly Lock _storeLock = new();
     private readonly Storage _storage;
-    private readonly AppFeatures _appFeatures;
+    private readonly AppDescriptor _appDescriptor;
     private VpnProfileInfo? _cashInfo;
     private string? _cashInfoRegion;
 
     // after each write of the store, off the writer's thread and lock
     public event EventHandler? Changed;
 
-    public VpnProfileService(Storage storage, AppFeatures appFeatures)
+    public VpnProfileService(Storage storage, AppDescriptor appDescriptor)
     {
         _storage = storage;
-        _appFeatures = appFeatures;
+        _appDescriptor = appDescriptor;
 #pragma warning disable CS0618 // Type or member is obsolete
         ClientProfileMigration.MigrateProfiles(Path.Combine(storage.FolderPath, FilenameProfiles));
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -61,7 +61,7 @@ public class VpnProfileService
 
             var vpnProfile = FindById(vpnProfileId);
             _cashInfoRegion = AppRegionInfo.CurrentRegion.Name;
-            _cashInfo = vpnProfile?.ToInfo(_appFeatures);
+            _cashInfo = vpnProfile?.ToInfo(_appDescriptor);
             return _cashInfo;
         }
     }

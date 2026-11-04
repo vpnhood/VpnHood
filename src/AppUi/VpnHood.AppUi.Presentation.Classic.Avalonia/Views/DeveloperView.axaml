@@ -10,7 +10,7 @@
        Close is the page's Back, which saves. DebugData1 is that dialog's combobox: the chosen
        commands as chips in a field, and the list behind the chevron, as wide as the field and
        scrolling on its own so the page never does. The items are the app's own
-       (AppFeatures.DebugCommands); a chip is dropped by unticking it in the list, not by a close
+       (AppDescriptor.DebugCommands); a chip is dropped by unticking it in the list, not by a close
        button on the chip, which a remote could not aim at. The words here are English literals, as
        they are in that dialog - a developers' screen has no locale keys. -->
   <DockPanel Classes="page">

@@ -38,7 +38,7 @@ public class AlwaysOnTest : TestAppBase
 
         // off: the start connects nothing, and turning the switch on connects nothing either
         await using (var app = CreateApp(storagePath)) {
-            Assert.AreEqual(AlwaysOnSupport.App, app.Features.AlwaysOnSupport);
+            Assert.AreEqual(AlwaysOnSupport.App, app.Descriptor.AlwaysOnSupport);
             Assert.AreEqual(AlwaysOnStatus.Off, app.State.AlwaysOnState?.Status);
             await Task.Delay(TimeSpan.FromSeconds(1), TestCt); // the app's start, a task of its own, has looked
             app.UserSettings.AlwaysOn = true;

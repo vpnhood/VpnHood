@@ -34,7 +34,7 @@ public class TvStorageTest : TestAppBase
             app.Settings.Save();
             vpnProfileId = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).VpnProfileId;
             app.SettingsService.SplitDomainSettings.Excludes = "example.com";
-            clientId = app.Features.ClientId;
+            clientId = app.Descriptor.ClientId;
         }
 
         foreach (var path in new[] {
@@ -50,7 +50,7 @@ public class TvStorageTest : TestAppBase
             Assert.IsTrue(app.UserSettings.IsLicenseAccepted);
             Assert.IsNotNull(app.VpnProfileService.FindById(vpnProfileId));
             Assert.AreEqual("example.com", app.SettingsService.SplitDomainSettings.Excludes);
-            Assert.AreEqual(clientId, app.Features.ClientId, "The server would count a new device.");
+            Assert.AreEqual(clientId, app.Descriptor.ClientId, "The server would count a new device.");
         }
     }
 

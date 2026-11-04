@@ -22,9 +22,9 @@ public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
     {
         _host = host;
         InitializeComponent();
-        _ = LoadDocument(VhApp.Features.PrivacyConsentAssetName, CancellationToken.None);
-        TermsButton.IsVisible = VhApp.Features.Links.TermsOfUse != null;
-        PrivacyButton.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
+        _ = LoadDocument(VhApp.Descriptor.PrivacyConsentAssetName, CancellationToken.None);
+        TermsButton.IsVisible = VhApp.Descriptor.Links.TermsOfUse != null;
+        PrivacyButton.IsVisible = VhApp.Descriptor.Links.PrivacyPolicy != null;
         // the notice ends in the documents it names: with neither, it would end in a colon, and Accept
         // takes the summary alone
         NoticePanel.IsVisible = TermsButton.IsVisible || PrivacyButton.IsVisible;
@@ -76,7 +76,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.TermsOfUse is { } url)
+            if (VhApp.Descriptor.Links.TermsOfUse is { } url)
                 await _host.OpenLink(url, Strings.Current.TermsOfUse, CancellationToken.None);
         }
         catch (Exception ex) {
@@ -87,7 +87,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, IRootPage
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.PrivacyPolicy is { } url)
+            if (VhApp.Descriptor.Links.PrivacyPolicy is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy, CancellationToken.None);
         }
         catch (Exception ex) {

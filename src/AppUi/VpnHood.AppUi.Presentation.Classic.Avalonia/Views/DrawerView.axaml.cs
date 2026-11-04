@@ -20,7 +20,7 @@ public partial class DrawerView : UserControl
         _host = host;
         InitializeComponent();
 
-        var features = VhApp.Features;
+        var features = VhApp.Descriptor;
         var state = VhApp.State;
         // the product's logo, by the store path the head named; not the look's to choose
         AppImage.SetSource(Logo, features.LogoAssetPath);
@@ -161,7 +161,7 @@ public partial class DrawerView : UserControl
     private async void OnWhatsNewClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.WhatsNew is { } url)
+            if (VhApp.Descriptor.Links.WhatsNew is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.WhatsNew, CancellationToken.None);
         }
         catch (Exception ex) {
@@ -172,7 +172,7 @@ public partial class DrawerView : UserControl
     private async void OnFeedbackClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.Feedback is { } url)
+            if (VhApp.Descriptor.Links.Feedback is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.SendFeedback, CancellationToken.None);
         }
         catch (Exception ex) {
@@ -183,7 +183,7 @@ public partial class DrawerView : UserControl
     private async void OnPersonalServerClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.PersonalServer is { } url)
+            if (VhApp.Descriptor.Links.PersonalServer is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.CreatePersonalServer, CancellationToken.None);
         }
         catch (Exception ex) {
@@ -194,7 +194,7 @@ public partial class DrawerView : UserControl
     private async void OnWebsiteClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.Website is { } url)
+            if (VhApp.Descriptor.Links.Website is { } url)
                 await Open(url.AbsoluteUri, GetWebsiteLabel(url), CancellationToken.None);
         }
         catch (Exception ex) {
@@ -205,7 +205,7 @@ public partial class DrawerView : UserControl
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.PrivacyPolicy is { } url)
+            if (VhApp.Descriptor.Links.PrivacyPolicy is { } url)
                 await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy, CancellationToken.None);
         }
         catch (Exception ex) {
@@ -216,7 +216,7 @@ public partial class DrawerView : UserControl
     private async void OnLinkedInClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.LinkedIn is { } url)
+            if (VhApp.Descriptor.Links.LinkedIn is { } url)
                 await Open(url.AbsoluteUri, "LinkedIn", CancellationToken.None);
         }
         catch (Exception ex) {
@@ -227,7 +227,7 @@ public partial class DrawerView : UserControl
     private async void OnInstagramClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.Instagram is { } url)
+            if (VhApp.Descriptor.Links.Instagram is { } url)
                 await Open(url.AbsoluteUri, "Instagram", CancellationToken.None);
         }
         catch (Exception ex) {
@@ -238,7 +238,7 @@ public partial class DrawerView : UserControl
     private async void OnXClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.X is { } url)
+            if (VhApp.Descriptor.Links.X is { } url)
                 await Open(url.AbsoluteUri, "X", CancellationToken.None);
         }
         catch (Exception ex) {

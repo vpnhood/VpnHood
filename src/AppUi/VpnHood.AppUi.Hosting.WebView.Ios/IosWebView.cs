@@ -93,7 +93,7 @@ public sealed class IosWebView : IWebView
             UIScrollViewContentInsetAdjustmentBehavior.Never;
 
         // Allow Safari Web Inspector to attach when debugging (iOS 16.4+).
-        if (VpnHoodApp.Instance.Features.IsDebugMode && OperatingSystem.IsIOSVersionAtLeast(16, 4))
+        if (VpnHoodApp.Instance.Descriptor.IsDebugMode && OperatingSystem.IsIOSVersionAtLeast(16, 4))
             _webView.Inspectable = true;
 
         // Insert below the spinner so the loading indicator stays visible until the first page loads.

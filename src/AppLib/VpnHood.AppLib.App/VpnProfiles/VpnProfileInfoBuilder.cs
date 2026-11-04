@@ -25,11 +25,11 @@ internal static class VpnProfileInfoBuilder
             : locationInfo.ServerLocation == ServerLocationInfo.TryParse(serverLocation)?.ServerLocation;
     }
 
-    public static VpnProfileInfo Build(VpnProfile vpnProfile, AppFeatures appFeatures)
+    public static VpnProfileInfo Build(VpnProfile vpnProfile, AppDescriptor appDescriptor)
     {
         var token = vpnProfile.Token;
         var clientPolicy = FindClientPolicy(token);
-        var locationInfos = ServerLocationItemBuilder.Build(vpnProfile, appFeatures);
+        var locationInfos = ServerLocationItemBuilder.Build(vpnProfile, appDescriptor);
 
         // the selected location, else the automatic one, else the first
         var selectedLocationInfo =
@@ -53,7 +53,7 @@ internal static class VpnProfileInfoBuilder
             LocationInfos = locationInfos,
             CanGoPremium = clientPolicy?.PremiumByCode == true || clientPolicy?.PremiumByPurchase == true,
             CanTryPremium = clientPolicy?.PremiumByTrial != null,
-            CanImportAccessCode = clientPolicy?.PremiumByCode == true && appFeatures.Premium?.AllowImportAccessCode == true,
+            CanImportAccessCode = clientPolicy?.PremiumByCode == true && appDescriptor.Premium?.AllowImportAccessCode == true,
             CanViewAccessCode = clientPolicy?.PremiumByCode == true,
             CustomServerEndpoints = vpnProfile.CustomServerEndpoints,
             IsCustomServerEndpointsEnabled = vpnProfile.IsCustomServerEndpointsEnabled,

@@ -465,7 +465,7 @@ public class CheckNewVersionTest : TestAppBase
         using var http = await CreateLocalHttpClient(app);
         var api = VpnHoodApiHttpFactory.Create(http);
 
-        Assert.IsTrue(app.Features.IsAutomaticUpdateSupported);
+        Assert.IsTrue(app.Descriptor.IsAutomaticUpdateSupported);
         Assert.IsTrue(await api.App.GetAutomaticUpdate(TestCt));
 
         await api.App.SetAutomaticUpdate(false, TestCt);
@@ -489,7 +489,7 @@ public class CheckNewVersionTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions);
         var updaterService = app.Services.UpdaterService ?? throw new InvalidOperationException("The app has no updater.");
 
-        Assert.IsFalse(app.Features.IsAutomaticUpdateSupported);
+        Assert.IsFalse(app.Descriptor.IsAutomaticUpdateSupported);
         await Assert.ThrowsExactlyAsync<NotSupportedException>(() => updaterService.IsAutomaticUpdateOn(TestCt));
         await Assert.ThrowsExactlyAsync<NotSupportedException>(() => updaterService.SetAutomaticUpdate(false, TestCt));
     }

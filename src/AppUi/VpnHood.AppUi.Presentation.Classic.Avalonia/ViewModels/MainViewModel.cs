@@ -58,8 +58,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // the page host: where a prompt raised by a state change is shown
     public MainView? Host { get; set; }
 
-    public string AppName => VhApp.Features.AppName;
-    public string VersionText => $"v{VhApp.Features.Version.Build}";
+    public string AppName => VhApp.Descriptor.AppName;
+    public string VersionText => $"v{VhApp.Descriptor.Version.Build}";
     public string SettingsTitle => Strings.Current.Settings.ToUpperInvariant();
     public string AutoChipText => Strings.Current.Auto.ToUpperInvariant();
     public string SplitCountriesTitle => Strings.Current.SplitCountries.ToUpperInvariant();
@@ -78,7 +78,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // A server is added by its access key, which only a client head takes (IsAddAccessKeySupported).
     // A remote cannot type a vh: key, so on a TV the button says so and leads to the phone -
     // exactly what the web UI's servers page does with it.
-    public bool CanAddServer => VhApp.Features.IsAddAccessKeySupported;
+    public bool CanAddServer => VhApp.Descriptor.IsAddAccessKeySupported;
     public string AddServerText => IsTv ? Strings.Current.AddOrRemoveServers : Strings.Current.AddServer;
     public string AddServerGlyph => IsTv ? Mdi.Cellphone : Mdi.PlusCircle;
 
@@ -88,9 +88,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsNotTv => !IsTv;
 
     // the drawer's door, off the TV; the account button in the corner, on it
-    public bool HasAccountButton => IsTv && VhApp.Features.IsAccountSupported;
-    public bool HasSplitAppsRow => VhApp.Features.IsExcludeAppsSupported || VhApp.Features.IsIncludeAppsSupported;
-    public bool HasSplitCountriesRow => VhApp.Features.IsSplitCountrySupported;
+    public bool HasAccountButton => IsTv && VhApp.Descriptor.IsAccountSupported;
+    public bool HasSplitAppsRow => VhApp.Descriptor.IsExcludeAppsSupported || VhApp.Descriptor.IsIncludeAppsSupported;
+    public bool HasSplitCountriesRow => VhApp.Descriptor.IsSplitCountrySupported;
 
     // A debug field that is set shows on the version chip, and opens the developer page on the
     // first tap rather than the fifth - the web UI's isDebugDataHasValue.
@@ -522,7 +522,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // first.
     public static bool IsConsentPending(AppState state)
     {
-        return (VhApp.Features.IsLicenseAgreementRequired && !VhApp.UserSettings.IsLicenseAccepted) ||
+        return (VhApp.Descriptor.IsLicenseAgreementRequired && !VhApp.UserSettings.IsLicenseAccepted) ||
                state.IsAnonymousTrackerPromptRequired;
     }
 
@@ -668,7 +668,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (profile == null)
             return [];
 
-        var isPremiumSupported = VhApp.Features.Premium != null;
+        var isPremiumSupported = VhApp.Descriptor.Premium != null;
         var isPremiumUser = profile.IsPremium;
         var all = profile.LocationInfos;
         var free = all.Where(x => x.Options.HasFree).ToArray();
@@ -976,7 +976,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public async Task SignIn(bool onPurchase, CancellationToken cancellationToken)
     {
         var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
-        if (!VhApp.Features.IsAccountSupported)
+        if (!VhApp.Descriptor.IsAccountSupported)
             throw new InvalidOperationException("Account service is not available.");
         var providerId = VhApp.PrimaryProviderId ?? throw new InvalidOperationException("This build reports no sign-in method.");
 

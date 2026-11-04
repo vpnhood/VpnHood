@@ -2,7 +2,7 @@ namespace VpnHood.AppLib.Abstractions.Accounts;
 
 public record SignInOptions
 {
-    /// <summary>The identity provider to sign in with — one of AppFeatures.AuthProviderIds (see AuthProviders).</summary>
+    /// <summary>The identity provider to sign in with — one of AppDescriptor.AuthProviderIds (see AuthProviders).</summary>
     public required string ProviderId { get; init; }
     public string? UserName { get; init; }
     public string? Password { get; init; }

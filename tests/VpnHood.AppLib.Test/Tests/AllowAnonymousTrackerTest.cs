@@ -246,7 +246,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
         appOptions.TrackerFactories = [];
         await using var app = TestAppHelper.CreateClientApp(appOptions, device);
         AcceptTerms(app);
-        Assert.IsFalse(app.Features.IsAnonymousTrackerSupported);
+        Assert.IsFalse(app.Descriptor.IsAnonymousTrackerSupported);
 
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
@@ -272,7 +272,7 @@ public class AllowAnonymousTrackerTest : TestAppBase
 
         Assert.IsEmpty(RecordingTrackerFactory.Made);
         Assert.IsInstanceOfType<NullTracker>(app.Services.TrackerService.Tracker);
-        Assert.IsFalse(app.Features.IsAnonymousTrackerSupported);
+        Assert.IsFalse(app.Descriptor.IsAnonymousTrackerSupported);
         Assert.IsEmpty(app.Services.TrackerService.TrackerFactoryInfos);
     }
 

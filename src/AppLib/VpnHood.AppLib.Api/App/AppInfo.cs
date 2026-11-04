@@ -11,7 +11,7 @@ namespace VpnHood.AppLib.Api.App;
 // which moves every second.
 public class AppInfo
 {
-    public required AppFeatures Features { get; init; }
+    public required AppDescriptor Descriptor { get; init; }
     public required DeviceIntentFeatures IntentFeatures { get; init; }
     public required AppState State { get; init; }
     public required UserSettings UserSettings { get; init; }

@@ -6,7 +6,7 @@ using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.AppLib.Api.App;
 
-public class AppFeatures
+public class AppDescriptor
 {
     public required string AppId { get; init; }
     public required string AppName { get; init; }

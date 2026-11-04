@@ -33,12 +33,12 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     Api = app.Api,
                     WebRoot = WebRoot,
                     UiAssetProvider = app.UiAssetProvider,
-                    AppName = app.Features.AppName,
-                    LogoAssetPath = app.Features.LogoAssetPath,
-                    UiTheme = app.Features.UiTheme,
+                    AppName = app.Descriptor.AppName,
+                    LogoAssetPath = app.Descriptor.LogoAssetPath,
+                    UiTheme = app.Descriptor.UiTheme,
                     WebUiPort = WebUiPort,
                     IsAlwaysOn = true, // the app's own UI loads it; nothing ever stops it
-                    IsTokenRequired = !app.Features.IsDebugMode // a debug build keeps its open door here too
+                    IsTokenRequired = !app.Descriptor.IsDebugMode // a debug build keeps its open door here too
                 });
         }
     }
@@ -55,9 +55,9 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     Api = app.Api,
                     WebRoot = WebRoot,
                     UiAssetProvider = app.UiAssetProvider,
-                    AppName = app.Features.AppName,
-                    LogoAssetPath = app.Features.LogoAssetPath,
-                    UiTheme = app.Features.UiTheme,
+                    AppName = app.Descriptor.AppName,
+                    LogoAssetPath = app.Descriptor.LogoAssetPath,
+                    UiTheme = app.Descriptor.UiTheme,
                     WebUiPort = WebUiPort,
                     IsAlwaysOn = _remoteIsDeveloperAccess, // otherwise a pairing screen holds it
                     IsTokenRequired = !_remoteIsDeveloperAccess
@@ -73,13 +73,13 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
         $"{nameof(AppOptions.WebRootZipAsset)}: a web host has no page to serve.");
 
     // The head's port, or the default AppOptions.WebUiPort promises when it names none.
-    private int WebUiPort => webUiPort ?? (app.Features.IsDebugMode ? 9091 : 9090);
+    private int WebUiPort => webUiPort ?? (app.Descriptor.IsDebugMode ? 9091 : 9090);
 
     // The developer's open door: remote access comes up without a screen and asks for no pairing, so a
     // UI developer can reach a device from their own machine. A host keeps what it was told when it was
     // built, so ApplySettings replaces it when this answer changes under a running app.
     private bool IsDeveloperRemoteAccess =>
-        app.Features.IsDebugMode || app.HasDebugCommand(DebugCommands.RemoteAccess);
+        app.Descriptor.IsDebugMode || app.HasDebugCommand(DebugCommands.RemoteAccess);
 
     // An always-on host is meant to be up without anyone asking for it, and on a head that shows a
     // native UI nobody ever will. Both are asked the same question and each answers for itself - which

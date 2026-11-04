@@ -20,7 +20,7 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // (DesktopWindowFit): a phone's shape where the screen has room for it, a TV's panel with --tv.
 // Never shipped.
 // "--sample-key" starts it with a server profile, which the location pages need.
-// "--tv" runs it as a TV (AppFeatures.IsTv: the pairing row, the ring on arrival); without it, as
+// "--tv" runs it as a TV (AppDescriptor.IsTv: the pairing row, the ring on arrival); without it, as
 // a phone or a desktop. "--connect" runs it as the Connect product - the violet look, no keys to
 // add (AppOptions.UiTheme, IsAddAccessKeySupported); without it, as the client. "--store google"
 // or "--store apple" runs it as Connect's build for that store - its premium tier, its sign-in and
@@ -50,7 +50,7 @@ internal static class Program
         // web host, which serves the same entries at /assets/ to a paired phone's page.
         var platformAssets = new FolderAssetProvider(AppContext.BaseDirectory);
 
-        // the name the UI shows, as a head of that product would set it (AppFeatures.AppName is
+        // the name the UI shows, as a head of that product would set it (AppDescriptor.AppName is
         // this very string), so the window says which product it is running as
         var appOptionsContext = new AppOptionsContext {
             AppId = "com.vpnhood.avalonia.dev",

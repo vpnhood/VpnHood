@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 
-// One row of the developer page: a debug command the app knows (AppFeatures.DebugCommands), and
+// One row of the developer page: a debug command the app knows (AppDescriptor.DebugCommands), and
 // whether DebugData1 names it.
 public sealed class DebugCommandItem(string command) : INotifyPropertyChanged
 {

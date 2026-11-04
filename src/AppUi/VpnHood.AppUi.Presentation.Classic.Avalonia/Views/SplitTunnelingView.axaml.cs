@@ -32,7 +32,7 @@ public partial class SplitTunnelingView : UserControl, IPage
         var s = Strings.Current;
         var state = VhApp.State;
         var split = state.SplitTunnelingState;
-        var features = VhApp.Features;
+        var features = VhApp.Descriptor;
 
         EnabledItem.Title = s.SplitTunnelingToggle;
         EnabledItem.IsOn = VhApp.UserSettings.SplitTunneling.Enabled;

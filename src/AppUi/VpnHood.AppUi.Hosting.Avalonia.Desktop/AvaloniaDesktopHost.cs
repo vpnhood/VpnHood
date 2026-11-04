@@ -126,7 +126,7 @@ public static class AvaloniaDesktopHost
         using var tray = trayArea == null
             ? null
             : new AvaloniaDesktopTray(Application.Current ?? throw new InvalidOperationException("Avalonia has no application."),
-                api, stateFollower, VhApp.Features.AppName, ShowMainWindow, () => lifetime.Shutdown());
+                api, stateFollower, VhApp.Descriptor.AppName, ShowMainWindow, () => lifetime.Shutdown());
         using var taskbarBadge = AvaloniaTaskbarBadge.Create(window, stateFollower, shell);
 
         // Start shows the main window it is given; one kept back waits for ShowMainWindow, unless a

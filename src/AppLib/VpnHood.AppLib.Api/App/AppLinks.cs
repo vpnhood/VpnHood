@@ -10,7 +10,7 @@ public record AppLinks
     public Uri? TermsOfUse { get; init; }
 
     // The menu's: the product's website, its "What's new" page, where to send feedback, the guide to
-    // a server of one's own (shown only where keys can be added, AppFeatures.IsAddAccessKeySupported)
+    // a server of one's own (shown only where keys can be added, AppDescriptor.IsAddAccessKeySupported)
     // and its social pages.
     public Uri? Website { get; init; }
     public Uri? WhatsNew { get; init; }

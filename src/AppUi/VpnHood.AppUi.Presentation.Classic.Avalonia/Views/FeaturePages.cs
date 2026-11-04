@@ -37,7 +37,7 @@ public static class FeaturePages
             VhApp.SaveUserSettings(settings, CancellationToken.None).Forget("Could not save that quick launch was offered.");
         }
 
-        var appName = VhApp.Features.AppName;
+        var appName = VhApp.Descriptor.AppName;
         var isRequestSupported = VhApp.Intents.IsRequestQuickLaunchSupported;
         return new FeaturePageView(host, new FeaturePageOptions {
             Title = S.QuickLaunchColored,
@@ -73,7 +73,7 @@ public static class FeaturePages
     // as the right-click action is there only where pkexec is.
     public static FeaturePageView KillSwitch(MainView host)
     {
-        var features = VhApp.Features;
+        var features = VhApp.Descriptor;
         if (features.IsKillSwitchSupported) {
             var appName = features.AppName;
             return new FeaturePageView(host, new FeaturePageOptions {
@@ -102,7 +102,7 @@ public static class FeaturePages
             Title = S.KillSwitchColored,
             Description = S.KillSwitchDesc,
             Image = "kill-switch.webp",
-            Steps = [S.KillSwitchHowToTurnOnStep1, S.KillSwitchHowToTurnOnStep2(VhApp.Features.AppName, "⚙️"), S.KillSwitchHowToTurnOnStep3],
+            Steps = [S.KillSwitchHowToTurnOnStep1, S.KillSwitchHowToTurnOnStep2(VhApp.Descriptor.AppName, "⚙️"), S.KillSwitchHowToTurnOnStep3],
             ButtonText = S.OpenVpnSettings,
             Action = () => VhApp.Api.Intents.OpenKillSwitchSettings(CancellationToken.None),
             IsActionAvailable = VhApp.Intents.IsKillSwitchSettingsSupported
@@ -127,7 +127,7 @@ public static class FeaturePages
     // the device's setting (Android's)
     public static FeaturePageView AlwaysOn(MainView host)
     {
-        var alwaysOnSupport = VhApp.Features.AlwaysOnSupport;
+        var alwaysOnSupport = VhApp.Descriptor.AlwaysOnSupport;
         if (alwaysOnSupport == AlwaysOnSupport.App) {
             return new FeaturePageView(host, new FeaturePageOptions {
                 Title = S.AlwaysOnColored,
@@ -145,7 +145,7 @@ public static class FeaturePages
             Title = S.AlwaysOnColored,
             Description = S.AlwaysOnDesc,
             Image = "always-on.webp",
-            Steps = [S.AlwaysOnHowToTurnOnStep1, S.AlwaysOnHowToTurnOnStep2(VhApp.Features.AppName, "⚙️"), S.AlwaysOnHowToTurnOnStep3],
+            Steps = [S.AlwaysOnHowToTurnOnStep1, S.AlwaysOnHowToTurnOnStep2(VhApp.Descriptor.AppName, "⚙️"), S.AlwaysOnHowToTurnOnStep3],
             ButtonText = S.OpenVpnSettings,
             Action = () => VhApp.Api.Intents.OpenAlwaysOnSettings(CancellationToken.None),
             IsPremium = VhApp.IsPremiumFeature(AppFeature.AlwaysOn),

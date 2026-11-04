@@ -19,7 +19,7 @@ public partial class PremiumFeaturesCarousel : UserControl
         InitializeComponent();
         var s = Strings.Current;
         var intents = VhApp.Intents;
-        var features = VhApp.Features;
+        var features = VhApp.Descriptor;
 
         // PremiumFeaturesCarousel.vue's carouselItems: a feature the device cannot have is not
         // promised, and a build with no premium tier does not sell speed

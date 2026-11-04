@@ -51,7 +51,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
             if (string.IsNullOrEmpty(fileName))
                 fileName = "report.txt";
             // after the app, so a shared copy says whose log it is
-            var filePath = Path.Combine(Path.GetTempPath(), $"{VpnHoodApp.Instance.Features.PackageTitle}-{fileName}");
+            var filePath = Path.Combine(Path.GetTempPath(), $"{VpnHoodApp.Instance.Descriptor.PackageTitle}-{fileName}");
             await File.WriteAllBytesAsync(filePath, content);
 
             hostController.BeginInvokeOnMainThread(() => PresentReportViewer(filePath, uri));

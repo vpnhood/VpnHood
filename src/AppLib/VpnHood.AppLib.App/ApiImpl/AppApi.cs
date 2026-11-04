@@ -40,10 +40,10 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
     public Task<AppInfo> GetInfo(CancellationToken cancellationToken)
     {
         var ret = new AppInfo {
-            Features = app.Features,
+            Descriptor = app.Descriptor,
             IntentFeatures = app.Services.DeviceUiProvider.ToIntentFeatures(app.Services.UserReviewProvider),
             UserSettings = app.UserSettings,
-            VpnProfileInfos = app.VpnProfileService.List().Select(x => x.ToInfo(app.Features)).ToArray(),
+            VpnProfileInfos = app.VpnProfileService.List().Select(x => x.ToInfo(app.Descriptor)).ToArray(),
             State = app.GetState(AppUiContext.Context),
             AvailableCultureInfos = app.Services.CultureProvider.AvailableCultures
                 .Select(x => new UiCultureInfo(x))

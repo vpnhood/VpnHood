@@ -3,7 +3,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.App;
 
-// What this build decided at construction and never changes. Unlike AppFeatures this is not a DTO
+// What this build decided at construction and never changes. Unlike AppDescriptor this is not a DTO
 // for the UI — it is internal behavior, never serialized. ConnectTimeout is the whole-connect
 // deadline (tripled when diagnosing); the per-TCP connect timeout is Transport.TcpConnectTimeout.
 public class VpnHoodAppConfig

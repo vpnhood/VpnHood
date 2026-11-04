@@ -87,7 +87,7 @@ GA4 with the id from their private appsettings, and Connect's Google Play head l
 Android SDK in its place. Each factory makes one tracker, and several report as one, each getting the
 switch and every event (`CompositeTracker`). A Debug build makes none, whatever the head lists, and a
 GA4 factory without an id makes a `NullTracker`. Nothing is sent then, and the UI hides the switch
-(`AppFeatures.IsAnonymousTrackerSupported`).
+(`AppDescriptor.IsAnonymousTrackerSupported`).
 
 **The app sends** ([`AppTrackerBuilder`](../../src/AppLib/VpnHood.AppLib.App/AppTrackerBuilder.cs),
 [`TrackerExtensions`](../../src/Net/VpnHood.Net.Toolkit/Extensions/TrackerExtensions.cs)):
@@ -169,7 +169,7 @@ as its browser build, or a web UI such as the SPA sample.
    ([`PrivacyView`](../../src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/Views/PrivacyView.axaml.cs)),
    and hides it where the build collects nothing.
 3. It adds no analytics of its own, the Avalonia UI and the SPA sample alike. A web UI of one's own
-   may, set up from `AppFeatures.CustomData`, and only while the switch is on.
+   may, set up from `AppDescriptor.CustomData`, and only while the switch is on.
 
 ## The switch
 

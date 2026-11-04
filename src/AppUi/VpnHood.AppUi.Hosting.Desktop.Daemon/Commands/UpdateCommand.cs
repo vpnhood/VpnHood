@@ -26,7 +26,7 @@ internal static class UpdateCommand
     private static async Task<int> Run(VpnHoodApi api, CancellationToken cancellationToken)
     {
         var info = await api.App.GetInfo(cancellationToken).Vhc();
-        var appVersion = info.Features.Version;
+        var appVersion = info.Descriptor.Version;
         var checkResult = await api.App.VersionCheck(cancellationToken).Vhc();
         if (checkResult == VersionCheckResult.Failed) {
             await Console.Error.WriteLineAsync("Could not check for an update; see the service's log.".AsMemory(),

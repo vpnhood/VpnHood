@@ -52,7 +52,7 @@ or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words o
 
 ## Invariants — do not break these
 
-1. **The fixture says which product it is.** `features.uiTheme`, `logoAssetPath`,
+1. **The fixture says which product it is.** `descriptor.uiTheme`, `logoAssetPath`,
    `privacyConsentAssetName`, `links.privacyPolicy` and `links.termsOfUse` are refused rather than
    filled: a picture wearing the other product's theme or logo looks right and is wrong. Copy them
    from the product's own options builder (`src/Apps/<product>/<product>/<Product>AppOptions.cs`; the

@@ -49,7 +49,7 @@ public class AppState
     public required TcpProxyUsageReason TcpProxyUsageReason { get; init; }
     public required SplitTunnelingState SplitTunnelingState { get; init; }
 
-    // null where the app does not keep always on itself (AppFeatures.AlwaysOnSupport)
+    // null where the app does not keep always on itself (AppDescriptor.AlwaysOnSupport)
     public required AlwaysOnState? AlwaysOnState { get; init; }
 
     // This app's kill switch block is up with no session: the internet is blocked but for the device-level split.

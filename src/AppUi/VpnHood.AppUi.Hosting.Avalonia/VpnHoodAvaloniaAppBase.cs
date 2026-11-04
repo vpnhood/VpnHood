@@ -53,7 +53,7 @@ public abstract class VpnHoodAvaloniaAppBase : Application
         switch (ApplicationLifetime) {
             case IClassicDesktopStyleApplicationLifetime desktop:
                 desktop.MainWindow = new Window {
-                    Title = VhApp.Features.AppName,
+                    Title = VhApp.Descriptor.AppName,
                     CanResize = false,
                     CanMaximize = false,
                     Background = ThemeBrush("BackgroundBrush"),

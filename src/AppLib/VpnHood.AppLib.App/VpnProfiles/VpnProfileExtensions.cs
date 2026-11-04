@@ -6,9 +6,9 @@ namespace VpnHood.AppLib.App.VpnProfiles;
 
 public static class VpnProfileExtensions
 {
-    public static VpnProfileInfo ToInfo(this VpnProfile vpnProfile, AppFeatures appFeatures)
+    public static VpnProfileInfo ToInfo(this VpnProfile vpnProfile, AppDescriptor appDescriptor)
     {
-        return VpnProfileInfoBuilder.Build(vpnProfile, appFeatures);
+        return VpnProfileInfoBuilder.Build(vpnProfile, appDescriptor);
     }
 
     public static VpnProfileBaseInfo ToBaseInfo(this VpnProfileInfo vpnProfileInfo)

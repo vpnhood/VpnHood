@@ -61,7 +61,7 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         // over it, where the head hands the UI the app's API first (Avalonia's designer, given none,
         // keeps the default), and a dictionary merged later wins.
         Resources.MergedDictionaries.Add(new BlueTheme());
-        var themeOverride = AppTheme.OverrideFor(VhApp.IsInit ? VhApp.Features.UiTheme : null);
+        var themeOverride = AppTheme.OverrideFor(VhApp.IsInit ? VhApp.Descriptor.UiTheme : null);
         if (themeOverride != null)
             Resources.MergedDictionaries.Add(themeOverride);
 

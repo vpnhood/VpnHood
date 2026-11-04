@@ -46,7 +46,7 @@ public static class ContentDocuments
 
     private static string FillPlaceholders(string text)
     {
-        var features = VhApp.Features;
+        var features = VhApp.Descriptor;
         return text
             .Replace("{appName}", features.AppName)
             .Replace("{companyName}", features.CompanyName);

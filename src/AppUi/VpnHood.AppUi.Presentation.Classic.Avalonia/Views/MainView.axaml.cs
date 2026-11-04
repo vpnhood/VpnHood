@@ -91,7 +91,7 @@ public partial class MainView : UserControl
         // the consent a first run asks for, over everything until it is given (App.vue's
         // isShowPrivacyPolicyDialog), and the usage-data question where the law wants a yes first,
         // on a build that skips the terms too and for a person who accepted them before
-        var features = VhApp.Features;
+        var features = VhApp.Descriptor;
         if (MainViewModel.IsConsentPending(VhApp.State))
             Navigate(new PrivacyPolicyView(this));
         // the account, once, for a build that has one (App.vue's onMounted); the pages that change
@@ -630,7 +630,7 @@ public partial class MainView : UserControl
         UpdateNotice.Classes.Set("update-alert", !isDeprecated);
         UpdateNoticeIcon.Text = isDeprecated ? Mdi.AlertCircle : Mdi.Update;
         UpdateNoticeText.Text = isDeprecated
-            ? Strings.Current.VersionIsDeprecated(VhApp.Features.AppName)
+            ? Strings.Current.VersionIsDeprecated(VhApp.Descriptor.AppName)
             : Strings.Current.VersionIsOld;
         // an app that updates itself offers its own Update instead of the links
         var hasUpdateState = status.UpdateState != null;
@@ -638,7 +638,7 @@ public partial class MainView : UserControl
         UpdateDirectButton.IsVisible = !hasUpdateState && publish.GooglePlayUrl == null;
         UpdateNoStoreButton.IsVisible = !hasUpdateState && publish.GooglePlayUrl != null;
         UpdateAlternative.IsVisible = false;
-        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {VhApp.Features.Version.ToString(3)}";
+        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {VhApp.Descriptor.Version.ToString(3)}";
         UpdateNewText.Text = $"{Strings.Current.NewVersion} {publish.Version}";
         RefreshUpdateState(status.UpdateState);
         UpdateNotice.IsVisible = true;
@@ -699,7 +699,7 @@ public partial class MainView : UserControl
             AppUpdateStage.Installing => Strings.Current.UpdateInstalling,
             // before Install opens Android's page for it, where a TV lists every app that asked
             AppUpdateStage.Downloaded when updateState?.IsInstallPermissionNeeded == true =>
-                Strings.Current.UpdateAllowInstalls(VhApp.Features.AppName),
+                Strings.Current.UpdateAllowInstalls(VhApp.Descriptor.AppName),
             AppUpdateStage.Downloaded when VhApp.IsConnected() => Strings.Current.UpdateVpnDisconnects,
             _ => null
         };

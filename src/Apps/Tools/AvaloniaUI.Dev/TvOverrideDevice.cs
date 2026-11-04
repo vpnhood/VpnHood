@@ -6,7 +6,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 namespace VpnHood.App.AvaloniaUI.Dev;
 
 // A device that answers IsTv as it is told to, and leaves every other answer to the real one.
-// IsTv is the device's word (AppFeatures.IsTv reads it, or the /tv-mode debug command at the next
+// IsTv is the device's word (AppDescriptor.IsTv reads it, or the /tv-mode debug command at the next
 // launch), and this host wants the answer for this run, from its command line.
 internal sealed class TvOverrideDevice(IDevice inner, bool isTv) : IDevice
 {

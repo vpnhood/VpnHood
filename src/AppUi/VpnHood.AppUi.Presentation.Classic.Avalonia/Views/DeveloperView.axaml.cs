@@ -26,8 +26,8 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
 
         var current = (VhApp.UserSettings.DebugData1 ?? "")
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        _commands = VhApp.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) }).ToArray();
-        _unknown = current.Except(VhApp.Features.DebugCommands).ToArray();
+        _commands = VhApp.Descriptor.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) }).ToArray();
+        _unknown = current.Except(VhApp.Descriptor.DebugCommands).ToArray();
 
         CommandList.ItemsSource = _commands;
         DebugData2Box.Text = VhApp.UserSettings.DebugData2;

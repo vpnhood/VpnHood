@@ -73,7 +73,7 @@ public class ClientAppTest : TestAppBase
         appOptions.IpLocationZipAsset = null;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         Assert.IsNull(app.IpRangeLocationProvider);
-        Assert.IsFalse(app.Features.IsSplitCountrySupported);
+        Assert.IsFalse(app.Descriptor.IsSplitCountrySupported);
 
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken);
@@ -451,7 +451,7 @@ public class ClientAppTest : TestAppBase
 
         // reload vpnProfile
         vpnProfile = clientApp.VpnProfileService.Get(vpnProfile.VpnProfileId);
-        Assert.IsTrue(vpnProfile.ToInfo(clientApp.Features).SelectedLocationInfo?.IsAuto);
+        Assert.IsTrue(vpnProfile.ToInfo(clientApp.Descriptor).SelectedLocationInfo?.IsAuto);
     }
 
     [TestMethod]
@@ -504,14 +504,14 @@ public class ClientAppTest : TestAppBase
         Assert.AreEqual(0, app.State.UserReviewRecommended, "It must be reset after rating.");
         Assert.IsTrue(app.Settings.UserReview?.Time >= beforeSetRateTime);
         Assert.AreEqual(3, app.Settings.UserReview?.Rating);
-        Assert.AreEqual(app.Features.Version, app.Settings.UserReview?.AppVersion);
+        Assert.AreEqual(app.Descriptor.Version, app.Settings.UserReview?.AppVersion);
 
         // Connect again then access manager should receive result
         Assert.IsNull(accessManager.UserReview);
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
         Assert.IsNotNull(accessManager.UserReview);
         Assert.AreEqual(3, accessManager.UserReview.Rating);
-        Assert.AreEqual(app.Features.Version, accessManager.UserReview.AppVersion);
+        Assert.AreEqual(app.Descriptor.Version, accessManager.UserReview.AppVersion);
         Assert.IsGreaterThanOrEqualTo(beforeSetRateTime, accessManager.UserReview.Time);
     }
 }

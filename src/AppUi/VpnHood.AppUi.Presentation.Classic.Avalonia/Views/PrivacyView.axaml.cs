@@ -27,7 +27,7 @@ public partial class PrivacyView : UserControl, IPage
         AdPrivacyItem.Subtitle = s.AdPrivacyOptionsDesc;
         AdPrivacyItem.IsVisible = VhApp.State.IsAdPrivacyOptionsRequired;
         NoticeText.IsVisible = isTrackerSupported;
-        PolicyButton.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
+        PolicyButton.IsVisible = VhApp.Descriptor.Links.PrivacyPolicy != null;
         PolicyCard.IsVisible = NoticeText.IsVisible || PolicyButton.IsVisible;
     }
 
@@ -65,7 +65,7 @@ public partial class PrivacyView : UserControl, IPage
     private async void OnPolicyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.PrivacyPolicy is { } url)
+            if (VhApp.Descriptor.Links.PrivacyPolicy is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy, CancellationToken.None);
         }
         catch (Exception ex) {

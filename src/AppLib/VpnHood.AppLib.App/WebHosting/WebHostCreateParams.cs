@@ -24,8 +24,8 @@ public class WebHostCreateParams
     // the same instance the app's own UI reads. Null for a head whose UI brings nothing of its own.
     public IAssetProvider? UiAssetProvider { get; init; }
 
-    // Whose page it is (AppFeatures.AppName, LogoAssetPath, a path in the UI's files) and its look
-    // (AppFeatures.UiTheme, whose colours are in the UI's files): the page is every app's and names
+    // Whose page it is (AppDescriptor.AppName, LogoAssetPath, a path in the UI's files) and its look
+    // (AppDescriptor.UiTheme, whose colours are in the UI's files): the page is every app's and names
     // none, so the host writes them into its index.html.
     public required string AppName { get; init; }
     public required string LogoAssetPath { get; init; }

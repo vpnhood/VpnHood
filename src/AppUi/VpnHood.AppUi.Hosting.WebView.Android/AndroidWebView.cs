@@ -59,7 +59,7 @@ public sealed class AndroidWebView : IWebView
         webViewClient.RenderProcessGone += OnWebViewRenderProcessGone;
         _webView.SetWebViewClient(webViewClient);
         _webView.SetWebChromeClient(new AndroidWebChromeClient(() => _localToken));
-        if (VpnHoodApp.Instance.Features.IsDebugMode)
+        if (VpnHoodApp.Instance.Descriptor.IsDebugMode)
             NativeWebView.SetWebContentsDebuggingEnabled(true);
     }
 

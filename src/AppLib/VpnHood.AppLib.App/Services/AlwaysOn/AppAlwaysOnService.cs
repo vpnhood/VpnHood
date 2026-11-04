@@ -50,7 +50,7 @@ internal sealed class AppAlwaysOnService : IDisposable
         app.VpnProfileService.Changed += VpnProfileService_Changed;
     }
 
-    private bool IsSupported => _app.Features.AlwaysOnSupport == AlwaysOnSupport.App;
+    private bool IsSupported => _app.Descriptor.AlwaysOnSupport == AlwaysOnSupport.App;
     private bool IsOn => IsSupported && _app.UserSettings.AlwaysOn;
 
     public AlwaysOnState? State {

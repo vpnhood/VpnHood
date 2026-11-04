@@ -35,8 +35,8 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         InitializeComponent();
         // on a TV the header holds nothing and would only push the centred page down
         Header.IsVisible = !VhApp.IsTvUi;
-        TermsLink.IsVisible = VhApp.Features.Links.TermsOfUse != null;
-        PrivacyLink.IsVisible = VhApp.Features.Links.PrivacyPolicy != null;
+        TermsLink.IsVisible = VhApp.Descriptor.Links.TermsOfUse != null;
+        PrivacyLink.IsVisible = VhApp.Descriptor.Links.PrivacyPolicy != null;
         LinksDot.IsVisible = TermsLink.IsVisible && PrivacyLink.IsVisible;
         LinksRow.IsVisible = TermsLink.IsVisible || PrivacyLink.IsVisible;
         if (VhApp.IsTvUi)
@@ -96,7 +96,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         StoreErrorCard.IsVisible = options is { IsStoreAvailable: false, StoreError: not null };
         WebButton.IsVisible = options.PurchaseUrl != null && MainView.IsExternalLinkUsable;
         CodeButton.IsVisible = options.CanGoPremiumByCode;
-        RestoreButton.IsVisible = VhApp.Features.IsAccountSupported;
+        RestoreButton.IsVisible = VhApp.Descriptor.IsAccountSupported;
         RestoreText.Text = VhApp.Account != null ? Strings.Current.RestorePurchase : Strings.Current.AlreadyPremium;
         if (options.IsStoreAvailable)
             ShowPlans(options.SubscriptionPlans);
@@ -264,7 +264,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
     private async Task Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
-        if (!VhApp.Features.IsBillingSupported)
+        if (!VhApp.Descriptor.IsBillingSupported)
             throw new InvalidOperationException("Billing service is not available.");
         var pending = new PendingDialog();
         _ = _host.ShowDialog(pending);
@@ -325,7 +325,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
             // a build with no store has nothing to ask; signing in and reading the account is the
             // whole of the restore there
-            var restored = VhApp.Features.IsBillingSupported
+            var restored = VhApp.Descriptor.IsBillingSupported
                 && await VhApp.Api.Billing.RestorePurchase(cancellationToken);
             await VhApp.LoadAccount(false, cancellationToken);
             await _host.ViewModel.ReloadInfo(cancellationToken);
@@ -393,7 +393,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.TermsOfUse is { } url)
+            if (VhApp.Descriptor.Links.TermsOfUse is { } url)
                 await _host.OpenLink(url, Strings.Current.TermsOfUse, CancellationToken.None);
         }
         catch (Exception ex) {
@@ -404,7 +404,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Features.Links.PrivacyPolicy is { } url)
+            if (VhApp.Descriptor.Links.PrivacyPolicy is { } url)
                 await _host.OpenLink(url, Strings.Current.PrivacyPolicy, CancellationToken.None);
         }
         catch (Exception ex) {

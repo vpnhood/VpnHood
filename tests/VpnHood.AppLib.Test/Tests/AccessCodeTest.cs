@@ -194,7 +194,7 @@ public class AccessCodeTest : TestAppBase
         });
 
         // check account is 
-        var vpnProfileInfo = vpnProfile.ToInfo(app.Features);
+        var vpnProfileInfo = vpnProfile.ToInfo(app.Descriptor);
         Assert.IsTrue(vpnProfileInfo.IsPremium);
         Assert.IsFalse(vpnProfileInfo.SelectedLocationInfo?.Options.CanGoPremium);
         Assert.IsFalse(vpnProfileInfo.SelectedLocationInfo?.Options.PremiumByCode);

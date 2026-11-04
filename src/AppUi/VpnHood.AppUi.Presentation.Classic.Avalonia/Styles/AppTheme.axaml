@@ -153,7 +153,7 @@
        inset of a TV at 960x540, and it belongs to a television alone, as the web UI gives it only
        to a tv-device (general.css, "TV page inset and measure"): a window on a desk crops nothing,
        and the inset there only pushes the page's header down the screen. MainView carries the
-       class, from the device's own word (AppFeatures.IsTv). -->
+       class, from the device's own word (AppDescriptor.IsTv). -->
   <Style Selector=":is(Panel).page">
     <Setter Property="Margin" Value="16,8,16,16" />
   </Style>

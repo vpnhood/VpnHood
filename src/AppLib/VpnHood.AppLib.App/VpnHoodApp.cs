@@ -105,7 +105,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public string NoBackupStorageFolderPath { get; }
     public AppSettings Settings => SettingsService.Settings;
     public UserSettings UserSettings => SettingsService.UserSettings;
-    public AppFeatures Features { get; }
+    public AppDescriptor Descriptor { get; }
     public VpnHoodAppConfig Config { get; }
     public VpnProfileService VpnProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
@@ -234,7 +234,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
 
         // initialize features
-        Features = new AppFeatures {
+        Descriptor = new AppDescriptor {
             Version = appVersion,
             IsExcludeAppsSupported = _device.IsExcludeAppsSupported && isSplitAppsSupported,
             IsIncludeAppsSupported = _device.IsIncludeAppsSupported && isSplitAppsSupported,
@@ -277,7 +277,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ChannelProtocols = protocols.Select(x => x.ToAppDto()).ToArray()
         };
 
-        VpnProfileService = new VpnProfileService(options.Storage.OpenStorage(FolderNameProfiles), Features);
+        VpnProfileService = new VpnProfileService(options.Storage.OpenStorage(FolderNameProfiles), Descriptor);
         _alwaysOnService = new AppAlwaysOnService(this, options.AlwaysOnOptions, _appPersistState);
         _killSwitchService = killSwitch != null ? new AppKillSwitchService(this, killSwitch) : null;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
@@ -321,7 +321,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ? null
                 : new AppUpdaterService(
                     storageFolderPath: options.StorageFolderPath,
-                    appVersion: Features.Version,
+                    appVersion: Descriptor.Version,
                     updateOptions: options.UpdaterOptions,
                     isConnected: () => ConnectionState is AppConnectionState.Connected),
             ProxyEndPointService = new AppProxyEndPointService(
@@ -857,7 +857,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private LogServiceOptions GetLogOptions()
     {
-        return GetLogOptions(UserSettings, Config.LogServiceOptions, Features.IsDebugMode);
+        return GetLogOptions(UserSettings, Config.LogServiceOptions, Descriptor.IsDebugMode);
     }
 
     private static LogServiceOptions GetLogOptions(UserSettings userSettings, LogServiceOptions appLogOptions,
@@ -1018,8 +1018,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // log general info
-            VhLogger.Instance.LogInformation("AppVersion: {AppVersion}, AppId: {Features.AppId}",
-                Features.Version, Features.AppId);
+            VhLogger.Instance.LogInformation("AppVersion: {AppVersion}, AppId: {Descriptor.AppId}",
+                Descriptor.Version, Descriptor.AppId);
             VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
             VhLogger.Instance.LogInformation("OS: {OsInfo}", _device.OsInfo);
             VhLogger.Instance.LogInformation("UserAgent: {UserAgent}", Services.TrackerService.UserAgent);
@@ -1092,8 +1092,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var isTrackerAllowed = Services.TrackerService.IsVpnServiceTrackerAllowed;
         var clientOptions = new ClientOptions {
             AdapterName = Config.AdapterName,
-            AppId = Features.AppId,
-            ClientId = Features.ClientId,
+            AppId = Descriptor.AppId,
+            ClientId = Descriptor.ClientId,
             AccessKey = token.ToAccessKey(),
             Transport = Config.Transport,
             SplitLocalNetwork = splitTunneling.UseLocalNetwork,
@@ -1111,10 +1111,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowAnonymousTracker = isTrackerAllowed,
             AllowEndPointTracker = isTrackerAllowed && Config.AllowEndPointTracker,
             AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
-            ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude && Features.IsExcludeAppsSupported
+            ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude && Descriptor.IsExcludeAppsSupported
                 ? [.. splitTunneling.Apps]
                 : null,
-            IncludeApps = splitTunneling.AppMode == SplitAppMode.Include && Features.IsIncludeAppsSupported
+            IncludeApps = splitTunneling.AppMode == SplitAppMode.Include && Descriptor.IsIncludeAppsSupported
                 ? [.. splitTunneling.Apps]
                 : null,
             DnsServers = dnsServers,
@@ -1123,9 +1123,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 .Where(x => _vpnEngineInfo.Features.TrackerKinds.Contains(x.Kind))
                 .ToArray(),
             TrackerUserAgent = Services.TrackerService.UserAgent,
-            TrackerClientVersion = Features.Version,
+            TrackerClientVersion = Descriptor.Version,
             UserAgent = _userAgent,
-            EndPointStrategy = Features.AllowEndPointStrategy
+            EndPointStrategy = Descriptor.AllowEndPointStrategy
                 ? UserSettings.EndPointStrategy.ToEngine()
                 : Core.Common.Tokens.EndPointStrategy.Auto,
             DebugData1 = UserSettings.DebugData1,
@@ -1133,7 +1133,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // A profile is the person's own only where keys are added. A single-profile app's may
             // come from another provider, so it names none: the system's VPN dialog, the tile and the
             // notification show the app's name instead.
-            SessionName = Features.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
+            SessionName = Descriptor.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
             CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
             AllowAlwaysOn = _vpnEngineInfo.Features.AlwaysOn && IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
             UseKillSwitch = _killSwitchService?.IsOn ?? false,
@@ -1145,7 +1145,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return new VpnServiceOptions {
             ContractVersion = VpnServiceContract.Negotiate(_vpnEngineInfo),
             ClientOptions = clientOptions,
-            ProxyOptions = Features.IsProxySupported ? proxyOptions : null,
+            ProxyOptions = Descriptor.IsProxySupported ? proxyOptions : null,
             Localization = new VpnServiceLocalization {
                 Manage = Resources.Strings.Manage,
                 Disconnect = Resources.Strings.Disconnect,
@@ -1454,7 +1454,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         _userReviewRecommended = 0;
         Settings.UserReview = new UserReview {
-            AppVersion = Features.Version,
+            AppVersion = Descriptor.Version,
             Rating = rating,
             Time = FastDateTime.UtcNow
         };
@@ -1598,7 +1598,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var sessionUserReviewRecommended = ConnectionInfo.SessionStatus?.UserReviewRecommended ?? 0;
             if (state.ConnectionState is AppConnectionState.Connected &&
                 _appPersistState.LastError is null && Config.AllowRecommendUserReviewByServer &&
-                Features.IsUserReviewSupported && sessionUserReviewRecommended > 0)
+                Descriptor.IsUserReviewSupported && sessionUserReviewRecommended > 0)
                 _userReviewRecommended = sessionUserReviewRecommended;
 
             // set user review recommended if debug command is enabled
@@ -1676,7 +1676,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         var profileInfo = VpnProfileService.GetInfo(vpnProfileId);
         var clientPolicy = profileInfo.ClientPolicy;
-        var premium = Features.Premium;
+        var premium = Descriptor.Premium;
 
         // The operator's own shop, read only by a build that MAY open one. The URL arrives from the
         // SERVER — every access token carries its operator's own — and that operator cannot know
@@ -1737,11 +1737,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public bool IsPremiumFeatureAllowed(AppFeature feature)
     {
         // a build with no premium tier IS the full app: every feature is everyone's
-        if (Features.Premium == null)
+        if (Descriptor.Premium == null)
             return true;
 
         // not a feature this tier sells
-        if (!Features.Premium.Features.Contains(feature))
+        if (!Descriptor.Premium.Features.Contains(feature))
             return true;
 
         // check if the current profile is premium

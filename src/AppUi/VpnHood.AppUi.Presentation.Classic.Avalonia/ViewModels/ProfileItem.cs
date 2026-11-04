@@ -40,7 +40,7 @@ public sealed class ProfileItem : INotifyPropertyChanged
     // debug command, and Diagnose waits for the app to be able to.
     public bool ShowMenu => !VhApp.IsTvUi;
     public bool CanRename => !IsBuiltIn;
-    public bool CanRemove => VhApp.Features.IsAddAccessKeySupported;
+    public bool CanRemove => VhApp.Descriptor.IsAddAccessKeySupported;
     public bool ShowStarlinkTools => VhApp.IsStarlinkToolsEnabled;
     public bool CanDiagnose => VhApp.State.CanDiagnose;
 

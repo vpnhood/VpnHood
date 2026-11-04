@@ -87,7 +87,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
     // one per theme, as in the web UI's split-apps page
     private static Task<Bitmap?> FutureAppsIcon()
     {
-        return AppAssets.LoadBitmapAsync(AppAssets.ImagePath($"future-apps-{VhApp.Features.UiTheme}.png"));
+        return AppAssets.LoadBitmapAsync(AppAssets.ImagePath($"future-apps-{VhApp.Descriptor.UiTheme}.png"));
     }
 
     // Include with nothing in it is the one state that cannot be saved: the app would tunnel

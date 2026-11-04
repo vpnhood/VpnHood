@@ -86,7 +86,7 @@ public static class VhApp
     private static AppInfo Info => _info ?? throw new InvalidOperationException(
         $"The app's info has not been read. {nameof(VhApp)}.{nameof(Init)} reads it.");
 
-    public static AppFeatures Features => Info.Features;
+    public static AppDescriptor Descriptor => Info.Descriptor;
     public static DeviceIntentFeatures Intents => Info.IntentFeatures;
     public static UserSettings UserSettings => Info.UserSettings;
     public static IReadOnlyList<VpnProfileInfo> VpnProfileInfos => Info.VpnProfileInfos;
@@ -139,7 +139,7 @@ public static class VhApp
 
     public static async Task LoadAccount(bool withRefresh, CancellationToken cancellationToken)
     {
-        if (!Features.IsAccountSupported) {
+        if (!Descriptor.IsAccountSupported) {
             Account = null;
             return;
         }
@@ -158,15 +158,15 @@ public static class VhApp
 
     // The TV layout: the device's word, unless this UI is the remote - the web UI's isTvUi, which
     // asks the same two questions. A phone driving a TV gets the phone's layout.
-    public static bool IsTvUi => Features.IsTv && !IsRemote;
+    public static bool IsTvUi => Descriptor.IsTv && !IsRemote;
 
     // A browser driving a TV: what the TV's own screen asks - a store's sheet, Android's VPN prompt,
     // an ad - is answered there, so a wait for it says to go on there.
-    public static bool IsTvRemote => Features.IsTv && IsRemote;
+    public static bool IsTvRemote => Descriptor.IsTv && IsRemote;
 
     // One built-in profile, called "location", against a list of servers the user adds keys for:
     // the list is fixed exactly when no key can be added. The web UI's isSingleProfileMode.
-    public static bool IsSingleProfileMode => !Features.IsAddAccessKeySupported;
+    public static bool IsSingleProfileMode => !Descriptor.IsAddAccessKeySupported;
 
     public static bool IsConnected(AppState state)
     {
@@ -178,7 +178,7 @@ public static class VhApp
     // A build with no premium tier is the full app: nothing sold, no crown, everything allowed. Left
     // so: a public key whose own plans include premium still shows them there (the locations' crowns,
     // the countdown, the promote page), since they describe that key.
-    public static bool IsPremiumSupported => Features.Premium != null;
+    public static bool IsPremiumSupported => Descriptor.Premium != null;
     public static bool IsPremiumUser => State.VpnProfile?.IsPremium == true;
     public static bool IsPremiumByAccount => IsPremiumUser && Account?.Subscription != null;
     public static bool IsPremiumByCode => IsPremiumUser && !IsPremiumByAccount;
@@ -190,17 +190,17 @@ public static class VhApp
 
     public static bool IsPremiumFeature(AppFeature feature)
     {
-        return Features.Premium?.Features.Contains(feature) ?? false;
+        return Descriptor.Premium?.Features.Contains(feature) ?? false;
     }
 
     // VpnHoodApp.IsPremiumFeatureAllowed, from what the API gives: a build with no premium tier
     // allows everything, a feature the tier does not sell is everyone's, the rest is the profile's.
     public static bool IsPremiumFeatureAllowed(AppFeature feature)
     {
-        if (Features.Premium == null)
+        if (Descriptor.Premium == null)
             return true;
 
-        if (!Features.Premium.Features.Contains(feature))
+        if (!Descriptor.Premium.Features.Contains(feature))
             return true;
 
         return IsPremiumUser;
@@ -250,11 +250,11 @@ public static class VhApp
 
     public static bool IsShowProtocol(ChannelProtocol protocol)
     {
-        return Features.ChannelProtocols.Contains(protocol);
+        return Descriptor.ChannelProtocols.Contains(protocol);
     }
 
     // this head has no web analytics of its own, so the tracker the app reports is the whole answer
-    public static bool IsAnonymousTrackerSupported => Features.IsAnonymousTrackerSupported;
+    public static bool IsAnonymousTrackerSupported => Descriptor.IsAnonymousTrackerSupported;
 
     public static bool IsLocalNetworkAvailable(AppState state)
     {
@@ -277,13 +277,13 @@ public static class VhApp
     // Android only: the tools drive the Starlink app, which exists on no other platform; a debug
     // build keeps the page reachable while it is developed
     public static bool IsStarlinkToolsEnabled =>
-        HasDebugCommand("/starlink") && (Features.IsDebugMode || Features.OsType == AppOsType.Android);
+        HasDebugCommand("/starlink") && (Descriptor.IsDebugMode || Descriptor.OsType == AppOsType.Android);
 
     // the store's method, never the portal's password (VpnHoodApp.primaryProviderId)
-    public static string? PrimaryProviderId => Features.AuthProviderIds.FirstOrDefault(x => x != "password");
+    public static string? PrimaryProviderId => Descriptor.AuthProviderIds.FirstOrDefault(x => x != "password");
 
     public static bool HasSignInChoice =>
-        Features.AuthProviderIds.Count > 1 || Features.AuthProviderIds.FirstOrDefault() == "password";
+        Descriptor.AuthProviderIds.Count > 1 || Descriptor.AuthProviderIds.FirstOrDefault() == "password";
 
-    public static bool HasPasswordSignIn => Features.AuthProviderIds.Contains("password");
+    public static bool HasPasswordSignIn => Descriptor.AuthProviderIds.Contains("password");
 }

@@ -84,7 +84,7 @@ public class VpnProfileTest : TestAppBase
         Assert.AreEqual(tokens2[0].TokenId, vpnProfiles[0].Token.TokenId);
         Assert.AreEqual(tokens2[1].TokenId, vpnProfiles[1].Token.TokenId);
         foreach (var vpnProfile in vpnProfiles)
-            Assert.IsTrue(vpnProfile.ToInfo(app2.Features).IsBuiltIn);
+            Assert.IsTrue(vpnProfile.ToInfo(app2.Descriptor).IsBuiltIn);
     }
 
     [TestMethod]
@@ -129,7 +129,7 @@ public class VpnProfileTest : TestAppBase
         // test free US client
         app.UpdateClientCountry("US");
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        var vpnProfileInfo = vpnProfile.ToInfo(app.Features);
+        var vpnProfileInfo = vpnProfile.ToInfo(app.Descriptor);
 
         // default (*/*)
         var location = vpnProfileInfo.LocationInfos.Single(x => x.ServerLocation == "*/*");
@@ -163,7 +163,7 @@ public class VpnProfileTest : TestAppBase
 
         // (US/*) no free for CA clients
         app.UpdateClientCountry("CA");
-        vpnProfileInfo = app.VpnProfileService.Get(vpnProfileInfo.VpnProfileId).ToInfo(app.Features);
+        vpnProfileInfo = app.VpnProfileService.Get(vpnProfileInfo.VpnProfileId).ToInfo(app.Descriptor);
         location = vpnProfileInfo.LocationInfos.Single(x => x.ServerLocation == "US/*");
         Assert.IsFalse(location.Options.HasFree);
         Assert.IsTrue(location.Options.HasPremium);
@@ -176,7 +176,7 @@ public class VpnProfileTest : TestAppBase
         // create premium token
         token.IsPublic = false;
         vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        vpnProfileInfo = vpnProfile.ToInfo(app.Features);
+        vpnProfileInfo = vpnProfile.ToInfo(app.Descriptor);
         location = vpnProfileInfo.LocationInfos.Single(x => x.ServerLocation == "FR/*");
         Assert.IsFalse(location.Options.HasFree);
         Assert.IsTrue(location.Options.HasPremium);
@@ -275,7 +275,7 @@ public class VpnProfileTest : TestAppBase
         Assert.AreEqual(updateParams.AccessCode.Value, vpnProfile.AccessCode);
         Assert.IsFalse(vpnProfile.IsAccessCodeSynced,
             "a code that appears here owes the account an upload — the service marks it, callers do not");
-        Assert.AreEqual(AccessCodeUtils.Redact(updateParams.AccessCode.Value), vpnProfile.ToInfo(app.Features).AccessCode);
+        Assert.AreEqual(AccessCodeUtils.Redact(updateParams.AccessCode.Value), vpnProfile.ToInfo(app.Descriptor).AccessCode);
 
         // ************
         // *** TEST ***: RemoveVpnProfile
@@ -347,17 +347,17 @@ public class VpnProfileTest : TestAppBase
         token.ServerToken.ServerLocations = null;
 
         // if there is no server location, it should be null
-        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(app.Features);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(app.Descriptor);
         Assert.IsNull(vpnProfile.SelectedLocationInfo?.ServerLocation);
 
         // if there is no server location, it should be null
         token.ServerToken.ServerLocations = [];
-        vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(app.Features);
+        vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(app.Descriptor);
         Assert.IsNull(vpnProfile.SelectedLocationInfo?.ServerLocation);
 
         // if no server location is set, it should return the first server location
         token.ServerToken.ServerLocations = ["US/California"];
-        vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(app.Features);
+        vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(app.Descriptor);
         Assert.AreEqual("US/California", vpnProfile.SelectedLocationInfo?.ServerLocation);
 
         // if null server location is set, it should return the first server location
@@ -372,7 +372,7 @@ public class VpnProfileTest : TestAppBase
 
         // if no server location is set for two location, it should return auto
         token.ServerToken.ServerLocations = ["US/California", "FR/Paris"];
-        vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(app.Features);
+        vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(app.Descriptor);
         Assert.IsTrue(ServerLocationInfo.IsAutoLocation(vpnProfile.SelectedLocationInfo?.ServerLocation));
 
         // if wrong server location is set for two location, it should return auto
@@ -448,7 +448,7 @@ public class VpnProfileTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
         // get all locations
-        var arizona = vpnProfile.ToInfo(app.Features).LocationInfos.First(x => x.ServerLocation == "US/arizona");
+        var arizona = vpnProfile.ToInfo(app.Descriptor).LocationInfos.First(x => x.ServerLocation == "US/arizona");
         Assert.IsFalse(arizona.Options.HasFree, "Free location should be overridden by FreeLocations.");
     }
 
@@ -460,7 +460,7 @@ public class VpnProfileTest : TestAppBase
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["US/texas [#tag1]", "US/california [#tag1]", "CA/toronto [#tag1]"];
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        var serverLocations = vpnProfile.ToInfo(app.Features).LocationInfos.ToArray();
+        var serverLocations = vpnProfile.ToInfo(app.Descriptor).LocationInfos.ToArray();
         var autoLocation = serverLocations.Single(x => x.IsAuto);
         Assert.IsTrue(autoLocation.Tags?.Contains("#tag1"));
         Assert.IsFalse(autoLocation.Tags?.Contains("~#tag1"));
@@ -475,7 +475,7 @@ public class VpnProfileTest : TestAppBase
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["US", "US/california"];
         var vpnProfile = app1.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        var vpnProfileInfo = vpnProfile.ToInfo(app1.Features);
+        var vpnProfileInfo = vpnProfile.ToInfo(app1.Descriptor);
         var serverLocations = vpnProfileInfo.LocationInfos.Select(x => x.ServerLocation).ToArray();
         var i = 0;
         Assert.AreEqual("US/*", serverLocations[i++]);
@@ -490,7 +490,7 @@ public class VpnProfileTest : TestAppBase
         token = CreateToken();
         token.ServerToken.ServerLocations = ["US", "US/california", "uk"];
         vpnProfile = app1.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        vpnProfileInfo = vpnProfile.ToInfo(app1.Features);
+        vpnProfileInfo = vpnProfile.ToInfo(app1.Descriptor);
         serverLocations = vpnProfileInfo.LocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
@@ -505,7 +505,7 @@ public class VpnProfileTest : TestAppBase
         token = CreateToken();
         token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england [#pr]", "uk/region2"];
         vpnProfile = app1.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        vpnProfileInfo = vpnProfile.ToInfo(app1.Features);
+        vpnProfileInfo = vpnProfile.ToInfo(app1.Descriptor);
         serverLocations = vpnProfileInfo.LocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
@@ -550,7 +550,7 @@ public class VpnProfileTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
 
-        var vpnProfileInfo = vpnProfile.ToInfo(app.Features);
+        var vpnProfileInfo = vpnProfile.ToInfo(app.Descriptor);
         // test three regin
         Assert.IsTrue(vpnProfileInfo.LocationInfos.Any(x => x.ServerLocation == "US/*"));
         Assert.IsTrue(vpnProfileInfo.LocationInfos.Any(x => x.ServerLocation == "US/california"));
@@ -606,7 +606,7 @@ public class VpnProfileTest : TestAppBase
         // test default policy
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
-        var vpnProfileInfo = vpnProfile.ToInfo(app.Features);
+        var vpnProfileInfo = vpnProfile.ToInfo(app.Descriptor);
 
         // names no shop: the store is the only way in
         billingProvider.SubscriptionPlanException = null;
@@ -626,7 +626,7 @@ public class VpnProfileTest : TestAppBase
         // test ca policy: a named shop replaces the store, which is not even asked — the billing
         // provider is still broken here, and no store error may surface from a store nobody called
         app.UpdateClientCountry("CA");
-        vpnProfileInfo = app.VpnProfileService.Get(vpnProfileInfo.VpnProfileId).ToInfo(app.Features);
+        vpnProfileInfo = app.VpnProfileService.Get(vpnProfileInfo.VpnProfileId).ToInfo(app.Descriptor);
         purchaseOptions = await app.GetPurchaseOptions(vpnProfileInfo.VpnProfileId, TestCt);
         Assert.AreEqual(caPolicy.PurchaseUrl, vpnProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.AreEqual(caPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
@@ -636,7 +636,7 @@ public class VpnProfileTest : TestAppBase
 
         // test cn policy: the country picks the shop
         app.UpdateClientCountry("CN");
-        vpnProfileInfo = app.VpnProfileService.Get(vpnProfileInfo.VpnProfileId).ToInfo(app.Features);
+        vpnProfileInfo = app.VpnProfileService.Get(vpnProfileInfo.VpnProfileId).ToInfo(app.Descriptor);
         purchaseOptions = await app.GetPurchaseOptions(vpnProfileInfo.VpnProfileId, TestCt);
         Assert.AreEqual(cnPolicy.PurchaseUrl, vpnProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.AreEqual(cnPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
@@ -674,7 +674,7 @@ public class VpnProfileTest : TestAppBase
 
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
-        var vpnProfileInfo = vpnProfile.ToInfo(app.Features);
+        var vpnProfileInfo = vpnProfile.ToInfo(app.Descriptor);
 
         var purchaseOptions = await app.GetPurchaseOptions(vpnProfile.VpnProfileId, TestCt);
         Assert.IsNull(purchaseOptions.PurchaseUrl, "a store build must never surface an outside shop");
@@ -688,7 +688,7 @@ public class VpnProfileTest : TestAppBase
         appOptions.Premium = new AppPremiumOptions { AllowImportAccessCode = true }; // and no outside shop
         await using var appWithoutBilling = TestAppHelper.CreateClientApp(appOptions);
         var profileWithoutBilling = appWithoutBilling.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        var infoWithoutBilling = profileWithoutBilling.ToInfo(appWithoutBilling.Features);
+        var infoWithoutBilling = profileWithoutBilling.ToInfo(appWithoutBilling.Descriptor);
         Assert.IsFalse(infoWithoutBilling.SelectedLocationInfo?.Options.PremiumByPurchase,
             "no store and no permitted shop leaves nothing to offer");
     }
@@ -710,7 +710,7 @@ public class VpnProfileTest : TestAppBase
         token.ClientPolicies = [new ClientPolicy { ClientCountries = ["*"], Normal = 10, PremiumByCode = true }];
 
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
-        var vpnProfileInfo = vpnProfile.ToInfo(app.Features);
+        var vpnProfileInfo = vpnProfile.ToInfo(app.Descriptor);
         Assert.IsFalse(vpnProfileInfo.CanImportAccessCode, "this build offers no box to type a code in");
         Assert.IsTrue(vpnProfileInfo.CanViewAccessCode, "the operator allows codes, so the held one may be read");
 
@@ -718,13 +718,13 @@ public class VpnProfileTest : TestAppBase
         var codeOptions = TestAppHelper.CreateAppOptions();
         codeOptions.Premium = new AppPremiumOptions { AllowImportAccessCode = true };
         await using var codeApp = TestAppHelper.CreateClientApp(codeOptions);
-        var codeProfileInfo = codeApp.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(codeApp.Features);
+        var codeProfileInfo = codeApp.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(codeApp.Descriptor);
         Assert.IsTrue(codeProfileInfo.CanImportAccessCode);
         Assert.IsTrue(codeProfileInfo.CanViewAccessCode);
 
         // an operator that sells no codes closes both, whatever the build can do
         token.ClientPolicies = [new ClientPolicy { ClientCountries = ["*"], Normal = 10, PremiumByCode = false }];
-        var noCodeInfo = codeApp.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(codeApp.Features);
+        var noCodeInfo = codeApp.VpnProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(codeApp.Descriptor);
         Assert.IsFalse(noCodeInfo.CanImportAccessCode);
         Assert.IsFalse(noCodeInfo.CanViewAccessCode, "there is no code of theirs to read");
     }
@@ -758,7 +758,7 @@ public class VpnProfileTest : TestAppBase
 
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
-        var options = vpnProfile.ToInfo(app.Features).SelectedLocationInfo?.Options
+        var options = vpnProfile.ToInfo(app.Descriptor).SelectedLocationInfo?.Options
                       ?? throw new InvalidOperationException("No selected location.");
 
         // every SOLD route is gone; what the server gives away is not the tier's business

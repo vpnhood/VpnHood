@@ -30,7 +30,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
         InitializeComponent();
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background,
             (_, _) => _ = Refresh(CancellationToken.None));
-        RemoteAccessDescText.Text = Strings.Current.RemoteAccessDesc(VhApp.Features.AppName);
+        RemoteAccessDescText.Text = Strings.Current.RemoteAccessDesc(VhApp.Descriptor.AppName);
         AddressText.Text = Strings.Current.RemoteAccessStarting;
         HintText.Text = hint;
         HintText.IsVisible = hint != null;

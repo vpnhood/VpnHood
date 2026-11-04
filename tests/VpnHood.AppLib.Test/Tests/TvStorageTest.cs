@@ -24,7 +24,7 @@ public class TvStorageTest : TestAppBase
         var storagePath = Path.Combine(root, "app");
         var noBackupStoragePath = Path.Combine(root, "no-backup", "app");
         var appOptions = TestAppHelper.CreateAppOptions(storagePath: storagePath,
-            noBackupStoragePath: noBackupStoragePath, storageProvider: new TestKeyValueFileStore(root));
+            noBackupStoragePath: noBackupStoragePath, storageProvider: new TestKeyValueStorageProvider(root));
 
         // a first run: the terms accepted, a key added, a split list written
         string clientId;
@@ -58,7 +58,7 @@ public class TvStorageTest : TestAppBase
     public void A_change_past_the_budget_fails_and_keeps_what_was_there()
     {
         var root = Path.Combine(TestAppHelper.WorkingPath, "tv_" + Guid.CreateVersion7());
-        var storageProvider = new TestKeyValueFileStore(root, budget: 1024);
+        var storageProvider = new TestKeyValueStorageProvider(root, budget: 1024);
         var filePath = Path.Combine(root, "app", "settings.json");
         storageProvider.Write(filePath, "small");
 
@@ -77,7 +77,7 @@ public class TvStorageTest : TestAppBase
     {
         var root = Path.Combine(TestAppHelper.WorkingPath, "tv_" + Guid.CreateVersion7());
         var appOptions = TestAppHelper.CreateAppOptions(storagePath: Path.Combine(root, "app"),
-            storageProvider: new TestKeyValueFileStore(root));
+            storageProvider: new TestKeyValueStorageProvider(root));
         appOptions.IsVpnServiceDataPurgeable = true;
 
         // added by hand - one of them then turned off - and pasted as a list, one of which goes again

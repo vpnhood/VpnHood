@@ -47,7 +47,7 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
             // tvOS empties both folders - every folder an app may write is a cache there - when the device
             // runs low on storage, and keeps only the app's defaults
             StorageProvider = OperatingSystem.IsTvOS()
-                ? new UserDefaultsFileStore(storageParentPath)
+                ? new UserDefaultsStorageProvider(storageParentPath)
                 : new FileSystemStorageProvider(),
             PackagedAssetProvider = new FolderAssetProvider(AppContext.BaseDirectory)
         };

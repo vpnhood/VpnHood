@@ -5,10 +5,10 @@ using VpnHood.Net.Toolkit.Storages;
 namespace VpnHood.AppLib.App;
 
 // The app's files as entries of a key-value store the platform keeps where it keeps no files (tvOS's
-// defaults: VpnHood.AppLib.App.Ios's UserDefaultsFileStore), one entry per file, named by its path under a
+// defaults: VpnHood.AppLib.App.Ios's UserDefaultsStorageProvider), one entry per file, named by its path under a
 // root folder. Such a store is small - tvOS ends an app whose defaults reach 1 MB - so the entries share a
 // budget, and a write past it fails with the old content kept.
-public abstract class KeyValueFileStore : IStorageProvider
+public abstract class KeyValueStorageProvider : IStorageProvider
 {
     private const string KeyPrefix = "VpnHood.AppFiles/";
     private readonly string _rootFolderPath;
@@ -16,7 +16,7 @@ public abstract class KeyValueFileStore : IStorageProvider
     private readonly Lock _writeLock = new();
     private long? _size;
 
-    protected KeyValueFileStore(string rootFolderPath, long budget)
+    protected KeyValueStorageProvider(string rootFolderPath, long budget)
     {
         _rootFolderPath = Path.GetFullPath(rootFolderPath);
         _budget = budget;

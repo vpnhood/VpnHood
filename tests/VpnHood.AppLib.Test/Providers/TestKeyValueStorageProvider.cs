@@ -3,10 +3,10 @@ using VpnHood.AppLib.App;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-// An Apple TV's defaults, in memory (KeyValueFileStore): they outlive the app's folders, as the defaults
+// An Apple TV's defaults, in memory (KeyValueStorageProvider): they outlive the app's folders, as the defaults
 // outlive tvOS emptying an app's caches.
-public class TestKeyValueFileStore(string rootFolderPath, long budget = 256 * 1024)
-    : KeyValueFileStore(rootFolderPath, budget)
+public class TestKeyValueStorageProvider(string rootFolderPath, long budget = 256 * 1024)
+    : KeyValueStorageProvider(rootFolderPath, budget)
 {
     private readonly ConcurrentDictionary<string, string> _values = new();
 

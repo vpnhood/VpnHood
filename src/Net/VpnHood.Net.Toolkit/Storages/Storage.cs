@@ -1,7 +1,10 @@
 namespace VpnHood.Net.Toolkit.Storages;
 
 // A folder of small text files that its provider keeps; OpenStorage gives a folder inside it. It takes
-// names, never paths, so whoever holds one stays inside its folder.
+// names, never paths, so whoever holds one stays inside its folder. One class over a provider of full
+// paths, rather than storages that wrap their parents: a wrapper hands its parent a path, so every level
+// would take paths and check them; here the joining, the check and the nesting are written once, and a
+// platform writes four methods.
 public sealed class Storage(IStorageProvider provider, string folderPath)
 {
     // for the plain files beside the provider's (a provider that keeps entries, not files, has nothing here)

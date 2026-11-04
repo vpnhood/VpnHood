@@ -16,6 +16,7 @@ using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Core.Client.Devices.Android;
+using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Android.Google;
@@ -75,21 +76,24 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         var appConfigs = ConnectAppConfigs.Load(typeof(App).Assembly);
         var options = ConnectAppOptions.Create(context, appConfigs);
+        // AdMob has no ads for a TV - Google's own test units answer No fill there - and neither its
+        // rewarded ad nor its consent form is made for a remote, so a TV shows the internal ad alone.
+        var useAdMob = !AndroidUtils.IsTv();
         // The store already took this acceptance at install - see AppOptions.
         options.IsLicenseAgreementRequired = false;
         options.UserReviewProvider = new GooglePlayInAppUserReviewProvider();
         options.AccountProvider = CreateAppAccountProvider(appConfigs, context);
-        options.AdProviderItems = CreateAppAdProviderItems(appConfigs);
+        options.AdProviderItems = CreateAppAdProviderItems(appConfigs, useAdMob);
         options.TrackerFactories = [new FirebaseAnalyticsTrackerFactory()];
         // Nothing forbids a typed code on this channel (App Review 3.1.1 binds the App Store head
         // only). The outside shop stays off: Play forbids steering a buyer to one, so no operator
         // token may raise a web-purchase link in this build.
         options.Premium = ConnectAppOptions.CreatePremium(allowImportAccessCode: true, isPurchaseUrlSupported: false);
         options.AdOptions = new AppAdOptions {
-            PreloadAd = true,
+            PreloadAd = useAdMob,
             RejectAdBlocker = true,
             AllowedPrivateDnsProviders = AllowedPrivateDnsProviders,
-            ConsentProvider = new AdMobConsentProvider()
+            ConsentProvider = useAdMob ? new AdMobConsentProvider() : null
         };
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "android"),
@@ -128,25 +132,27 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
     // AdMob's units are settings; where they name none, the head loads Google's test units and warns,
     // so a build without the private settings still has ads to test with.
-    private static AppAdProviderItem[] CreateAppAdProviderItems(ConnectAppConfigs appConfigs)
+    private static AppAdProviderItem[] CreateAppAdProviderItems(ConnectAppConfigs appConfigs, bool useAdMob)
     {
         var items = new List<AppAdProviderItem>();
 
-        // interstitial
-        items.Add(new AppAdProviderItem {
-            AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId ??
-                UseAdMobTestAdUnit(nameof(appConfigs.AdMobInterstitialAdUnitId), AdMobTestAdUnitIds.Interstitial)),
-            ExcludeCountryCodes = ["CN", "RU"],
-            ProviderName = "AdMob"
-        });
+        if (useAdMob) {
+            // interstitial
+            items.Add(new AppAdProviderItem {
+                AdProvider = AdMobInterstitialAdProvider.Create(appConfigs.AdMobInterstitialAdUnitId ??
+                    UseAdMobTestAdUnit(nameof(appConfigs.AdMobInterstitialAdUnitId), AdMobTestAdUnitIds.Interstitial)),
+                ExcludeCountryCodes = ["CN", "RU"],
+                ProviderName = "AdMob"
+            });
 
-        // rewarded ad
-        items.Add(new AppAdProviderItem {
-            AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId ??
-                UseAdMobTestAdUnit(nameof(appConfigs.AdMobRewardedAdUnitId), AdMobTestAdUnitIds.Rewarded)),
-            ExcludeCountryCodes = ["CN", "RU"],
-            ProviderName = "AdMob-Rewarded"
-        });
+            // rewarded ad
+            items.Add(new AppAdProviderItem {
+                AdProvider = AdMobRewardedAdProvider.Create(appConfigs.AdMobRewardedAdUnitId ??
+                    UseAdMobTestAdUnit(nameof(appConfigs.AdMobRewardedAdUnitId), AdMobTestAdUnitIds.Rewarded)),
+                ExcludeCountryCodes = ["CN", "RU"],
+                ProviderName = "AdMob-Rewarded"
+            });
+        }
 
         // the internal ad: CONNECT's film where the build packed it, else the still page the UI shows
         items.Add(new AppAdProviderItem {

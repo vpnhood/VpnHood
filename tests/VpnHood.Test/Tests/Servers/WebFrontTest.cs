@@ -554,6 +554,7 @@ public partial class WebFrontTest : TestBase
 
     // reads the bytes it was given, then ends, or waits as an open connection does; keeps what is written
     private sealed class TestDuplexStream(byte[] input, bool blockAtEnd = false, bool blockWrites = false,
+        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
         bool failWrites = false, int maxReadSize = int.MaxValue) : Stream
     {
         private readonly MemoryStream _input = new(input);

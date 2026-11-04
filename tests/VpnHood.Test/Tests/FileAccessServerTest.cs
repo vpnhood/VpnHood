@@ -291,7 +291,7 @@ public class FileAccessManagerTest : TestBase
         using var accessManager1 = await TestHelper.CreateAccessManager(options, storagePath);
         var serverConfig = await accessManager1.Server_Configure(CreateServerInfo(freeUdpPort: 20001), TestCt);
         Assert.AreEqual("0.0.0.0:20001,[::]:20001", FormatUdpEndPoints(serverConfig));
-        Assert.AreEqual("20001", File.ReadAllText(Path.Combine(storagePath, "udp_port")));
+        Assert.AreEqual("20001", await File.ReadAllTextAsync(Path.Combine(storagePath, "udp_port"), TestCt));
 
         // a restart keeps the port, whatever port is free then; one TCP address, one UDP address
         options = CreateOptionsWithDefaultUdp();

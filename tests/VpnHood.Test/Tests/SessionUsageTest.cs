@@ -225,6 +225,7 @@ public class SessionUsageTest : TestBase
         try {
             var staleReply = await statusApplied.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
             Assert.IsTrue(staleReply.SessionResponses.TryGetValue(session.SessionId, out var staleResponse));
+            Assert.IsNotNull(staleResponse);
             Assert.IsNotNull(staleResponse.AccessUsage?.ExpirationTime);
 
             // the ad goes meanwhile and clears the expiration

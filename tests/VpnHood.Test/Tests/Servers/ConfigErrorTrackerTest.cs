@@ -188,7 +188,7 @@ public class ConfigErrorTrackerTest : TestBase
     {
         var storagePath = CreateTempStorage();
         try {
-            File.WriteAllText(Path.Combine(storagePath, ConfigErrorTracker.StrikeFileName), "NOT VALID JSON{{{");
+            await File.WriteAllTextAsync(Path.Combine(storagePath, ConfigErrorTracker.StrikeFileName), "NOT VALID JSON{{{", TestCt);
             var tracker = CreateTracker(storagePath);
 
             // Before RecordError, IsPaused is always false

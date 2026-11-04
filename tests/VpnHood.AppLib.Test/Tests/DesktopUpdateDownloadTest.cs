@@ -13,7 +13,8 @@ public class DesktopUpdateDownloadTest : TestAppBase
     public async Task A_cut_download_is_continued_where_it_stopped()
     {
         var package = CreatePackage();
-        using var server = new TestPackageServer(package) { CutAfterBytes = package.Length / 3 };
+        using var server = new TestPackageServer(package);
+        server.CutAfterBytes = package.Length / 3;
         var updater = CreateUpdater();
         var release = new AppRelease { Version = new Version(1, 0, 1), PackageUrl = server.PackageUrl };
 
@@ -30,7 +31,8 @@ public class DesktopUpdateDownloadTest : TestAppBase
     public async Task A_server_that_ignores_ranges_starts_it_over()
     {
         var package = CreatePackage();
-        using var server = new TestPackageServer(package) { CutAfterBytes = package.Length / 3 };
+        using var server = new TestPackageServer(package);
+        server.CutAfterBytes = package.Length / 3;
         var updater = CreateUpdater();
         var release = new AppRelease { Version = new Version(1, 0, 1), PackageUrl = server.PackageUrl };
         await Download(updater, release, AppUpdateStage.Failed);

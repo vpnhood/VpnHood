@@ -125,7 +125,7 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
 
     // The window has to be a window of something readable and seekable, and has to lie inside it:
     // a range running past the end of the source would read short at some unrelated later moment.
-    // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
+    // ReSharper disable ParameterOnlyUsedForPreconditionCheck.Local
     private static Stream Validate(Stream source, long start, long length)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -137,6 +137,7 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
         ArgumentOutOfRangeException.ThrowIfGreaterThan(start + length, source.Length, nameof(length));
         return source;
     }
+    // ReSharper restore ParameterOnlyUsedForPreconditionCheck.Local
 
     // The flag releases the source once and once only, whichever way this was disposed.
     protected override void Dispose(bool disposing)

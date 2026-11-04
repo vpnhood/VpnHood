@@ -15,6 +15,7 @@ public class AccessKeyTest : TestBase
 
         StringAssert.StartsWith(accessKey, "vh:eyJ");
         Assert.IsTrue(Uri.TryCreate(accessKey, UriKind.Absolute, out var uri), "a key is a link");
+        Assert.IsNotNull(uri);
         Assert.AreEqual("vh", uri.Scheme);
         Assert.AreEqual(accessKey, uri.OriginalString);
     }
@@ -48,6 +49,7 @@ public class AccessKeyTest : TestBase
 
         Assert.AreEqual(token.ToAccessKey(), Token.FromAccessKey(vhkeyKey).ToAccessKey());
         Assert.IsTrue(Uri.TryCreate(vhkeyKey, UriKind.Absolute, out var uri), "a key is a link");
+        Assert.IsNotNull(uri);
         Assert.AreEqual("vhkey", uri.Scheme);
     }
 }

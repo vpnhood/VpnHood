@@ -58,7 +58,6 @@ public class VpnProfileTest : TestAppBase
         // BuiltIn token should not be removed
         foreach (var vpnProfile in vpnProfiles) {
             Assert.ThrowsExactly<InvalidOperationException>(() => {
-                // ReSharper disable once AccessToDisposedClosure
                 app1.VpnProfileService.Delete(vpnProfile.VpnProfileId);
             });
         }
@@ -244,7 +243,6 @@ public class VpnProfileTest : TestAppBase
         // ************
         // *** TEST ***: Update throw NotExistsException exception if tokenId does not exist
         Assert.ThrowsExactly<NotExistsException>(() => {
-            // ReSharper disable once AccessToDisposedClosure
             app.VpnProfileService.Update(Guid.NewGuid(), new VpnProfileUpdateParams {
                 VpnProfileName = "Hi"
             });
@@ -325,10 +323,11 @@ public class VpnProfileTest : TestAppBase
             Path.Combine(app1.StorageFolderPath, "profiles", "vpn_profiles.json")
         ];
         foreach (var filePath in filePaths) {
-            File.WriteAllText(filePath, File.ReadAllText(filePath)
+            var text = await File.ReadAllTextAsync(filePath, TestCt);
+            await File.WriteAllTextAsync(filePath, text
                 .Replace("\"VpnProfileId\"", "\"ClientProfileId\"")
-                .Replace("\"VpnProfileName\"", "\"ClientProfileName\""));
-            Assert.Contains("\"ClientProfileId\"", File.ReadAllText(filePath));
+                .Replace("\"VpnProfileName\"", "\"ClientProfileName\""), TestCt);
+            Assert.Contains("\"ClientProfileId\"", await File.ReadAllTextAsync(filePath, TestCt));
         }
 
         var appOptions = TestAppHelper.CreateAppOptions(storagePath: app1.StorageFolderPath);

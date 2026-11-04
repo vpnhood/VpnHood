@@ -5,6 +5,7 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class JsonUtilsTest : TestBase
 {
+    // ReSharper disable once ClassNeverInstantiated.Local
     private record Item(string Name);
 
     [TestMethod]

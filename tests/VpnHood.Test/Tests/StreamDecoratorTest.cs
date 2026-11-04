@@ -51,7 +51,6 @@ public class StreamDecoratorTest : TestBase
         var source = new CloseRecordingStream();
         var stream = new CleanupRecordingDecorator(source, leaveOpen: false);
 
-        // ReSharper disable once MethodHasAsyncOverload
         stream.Dispose();
         await stream.DisposeAsync();
 

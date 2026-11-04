@@ -273,7 +273,6 @@ public class AdTest : TestAppBase
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         var isAdLoadingStatusMet = false;
         app.ConnectionStateChanged += (_, _) => {
-            // ReSharper disable once AccessToDisposedClosure
             if (app.ConnectionState == AppConnectionState.WaitingForAd)
                 isAdLoadingStatusMet = true;
         };

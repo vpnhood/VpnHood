@@ -90,7 +90,6 @@ public sealed class TcpStackIntegrationTest
             Console.WriteLine($"[{time:HH:mm:ss.fff}] >>> OUTGOING: {info}");
             lock (outgoingPackets) outgoingPackets.Add((time, info, packet.Buffer.ToArray()));
 
-            // ReSharper disable once AccessToDisposedClosure
             adapter.SendPacketQueued(packet);
         };
 
@@ -259,7 +258,6 @@ public sealed class TcpStackIntegrationTest
         // Setup TCP stack to send packets back through adapter
         tcpStack.OnPacketSend = packet => {
             try {
-                // ReSharper disable once AccessToDisposedClosure
                 adapter.SendPacketQueued(packet);
             }
             catch (Exception ex) {

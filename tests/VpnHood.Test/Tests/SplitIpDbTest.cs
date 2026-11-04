@@ -241,7 +241,6 @@ public class SplitIpDbTest : TestBase
             return new[] { IpRange.Parse("1.0.0.0 - 1.0.0.255") }.ToOrderedList();
         }
 
-        // ReSharper disable once AccessToModifiedClosure
         var dbBuilder = new IpRangeListDbBuilder(() => signature, includesFactory: RangesFactory);
 
         await dbBuilder.EnsureAsync(dbPath, TestCt);

@@ -473,6 +473,7 @@ public class PacketTransportTest : TestBase
         Assert.IsTrue(unhandledMemory.IsDisposed);
 
         // given back by a handler that threw; one the handler takes is its own
+        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
         transport.PacketReceived += (_, ipPacket) => {
             if (ipPacket.ExtractUdp().SourcePort == 2)
                 throw new InvalidOperationException("Test: the handler failed.");

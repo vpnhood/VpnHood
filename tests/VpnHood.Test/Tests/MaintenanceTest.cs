@@ -125,6 +125,7 @@ public class MaintenanceTest : TestBase
         var handler = new HttpClientHandler {
             ServerCertificateCustomValidationCallback = (_, _, _, _) => true
         };
+        // ReSharper disable once ShortLivedHttpClient
         using var httpClient = new HttpClient(handler);
         var url = $"https://{token.ServerToken.HostEndPoints!.First()}";
 

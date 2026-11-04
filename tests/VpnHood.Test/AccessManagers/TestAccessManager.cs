@@ -75,6 +75,7 @@ public class TestAccessManager : FileAccessManager
     public override async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus,
         CancellationToken cancellationToken)
     {
+        // ReSharper disable once MethodSupportsCancellation
         await StatusUpdateHold.WaitIfHeld();
         var ret = await base.Server_UpdateStatus(serverStatus, cancellationToken);
         LastServerStatus = serverStatus;
@@ -86,6 +87,7 @@ public class TestAccessManager : FileAccessManager
     public override async Task<ServerConfig> Server_Configure(ServerInfo serverInfo,
         CancellationToken cancellationToken)
     {
+        // ReSharper disable once MethodSupportsCancellation
         await ConfigureHold.WaitIfHeld();
         LastConfigureTime = DateTime.Now;
         LastServerInfo = serverInfo;

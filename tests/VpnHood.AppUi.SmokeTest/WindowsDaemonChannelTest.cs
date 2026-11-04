@@ -115,7 +115,7 @@ public class WindowsDaemonChannelTest
             for (var i = 0; i < 50; i++) {
                 await using var pipe = new NamedPipeClientStream(".", name, PipeAccessRights.ReadWrite, PipeOptions.None,
                     TokenImpersonationLevel.Identification, HandleInheritability.None);
-                pipe.Connect(5000);
+                await pipe.ConnectAsync(5000, TestCt);
             }
 
             var answer = await DaemonChannelClient.AskOnce(channel, TestCt).WaitAsync(TimeSpan.FromSeconds(10), TestCt);

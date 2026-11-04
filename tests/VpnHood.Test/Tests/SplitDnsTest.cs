@@ -283,9 +283,8 @@ public class SplitDnsTest : TestBase
         // a blocked address stays dropped, DNS too (ClientPacketHandler), so the blocked resolver is no candidate
         var serverDns = IPAddress.Parse("9.9.9.9");
         using var serverIpFilter = new ServerIpFilter(
-            new StaticIpFilter(null) { BlockedRanges = new[] { new IpRange(serverDns) }.ToOrderedList() }) {
-            IncludeRanges = IpNetwork.All.ToIpRanges()
-        };
+            new StaticIpFilter(null) { BlockedRanges = new[] { new IpRange(serverDns) }.ToOrderedList() });
+        serverIpFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
 
         var dnsConfig = ClientHelper.GetDnsServers(
             userDnsAddresses: null,
@@ -326,7 +325,6 @@ public class SplitDnsTest : TestBase
             serverIncludeIpRanges: new[] { IpRange.Parse("1.2.3.0-1.2.3.255") }.ToOrderedList(),
             clientExcludeRanges: IpNetwork.All.ToIpRanges());
 
-        // ReSharper disable once AccessToDisposedClosure
         Assert.ThrowsExactly<InvalidOperationException>(() => ClientHelper.GetDnsServers(
             userDnsAddresses: [PublicDns],
             serverDnsAddresses: [IPAddress.Parse("9.9.9.9")],

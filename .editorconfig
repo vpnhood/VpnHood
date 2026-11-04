@@ -118,5 +118,10 @@ dotnet_diagnostic.VH0002.severity = warning
 [src/Apps/Tools/**.cs]
 dotnet_diagnostic.VH0001.severity = none
 
+# a test's closures run within the test, while what they capture is alive, and a sync call is often
+# what it tests, as a quick close's Dispose
 [tests/**.cs]
 dotnet_diagnostic.VH0001.severity = none
+resharper_access_to_disposed_closure_highlighting = none
+resharper_access_to_modified_closure_highlighting = none
+resharper_method_has_async_overload_highlighting = none

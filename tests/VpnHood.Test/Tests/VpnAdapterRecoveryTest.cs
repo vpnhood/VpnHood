@@ -198,9 +198,8 @@ public class VpnAdapterRecoveryTest : TestBase
     [TestMethod]
     public async Task Reader_that_outlived_its_stop_leaves_the_next_run()
     {
-        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) {
-            ReaderWaitTimeout = TimeSpan.FromMilliseconds(100)
-        };
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        adapter.ReaderWaitTimeout = TimeSpan.FromMilliseconds(100);
         await adapter.Start(CreateAdapterOptions(), TestCt);
 
         // the reader is held past its stop's wait, and the next run starts beside it
@@ -238,10 +237,9 @@ public class VpnAdapterRecoveryTest : TestBase
     [DataRow(true)]
     public async Task Start_overtaken_before_its_add_removes_what_it_added(bool dispose)
     {
-        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) {
-            StopBeforeAdd = !dispose,
-            DisposeBeforeAdd = dispose
-        };
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        adapter.StopBeforeAdd = !dispose;
+        adapter.DisposeBeforeAdd = dispose;
 
         // the owner's stop or dispose lands before the start adds the adapter, so it finds nothing; the start
         // adds it anyway, as a step that ignores the token does, then ends before its routes and reports the

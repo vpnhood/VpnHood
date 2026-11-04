@@ -16,6 +16,7 @@ public class QuicListenerCloseHoldingServer : IQuicServer
     public async ValueTask<IQuicListener> ListenAsync(QuicListenerOptions options,
         CancellationToken cancellationToken)
     {
+        // ReSharper disable once MethodSupportsCancellation
         await ListenHold.WaitIfHeld();
         return new HoldingQuicListener(options.ListenEndPoint, this);
     }

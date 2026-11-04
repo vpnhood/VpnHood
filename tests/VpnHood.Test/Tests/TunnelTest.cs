@@ -40,7 +40,6 @@ public class TunnelTest : TestBase
         var serverReceivedPackets = new List<IpPacket>();
         serverChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             serverReceivedPackets.Add(ipPacket);
-            // ReSharper disable once AccessToDisposedClosure
             serverChannel.SendPacketQueued(ipPacket.Clone());
         };
 
@@ -413,7 +412,6 @@ public class TunnelTest : TestBase
         var serverReceivedPackets = new List<IpPacket>();
         serverTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             serverReceivedPackets.Add(ipPacket);
-            // ReSharper disable once AccessToDisposedClosure
             serverTunnel.SendPacketQueued(ipPacket.Clone());
         };
 
@@ -437,7 +435,6 @@ public class TunnelTest : TestBase
     public void Udp_needs_a_udp_channel()
     {
         using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
-        // ReSharper disable once AccessToDisposedClosure
         Assert.ThrowsExactly<InvalidOperationException>(() => tunnel.UseUdp = true);
         Assert.IsFalse(tunnel.UseUdp);
     }
@@ -451,7 +448,6 @@ public class TunnelTest : TestBase
         var udpChannel = listener.AddSession(1UL, VhUtils.GenerateKey());
         using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions(udpChannel));
 
-        // ReSharper disable once AccessToDisposedClosure
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => tunnel.AddChannel(udpChannel));
         Assert.AreEqual(0, tunnel.PacketChannelCount);
     }
@@ -559,7 +555,6 @@ public class TunnelTest : TestBase
             new ReusableStreamConnection(tcpConnection, webSocketStream, reused => reused.Dispose()));
 
         connection.PreventReuse();
-        // ReSharper disable once MethodHasAsyncOverload
         connection.Dispose();
 
         // the socket closes at once: the client, which sends nothing more, reads to its end, where a release would
@@ -652,7 +647,6 @@ public class TunnelTest : TestBase
             await channel.DisposeAsync();
         }
         else {
-            // ReSharper disable once MethodHasAsyncOverload
             channel.Dispose();
         }
 
@@ -673,7 +667,6 @@ public class TunnelTest : TestBase
             await channel.DisposeAsync();
         }
         else {
-            // ReSharper disable once MethodHasAsyncOverload
             channel.Dispose();
         }
 
@@ -758,7 +751,6 @@ public class TunnelTest : TestBase
 
         // the release waits for the peer to end the logical stream too, which it does not do here
         var release = clientConnection.DisposeAsync().AsTask();
-        // ReSharper disable once MethodHasAsyncOverload
         clientConnection.Dispose();
 
         await release.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
@@ -786,7 +778,6 @@ public class TunnelTest : TestBase
         Assert.IsFalse(stream.CanReuse);
 
         await stream.DisposeAsync();
-        // ReSharper disable once MethodHasAsyncOverload
         stream.Dispose(); // a sync one after it finds the source closed
         Assert.IsTrue(source.AsyncClosed);
         Assert.IsFalse(source.SyncClosed);
@@ -819,7 +810,6 @@ public class TunnelTest : TestBase
         var stream = new WebSocketStream(source, "test", useBuffer: useBuffer, isServer: false);
         Assert.AreEqual(0, await stream.ReadAsync(new byte[10], TestCt));
 
-        // ReSharper disable once MethodHasAsyncOverload
         stream.Dispose();
         await stream.DisposeAsync(); // an async one after it leaves the source too
         Assert.IsFalse(source.SyncClosed);

@@ -19,7 +19,6 @@ using ProxyProtocol = VpnHood.AppLib.Api.Proxies.ProxyProtocol;
 using ProxyAutoUpdateOptions = VpnHood.AppLib.Api.Settings.ProxyAutoUpdateOptions;
 using VpnHood.Test;
 using VpnHood.AppLib.Abstractions.UiContexts;
-// ReSharper disable AccessToModifiedClosure
 
 namespace VpnHood.AppLib.Test.Tests;
 

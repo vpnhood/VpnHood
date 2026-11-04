@@ -287,13 +287,10 @@ public class SqliteFilterChainTest : TestBase
         // the hammer runs on dedicated threads: spin loops would otherwise hold the thread pool hostage for
         // the whole test, and stopCts must stay out of the creation token, or a worker that has not started
         // yet completes as Canceled and fails the wait below instead of the drain it is meant to check
-        // ReSharper disable once AccessToDisposedClosure
         var workers = Enumerable.Range(0, 8).Select(_ => Task.Factory.StartNew(() => {
             while (!stopCts.IsCancellationRequested)
                 try {
-                    // ReSharper disable once AccessToDisposedClosure
                     filter.Process("stress.com");
-                    // ReSharper disable once AccessToDisposedClosure
                     filter.Process("other.com");
                 }
                 catch (Exception ex) {

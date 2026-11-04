@@ -162,7 +162,6 @@ public class AccessCodeTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp();
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
 
-        // ReSharper disable once AccessToDisposedClosure
         Assert.ThrowsExactly<ArgumentException>(() => app.VpnProfileService.Update(
             vpnProfile.VpnProfileId, new VpnProfileUpdateParams { AccessCode = accessCode }));
     }

@@ -286,11 +286,11 @@ public class KillSwitchTest : TestAppBase
 
         // the file as 9.0.863 wrote it
         var filePath = Path.Combine(app1.StorageFolderPath, "settings.json");
-        var root = JsonNode.Parse(File.ReadAllText(filePath)) ?? throw new InvalidDataException("No settings.");
+        var root = JsonNode.Parse(await File.ReadAllTextAsync(filePath, TestCt)) ?? throw new InvalidDataException("No settings.");
         var userSettings = root["UserSettings"]?.AsObject() ?? throw new InvalidDataException("No user settings.");
         userSettings["KillSwitch"] = isOn;
         userSettings["KillSwitchLockdown"] = isLockdown;
-        File.WriteAllText(filePath, root.ToJsonString());
+        await File.WriteAllTextAsync(filePath, root.ToJsonString(), TestCt);
 
         var appOptions = TestAppHelper.CreateAppOptions(storagePath: app1.StorageFolderPath);
         await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);

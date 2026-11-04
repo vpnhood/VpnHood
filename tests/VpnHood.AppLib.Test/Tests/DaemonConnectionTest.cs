@@ -188,6 +188,7 @@ public class DaemonConnectionTest
 
         Assert.AreEqual("first", await connection.Api.App.Log(TestCt));
         Assert.IsTrue(first.Requests.TryDequeue(out var request));
+        Assert.IsNotNull(request);
         Assert.AreEqual("/api/app/log.txt", request.Target);
         Assert.AreEqual("Bearer t1", request.Authorization);
         Assert.AreEqual($"127.0.0.1:{first.Port}", request.Host);
@@ -198,6 +199,7 @@ public class DaemonConnectionTest
         });
         Assert.AreEqual("second", await connection.Api.App.Log(TestCt));
         Assert.IsTrue(second.Requests.TryDequeue(out request));
+        Assert.IsNotNull(request);
         Assert.AreEqual("Bearer t2", request.Authorization);
         Assert.AreEqual(0, first.Requests.Count, "nothing goes to the old address");
     }

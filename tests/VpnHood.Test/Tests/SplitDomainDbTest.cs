@@ -99,7 +99,6 @@ public class SplitDomainDbTest : TestBase
             return ["google.com"];
         }
 
-        // ReSharper disable once AccessToModifiedClosure
         var dbBuilder = new DomainListDbBuilder(() => signature, includesFactory: DomainsFactory);
 
         await dbBuilder.EnsureAsync(dbPath, TestCt);

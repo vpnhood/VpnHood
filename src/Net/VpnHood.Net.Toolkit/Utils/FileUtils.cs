@@ -90,7 +90,7 @@ public static class FileUtils
     public static async Task WriteAllBytesAtomicAsync(string filePath, byte[] bytes,
         CancellationToken cancellationToken)
     {
-        var tempFilePath = $"{filePath}.{Guid.NewGuid():N}.tmp";
+        var tempFilePath = CreateAtomicTempFilePath(filePath);
         try {
             await File.WriteAllBytesAsync(tempFilePath, bytes, cancellationToken).Vhc();
             File.Move(tempFilePath, filePath, overwrite: true);
@@ -99,6 +99,26 @@ public static class FileUtils
             VhUtils.TryDeleteFile(tempFilePath);
             throw;
         }
+    }
+
+    // The same for a write behind a sync setter: a full disk or a crash leaves the old file.
+    public static void WriteAllTextAtomic(string filePath, string content)
+    {
+        var tempFilePath = CreateAtomicTempFilePath(filePath);
+        try {
+            File.WriteAllText(tempFilePath, content);
+            File.Move(tempFilePath, filePath, overwrite: true);
+        }
+        catch {
+            VhUtils.TryDeleteFile(tempFilePath);
+            throw;
+        }
+    }
+
+    // beside the file, so the move is a rename on one volume; a name of its own, so two writes never share it
+    private static string CreateAtomicTempFilePath(string filePath)
+    {
+        return $"{filePath}.{Guid.NewGuid():N}.tmp";
     }
 
     public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout,

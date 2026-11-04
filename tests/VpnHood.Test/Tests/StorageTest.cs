@@ -39,4 +39,33 @@ public class StorageTest
         Assert.IsFalse(File.Exists(filePath));
         Assert.IsNull(domains.Read("includes.txt"));
     }
+
+    [TestMethod]
+    public void A_rewrite_replaces_the_file_whole_and_leaves_nothing_beside_it()
+    {
+        var folderPath = CreateFolderPath();
+        var storage = new Storage(new FileSystemStorageProvider(), folderPath);
+
+        storage.Write("settings.json", "first, the longer one");
+        var signature = storage.GetSignature("settings.json");
+        storage.Write("settings.json", "second");
+
+        Assert.AreEqual("second", storage.Read("settings.json"));
+        Assert.AreNotEqual(signature, storage.GetSignature("settings.json"));
+        CollectionAssert.AreEqual(new[] { "settings.json" },
+            Directory.GetFiles(folderPath).Select(Path.GetFileName).ToArray(), "A temp file was left beside it.");
+    }
+
+    [TestMethod]
+    public void A_failed_write_leaves_no_temp_file()
+    {
+        var folderPath = CreateFolderPath();
+        var storage = new Storage(new FileSystemStorageProvider(), folderPath);
+
+        // a folder where the file would go, so the move over it fails
+        Directory.CreateDirectory(Path.Combine(folderPath, "taken"));
+
+        Assert.Throws<Exception>(() => storage.Write("taken", "x"));
+        Assert.IsEmpty(Directory.GetFiles(folderPath), "A temp file was left beside it.");
+    }
 }

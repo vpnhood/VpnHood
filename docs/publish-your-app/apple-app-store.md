@@ -95,6 +95,12 @@ section that is automated. For the Apple TV app, add the **tvOS** platform to th
 **+** beside its platforms) before the first upload that carries it: one app record, one purchase, on
 both.
 
+Adding tvOS also makes the **Apple TV privacy policy text** required, on *App Information* in every
+language, as an Apple TV cannot open the policy's link. App Information is shared by both platforms,
+so until the text is there no version can go to review, the iPhone one included: App Store Connect
+refuses with *"This resource cannot be reviewed"* and, over the API, names `privacyPolicyText`. Paste
+your privacy policy as plain text.
+
 ---
 
 ## 5. Create the keys the automation uses

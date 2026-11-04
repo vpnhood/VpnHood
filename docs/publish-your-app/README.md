@@ -32,11 +32,9 @@ What you do **not** get: a business. Servers cost money, support takes time, and
 VPN apps more strictly than almost any other category. Read [What the stores demand of VPN
 apps](#3-what-the-stores-demand-of-vpn-apps) before spending anything.
 
-> **Know this before you plan an iPhone launch.** Today the pipeline sends a CONNECT-style app to
-> **TestFlight only** — Apple's testing channel, not the public App Store. Everything else (the
-> listing, subscriptions, screenshots) publishes normally, and the last step to the public store is
-> a deliberate one-line change we have not switched on yet. If a public iPhone release is your goal,
-> talk to us about timing before you start.
+> **iPhone builds:** a prerelease goes to **TestFlight**, Apple's testing channel; a stable release
+> uploads to the App Store, where you send the version to review yourself
+> ([Apple App Store](apple-app-store.md), "Submit").
 
 ---
 

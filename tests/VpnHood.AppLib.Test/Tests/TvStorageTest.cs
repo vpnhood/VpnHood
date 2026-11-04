@@ -73,6 +73,20 @@ public class TvStorageTest : TestAppBase
     }
 
     [TestMethod]
+    public void A_deletion_that_fails_frees_nothing_of_the_budget()
+    {
+        var root = Path.Combine(TestAppHelper.WorkingPath, "tv_" + Guid.CreateVersion7());
+        var storageProvider = new RemovalFailingStorageProvider(root, budget: 1024);
+        var filePath = Path.Combine(root, "app", "settings.json");
+        storageProvider.Write(filePath, new string('x', 900));
+
+        // the entry is still there, and still takes its part of the budget
+        Assert.ThrowsExactly<InvalidOperationException>(() => storageProvider.Delete(filePath));
+        Assert.ThrowsExactly<IOException>(() =>
+            storageProvider.Write(Path.Combine(root, "app", "profiles", "vpn_profiles.json"), new string('x', 900)));
+    }
+
+    [TestMethod]
     public async Task The_proxies_the_person_added_come_back_when_tvOS_deletes_their_database()
     {
         var root = Path.Combine(TestAppHelper.WorkingPath, "tv_" + Guid.CreateVersion7());
@@ -114,5 +128,13 @@ public class TvStorageTest : TestAppBase
     {
         return proxyEndPointService.ListProxies(search: null, includeSucceeded: true, includeFailed: true,
             includeUnknown: true, includeDisabled: true, recordIndex: null, recordCount: null, TestCt);
+    }
+
+    // a store whose every removal fails
+    private sealed class RemovalFailingStorageProvider(string rootFolderPath, long budget)
+        : TestKeyValueStorageProvider(rootFolderPath, budget)
+    {
+        protected override void RemoveValue(string key) =>
+            throw new InvalidOperationException("The store failed the removal.");
     }
 }

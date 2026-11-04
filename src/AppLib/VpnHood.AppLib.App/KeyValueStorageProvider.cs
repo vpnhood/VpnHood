@@ -53,8 +53,10 @@ public abstract class KeyValueStorageProvider : IStorageProvider
     {
         var key = ToKey(filePath);
         lock (_writeLock) {
-            _size = GetSize() - GetEntrySize(key, GetValue(key));
+            // kept only once the entry is gone: a removal that fails frees nothing
+            var size = GetSize() - GetEntrySize(key, GetValue(key));
             RemoveValue(key);
+            _size = size;
         }
     }
 

@@ -28,6 +28,9 @@ public static class ClientExceptionConverter
         if (apiError.Is<VpnServiceRevokedException>())
             exception = new VpnServiceRevokedException(apiError.Message);
 
+        if (apiError.Is<VpnServiceContractException>())
+            exception = new VpnServiceContractException(apiError.Message);
+
         // client
         if (apiError.Is<ConnectionTimeoutException>())
             exception = new ConnectionTimeoutException(apiError.Message);

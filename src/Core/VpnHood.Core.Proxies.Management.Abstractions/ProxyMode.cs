@@ -1,8 +1,11 @@
 using System.Text.Json.Serialization;
+using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.Core.Proxies.Management.Abstractions;
 
-[JsonConverter(typeof(JsonStringEnumConverter<ProxyMode>))]
+// A name this side does not know reads as None: no proxy.
+[JsonConverter(typeof(JsonStringEnumFallbackConverter<ProxyMode>))]
+[JsonEnumFallback(ProxyMode.None)]
 public enum ProxyMode
 {
     /// <summary>No proxy; connect directly.</summary>

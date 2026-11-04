@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.Core.Client.Abstractions;
 
@@ -8,7 +9,10 @@ namespace VpnHood.Core.Client.Abstractions;
 // refused by the server's word.
 // Serialized by name (settings.json and vpn.config): the stored value stays readable and adding a mode can
 // never reinterpret a saved one.
-[JsonConverter(typeof(JsonStringEnumConverter<SplitUnsupportedIpMode>))]
+// A name this side does not know reads as Block: fail-closed: a mode this side does not know never sends
+// traffic around the tunnel.
+[JsonConverter(typeof(JsonStringEnumFallbackConverter<SplitUnsupportedIpMode>))]
+[JsonEnumFallback(SplitUnsupportedIpMode.Block)]
 public enum SplitUnsupportedIpMode
 {
     // Unsupported destinations connect directly, outside the VPN. Keeps everything working (the classic

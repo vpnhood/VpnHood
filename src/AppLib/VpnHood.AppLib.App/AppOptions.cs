@@ -8,6 +8,7 @@ using VpnHood.AppLib.App.Services.Ads;
 using VpnHood.AppLib.App.Services.AlwaysOn;
 using VpnHood.AppLib.App.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Logging;
@@ -104,6 +105,12 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // ITrackerFactory): none by default, so a head that means to report names its own, such as
     // Ga4TrackerFactory with its id. The app decides when they report, and a Debug build makes none.
     public IReadOnlyList<ITrackerFactory> TrackerFactories { get; set; } = [];
+
+    // The VPN engine this head bundles, as it reports itself (VpnEngineInfo): the contract versions it speaks
+    // and the optional features it has. The app writes the options in a version both speak, and offers only
+    // what the engine has, before the engine ever runs. This library's own engine by default; a head that
+    // bundles another engine names that one's report.
+    public VpnEngineInfo VpnEngineInfo { get; set; } = VpnEngineInfo.VpnHoodEngine;
 
     // What a paired phone loads, built on the app itself - so the head
     // hands in a factory rather than an instance. Null means this head runs no web host, and

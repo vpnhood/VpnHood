@@ -32,6 +32,9 @@ public class ConnectionInfo
     public required SessionInfo? SessionInfo { get; init; }
     public required SessionStatus? SessionStatus { get; init; }
 
+    // The engine's report of itself (VpnEngineInfo); null where the app speaks for it, before any status.
+    public VpnEngineInfo? VpnEngineInfo { get; init; }
+
     public bool IsStarted() => ClientState is not (
         ClientState.None or ClientState.Disposed or ClientState.Disconnecting);
 }

@@ -13,6 +13,6 @@ public class LogServiceOptions
     public bool AutoFlush { get; set; } = true;
     public string[] LogEventNames { get; set; } = [];
 
-    [JsonConverter(typeof(JsonStringEnumConverter<LogLevel>))]
+    [JsonConverter(typeof(LogLevelJsonConverter))]
     public LogLevel MinLogLevel { get; set; } = LogLevel.Information;
 }

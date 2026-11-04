@@ -1,9 +1,12 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.Core.Common.Tokens;
 
+// A name or number this side does not know reads as Auto.
 [JsonConverter(typeof(EndPointStrategyConverter))]
+[JsonEnumFallback(EndPointStrategy.Auto)]
 public enum EndPointStrategy
 {
     Auto = 0,
@@ -31,15 +34,17 @@ public sealed class EndPointStrategyConverter : JsonConverter<EndPointStrategy>
     {
         switch (reader.TokenType) {
             case JsonTokenType.Number:
-                return (EndPointStrategy)reader.GetInt32();
+                return reader.TryGetInt32(out var number) && Enum.IsDefined((EndPointStrategy)number)
+                    ? (EndPointStrategy)number
+                    : EndPointStrategy.Auto;
 
             case JsonTokenType.String: {
                     var name = reader.GetString();
 
-                    if (Enum.TryParse<EndPointStrategy>(name, ignoreCase: true, out var value))
-                        return value;
-
-                    throw new JsonException($"Invalid {nameof(EndPointStrategy)} value: {name}");
+                    return Enum.TryParse<EndPointStrategy>(name, ignoreCase: true, out var value) &&
+                           Enum.IsDefined(value)
+                        ? value
+                        : EndPointStrategy.Auto;
                 }
 
             default:

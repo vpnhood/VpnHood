@@ -2,6 +2,11 @@
 	<PropertyGroup>
 		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<!-- The DTO converters map every enum with no default arm, so a member added on one side fails the
+		     build here (CS8509) rather than arriving somewhere as a fallback. A value no member names (CS8524)
+		     is wrong input, which throws there (SwitchExpressionException) as it should. -->
+		<WarningsAsErrors>$(WarningsAsErrors);CS8509</WarningsAsErrors>
+		<NoWarn>$(NoWarn);CS8524</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

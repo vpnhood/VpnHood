@@ -195,6 +195,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             var serviceOptions = await Context.ServiceOptionsFile.Read(cancellationToken).Vhc();
             var clientOptions = serviceOptions.ClientOptions;
             _logService?.Start(clientOptions.LogServiceOptions);
+            VpnServiceContract.Verify(serviceOptions.ContractVersion);
 
             // check if auto start is allowed: the system's (Android's), or the app's own (a desktop's)
             if ((isAlwaysOn || clientOptions.IsAlwaysOn) && !clientOptions.AllowAlwaysOn)
@@ -366,7 +367,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             ClientState = client.State,
             ClientStateProgress = client.StateProgress,
             ClientStateChangedTime = client.StateChangedTime,
-            Error = ex?.ToApiError() ?? client.LastException?.ToApiError()
+            Error = ex?.ToApiError() ?? client.LastException?.ToApiError(),
+            VpnEngineInfo = VpnEngineInfo.VpnHoodEngine
         };
     }
 
@@ -383,7 +385,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             ClientStateProgress = null,
             ClientStateChangedTime = null,
             Error = exception?.ToApiError(),
-            SessionName = sessionName
+            SessionName = sessionName,
+            VpnEngineInfo = VpnEngineInfo.VpnHoodEngine
         };
     }
 

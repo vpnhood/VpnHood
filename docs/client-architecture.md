@@ -60,24 +60,25 @@ flowchart TB
 | your own UI, in any framework or language | AppLib and Core | ① the app API |
 | your own app in .NET, without AppLib | Core | the manager and the device: `Core.Client.VpnServices.Manager` and `Core.Client.Devices.<OS>` |
 | your own app in another framework or language - Swift, Kotlin, C++ | Core's VPN service | ② the VPN service contract, spoken directly: our .NET device libraries are out of its reach, but the contract is plain files and JSON |
-| your own VPN engine - in C++, say - under our app | AppLib and AppUi | ② the same contract from the other side: read the options, answer the requests, write the status, inside the OS's VPN component that the device starts |
+| your own VPN engine - in C++, say - under our app | AppLib and AppUi | ② the same contract from the other side: read the options, answer the requests, write the status, inside the OS's VPN component that the device starts; the head declares the engine's report (`AppOptions.VpnEngineInfo`) |
 | networking for any .NET app | Net | its packages, which know nothing of a VPN |
 
 ## ② The VPN service contract
 
 The VPN service's config folder (`IDevice.VpnServiceConfigFolder`, which both processes reach - an App
 Group's on iOS) holds the files below, and the channel carries one kind of message. That is the whole
-contract; its C# types are in `VpnHood.Core.Client.VpnServices.Abstractions`, and the rules below keep
-it stable.
+contract, and its C# types in `VpnHood.Core.Client.VpnServices.Abstractions` are its reference: an
+implementation in another language writes and reads the JSON they make.
 
 1. **The options**, `vpn.config`: JSON (`VpnServiceOptions`) saying what to connect to and how - the
-   access key, the transport, the proxies. The app writes it at each connect and at each change of its
-   settings; the VPN service reads it at each start, including one the OS makes on its own.
-2. **The split-tunnel rules**: SQLite databases the app publishes in folders beside the options, each
-   folder with a manifest naming its databases (`SplitDbManifest`), which the VPN service reads again at
-   each reconfigure.
+   access key, the transport, the proxies - and the contract version it is written in. The app writes it
+   at each connect and at each change of its settings; the VPN service reads it at each start, including
+   one the OS makes on its own.
+2. **The split-tunnel rules**: SQLite databases the app publishes in two folders beside the options,
+   `ip-filters` and `domain-filters`, each with a `manifest.json` naming its databases in the order they
+   apply (`{ "DbFiles": [ ... ] }`), which the VPN service reads again at each reconfigure.
 3. **The status**, `vpn.status`: JSON (`ConnectionInfo`) that the VPN service writes as its state
-   changes, and the app reads.
+   changes, and the app reads. It carries the engine's report of itself (`VpnEngineInfo`, below).
 4. **The log**, `vpn.log`: the VPN service's own.
 5. **A request** is two values, each a 4-byte little-endian length followed by UTF-8 JSON: the
    request's type name (`ApiDisconnectRequest`, `ApiReconfigureRequest`, `ApiGetConnectionInfoRequest`
@@ -90,17 +91,42 @@ it stable.
 | iOS, tvOS | the Network Extension's provider messages (`NETunnelProviderSession`) |
 | Windows, Microsoft Store | the package's app service |
 
+### The version and the engine's report
+
+An engine reports what it is (`VpnEngineInfo`): its name and version, the contract versions it speaks
+(`MinContractVersion` to `MaxContractVersion`), and the optional features it has (`VpnEngineFeatures`: a
+switch for each optional part of the contract, and the kinds of tracker it makes). The app needs that before
+the engine ever runs, to offer only what it does, so the head that bundles an engine declares its report
+(`AppOptions.VpnEngineInfo`, VpnHood's own engine by default); the engine writes the same in its status.
+
+1. **The version.** The app writes the options in the highest version both sides speak
+   (`ContractVersion`); with none in common the connect fails, naming both. An engine refuses options of a
+   version it does not speak.
+2. **The optional features.** An engine has the whole contract but these: split tunneling by app, the kill
+   switch, the proxies, QUIC, the ads, always-on, the endpoint strategy and each kind of tracker. A feature
+   its report leaves out is one it lacks. The app neither offers nor asks for one the engine lacks, and an
+   engine asked for one fails the connect rather than ignoring it - a kill switch or a split that silently
+   did nothing would leak.
+
+A tracker crosses as its kind and its settings (`TrackerFactoryInfo`): `ga4` is GA4's own protocol, with
+its measurement id, which an engine in any language can speak; `dotnet` is a factory a .NET engine makes
+again from its type.
+
 ### Keeping to the contract
 
 Every AppLib relies on the contract as it is published, so an engine that changes it breaks every app
-built on it. The contract is VpnHood's, and three rules keep it stable:
+built on it. The contract is VpnHood's, and these rules keep it stable:
 
 1. **An engine keeps to the contract as it is.** It adds no request, field or file of its own. What it
    needs and the contract lacks is a change to the contract itself, asked for in VpnHood.
-2. **The contract only grows.** A release may add a request, a field or a file, but never renames or
-   removes one, and never changes what one means.
-3. **Each side ignores what it does not know.** It skips a field it does not know, and answers a
-   request it does not know with an error, never with silence.
+2. **The contract only grows.** A release may add a request, a field, a file or an enum's value, but
+   never renames or removes one, and never changes what one means. Anything else is a new version of
+   the contract.
+3. **Each side ignores what it does not know.** It skips a field it does not know, reads an enum's name
+   it does not know as that enum's fallback (its `JsonEnumFallback`), and answers a request it does not
+   know with an error, never with silence.
+4. **An engine says what it lacks.** It reports its features truly, and fails a connect that asks for one
+   it does not have.
 
 ## The two halves
 

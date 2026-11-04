@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.Core.Common.Tokens;
 
@@ -7,7 +8,9 @@ namespace VpnHood.Core.Common.Tokens;
 /// is entitled to connect (free, ad-supported, trial, or premium).
 /// See docs/connection-options.md for the product-level overview.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<ConnectPlanId>))]
+// A name this side does not know reads as Normal: the plan with no ad and no premium.
+[JsonConverter(typeof(JsonStringEnumFallbackConverter<ConnectPlanId>))]
+[JsonEnumFallback(ConnectPlanId.Normal)]
 public enum ConnectPlanId
 {
     /// <summary>

@@ -12,6 +12,10 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 /// </summary>
 public class VpnServiceOptions
 {
+    // The contract version these options are written in (VpnServiceContract), which the engine refuses when it
+    // does not speak it. Options from before versions existed have none, and are the first.
+    public int ContractVersion { get; init; } = 1;
+
     public required ClientOptions ClientOptions { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

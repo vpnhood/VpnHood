@@ -73,6 +73,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly IDevice _device;
+    private readonly VpnEngineInfo _vpnEngineInfo;
     private readonly string _userAgent; // the server's: the trackers' without the device's model
     private readonly IIpRangeLocationProvider? _ipRangeLocationProvider;
     private bool _isDisconnecting;
@@ -155,6 +156,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             options.WebUiPort);
 
         _device = device;
+        _vpnEngineInfo = options.VpnEngineInfo;
         _appPersistState = AppPersistState.Load(options.Storage);
         _logService = logService;
 
@@ -205,8 +207,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a split-domain change", LogLevel.Warning,
                 () => ReconfigureVpnService(CancellationToken.None));
 
+        // What the engine lacks the app neither offers nor asks of it (VpnEngineFeatures): the device says what
+        // the system can do, the engine what it does of it.
+        var isQuicSupported = device.IsQuicSupported && _vpnEngineInfo.Features.Quic;
+        var killSwitch = _vpnEngineInfo.Features.KillSwitch ? device.KillSwitch : null;
+        var adProviderItems = _vpnEngineInfo.Features.Ads ? options.AdProviderItems : [];
+        var isSplitAppsSupported = _vpnEngineInfo.Features.SplitApps;
+
         var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
-        if (_device.IsQuicSupported)
+        if (isQuicSupported)
             protocols.Add(ChannelProtocol.Quic);
 
         // Created before the features because only the trackers know whether this build collects anything.
@@ -227,21 +236,23 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // initialize features
         Features = new AppFeatures {
             Version = appVersion,
-            IsExcludeAppsSupported = _device.IsExcludeAppsSupported,
-            IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
+            IsExcludeAppsSupported = _device.IsExcludeAppsSupported && isSplitAppsSupported,
+            IsIncludeAppsSupported = _device.IsIncludeAppsSupported && isSplitAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             Premium = options.Premium,
-            AllowEndPointStrategy = options.AllowEndPointStrategy,
+            AllowEndPointStrategy = options.AllowEndPointStrategy && _vpnEngineInfo.Features.EndPointStrategy,
             IsTv = device.IsTv || HasDebugCommand(DebugCommands.TvMode),
             OsType = AppUtils.GetOsType(),
             UiTheme = options.UiTheme,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.Billing != null,
             AuthProviderIds = options.AccountProvider?.AuthenticationProvider.ProviderIds ?? [],
-            IsQuicSupported = device.IsQuicSupported,
-            AlwaysOnSupport = GetAlwaysOnSupport(device, deviceUiProvider),
-            IsKillSwitchSupported = device.KillSwitch != null,
-            KillSwitchOffScriptPath = device.KillSwitch != null ? options.KillSwitchOffScriptPath : null,
+            IsQuicSupported = isQuicSupported,
+            AlwaysOnSupport = _vpnEngineInfo.Features.AlwaysOn
+                ? GetAlwaysOnSupport(device, deviceUiProvider)
+                : AlwaysOnSupport.None,
+            IsKillSwitchSupported = killSwitch != null,
+            KillSwitchOffScriptPath = killSwitch != null ? options.KillSwitchOffScriptPath : null,
             IsAutomaticUpdateSupported = options.UpdaterOptions?.UpdaterProvider?.IsAutomaticUpdateSupported == true,
             IsSplitCountrySupported = options.IpLocationZipAsset != null,
             IsUserReviewSupported = options.UserReviewProvider != null,
@@ -259,16 +270,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DebugCommands = DebugCommands.All,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
-            IsAdSupported = options.AdProviderItems.Any(),
-            IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
-            IsProxySupported = true,
+            IsAdSupported = adProviderItems.Any(),
+            IsRewardedAdSupported = adProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
+            IsProxySupported = _vpnEngineInfo.Features.Proxies,
             IsRemoteAccessSupported = options.WebHostFactory != null,
             ChannelProtocols = protocols.Select(x => x.ToAppDto()).ToArray()
         };
 
         VpnProfileService = new VpnProfileService(options.Storage.OpenStorage(FolderNameProfiles), Features);
         _alwaysOnService = new AppAlwaysOnService(this, options.AlwaysOnOptions, _appPersistState);
-        _killSwitchService = device.KillSwitch is { } killSwitch ? new AppKillSwitchService(this, killSwitch) : null;
+        _killSwitchService = killSwitch != null ? new AppKillSwitchService(this, killSwitch) : null;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
         // add a default test public server if not added yet
@@ -326,7 +337,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // create ad service
         var adService = new AppAdService(
-            adProviderItems: options.AdProviderItems,
+            adProviderItems: adProviderItems,
             loadAdTimeout: options.AdOptions.LoadAdTimeout,
             loadAdPostDelay: options.AdOptions.LoadAdPostDelay,
             tracker: trackerService.Tracker);
@@ -343,7 +354,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             uiProvider: deviceUiProvider);
 
         // temporary, enable internal ad provider if exists and setting is enabled
-        if (options.AdProviderItems.Any(x => x.Name == "InternalAd"))
+        if (adProviderItems.Any(x => x.Name == "InternalAd"))
             AdManager.AdService.EnableAdProvider("InternalAd", SettingsService.RemoteSettings?.ShowInternalAd == true);
 
         // The API over this app, built last: every service it reaches through must already exist.
@@ -1100,11 +1111,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowAnonymousTracker = isTrackerAllowed,
             AllowEndPointTracker = isTrackerAllowed && Config.AllowEndPointTracker,
             AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
-            ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude ? [.. splitTunneling.Apps] : null,
-            IncludeApps = splitTunneling.AppMode == SplitAppMode.Include ? [.. splitTunneling.Apps] : null,
+            ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude && Features.IsExcludeAppsSupported
+                ? [.. splitTunneling.Apps]
+                : null,
+            IncludeApps = splitTunneling.AppMode == SplitAppMode.Include && Features.IsIncludeAppsSupported
+                ? [.. splitTunneling.Apps]
+                : null,
             DnsServers = dnsServers,
             LogServiceOptions = GetLogOptions(),
-            TrackerFactoryInfos = Services.TrackerService.TrackerFactoryInfos,
+            TrackerFactoryInfos = Services.TrackerService.TrackerFactoryInfos
+                .Where(x => _vpnEngineInfo.Features.TrackerKinds.Contains(x.Kind))
+                .ToArray(),
             TrackerUserAgent = Services.TrackerService.UserAgent,
             TrackerClientVersion = Features.Version,
             UserAgent = _userAgent,
@@ -1118,7 +1135,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // notification show the app's name instead.
             SessionName = Features.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
             CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
-            AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
+            AllowAlwaysOn = _vpnEngineInfo.Features.AlwaysOn && IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
             UseKillSwitch = _killSwitchService?.IsOn ?? false,
             UserReview = Settings.UserReview
         };
@@ -1126,8 +1143,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // what the VpnService must resolve into services itself; the client only gets ClientOptions
         // (the split filter dbs travel through the folder manifests, not here)
         return new VpnServiceOptions {
+            ContractVersion = VpnServiceContract.Negotiate(_vpnEngineInfo),
             ClientOptions = clientOptions,
-            ProxyOptions = proxyOptions,
+            ProxyOptions = Features.IsProxySupported ? proxyOptions : null,
             Localization = new VpnServiceLocalization {
                 Manage = Resources.Strings.Manage,
                 Disconnect = Resources.Strings.Disconnect,

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.Core.Client.Abstractions;
 
@@ -8,7 +9,9 @@ namespace VpnHood.Core.Client.Abstractions;
 // to exclude. That is why the default keeps all of it inside.
 // Serialized by name (settings.json and vpn.config): the stored value stays readable and adding a mode can
 // never reinterpret a saved one.
-[JsonConverter(typeof(JsonStringEnumConverter<SplitDnsMode>))]
+// A name this side does not know reads as IncludeAll: the mode that leaks no DNS query.
+[JsonConverter(typeof(JsonStringEnumFallbackConverter<SplitDnsMode>))]
+[JsonEnumFallback(SplitDnsMode.IncludeAll)]
 public enum SplitDnsMode
 {
     // Every DNS query goes through the tunnel, past any split that would push it out. A query the server

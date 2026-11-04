@@ -277,9 +277,10 @@ internal class ConnectorService : IAsyncDisposable
     private static readonly Lazy<SemaphoreSlim> ConnectGateLazy = new(() => new SemaphoreSlim(ConnectGateCapacity));
     private static SemaphoreSlim ConnectGate => ConnectGateLazy.Value;
 
-    // read once, at the process's first connect: tests widen it before, as their parallel clients share the process
+    // read once, at the process's first connect: tests widen it before, as their parallel clients share the process.
+    // tvOS's extension has iOS's ceiling (50 MB, footprint + os_proc_available_memory on an Apple TV 4K).
     internal static int ConnectGateCapacity { get; set; } =
-        OperatingSystem.IsIOS() && !OperatingSystem.IsMacCatalyst() ? 3 : 8;
+        (OperatingSystem.IsIOS() && !OperatingSystem.IsMacCatalyst()) || OperatingSystem.IsTvOS() ? 3 : 8;
 
     // While the process footprint is critical, hold fresh establishment entirely (aligned with the QUIC
     // ingest gate and the TCP-stack admission gate at 42 MB): in the jammed-tunnel state native handshake

@@ -68,12 +68,14 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
     // 46.0 reading) — hence a dedicated 250 ms watchdog rather than the cleanup job.
     private const double PanicFootprintMb = 44.0;
 
-    // iOS-only: the threshold is scaled to the ~52 MB Network Extension jetsam limit — on desktop-class
-    // hosts a 45 MB footprint is normal and recycling there would be destructive. (Today only iOS installs
-    // a footprint-reporting VhMemory, but guard by platform so a future desktop reader stays safe.)
+    // iOS and tvOS only: the threshold is scaled to their ~50 MB Network Extension jetsam limit — on
+    // desktop-class hosts a 45 MB footprint is normal and recycling there would be destructive. (Today only
+    // the Apple hosts install a footprint-reporting VhMemory, but guard by platform so a future desktop
+    // reader stays safe.)
     private void StartMemoryWatchdog()
     {
-        if (!OperatingSystem.IsIOS() || OperatingSystem.IsMacCatalyst())
+        var isAppleExtension = (OperatingSystem.IsIOS() && !OperatingSystem.IsMacCatalyst()) || OperatingSystem.IsTvOS();
+        if (!isAppleExtension)
             return;
 
         new Thread(() => {

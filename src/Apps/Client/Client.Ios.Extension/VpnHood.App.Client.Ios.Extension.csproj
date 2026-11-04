@@ -5,6 +5,9 @@
     <TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
+    <!-- The SDK trims only its own assemblies here, so the shared code's reflection finds our types whole.
+         Android's SDK keeps this analysis off for such a build; Apple's leaves it on. -->
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
     <!-- The bundle id and the App Group come from the app's identity (../Directory.Build.props). -->
     <AssemblyName>$(VhAppPackageTitle)Extension</AssemblyName>
     <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>

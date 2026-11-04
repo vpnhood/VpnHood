@@ -16,6 +16,9 @@
 	     reads them before any targets file of a package, and a props file comes before the head says it is
 	     an Android one. -->
 	<PropertyGroup Condition="'$(AndroidApplication)' == 'true' And '$(AndroidManifest)' == ''">
+		<!-- The manifest holds the target below the API the build compiles against, as its comment says why.
+		     These go when the two meet. Not NoWarn: the SDK has copied that into this property by now. -->
+		<MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);XA1006;XA4211</MSBuildWarningsAsMessages>
 		<AndroidManifest>$(IntermediateOutputPath)vh\AndroidManifest.xml</AndroidManifest>
 		<_VhAndroidSharedManifest>true</_VhAndroidSharedManifest>
 	</PropertyGroup>

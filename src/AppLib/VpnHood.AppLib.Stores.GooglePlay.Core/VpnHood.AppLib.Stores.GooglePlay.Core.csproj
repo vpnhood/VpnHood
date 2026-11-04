@@ -13,6 +13,9 @@
 	<ItemGroup>
 	  <PackageReference Include="Xamarin.Google.Android.Play.App.Update" Version="2.1.0.20" />
 	  <PackageReference Include="Xamarin.Google.Android.Play.Review" Version="2.0.2.10" />
+	  <!-- Play Services takes AndroidX Lifecycle to 2.11, and the Lifecycle.Process 2.10 that
+	       Avalonia.Android's AppCompat brings allows only 2.10 beside it (NU1608). -->
+	  <PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.11.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

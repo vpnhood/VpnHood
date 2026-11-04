@@ -3,6 +3,9 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<Description>VpnHood's own Avalonia UI: the web UI's pages, page for page, in one responsive layout - the views, the controls and the two products' themes - and the same UI compiled to WebAssembly, the page the app's web host serves to a paired phone</Description>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+		<!-- A view takes its view model in its constructor and is made in code, never by the runtime
+		     loader this warning is about. -->
+		<NoWarn>$(NoWarn);AVLN3001</NoWarn>
 	</PropertyGroup>
 
 	<!-- This UI embeds no assets: its images, country flags, fonts, content documents and words are

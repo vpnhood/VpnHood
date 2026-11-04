@@ -123,6 +123,10 @@ jobs:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      # The UI declares the look's package (VpnHood.AppUi.Assets.Classic), a submodule; fastlane/, the
+      # other submodule, stays out.
+      - name: Check out the asset submodule
+        run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
       - uses: actions/setup-dotnet@v6
         with: { global-json-file: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/global.json }
       - name: Install .NET WebAssembly workload (for the SDK the page's global.json names)
@@ -432,7 +436,9 @@ jobs:
         with:
           name: ${{ inputs.app }}-android-google-aab
           path: ${{ env.MODULE_DIR }}/android-google
+      # CLIENT's alone: Connect has no Samsung head.
       - uses: actions/download-artifact@v8
+        if: inputs.app == 'client'
         continue-on-error: true
         with:
           name: ${{ inputs.app }}-android-samsung-apk

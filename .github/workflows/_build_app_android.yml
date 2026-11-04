@@ -97,11 +97,14 @@ jobs:
       - name: Install .NET Android workload
         shell: pwsh
         run: dotnet workload install android
+      # Asks for the newest cmdline-tools the installer's own list has: the workload's default is past
+      # that list, which warns, and the build does not use them.
       - name: Provision Android SDK
         shell: pwsh
         run: |
           dotnet build "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Web/VpnHood.App.$env:PREFIX.Android.Web.csproj" `
-            -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME"
+            -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME" `
+            -p:AndroidCommandLineToolsVersion=19.0
       - name: Credentials + Android signing config
         shell: pwsh
         run: |

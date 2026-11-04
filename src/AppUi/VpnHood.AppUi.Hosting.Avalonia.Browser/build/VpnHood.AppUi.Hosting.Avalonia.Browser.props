@@ -14,6 +14,8 @@
 		<PublishTrimmed>true</PublishTrimmed>
 		<TrimMode>full</TrimMode>
 		<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+		<!-- The analysis lists those places, which are known; a new one in a page would go unreported. -->
+		<SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
 	</PropertyGroup>
 
 	<!-- Published under the .NET 10 SDK, named by a global.json in the page project's folder: SkiaSharp's

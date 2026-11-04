@@ -124,9 +124,11 @@ jobs:
         with:
           name: browser-page
           path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive
+      # setup-xcode exports MD_APPLE_SDK_ROOT beside its xcode-select; the Apple SDKs ignore it and warn.
       - name: Build iOS (.ipa)
         shell: pwsh
         run: |
+          Remove-Item Env:MD_APPLE_SDK_ROOT -ErrorAction Ignore
           & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Ios.Apple/_publish.ps1"
       - uses: actions/upload-artifact@v7
         with:

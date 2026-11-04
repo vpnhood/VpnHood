@@ -27,15 +27,32 @@ Work through it in order. Come back to [start here](README.md) when you are done
    ID you submit exactly. The profile starts subscribed to *News, Benefits, Newsletter*: untick it under
    *Profile* → *Edit*, which first asks Samsung to confirm it is you (a one-time email code, for an
    account made with Google).
-3. **Commercial seller status**: *Request Commercial Seller* on your profile. It is required for
-   free apps too. A corporate seller with an Android app must verify a **D‑U‑N‑S number**, the same
-   one Apple asks for: Samsung then copies the company's name, representative and address from that
-   record, read-only. Once you send the request, nothing on it changes except through Samsung's
-   Support, so check it whole first. Approval takes several days.
-4. **Financial information**, on the same request: PayPal or a bank account in your company's name,
+3. **Get your D‑U‑N‑S record ready first.** A corporate seller with an Android app must verify a
+   **D‑U‑N‑S number**, the same one Apple asks for, and Samsung's review reads Dun & Bradstreet's
+   record of your company. It rejects the request unless that record:
+   - has an **industry**, not D&B's default "nonclassifiable establishment";
+   - lists your **company website**;
+   - and that website shows an email address on the same domain as your Samsung account's.
+
+   Look your company up on D&B's public Business Directory, and fix the record in D&B's free
+   **D‑U‑N‑S Profile Manager** (`my.dnb.com`). Before it lets you edit, accept its terms, then one of
+   the company's principals verifies: a live photo-ID check on a phone, and two official documents
+   naming them at the company's address, such as a tax-agency letter and the state's annual statement.
+   D&B allows itself eight business days; it can take one. The industry is a search by SIC code there
+   (software publishers: 7372, *Prepackaged software*). The website field is read-only in Profile
+   Manager: ask D&B's support to add it. Let the person Samsung will show as your representative do
+   the verifying: D&B may record whoever verifies on its file of your company.
+4. **Commercial seller status**: *Request Commercial Seller* on your profile. It is required for
+   free apps too, and until it is approved, *Add New App* refuses Android apps. Samsung copies the
+   company's name, representative and address from the D‑U‑N‑S record, read-only. In *Comments to
+   the Person in Charge*, describe your plan: the type of app, its audience and its markets; Samsung
+   asks for it. Once you send the request, nothing on it changes except through Samsung's Support,
+   so check it whole first. Samsung answers by email in about four business days; a rejection lists
+   its reasons, and the request can be sent again once they are fixed.
+5. **Financial information**, on the same request: PayPal or a bank account in your company's name,
    in the same country as the seller account. Samsung pays by international wire, so a bank account
    takes its SWIFT code and account number, not a US routing number. With D‑U‑N‑S, the request needs
-   no document uploads. Samsung answers by email in about four business days.
+   no document uploads.
 
 Samsung charges no registration fee.
 

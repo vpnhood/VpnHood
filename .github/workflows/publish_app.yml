@@ -269,7 +269,10 @@ jobs:
   publish-appstore-ios:
     needs: [build-ios]
     if: needs.build-ios.result == 'success' && inputs.publish_appstore != false
-    runs-on: macos-26
+    # The build's image: on 2026-11-04 macos-26 had no arm64 machine for 15 minutes and GitHub
+    # cancelled the upload ("not acquired by Runner of type hosted"), while xcode-27 gave the
+    # builds one at once.
+    runs-on: xcode-27
     env:
       APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
       APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}

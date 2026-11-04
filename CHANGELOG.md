@@ -1,6 +1,6 @@
 # Latest
 
-* Update: A VpnHoodServer of your own must run this release or later before this version can connect to it #android #ios #windows #linux
+* Update: A VpnHoodServer of your own must run this release or later before this version can connect to it #client #android #ios #windows #linux
 * Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android #store
 * Improve: The app draws its screens itself rather than as a web page, and text is easier to read, with more contrast
@@ -11,9 +11,9 @@
 * Update: On Windows and Linux, one VPN app made with VpnHood is connected at a time: connecting another - VpnHood! CLIENT and VpnHood! CONNECT, say - disconnects the first, which says another VPN app took over and stays off, even with Always On, until you connect it again #windows #linux
 * Feature: On Windows and Linux, the app from our website updates itself: it downloads each new version in the background and installs it while the VPN is disconnected; Settings > Automatic Updates turns this off. With Always On, the app tells you after a few days, and its Install updates it at once; on a computer with no desktop, the `update` command does the same #windows #linux
 * Feature: The Android app from our website updates itself: "Update now" downloads the version made for your phone's processor, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store keeps updating there #android
-* Feature: An access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so #ios
-* Feature: On Windows, an access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so, as on Android #windows
-* Update: Access keys start with vh: rather than vh://, so their links open on iPhone and Mac too; a key given out before still works everywhere, and as a link everywhere but on iPhone and Mac
+* Feature: An access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so #client #ios
+* Feature: On Windows, an access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so, as on Android #client #windows
+* Update: Access keys start with vh: rather than vh://, so their links open on iPhone and Mac too; a key given out before still works everywhere, and as a link everywhere but on iPhone and Mac #client
 * Feature: On Linux desktops that show tray icons (KDE, or GNOME with the AppIndicator extension), the app sits in the tray: it shows the connection, connects and disconnects, and closing the window keeps the app there. The tray icon is the app's own, with the connection's state on its corner #windows #linux
 * Feature: On Linux the app has an uninstaller: Uninstall on its menu entry's right-click menu, or `sudo /opt/VpnHoodClient/vhuninstall` (`/opt/VpnHoodConnect/vhuninstall` for CONNECT). Settings and profiles stay for a later install unless you add `-purge` #linux
 * Feature: In the EEA, the UK and Switzerland, the app asks in Google's own form before its ads use your data, and Settings > Privacy > Ad privacy choices changes your answer #android #connect #store
@@ -40,7 +40,8 @@
 * Fix: When the app was updated or force stopped while connected, or the phone restarted, it now opens on Disconnected instead of saying "VPN service encountered an issue" #android
 * Fix: On Android, Cancel on the system's VPN connection request now stops connecting, instead of showing the request again #android
 * Fix: On Android, the VPN connects when your split by IP addresses on the device leaves out a range that ends just before 127.0.0.0, such as 126.0.0.0/8; it failed with "Bad address" #android
-* Fix: Your settings and servers now go into your phone's backup and come back on a new phone - the backup used to be too big for Google's limit - while your sign-in, the app's logs and its unpacked files stay on the phone they belong to #android #ios
+* Fix: Your settings and servers now go into your phone's backup and come back on a new phone - the backup used to be too big for Google's limit - while your sign-in, the app's logs and its unpacked files stay on the phone they belong to #android
+* Fix: Your settings and servers now go into your phone's backup and come back on a new phone, while your sign-in, the app's logs and its unpacked files stay on the phone they belong to #ios
 * Fix: On a slow connection, an ad you chose to watch - Watch Ad, Free Server by Ad, or more minutes for your session - is no longer cut off while it is still loading #android #connect
 * Fix: "Forgot password" on the sign-in form opens the account website's password reset page; it opened the site's home page #connect
 * Fix: After you delete your account, a device still signed in to it signs out, rather than quietly signing in again and making you a new account #connect

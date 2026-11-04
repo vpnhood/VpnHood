@@ -3,14 +3,16 @@
 * Update: A VpnHoodServer of your own must run this release or later before this version can connect to it #android #ios #windows #linux
 * Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android #store
-* Improve: The app draws its screens itself rather than as a web page: on Android it no longer needs Android System WebView, and text is easier to read, with more contrast
+* Improve: The app draws its screens itself rather than as a web page, and text is easier to read, with more contrast
+* Improve: The app no longer needs Android System WebView #android
 * Feature: Always On comes to Windows and Linux: switch it on in Settings, or with the `always-on on` command on a computer with no desktop, and the VPN connects as the computer starts, before anyone signs in. While the server is out of reach it tries again, waiting longer each time. It stops when you disconnect, when another VPN app takes over, or when the server refuses the connection, and the app says why. On VpnHood! CONNECT it needs premium #windows #linux
 * Update: On Windows the VPN runs as a service: it starts with Windows, the connection no longer depends on the window, and the window and its tray no longer ask for administrator rights. The first time you open this version, your settings, profiles, split lists and sign-in move into the service, and your device keeps its identity #windows
 * Update: On Windows and Linux only an administrator can use the app; on a standard account its window says so #windows #linux
 * Update: On Windows and Linux, one VPN app made with VpnHood is connected at a time: connecting another - VpnHood! CLIENT and VpnHood! CONNECT, say - disconnects the first, which says another VPN app took over and stays off, even with Always On, until you connect it again #windows #linux
 * Feature: On Windows and Linux, the app from our website updates itself: it downloads each new version in the background and installs it while the VPN is disconnected; Settings > Automatic Updates turns this off. With Always On, the app tells you after a few days, and its Install updates it at once; on a computer with no desktop, the `update` command does the same #windows #linux
 * Feature: The Android app from our website updates itself: "Update now" downloads the version made for your phone's processor, with its progress, and the download goes on while the app is closed; then "Install". Android asks once to let the app install apps. An app installed from a store keeps updating there #android
-* Feature: On Windows and iOS, an access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so, as on Android #windows #ios
+* Feature: An access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so #ios
+* Feature: On Windows, an access key's file (.cdy) and its link (vh:...) open in VpnHood! CLIENT, which adds its server, chooses it and says so, as on Android #windows
 * Update: Access keys start with vh: rather than vh://, so their links open on iPhone and Mac too; a key given out before still works everywhere, and as a link everywhere but on iPhone and Mac
 * Feature: On Linux desktops that show tray icons (KDE, or GNOME with the AppIndicator extension), the app sits in the tray: it shows the connection, connects and disconnects, and closing the window keeps the app there. The tray icon is the app's own, with the connection's state on its corner #windows #linux
 * Feature: On Linux the app has an uninstaller: Uninstall on its menu entry's right-click menu, or `sudo /opt/VpnHoodClient/vhuninstall` (`/opt/VpnHoodConnect/vhuninstall` for CONNECT). Settings and profiles stay for a later install unless you add `-purge` #linux
@@ -34,7 +36,8 @@
 * Fix: On some phones, the quick-settings tile and the app no longer stall as they start, where Android could say the app isn't responding #android
 * Improve: The Quick Settings tile no longer starts Firebase in its own process, so it appears faster on low-end devices #android #connect
 * Fix: On Android, a server added from a link or a key file shows on the home page at once and stays selected, and its message no longer says "updated" for a new one; a link that opens the app before you have accepted its terms adds its server once you accept #android
-* Fix: When the app was updated while connected - and on Android also force stopped, or the phone restarted - the app now opens on Disconnected instead of saying "VPN service encountered an issue" #android #ios
+* Fix: When the app was updated while connected, it now opens on Disconnected instead of saying "VPN service encountered an issue" #ios
+* Fix: When the app was updated or force stopped while connected, or the phone restarted, it now opens on Disconnected instead of saying "VPN service encountered an issue" #android
 * Fix: On Android, Cancel on the system's VPN connection request now stops connecting, instead of showing the request again #android
 * Fix: On Android, the VPN connects when your split by IP addresses on the device leaves out a range that ends just before 127.0.0.0, such as 126.0.0.0/8; it failed with "Bad address" #android
 * Fix: Your settings and servers now go into your phone's backup and come back on a new phone - the backup used to be too big for Google's limit - while your sign-in, the app's logs and its unpacked files stay on the phone they belong to #android #ios

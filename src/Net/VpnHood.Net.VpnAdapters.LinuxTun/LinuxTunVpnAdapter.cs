@@ -291,6 +291,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         VhLogger.Instance.LogDebug("Clean previous tun adapter...");
         AdapterRemove();
 
+        await ExcludeFromNetworkManager(cancellationToken).Vhc();
+
         // Made by this process, not by ip(8), whose tun outlives the process: the kernel removes this one,
         // its routes and its DNS with it, once the process ends, by a crash too, as WinTun does its adapter.
         // Until the adapter holds it, nothing keeps the name from the app a revoke hands it to, so the
@@ -314,6 +316,41 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // Bring up the interface
         VhLogger.Instance.LogDebug("Bringing up the TUN...");
         await ExecuteCommandAsync($"ip link set {AdapterName} up", cancellationToken).Vhc();
+    }
+
+    // NetworkManager adopts a new interface it does not manage as "connected (externally)", and a desktop's
+    // network tray then announces the tun's coming and going as a connection made and lost (Lubuntu's
+    // nm-tray: "No longer connected to 802-3-ethernet ''" at every disconnect). NetworkManager waits for udev
+    // before it looks at a device, so a udev rule marking the name NM_UNMANAGED keeps it off from the start;
+    // nmcli once the tun exists would come after the announcement. The rule is in /run, gone at the next
+    // boot, and written once per boot: the name is this app's alone (ClearAdapterName). Without it the VPN
+    // works the same, so a failure is a warning; a machine without udev (a container) has no
+    // NetworkManager to keep off.
+    private async Task ExcludeFromNetworkManager(CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists("/run/udev"))
+            return;
+
+        const string rulesFolder = "/run/udev/rules.d";
+        var rulesFile = Path.Combine(rulesFolder, $"90-{AdapterName}.rules");
+        var rule = $"SUBSYSTEM==\"net\", KERNEL==\"{AdapterName}\", ENV{{NM_UNMANAGED}}=\"1\"\n";
+        try {
+            if (File.Exists(rulesFile) && await File.ReadAllTextAsync(rulesFile, cancellationToken).Vhc() == rule)
+                return;
+
+            VhLogger.Instance.LogDebug("Keeping NetworkManager off {AdapterName}...", AdapterName);
+            Directory.CreateDirectory(rulesFolder);
+            await FileUtils.WriteAllTextAtomicAsync(rulesFile, rule, cancellationToken).Vhc();
+            await ExecuteCommandAsync("udevadm control --reload", cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not keep NetworkManager off {AdapterName}; the desktop may announce the VPN as a network connection.",
+                AdapterName);
+        }
     }
 
     // Only what this adapter added: a start that was refused the name must not take down the tun,

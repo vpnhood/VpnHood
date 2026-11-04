@@ -8,13 +8,16 @@
 #                                     (com.vpnhood.client.ios)
 #   IOS_PROVISION_EXT_BASE64          base64 of the App Store provisioning profile for the Network
 #                                     Extension (com.vpnhood.client.ios.networkextension)
+#   TVOS_PROVISION_APP_BASE64         the same two for the Apple TV: tvOS App Store profiles for the same
+#   TVOS_PROVISION_EXT_BASE64         two ids. Optional: without both, the Apple TV app is not built.
 #
 # UNLIKE Android there is NO ephemeral fallback: an App Store .ipa cannot be self-signed. When any
 # required secret is absent we DON'T fail — we write ios_signing.json { Signed: false } and warn. The
 # publish step then does a codesign-disabled compile check (no .ipa) and the App Store upload job skips.
 # Add the secrets to switch real signing on. Mirrors the gated design of Initialize-CiAndroidSigning.ps1.
 #
-# Output: .user/<appFolder>/ios/ios_signing.json — { Signed, CodesignKey, AppProvision, ExtProvision }.
+# Output: .user/<appFolder>/ios/ios_signing.json — { Signed, CodesignKey, AppProvision, ExtProvision,
+# TvAppProvision, TvExtProvision }, the last two empty when the Apple TV's profiles are not set.
 
 param(
 	# The .user/<appFolder>/ios config folder to materialize signing into. Defaults to VpnHoodClient so
@@ -37,6 +40,8 @@ $certB64 = Get-Env "APPLE_DISTRIBUTION_CERT_BASE64";
 $certPass = Get-Env "APPLE_DISTRIBUTION_CERT_PASSWORD";
 $appProfB64 = Get-Env "IOS_PROVISION_APP_BASE64";
 $extProfB64 = Get-Env "IOS_PROVISION_EXT_BASE64";
+$tvAppProfB64 = Get-Env "TVOS_PROVISION_APP_BASE64";
+$tvExtProfB64 = Get-Env "TVOS_PROVISION_EXT_BASE64";
 
 function Write-Unsigned([string]$reason) {
 	Write-Host "::warning title=iOS signing not configured::$reason The iOS build will be UNSIGNED (no .ipa) and the App Store upload will be skipped. Add the APPLE_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see docs/cicd/deployment.md) to enable it.";
@@ -132,11 +137,25 @@ function Install-Profile([string]$b64, [string]$label) {
 $appProvName = Install-Profile $appProfB64 "app";
 $extProvName = Install-Profile $extProfB64 "ext";
 
+# The Apple TV's two, only as a pair: an app signed without its extension's profile cannot be built.
+$tvAppProvName = ""; $tvExtProvName = "";
+if ($tvAppProfB64 -and $tvExtProfB64) {
+	$tvAppProvName = Install-Profile $tvAppProfB64 "tv-app";
+	$tvExtProvName = Install-Profile $tvExtProfB64 "tv-ext";
+}
+elseif ($tvAppProfB64 -or $tvExtProfB64) {
+	throw "Apple TV signing FAILED: TVOS_PROVISION_APP_BASE64 and TVOS_PROVISION_EXT_BASE64 are set one without the other; the app and its extension each sign with their own tvOS App Store profile.";
+}
+
 @{
 	Signed = $true;
 	CodesignKey = $identity;
 	AppProvision = $appProvName;
 	ExtProvision = $extProvName;
+	TvAppProvision = $tvAppProvName;
+	TvExtProvision = $tvExtProvName;
 } | ConvertTo-Json | Out-File $markerFile -Encoding ASCII;
 
 Write-Host "iOS signing ready: identity='$identity' appProfile='$appProvName' extProfile='$extProvName'" -ForegroundColor Cyan;
+if ($tvAppProvName) { Write-Host "Apple TV signing ready: appProfile='$tvAppProvName' extProfile='$tvExtProvName'" -ForegroundColor Cyan; }
+else { Write-Host "::warning title=Apple TV signing not configured::TVOS_PROVISION_APP_BASE64 and TVOS_PROVISION_EXT_BASE64 are not set; the Apple TV app will not be built."; }

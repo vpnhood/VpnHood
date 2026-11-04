@@ -27,12 +27,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- The Apple libraries' targets: iOS, and tvOS beside it only for a build that asks
-         (-p:VhAppleTv=true, for the Apple TV apps, the second target of Client.Ios.Apple and Connect.Ios.Apple): the Apple TV apps are not released yet, and no other
-         build - CI's packages included - has the tvOS workload. A library's tvOS floor is 17, the
-         first tvOS with Network Extension. -->
-    <VhAppleTargetFrameworks>net11.0-ios</VhAppleTargetFrameworks>
-    <VhAppleTargetFrameworks Condition="'$(VhAppleTv)' == 'true'">net11.0-ios;net11.0-tvos</VhAppleTargetFrameworks>
+    <!-- The Apple libraries' targets, and the Apple heads' (Client.Ios.Apple and Connect.Ios.Apple, each one
+         app on the iPhone, the iPad and the Apple TV): building them needs the ios and tvos workloads. A
+         library's tvOS floor is 17, the first tvOS with Network Extension. -->
+    <VhAppleTargetFrameworks>net11.0-ios;net11.0-tvos</VhAppleTargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>

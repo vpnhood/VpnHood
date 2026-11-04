@@ -1,7 +1,7 @@
 name: _build_app_ios (reusable)
 
-# Builds the iOS .ipa from the vpnhood/VpnHood monorepo (checked out into code/). Called by
-# publish_app.yml (client only today — connect has no iOS project). Runs on the GitHub-hosted
+# Builds the iOS .ipa, and the Apple TV's beside it when its profiles are set, from the vpnhood/VpnHood
+# monorepo (checked out into code/). Called by publish_app.yml for each app. Runs on the GitHub-hosted
 # xcode-27 image (Xcode 27.0 + .NET 11). Signing secrets arrive via `secrets: inherit`; when absent
 # the build is UNSIGNED (no .ipa, a warning) and the job stays green. Uploads `<app>-ios`.
 
@@ -39,6 +39,9 @@ jobs:
       APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}
       IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
       IOS_PROVISION_EXT_BASE64: ${{ secrets.IOS_PROVISION_EXT_BASE64 }}
+      # The Apple TV's two tvOS App Store profiles, for the same ids; without them no Apple TV .ipa is built.
+      TVOS_PROVISION_APP_BASE64: ${{ secrets.TVOS_PROVISION_APP_BASE64 }}
+      TVOS_PROVISION_EXT_BASE64: ${{ secrets.TVOS_PROVISION_EXT_BASE64 }}
       # Connect embeds a default server access key. Keys are per-entitlement: the App Store build has no
       # ads, so it uses the 'premium' key shared by every ad-free distribution. Unused for the client.
       ACCESS_KEY_PREMIUM: ${{ secrets.ACCESS_KEY_PREMIUM }}
@@ -57,9 +60,10 @@ jobs:
         with:
           dotnet-version: "11.0"
           dotnet-quality: preview
-      - name: Install .NET iOS workload
+      # Every Apple project targets the Apple TV beside iOS (VhAppleTargetFrameworks).
+      - name: Install .NET iOS and tvOS workloads
         shell: pwsh
-        run: dotnet workload install ios
+        run: dotnet workload install ios tvos
       # Pin the Xcode the CURRENT .NET-for-iOS preview demands — the SDK hard-errors when Xcode is older
       # ("requires Xcode 26.6 ... current is 26.5"), and nothing suppresses that check (no
       # ValidateXcodeVersion anywhere in the repo). Because the SDK above floats on the preview channel,

@@ -56,6 +56,7 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. ONE cert signs every app of the team — set it as an **organization** secret visible to both app repos (or repeat it per repo). Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
 | `IOS_PROVISION_APP_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app. Per-app **repository** secret — the profile is minted for that repo's own bundle id (Client `com.vpnhood.client.ios`, Connect `com.vpnhood.connect.ios`). |
 | `IOS_PROVISION_EXT_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for that app's Network Extension (`…ios.networkextension`). The extension needs its own profile. |
+| `TVOS_PROVISION_APP_BASE64` / `TVOS_PROVISION_EXT_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (Apple TV signing) | The same two for the Apple TV: **tvOS App Store** profiles for the same two ids, as the Apple TV app is the same app's tvOS build. Set both or neither; absent → no Apple TV `.ipa` (a warning), the iOS build unchanged. |
 | `ACCESS_KEY_AD` / `ACCESS_KEY_PREMIUM` | `_build_app_android.yml`, `_build_app_ios.yml`, `_build_app_windows.yml`, `_build_app_linux.yml` | **Required (Connect only)** | The `vh:…` default server access key embedded in each Connect distribution, written to `.user/VpnHoodConnect/access_key_ad.txt` / `access_key_premium.txt` before the build. Keys are per-entitlement, not per-store: `ACCESS_KEY_AD` = the ad-supported Android Google (Play) build only; `ACCESS_KEY_PREMIUM` = every ad-free distribution (iOS **+ Android web APK + Windows setup + Linux**). Absent on a strict publish → the build **FAILS** (`Assert-DefaultAccessKey`): Connect without a default server opens on an empty server list. Ignored by Client builds, and skipped entirely for a fork with no `PUBLISH` variable. |
 | `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents** (raw PEM text, NOT base64), its Key ID, and the Issuer ID. Team-wide like the cert — suits an **organization** secret. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
 
@@ -111,6 +112,8 @@ secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`)
 .user/VpnHoodClient/web/… , .user/VpnHoodConnect/web/…       (per-store signing keys only)
 .user/<app>/ios/ios_provision_app.mobileprovision           App Store profile, app        — secret IOS_PROVISION_APP_BASE64
 .user/<app>/ios/ios_provision_ext.mobileprovision           App Store profile, extension  — secret IOS_PROVISION_EXT_BASE64
+.user/<app>/ios/tvos_provision_app.mobileprovision          tvOS App Store profile, app   — secret TVOS_PROVISION_APP_BASE64
+.user/<app>/ios/tvos_provision_ext.mobileprovision          tvOS App Store profile, extension — secret TVOS_PROVISION_EXT_BASE64
 .user/<app>/ios/ios_signing.json                            local marker ({ "Signed": false } = build unsigned); CI regenerates it from the secrets
 .user/vendors/apple/apple_distribution_cert.p12 (+ _password.txt)         not per-app: one Apple Distribution cert signs every app — org secret APPLE_DISTRIBUTION_CERT_BASE64/_PASSWORD
 .user/vendors/apple/appstore_connect_api_key_<KEYID>.p8 (+ id/issuer txt) not per-app: App Store Connect API key — org secrets APPSTORE_CONNECT_API_KEY/_API_KEY_ID/_ISSUER_ID
@@ -279,10 +282,13 @@ prerequisites:
   [docs/legal/APP_STORE_EXPORT_COMPLIANCE.md](../legal/developer/APP_STORE_EXPORT_COMPLIANCE.md).
 
 Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,
-`IOS_PROVISION_EXT_BASE64` (build/signing) and `APPSTORE_CONNECT_API_KEY` + `_API_KEY_ID` +
-`APPSTORE_CONNECT_ISSUER_ID` (upload). `pub/lib/Initialize-CiIosSigning.ps1` materializes the cert/profiles
-into a CI keychain at build time (writing `.user/<app>/ios/ios_signing.json`); `pub/lib/Publish-IosApp.ps1`
-produces the `.ipa` + `<PackageTitle>-ios.json`.
+`IOS_PROVISION_EXT_BASE64`, the Apple TV's `TVOS_PROVISION_APP_BASE64` + `TVOS_PROVISION_EXT_BASE64`
+(build/signing) and `APPSTORE_CONNECT_API_KEY` + `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID` (upload).
+`pub/lib/Initialize-CiIosSigning.ps1` materializes the cert/profiles into a CI keychain at build time
+(writing `.user/<app>/ios/ios_signing.json`); `pub/lib/Publish-IosApp.ps1` produces the `.ipa` +
+`<PackageTitle>-ios.json`, and with the Apple TV's profiles `<PackageTitle>-tvos.ipa`, which the upload
+job sends to the same App Store record as an Apple TV build. The Apple TV app has no json of its own: it
+is the same head, and checks the iOS one for its updates.
 
 #### Obtaining the Apple-issued iOS assets (fork checklist)
 
@@ -297,6 +303,7 @@ while the certificate and the API key are one-per-team.
 | …its export password | `APPLE_DISTRIBUTION_CERT_PASSWORD` | The password you chose when exporting the `.p12`. |
 | **App Store** provisioning profile for the app | `IOS_PROVISION_APP_BASE64` | Developer portal → Profiles → **+ → App Store** → the app's App ID → the Distribution cert. Download the `.mobileprovision`. |
 | **App Store** provisioning profile for the extension | `IOS_PROVISION_EXT_BASE64` | Same, for the `…networkextension` App ID. The extension needs its **own** profile. |
+| **tvOS App Store** profiles for the app and the extension (Apple TV) | `TVOS_PROVISION_APP_BASE64`, `TVOS_PROVISION_EXT_BASE64` | Developer portal → Profiles → **+ → tvOS App Store** → the same two App IDs and the Distribution cert. Before the first upload, add the **tvOS** platform to the app in App Store Connect (the app's page → **+** beside the platforms). |
 | App Store Connect API key `.p8` contents | `APPSTORE_CONNECT_API_KEY` | App Store Connect → Users and Access → **Integrations → App Store Connect API** → generate a key (App Manager role). Download the `AuthKey_XXXX.p8` — Apple offers it **once**. |
 | …the key's Key ID | `APPSTORE_CONNECT_API_KEY_ID` | Shown next to the key. |
 | …the Issuer ID | `APPSTORE_CONNECT_ISSUER_ID` | Shown at the top of the API keys page. |
@@ -308,6 +315,8 @@ API key rows suit organization secrets when several app repos share them):
 base64 -i AppleDistribution.p12 | gh secret set APPLE_DISTRIBUTION_CERT_BASE64 -R <owner>/<app-repo>
 base64 -i App.mobileprovision   | gh secret set IOS_PROVISION_APP_BASE64      -R <owner>/<app-repo>
 base64 -i Ext.mobileprovision   | gh secret set IOS_PROVISION_EXT_BASE64      -R <owner>/<app-repo>
+base64 -i TvApp.mobileprovision | gh secret set TVOS_PROVISION_APP_BASE64     -R <owner>/<app-repo>
+base64 -i TvExt.mobileprovision | gh secret set TVOS_PROVISION_EXT_BASE64     -R <owner>/<app-repo>
 gh secret set APPSTORE_CONNECT_API_KEY -R <owner>/<app-repo> < AuthKey_XXXX.p8   # raw .p8 text, NOT base64
 ```
 
@@ -317,7 +326,8 @@ carries the full white-label checklist for in-app purchase, Sign in with Apple a
 Notifications):
 
 - **Changing capabilities on an App ID invalidates every existing profile on it.** Regenerate + re-download
-  the profiles and refresh the `IOS_PROVISION_*` secrets afterwards — Apple never retrofits a profile.
+  the profiles and refresh the `IOS_PROVISION_*` and `TVOS_PROVISION_*` secrets afterwards — Apple never
+  retrofits a profile.
 - **Renaming a profile in the portal regenerates it** (new UUID) — re-download and refresh the secret.
 
 ### Server (separate repo — `vpnhood/VpnHood.App.Server`)

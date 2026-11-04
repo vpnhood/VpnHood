@@ -10,9 +10,13 @@ param(
 
 # iOS App Store publish, structured exactly like Publish-AndroidApp.ps1 so the CI wiring and the
 # release job treat it the same way: build -> $packagesRootDir/$appFolder/ios/<title>-ios.{ipa,json}.
+# A head that targets the Apple TV too gets <title>-tvos.ipa beside it: the same app's tvOS build, which
+# App Store Connect files under the same record. The Apple TV app checks the iOS sidecar for its updates,
+# as it is the same head, so it has no json of its own.
 #
 # SIGNING is read from a marker the CI signing step writes (Initialize-CiIosSigning.ps1) at
-#   .user/<appFolder>/ios/ios_signing.json  ->  { "Signed": bool, "CodesignKey": "...", "AppProvision": "...", "ExtProvision": "..." }
+#   .user/<appFolder>/ios/ios_signing.json  ->  { "Signed": bool, "CodesignKey": "...", "AppProvision": "...", "ExtProvision": "...",
+#   "TvAppProvision": "...", "TvExtProvision": "..." } (the last two empty without the Apple TV's profiles)
 # Unlike Android there is NO ephemeral fallback: an App Store .ipa cannot be self-signed. When the
 # marker says Signed=false (distribution cert / profiles absent) we do a codesign-DISABLED build as a
 # compile check and emit the sidecar json only (no .ipa) with a warning — the pipeline stays green and
@@ -26,9 +30,11 @@ param(
 . "$PSScriptRoot/Common.ps1"
 
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-# The iOS target: a head may target the Apple TV too (Client.Ios.Apple, with VhAppleTv), which this does not publish.
 $tfm = "net11.0-ios";
 $rid = "ios-arm64";
+$tvTfm = "net11.0-tvos";
+$tvRid = "tvos-arm64";
+$tvTarget = (Get-ProjectProperty $projectFile "TargetFrameworks") -split ';' -contains $tvTfm;
 
 # Per-app identity from .user/<appFolder>/publish.json (see AppPublishConfig.ps1). The iOS BUNDLE ID is
 # NOT part of publish.json's schema (it is Android-only), so it is always the head's ApplicationId, as
@@ -60,19 +66,22 @@ PrepareModuleFolder $moduleDir $moduleDirLatest;
 $module_baseFileName = "$packageFileTitle-ios";
 $module_infoFile = "$moduleDir/$module_baseFileName.json";
 $module_packageFile = "$moduleDir/$module_baseFileName.ipa";
+$module_tvPackageFile = "$moduleDir/$packageFileTitle-tvos.ipa";
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # ----- signing marker (written by Initialize-CiIosSigning.ps1 in CI, or by hand locally) -----
 $iosDir = Join-Path $appUserDir "ios";
 $signingFile = Join-Path $iosDir "ios_signing.json";
-$signed = $false; $codesignKey = ""; $appProvision = ""; $extProvision = "";
+$signed = $false; $codesignKey = ""; $appProvision = ""; $extProvision = ""; $tvAppProvision = ""; $tvExtProvision = "";
 if (Test-Path $signingFile) {
 	$s = Get-Content $signingFile -Raw | ConvertFrom-Json;
 	$signed = [bool]$s.Signed;
 	$codesignKey = "$($s.CodesignKey)";
 	$appProvision = "$($s.AppProvision)";
 	$extProvision = "$($s.ExtProvision)";
+	$tvAppProvision = "$($s.TvAppProvision)";
+	$tvExtProvision = "$($s.TvExtProvision)";
 }
 if ($signed -and (!$appProvision -or !$extProvision)) { Throw "$signingFile is Signed but lacks AppProvision or ExtProvision: the app and its extension each sign with their own App Store profile."; }
 
@@ -111,6 +120,35 @@ try {
 			Sort-Object LastWriteTime -Descending | Select-Object -First 1;
 		if (-not $ipa) { Throw "Signed build succeeded but no .ipa was found under $projectDir."; }
 		Copy-Item -Path $ipa.FullName -Destination $module_packageFile -Force;
+
+		# The Apple TV: the same publish for the tvOS target, signed with the tvOS App Store profiles of the
+		# same two ids. Its .ipa is the one written after this build began, as the iOS one is under the same
+		# folder.
+		if ($tvTarget -and $tvAppProvision) {
+			Write-Host "Apple TV distribution signing: appProfile='$tvAppProvision' extProfile='$tvExtProvision'" -ForegroundColor Cyan;
+			$tvStart = Get-Date;
+			dotnet publish $projectFile -c Release -f $tvTfm -r $tvRid `
+				/verbosity:$msverbosity `
+				/p:SolutionDir=$solutionDir `
+				/p:RuntimeIdentifier=$tvRid `
+				/p:ArchiveOnBuild=true `
+				/p:Version=$versionParam `
+				/p:AutomaticProvisioning=false `
+				/p:CodesignKey="$codesignKey" `
+				/p:CodesignProvision="$tvAppProvision" `
+				/p:VhExtensionCodesignProvision="$tvExtProvision" `
+				/p:OutputPath=$(Join-Path $projectDir "bin/Release-tvos/publish/") `
+				;
+			if ($LASTEXITCODE -gt 0) { Throw "The Apple TV build exited with error code: $LASTEXITCODE"; }
+
+			$tvIpa = Get-ChildItem -Path $projectDir -Recurse -File -Filter "*.ipa" -ErrorAction SilentlyContinue |
+				Where-Object { $_.LastWriteTime -ge $tvStart } | Sort-Object LastWriteTime -Descending | Select-Object -First 1;
+			if (-not $tvIpa) { Throw "Signed Apple TV build succeeded but no new .ipa was found under $projectDir."; }
+			Copy-Item -Path $tvIpa.FullName -Destination $module_tvPackageFile -Force;
+		}
+		elseif ($tvTarget) {
+			Write-Host "::warning title=Apple TV unsigned build::No Apple TV signing configured (ios_signing.json has no TvAppProvision); NOT producing the Apple TV .ipa. Add the TVOS_PROVISION_* secrets (see docs/cicd/deployment.md) to build it.";
+		}
 	}
 	else {
 		# No distribution signing -> emit the sidecar only, no .ipa. We deliberately DON'T run a device

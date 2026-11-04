@@ -22,15 +22,14 @@ included. Sign in with Apple and StoreKit billing work as on iOS. What tvOS lack
 in-app rating prompt (`#if TVOS`), and no subscription-management sheet, so the account page sends the person
 to another of their devices (`AppStoreBillingProvider`). The UI takes its TV layout (`IosDevice.IsTv`).
 
-Not released yet. The Apple libraries target tvOS only for a build that asks for it, so the target exists
-only with `-p:VhAppleTv=true`, which needs the `tvos` workload; every other build, CI's included, sees iOS
-alone.
+The Apple libraries target tvOS beside iOS, so a build of the Apple projects needs the `tvos` workload beside
+`ios`.
 
 ### Build for the Apple TV simulator (on the Mac)
 
 ```bash
 ~/.dotnet/dotnet build src/Apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj \
-  -f net11.0-tvos -c Debug -r tvossimulator-arm64 -p:VhAppleTv=true -p:ValidateXcodeVersion=false \
+  -f net11.0-tvos -c Debug -r tvossimulator-arm64 -p:ValidateXcodeVersion=false \
   -p:AutomaticProvisioning=false -p:CodesignKey=-
 xcrun simctl install <udid> src/Apps/Connect/Connect.Ios.Apple/bin/Debug/net11.0-tvos/tvossimulator-arm64/VpnHoodConnect.app
 xcrun simctl launch <udid> com.vpnhood.connect.ios

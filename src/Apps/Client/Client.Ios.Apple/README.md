@@ -19,15 +19,14 @@ id (`com.vpnhood.client.ios`), so both are one App Store record (universal purch
 out: no file or link opens the app (`Info.tvOS.plist`, the target's manifest), and there is no in-app rating
 prompt (`#if TVOS`). The UI takes its TV layout (`IosDevice.IsTv`).
 
-Not released yet. The Apple libraries target tvOS only for a build that asks for it, so the target exists
-only with `-p:VhAppleTv=true`, which needs the `tvos` workload; every other build, CI's included, sees iOS
-alone.
+The Apple libraries target tvOS beside iOS, so a build of the Apple projects needs the `tvos` workload beside
+`ios`.
 
 ### Build for the Apple TV simulator (on the Mac)
 
 ```bash
 ~/.dotnet/dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
-  -f net11.0-tvos -c Debug -r tvossimulator-arm64 -p:VhAppleTv=true -p:ValidateXcodeVersion=false \
+  -f net11.0-tvos -c Debug -r tvossimulator-arm64 -p:ValidateXcodeVersion=false \
   -p:AutomaticProvisioning=false -p:CodesignKey=-
 xcrun simctl install <udid> src/Apps/Client/Client.Ios.Apple/bin/Debug/net11.0-tvos/tvossimulator-arm64/VpnHoodClient.app
 xcrun simctl launch <udid> com.vpnhood.client.ios

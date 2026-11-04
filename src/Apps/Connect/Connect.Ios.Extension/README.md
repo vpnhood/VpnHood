@@ -6,7 +6,7 @@ subclass that roots the core assembly. The real Network-Extension implementation
 `src/Net`, mainly `VpnHood.Core.Client.VpnServices.Host.Ios` (IosVpnService), `VpnHood.Net.VpnAdapters.IosTun`
 and `VpnHood.Net.TcpStack`.
 
-The Apple TV target (`net11.0-tvos`, with `-p:VhAppleTv=true`) differs only in its csproj, as the Client
+The Apple TV target (`net11.0-tvos`) differs only in its csproj, as the Client
 extension's does (`../../Client/Client.Ios.Extension/README.md` says how).
 
 **iOS engineering notes → [`/docs/ios/`](../../../../docs/ios/)** — read

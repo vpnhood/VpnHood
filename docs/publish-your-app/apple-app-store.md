@@ -70,8 +70,10 @@ Still in Apple Developer:
    Keychain Access as a `.p12` file **with its private key** and give it a password you keep.
 2. **Profiles → App Store**, twice — once for the app identifier, once for the network extension
    identifier. Download both files.
+3. **For the Apple TV app: Profiles → tvOS App Store**, twice, for the same two identifiers. The Apple
+   TV app is the same app on another platform; without these two the pipeline builds no Apple TV app.
 
-These three files plus the password are what let the pipeline sign your app. Where to paste them:
+These files plus the password are what let the pipeline sign your app. Where to paste them:
 [deployment](../cicd/deployment.md).
 
 ---
@@ -89,7 +91,9 @@ In App Store Connect → **Apps → +**:
   automatic updates are not affected.
 
 The app must exist here before the pipeline's first upload — uploading is the only part of this
-section that is automated.
+section that is automated. For the Apple TV app, add the **tvOS** platform to the same app (the
+**+** beside its platforms) before the first upload that carries it: one app record, one purchase, on
+both.
 
 ---
 

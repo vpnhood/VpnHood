@@ -2,8 +2,8 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
     <OutputType>Exe</OutputType>
-    <!-- iOS, and the Apple TV beside it in a build that asks (-p:VhAppleTv=true): one app on both, the same
-         bundle id, App Group and extension id, so one App Store record. -->
+    <!-- iOS and the Apple TV: one app on both, the same bundle id, App Group and extension id, so one App
+         Store record. -->
     <TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
     <UseMaui>false</UseMaui>
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
@@ -37,13 +37,6 @@
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">
     <ReferenceNativeSymbol Include="sqlite3_enable_load_extension" SymbolType="Function" SymbolMode="Ignore" />
   </ItemGroup>
-
-  <!-- The Apple libraries target tvOS only for a build that asks (VhAppleTargetFrameworks): said before the
-       package assets are read, which would otherwise fail first, naming no flag. -->
-  <Target Name="VhRequireAppleTv" BeforeTargets="Restore;_GenerateRestoreGraph;ResolvePackageAssets"
-          Condition="'$(VhAppleTv)' != 'true' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">
-    <Error Text="Build the Apple TV target with -p:VhAppleTv=true: without it the Apple libraries have no tvOS build to reference." />
-  </Target>
 
 
   <!-- Apple's privacy manifest. MUST sit at the ROOT of the .app bundle for App Store Connect's scanner

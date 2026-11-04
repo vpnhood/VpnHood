@@ -293,7 +293,9 @@ jobs:
         shell: bash
         run: |
           set -e
-          IPA=$(ls ios/*.ipa 2>/dev/null | head -n1 || true)
+          # The iPhone's .ipa, and the Apple TV's beside it when its signing is set (<title>-tvos.ipa).
+          IPA=$(ls ios/*-ios.ipa 2>/dev/null | head -n1 || true)
+          echo "TV_IPA_PATH=$(ls ios/*-tvos.ipa 2>/dev/null | head -n1 || true)" >> $GITHUB_ENV
           if [ -z "$IPA" ]; then
             if [ -n "$APPLE_DISTRIBUTION_CERT_BASE64" ]; then
               echo "::error title=iOS upload has no .ipa::A signed App Store build was intended (upload key + distribution cert set) but build-ios produced no .ipa. This is a real signing/build failure."
@@ -337,11 +339,25 @@ jobs:
               echo "::error title=TestFlight upload failed::Fastlane pilot could not upload the .ipa. A common cause is a CFBundleVersion that is not higher than the last build."
               exit 1
             fi
+            if [ -n "$TV_IPA_PATH" ]; then
+              echo "Uploading $TV_IPA_PATH to TestFlight (Apple TV)"
+              if ! fastlane run upload_to_testflight ipa:"$TV_IPA_PATH" app_platform:appletvos api_key_path:asc/api_key.json skip_waiting_for_build_processing:true; then
+                echo "::error title=TestFlight upload failed (Apple TV)::Fastlane pilot could not upload the Apple TV .ipa. Check that the app's App Store record has the tvOS platform."
+                exit 1
+              fi
+            fi
           else
             echo "Uploading $IPA_PATH to App Store Connect (App Store track)"
             if ! fastlane run upload_to_app_store ipa:"$IPA_PATH" api_key_path:asc/api_key.json skip_metadata:true skip_screenshots:true submit_for_review:false force:true precheck_include_in_app_purchases:false; then
               echo "::error title=App Store upload failed::Fastlane deliver could not upload the .ipa. Verify signing and that CFBundleVersion is higher than the last build."
               exit 1
+            fi
+            if [ -n "$TV_IPA_PATH" ]; then
+              echo "Uploading $TV_IPA_PATH to App Store Connect (App Store track, Apple TV)"
+              if ! fastlane run upload_to_app_store ipa:"$TV_IPA_PATH" platform:appletvos api_key_path:asc/api_key.json skip_metadata:true skip_screenshots:true submit_for_review:false force:true precheck_include_in_app_purchases:false; then
+                echo "::error title=App Store upload failed (Apple TV)::Fastlane deliver could not upload the Apple TV .ipa. Check that the app's App Store record has the tvOS platform."
+                exit 1
+              fi
             fi
           fi
 

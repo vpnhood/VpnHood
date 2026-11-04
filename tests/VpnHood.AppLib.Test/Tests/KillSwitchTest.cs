@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api.Settings;
@@ -267,6 +268,34 @@ public class KillSwitchTest : TestAppBase
 
         await Assert.ThrowsAsync<Exception>(() => app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
         Assert.IsFalse(killSwitch.IsUp);
+    }
+
+    // Migration (added 2026-11-04): remove with KillSwitchSettingsMigration.
+    // 9.0.863 saved two switches where the level is now: its file loads with every setting it holds.
+    [TestMethod]
+    [DataRow(false, true, KillSwitchMode.Off)]
+    [DataRow(true, false, KillSwitchMode.UntilDisconnect)]
+    [DataRow(true, true, KillSwitchMode.Lockdown)]
+    public async Task Load_settings_saved_with_the_two_kill_switch_switches(bool isOn, bool isLockdown,
+        KillSwitchMode expected)
+    {
+        await using var app1 = TestAppHelper.CreateClientApp();
+        app1.UserSettings.DropUdp = true;
+        app1.SettingsService.Save();
+        await app1.DisposeAsync();
+
+        // the file as 9.0.863 wrote it
+        var filePath = Path.Combine(app1.StorageFolderPath, "settings.json");
+        var root = JsonNode.Parse(File.ReadAllText(filePath)) ?? throw new InvalidDataException("No settings.");
+        var userSettings = root["UserSettings"]?.AsObject() ?? throw new InvalidDataException("No user settings.");
+        userSettings["KillSwitch"] = isOn;
+        userSettings["KillSwitchLockdown"] = isLockdown;
+        File.WriteAllText(filePath, root.ToJsonString());
+
+        var appOptions = TestAppHelper.CreateAppOptions(storagePath: app1.StorageFolderPath);
+        await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        Assert.AreEqual(expected, app2.UserSettings.KillSwitch);
+        Assert.IsTrue(app2.UserSettings.DropUdp);
     }
 
     // a desktop's device, which has a kill switch

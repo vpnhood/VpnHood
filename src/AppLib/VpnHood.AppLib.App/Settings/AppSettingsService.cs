@@ -34,6 +34,7 @@ public class AppSettingsService
         _storage = storage;
 #pragma warning disable CS0618 // Type or member is obsolete
         ClientProfileMigration.MigrateSettings(Path.Combine(storage.FolderPath, FileNameSettings));
+        KillSwitchSettingsMigration.MigrateSettings(Path.Combine(storage.FolderPath, FileNameSettings));
 #pragma warning restore CS0618 // Type or member is obsolete
 
         // A file that cannot be read is replaced by defaults - a new client id among them - so the

@@ -739,7 +739,7 @@ public sealed partial class Strings
     /// <summary>Kill &lt;span class="text-promote-premium-color-premium"&gt;Switch&lt;/span&gt;</summary>
     public string KillSwitchColored => Get("KILL_SWITCH_COLORED");
 
-    /// <summary>Automatically blocks internet connection if the VPN disconnects.</summary>
+    /// <summary>Blocks the internet whenever the VPN drops, even after a restart, so nothing leaves your device outside the VPN.</summary>
     public string KillSwitchDesc => Get("KILL_SWITCH_DESC");
 
     /// <summary>Open the VPN settings on your device.</summary>
@@ -760,10 +760,10 @@ public sealed partial class Strings
     /// <summary>If {appName} won't open while the internet is blocked, right-click {appName} in the app menu and choose "{actionName}...</summary>
     public string KillSwitchWayOutLinux(object appName, object actionName, object command) => Get("KILL_SWITCH_WAY_OUT_LINUX", ("appName", appName), ("actionName", actionName), ("command", command));
 
-    /// <summary>Block the internet while disconnected</summary>
+    /// <summary>Keep blocking after you disconnect</summary>
     public string KillSwitchLockdown => Get("KILL_SWITCH_LOCKDOWN");
 
-    /// <summary>Turn this off before you sign in to Wi-Fi at a hotel or an airport.</summary>
+    /// <summary>Nothing goes online without the VPN, even after you disconnect it. Turn this off to sign in to Wi-Fi at a hotel or an...</summary>
     public string KillSwitchLockdownDesc => Get("KILL_SWITCH_LOCKDOWN_DESC");
 
     /// <summary>Notifications</summary>

@@ -13,7 +13,7 @@ namespace VpnHood.AppLib.App.Services.KillSwitch;
 // through an error stop, a crash and a reboot, and only a person's disconnect lifts it, or the switch turned off,
 // or another app's take of the tunnel, which is a disconnect too.
 // Add no reconnect of the switch's own: a free session may need an ad, so the block waits for a person, unless
-// always on reconnects. Lockdown keeps it while disconnected too (an option, off by default, as a hotel's Wi-Fi
+// always on reconnects. Lockdown keeps it while disconnected too (an option, on by default; a hotel's Wi-Fi
 // sign-in needs it off): up by the settings' split at a person's disconnect, when the option is turned on and at
 // the app's start. Whether this app's block is up is the OS's word, read at each of those and at each session's
 // end, never per state read: on Linux a read runs nft.

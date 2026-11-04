@@ -109,6 +109,20 @@ public class KillSwitchTest : TestAppBase
         await AssertEqualsWait(false, () => app.State.IsKillSwitchBlocking);
     }
 
+    // Kept while disconnected by default: the switch alone turned on with no session blocks at once.
+    [TestMethod]
+    public async Task Lockdown_is_on_by_default()
+    {
+        var killSwitch = new TestVpnKillSwitch();
+        await using var app = TestAppHelper.CreateClientApp(device: CreateDevice(killSwitch));
+        Assert.IsTrue(app.UserSettings.KillSwitchLockdown);
+
+        app.UserSettings.KillSwitch = true;
+        app.SettingsService.Save();
+        await AssertEqualsWait(true, () => killSwitch.IsUp);
+        await AssertEqualsWait(true, () => app.State.IsKillSwitchBlocking);
+    }
+
     [TestMethod]
     public async Task The_switch_turned_off_lifts_a_block_an_error_stop_left()
     {

@@ -82,7 +82,7 @@ public static class FeaturePages
                 Image = "kill-switch.webp",
                 Kind = FeaturePageKind.Choice,
                 Choices = [
-                    KillSwitchChoice(KillSwitchMode.Off, S.Off, null),
+                    KillSwitchChoice(KillSwitchMode.Off, S.Off, S.KillSwitchOffDesc),
                     KillSwitchChoice(KillSwitchMode.UntilDisconnect, S.KillSwitchUntilDisconnect,
                         S.KillSwitchUntilDisconnectDesc),
                     KillSwitchChoice(KillSwitchMode.Lockdown, S.KillSwitchLockdown, S.KillSwitchLockdownDesc)

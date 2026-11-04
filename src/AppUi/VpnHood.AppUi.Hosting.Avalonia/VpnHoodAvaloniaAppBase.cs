@@ -82,13 +82,8 @@ public abstract class VpnHoodAvaloniaAppBase : Application
             throw new InvalidOperationException(
                 $"The UI has not been configured. A head must call {nameof(VhApp)}.{nameof(VhApp.Configure)} before the view is made.");
 
-        // A TV layout is drawn for 960x540, the screen Android TV lays out in. tvOS lays the same screen out
-        // in points, 1920x1080, which would show it at half its size - type half of tvOS's own - so there
-        // the view is shown twice as large. A transform rather than other sizes keeps one layout for both.
         var view = CreateMainView();
-        return OperatingSystem.IsTvOS()
-            ? new LayoutTransformControl { LayoutTransform = new ScaleTransform(2, 2), Child = view }
-            : view;
+        return VhApp.IsTvUi ? new TvScreenFit { Child = view } : view;
     }
 
     // the theme's brush for the one surface XAML does not reach: the desktop window itself. A UI

@@ -1,5 +1,7 @@
 # VpnHood! MANAGER - Privacy Policy
 
+*Effective: 2026-11-05.*
+
 **PLEASE NOTE:** This privacy policy applies just to "VpnHood! MANAGER". To see the privacy policies of our other products, visit the following page: https://www.vpnhood.com/legal/  
 
 This page informs website visitors regarding our policies on the collection, use, and disclosure of Personal Information. If anyone decides to use our service, the VpnHood website, and the VpnHood! MANAGER.  
@@ -8,7 +10,7 @@ If you choose to use our service, you agree to the collection and use of informa
 
 ## Definitions
 
-- **VPNHOOD, WE, US:** VpnHood Team  
+- **VPNHOOD, WE, US:** OmegaHood LLC  
 - **CLIENT:** Your clients who connect and use your VPN service  
 - **VPNHOOD SERVER:** Your VPN server that your clients connect to  
 - **HOSTING:** Any hosting company that hosts your VpnHood Server  

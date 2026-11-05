@@ -408,4 +408,16 @@ public class WebServerTest : TestAppBase
         Assert.IsTrue(remote.IsAlwaysOn);
         StringAssert.Contains(await http.GetStringAsync(url), PageTitle);
     }
+
+    [TestMethod]
+    public async Task Local_host_waits_for_whatever_loads_from_it()
+    {
+        var appOptions = CreateWebHostOptions(isDebugMode: false);
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        var local = RequireHost(app.LocalWebHost, "local");
+        Assert.IsFalse(local.IsActive, "a head that shows a native UI never asks for it");
+
+        await local.EnsureStarted(TestCt);
+        Assert.IsTrue(local.IsActive);
+    }
 }

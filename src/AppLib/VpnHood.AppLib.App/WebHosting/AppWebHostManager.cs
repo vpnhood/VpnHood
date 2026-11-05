@@ -24,8 +24,9 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
     private IAppWebHost? _remote;
     private bool _remoteIsDeveloperAccess;
 
-    // What each host is told differs, so each says it here rather than the host inferring it - if the
-    // local one should stop coming up by itself, this is the line that changes.
+    // What each host is told differs, so each says it here rather than the host inferring it. The local
+    // one is never up by itself: whatever loads from it starts it - the desktop window, a web view - and
+    // a head that shows a native UI never opens it, which spares that app the listener at every start.
     public IAppWebHost? Local {
         get {
             lock (_lock)
@@ -37,7 +38,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     LogoAssetPath = app.Descriptor.LogoAssetPath,
                     UiTheme = app.Descriptor.UiTheme,
                     WebUiPort = WebUiPort,
-                    IsAlwaysOn = true, // the app's own UI loads it; nothing ever stops it
+                    IsAlwaysOn = false,
                     IsTokenRequired = !app.Descriptor.IsDebugMode // a debug build keeps its open door here too
                 });
         }
@@ -81,16 +82,11 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
     private bool IsDeveloperRemoteAccess =>
         app.Descriptor.IsDebugMode || app.HasDebugCommand(DebugCommands.RemoteAccess);
 
-    // An always-on host is meant to be up without anyone asking for it, and on a head that shows a
-    // native UI nobody ever will. Both are asked the same question and each answers for itself - which
-    // of them is ever always on is the host's business, not this one's.
+    // The developer's open door is meant to be up without anyone asking for it, and on a head that shows
+    // a native UI nobody ever will. Only it: any other host waits for whatever needs it.
     public async Task StartAlwaysOn(CancellationToken cancellationToken)
     {
-        if (Local?.IsAlwaysOn == true)
-            await VhInvoker.TryInvokeAsync("open the local listeners for always-on", LogLevel.Warning,
-                () => Local.EnsureStarted(cancellationToken)).Vhc();
-
-        if (Remote?.IsAlwaysOn == true)
+        if (IsDeveloperRemoteAccess && Remote?.IsAlwaysOn == true)
             await VhInvoker.TryInvokeAsync("open the remote access listeners for always-on", LogLevel.Warning,
                 () => Remote.EnsureStarted(cancellationToken)).Vhc();
     }

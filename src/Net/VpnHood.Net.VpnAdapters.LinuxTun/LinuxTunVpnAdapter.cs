@@ -572,6 +572,13 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         await ExecuteCommandAsync(command, cancellationToken).Vhc();
     }
 
+    private const string ResolvConfPath = "/etc/resolv.conf";
+
+    private const string DnsServersError =
+        "Could not set the VPN's DNS servers. Install and turn on systemd-resolved " +
+        "(systemctl enable --now systemd-resolved) and link /etc/resolv.conf to " +
+        "/run/systemd/resolve/stub-resolv.conf.";
+
     private async Task SetDnsServersByResolvectl(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
@@ -675,13 +682,33 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             // box without systemd-resolved (Arch's default) gets here, as its resolvconf is systemd-resolved's
             catch (Exception fallbackEx) {
                 throw new Exception(
-                    "Could not set the VPN's DNS servers. Install and turn on systemd-resolved " +
-                    "(systemctl enable --now systemd-resolved) and link /etc/resolv.conf to " +
-                    "/run/systemd/resolve/stub-resolv.conf.\n" +
+                    $"{DnsServersError}\n" +
                     $"resolvectl error: {ex.Message}\n" +
                     $"resolvconf error: {fallbackEx.Message}", fallbackEx);
             }
         }
+
+        // Fail-closed too: systemd-resolved takes the VPN's servers even when programs do not ask it, and a
+        // server of the local network in /etc/resolv.conf stays off the tunnel, seeing every name looked up.
+        var resolvConf = File.Exists(ResolvConfPath)
+            ? await File.ReadAllTextAsync(ResolvConfPath, cancellationToken).Vhc()
+            : string.Empty;
+        if (!IsResolvConfOnVpnDns(resolvConf, dnsServers))
+            throw new Exception($"{DnsServersError}\n{ResolvConfPath} does not use them, so DNS would go around the VPN.");
+    }
+
+    // Every server in resolv.conf is systemd-resolved's stub or one of the VPN's. A file with none counts as
+    // another server, as glibc then asks 127.0.0.1.
+    public static bool IsResolvConfOnVpnDns(string resolvConf, IEnumerable<IPAddress> dnsServers)
+    {
+        var allowed = dnsServers.Select(x => x.ToString()).Concat(["127.0.0.53", "127.0.0.54"]).ToHashSet();
+        var servers = resolvConf.Split('\n')
+            .Select(x => x.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+            .Where(x => x.Length >= 2 && x[0] == "nameserver")
+            .Select(x => x[1])
+            .ToArray();
+
+        return servers.Length > 0 && servers.All(allowed.Contains);
     }
 
     protected override void WaitForTunRead()

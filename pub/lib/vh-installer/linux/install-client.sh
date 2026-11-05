@@ -424,7 +424,7 @@ if ! dns_way_found; then
 			printf '[Resolve]\nFallbackDNS=%s\n' "$dnsServers" >/etc/systemd/resolved.conf.d/vpnhood-machine-dns.conf;
 		fi
 		# Debian's and Ubuntu's package links it; without the link, programs would not ask systemd-resolved
-		[ -L /etc/resolv.conf ] || ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf;
+		[ "$(readlink -f /etc/resolv.conf)" = /run/systemd/resolve/stub-resolv.conf ] || ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf;
 		systemctl enable systemd-resolved;
 		systemctl restart systemd-resolved;
 		systemctl try-restart NetworkManager 2>/dev/null;

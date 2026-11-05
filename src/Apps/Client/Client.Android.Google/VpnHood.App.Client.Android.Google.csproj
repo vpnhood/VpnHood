@@ -19,7 +19,9 @@
 		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
 		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
 		<PublishTrimmed>True</PublishTrimmed>
-		<!--<AndroidLinkTool>r8</AndroidLinkTool>-->
+		<!-- Play's DEX-optimization requirement (from February 2027): over 10 MB of DEX needs at least 25%
+		     optimization, obfuscation and shrinking. Without R8 this app has 9.6 MB and scores none. -->
+		<AndroidLinkTool>r8</AndroidLinkTool>
 	</PropertyGroup>
 
 

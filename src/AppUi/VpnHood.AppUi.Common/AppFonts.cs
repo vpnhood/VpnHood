@@ -5,10 +5,15 @@ namespace VpnHood.AppUi.Common;
 // Design Icons, cut down to the icons the UIs name. One collection under one scheme, so
 // "fonts:VpnHood#Poppins" in a style resolves to the store wherever the store is; the collection
 // itself is the UI toolkit's to register (AppFontCollection in the Avalonia UI).
+//
+// A browser page has a second folder beside it, browser-fonts/, for what an app gets from its OS: no
+// browser lends a page a system font, so Russian and Chinese need faces of their own there.
 public static class AppFonts
 {
     public const string FolderName = "fonts";
     public const string IndexPath = $"{FolderName}/index.json";
+    public const string BrowserFolderName = "browser-fonts";
+    public const string BrowserIndexPath = $"{BrowserFolderName}/index.json";
     public const string CollectionScheme = "fonts:VpnHood";
     public const string TextFamily = $"{CollectionScheme}#Poppins";
     public const string IconFamily = $"{CollectionScheme}#Material Design Icons";

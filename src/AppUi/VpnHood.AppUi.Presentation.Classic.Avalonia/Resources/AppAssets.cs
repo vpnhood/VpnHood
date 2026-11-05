@@ -25,24 +25,32 @@ public static class AppAssets
 
     public static bool IsPrepared => _fontFiles != null;
 
-    // The provider, and the fonts out of it - every face fonts/index.json names - which every
-    // page's text needs before it is drawn. Registered at once where Avalonia is already up
-    // (Android, whose Application starts before its activity prepares the content); otherwise
-    // Initialize registers them as the styles that name them are read.
+    // The provider, and the fonts out of it - every face fonts/index.json names, and in a browser
+    // those of browser-fonts/ too, which an app leaves unread - which every page's text needs before
+    // it is drawn. Registered at once where Avalonia is already up (Android, whose Application starts
+    // before its activity prepares the content); otherwise Initialize registers them as the styles
+    // that name them are read.
     public static async Task PrepareAsync(IAssetProvider assets, CancellationToken cancellationToken)
     {
         _assets = assets;
-        var names = await AssetIndex.ReadAsync(assets, AppFonts.IndexPath, cancellationToken).ConfigureAwait(false);
         var files = new List<byte[]>();
-        foreach (var name in names) {
-            await using var stream = await assets.OpenReadAsync($"{AppFonts.FolderName}/{name}", cancellationToken).ConfigureAwait(false);
-            var memoryStream = await stream.ToMemoryStreamAsync(cancellationToken).ConfigureAwait(false);
-            files.Add(memoryStream.ToArray());
-        }
+        await ReadFonts(assets, AppFonts.IndexPath, AppFonts.FolderName, files, cancellationToken).ConfigureAwait(false);
+        if (OperatingSystem.IsBrowser())
+            await ReadFonts(assets, AppFonts.BrowserIndexPath, AppFonts.BrowserFolderName, files, cancellationToken).ConfigureAwait(false);
 
         _fontFiles = files;
         if (Application.Current != null)
             RegisterFonts();
+    }
+
+    private static async Task ReadFonts(IAssetProvider assets, string indexPath, string folderName, List<byte[]> files,
+        CancellationToken cancellationToken)
+    {
+        foreach (var name in await AssetIndex.ReadAsync(assets, indexPath, cancellationToken).ConfigureAwait(false)) {
+            await using var stream = await assets.OpenReadAsync($"{folderName}/{name}", cancellationToken).ConfigureAwait(false);
+            var memoryStream = await stream.ToMemoryStreamAsync(cancellationToken).ConfigureAwait(false);
+            files.Add(memoryStream.ToArray());
+        }
     }
 
     public static void RegisterFonts()

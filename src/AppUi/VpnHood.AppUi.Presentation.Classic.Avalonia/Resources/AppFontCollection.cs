@@ -15,7 +15,8 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 // FontCollectionBase does the matching, including the character fallback that puts a Persian word
 // on a Persian face when Poppins has no glyph for it. A character none of the faces has draws as a
 // box on the paired browser page, where no system face stands in: Poppins has "›" (U+203A) but no
-// "→", so the words point with "›".
+// "→", so the words point with "›". _cut-browser-fonts.py fails on such a word; a user's typing, a
+// rare Chinese character or a language with no face here, stays a box.
 internal sealed class AppFontCollection : FontCollectionBase
 {
     public const string Scheme = AppFonts.CollectionScheme;

@@ -26,16 +26,16 @@ public static class CertificateUtil
         return name;
     }
 
-    // a made-up name in no fixed shape for a network to match: of any length, under a common ending, and at times on a
-    // host of the kind many sites keep for an API or their files. Long enough to be a real site's name only rarely
+    // a made-up name in no fixed shape for a network to match: of any length, under a common ending, on a host of the
+    // kind many sites keep for an API or their files. Long enough to be a real site's name only rarely
     public static string CreateRandomDns()
     {
         string[] hosts = ["api", "app", "assets", "cdn", "data", "edge", "files", "img", "media", "static"];
-        string[] extensions = [".com", ".net", ".org", ".io", ".co", ".info"];
+        string[] extensions = [".com", ".net", ".org"];
 
         var random = Random.Shared;
-        var name = GenerateName(random.Next(3, 5)) + extensions[random.Next(extensions.Length)];
-        return random.Next(2) == 0 ? name : $"{hosts[random.Next(hosts.Length)]}.{name}";
+        return hosts[random.Next(hosts.Length)] + "." + GenerateName(random.Next(3, 5)) +
+               extensions[random.Next(extensions.Length)];
     }
 
     public static async Task<X509Certificate2> GetCertificateFromUrl(Uri url, CancellationToken cancellationToken)

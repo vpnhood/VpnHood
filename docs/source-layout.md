@@ -198,7 +198,7 @@ them in its own folder:
 
 | What | Where it comes from | How a head overrides it |
 | --- | --- | --- |
-| the manifest: the target SDK, and the language list and backup rules the `<application>` element names | `buildTransitive/AndroidManifest.xml`, copied into the head's `obj` (the SDK takes a manifest only under the head's folder) | its own `Properties/AndroidManifest.xml`, which the build then takes instead, whole |
+| the manifest: the target SDK, and the language list and backup rules the `<application>` element names | `buildTransitive/AndroidManifest.xml`, copied into the head's `obj` (the SDK takes a manifest only under the head's folder) | its own `Properties/AndroidManifest.xml`, or a MAUI head's `Platforms/Android/AndroidManifest.xml`, which the build then takes instead, whole |
 | the backup rules: `backup_rules.xml` for Android 11 and older, `data_extraction_rules.xml` for 12 and newer | the library's `Resources/xml/` | a file of the same name in its own `Resources/xml/` |
 | the network security config: Let's Encrypt's root for Android 7.0, plain http to localhost | the library's `Resources/xml/network_security_config.xml` | the same |
 | the `<application>` switches: label, icon, banner, backup on or off, right-to-left, the network security config | `AndroidAppConstants`, which the head's `App.cs` names in its `[Application]` | its own values in that attribute |

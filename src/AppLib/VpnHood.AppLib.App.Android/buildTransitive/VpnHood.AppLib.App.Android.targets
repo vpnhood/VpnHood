@@ -5,12 +5,17 @@
 	     a project reference carrying no targets.
 
 	     The manifest beside this file is the app's own, not a library's merged into it: Android takes the
-	     target SDK from the app's alone. A head with a manifest of its own (Properties/AndroidManifest.xml)
-	     keeps it, and answers for all of this itself. Set here, after the SDK's defaults, which leave
-	     AndroidManifest unset for a head with none. The SDK reads it as a path under the head's folder
-	     ($(ProjectDir)$(AndroidManifest)), which a package's file is not - the NuGet cache may even be on
-	     another drive - so the head gets a copy in its obj before the SDK first reads it: in a build, or in
-	     InstallAndroidDependencies (GetAndroidDependencies), which reads it with no build before it.
+	     target SDK from the app's alone. A head with a manifest of its own (Properties/AndroidManifest.xml,
+	     or a MAUI head's Platforms/Android/AndroidManifest.xml) keeps it, and answers for all of this itself.
+	     Set here, after the SDK's defaults, which leave AndroidManifest unset for a head with none. The SDK
+	     reads it as a path under the head's folder ($(ProjectDir)$(AndroidManifest)), which a package's file
+	     is not - the NuGet cache may even be on another drive - so the head gets a copy in its obj before
+	     the SDK first reads it: in a build, or in InstallAndroidDependencies (GetAndroidDependencies), which
+	     reads it with no build before it.
+
+	     MAUI names its head's manifest after this file, over the value set here. So what follows asks
+	     whether AndroidManifest is still that value, which a target's or an item's condition sees as it
+	     ended: a flag set here would send the copy onto the head's own file.
 
 	     The build settings - the oldest Android, the runtime ids, the trimming - stay in each head: the SDK
 	     reads them before any targets file of a package, and a props file comes before the head says it is
@@ -19,10 +24,11 @@
 		<!-- The manifest holds the target below the API the build compiles against, as its comment says why.
 		     These go when the two meet. Not NoWarn: the SDK has copied that into this property by now. -->
 		<MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);XA1006;XA4211</MSBuildWarningsAsMessages>
-		<AndroidManifest>$(IntermediateOutputPath)vh\AndroidManifest.xml</AndroidManifest>
-		<_VhAndroidSharedManifest>true</_VhAndroidSharedManifest>
+		<_VhAndroidSharedManifest>$(IntermediateOutputPath)vh\AndroidManifest.xml</_VhAndroidSharedManifest>
+		<AndroidManifest>$(_VhAndroidSharedManifest)</AndroidManifest>
 	</PropertyGroup>
-	<Target Name="VhCopyAndroidManifest" BeforeTargets="_GetAndroidPackageName;GetAndroidDependencies" Condition="'$(_VhAndroidSharedManifest)' == 'true'">
+	<Target Name="VhCopyAndroidManifest" BeforeTargets="_GetAndroidPackageName;GetAndroidDependencies"
+	        Condition="'$(_VhAndroidSharedManifest)' != '' And '$(AndroidManifest)' == '$(_VhAndroidSharedManifest)'">
 		<Copy SourceFiles="$(MSBuildThisFileDirectory)AndroidManifest.xml" DestinationFiles="$(AndroidManifest)" SkipUnchangedFiles="true" />
 		<ItemGroup>
 			<FileWrites Include="$(AndroidManifest)" />
@@ -33,10 +39,11 @@
 	     file it states beside its identity (VhAppLocaleConfig), as only the product knows the languages its
 	     words come in. Android 14 and later replace it at run time with the UI's own (AndroidAppCultureProvider);
 	     this is the list before the first start, and Android 13's. -->
-	<ItemGroup Condition="'$(_VhAndroidSharedManifest)' == 'true' And '$(VhAppLocaleConfig)' != ''">
+	<ItemGroup Condition="'$(_VhAndroidSharedManifest)' != '' And '$(AndroidManifest)' == '$(_VhAndroidSharedManifest)' And '$(VhAppLocaleConfig)' != ''">
 		<AndroidResource Include="$(VhAppLocaleConfig)" Link="Resources\xml\locales_config.xml" />
 	</ItemGroup>
-	<Target Name="VhCheckAppLocaleConfig" BeforeTargets="BeforeBuild" Condition="'$(_VhAndroidSharedManifest)' == 'true'">
+	<Target Name="VhCheckAppLocaleConfig" BeforeTargets="BeforeBuild"
+	        Condition="'$(_VhAndroidSharedManifest)' != '' And '$(AndroidManifest)' == '$(_VhAndroidSharedManifest)'">
 		<Error Condition="'$(VhAppLocaleConfig)' == ''"
 		       Text="The app states no languages: state VhAppLocaleConfig beside its identity, an Android locale-config file of the languages its words come in." />
 		<Error Condition="'$(VhAppLocaleConfig)' != '' And !Exists('$(VhAppLocaleConfig)')"

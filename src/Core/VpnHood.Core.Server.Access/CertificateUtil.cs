@@ -7,34 +7,35 @@ namespace VpnHood.Core.Server.Access;
 
 public static class CertificateUtil
 {
-    private static string GenerateName(int length, bool pascalCase = false)
+    // pronounceable, as a string of random letters looks like a malware domain
+    private static string GenerateName(int syllableCount)
     {
-        var random = new Random();
-        string[] consonants = [
-            "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "sh", "zh", "t", "v", "w",
-            "x"
+        string[] onsets = [
+            "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "r", "s", "t", "v", "w", "z",
+            "br", "cl", "dr", "fl", "gr", "pl", "sh", "st", "tr"
         ];
-        string[] vowels = ["a", "e", "i", "o", "u", "ae", "y"];
-        var name = "";
-        for (var i = 0; i < length; i += 2) {
-            name += consonants[random.Next(consonants.Length)];
-            name += vowels[random.Next(vowels.Length)];
-        }
+        string[] vowels = ["a", "e", "i", "o", "u", "a", "e", "i", "o", "ai", "ea", "ou"];
+        string[] codas = ["", "", "", "", "", "", "", "", "l", "m", "n", "r", "s", "t", "x", "nd"];
 
-        if (pascalCase)
-            name = name[0].ToString().ToUpper() + name[1..];
+        var random = Random.Shared;
+        var name = "";
+        for (var i = 0; i < syllableCount; i++)
+            name += onsets[random.Next(onsets.Length)] + vowels[random.Next(vowels.Length)] +
+                    codas[random.Next(codas.Length)];
 
         return name;
     }
 
+    // a made-up name in no fixed shape for a network to match: of any length, under a common ending, and at times on a
+    // host of the kind many sites keep for an API or their files. Long enough to be a real site's name only rarely
     public static string CreateRandomDns()
     {
-        var extensions = new[] { ".com", ".net", ".org" };
+        string[] hosts = ["api", "app", "assets", "cdn", "data", "edge", "files", "img", "media", "static"];
+        string[] extensions = [".com", ".net", ".org", ".io", ".co", ".info"];
 
-        var random = new Random();
-        var ret = GenerateName(random.Next(2, 3)) + "." + GenerateName(random.Next(7, 10));
-        ret += extensions[random.Next(0, 2)];
-        return ret;
+        var random = Random.Shared;
+        var name = GenerateName(random.Next(3, 5)) + extensions[random.Next(extensions.Length)];
+        return random.Next(2) == 0 ? name : $"{hosts[random.Next(hosts.Length)]}.{name}";
     }
 
     public static async Task<X509Certificate2> GetCertificateFromUrl(Uri url, CancellationToken cancellationToken)

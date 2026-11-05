@@ -1,10 +1,10 @@
 # Latest
 
-* Update: A VpnHoodServer of your own must run this release or later before this version can connect to it #client #android #ios #windows #linux
 * Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android #store
 * Improve: The app draws its screens itself rather than as a web page, and text is easier to read, with more contrast
 * Improve: The app no longer needs Android System WebView #android
+* Feature: VpnHood! CONNECT works on a computer with no desktop: `sign-in` signs in to your account, asking for your password or reading it from standard input, `sign-out` signs out, and `premium-code` sets a premium code; `connect` then says what is missing rather than the server's refusal #connect #windows #linux
 * Feature: Always On comes to Windows and Linux: switch it on in Settings, or with the `always-on on` command on a computer with no desktop, and the VPN connects as the computer starts, before anyone signs in. While the server is out of reach it tries again, waiting longer each time. It stops when you disconnect, when another VPN app takes over, or when the server refuses the connection, and the app says why. On VpnHood! CONNECT it needs premium #windows #linux
 * Update: On Windows the VPN runs as a service: it starts with Windows, the connection no longer depends on the window, and the window and its tray no longer ask for administrator rights. The first time you open this version, your settings, profiles, split lists and sign-in move into the service, and your device keeps its identity #windows
 * Update: On Windows and Linux only an administrator can use the app; on a standard account its window says so #windows #linux

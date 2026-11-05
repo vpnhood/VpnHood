@@ -115,10 +115,14 @@ vhclient status
 | `vhclient status [--json] [--watch]` | What the app is doing, and a newer version on its way: downloading, waiting for the VPN to disconnect, installing. |
 | `vhclient locations [--profile P] [--json]` | The server locations a profile offers. |
 | `vhclient always-on [on\|off]` | Connects when the service starts, before anyone signs in, and again after a failure to reach a server, waiting longer each time; a refused key, a used-up quota or a disconnect stops it until the next connect. Bare, it says which; `status` says what it is doing. |
+| `vhclient kill-switch [off\|until-disconnect\|lockdown]` | Lets nothing out but the VPN tunnel: from a connect until a disconnect, through a crash and a reboot, or with `lockdown` after a disconnect too. Bare, it says which. `sudo vhclient kill-switch off` lifts the block with the service stopped too. |
 | `vhclient profile list [--json]` *(CLIENT only)* | Profiles on this device; `*` marks the one connect uses. |
 | `vhclient profile add <access-key>` *(CLIENT only)* | Adds a profile from an access key, or from the path of a file holding one. |
 | `vhclient profile remove <profile>` *(CLIENT only)* | Removes one. |
 | `vhclient profile set-default <profile>` *(CLIENT only)* | Chooses the profile `connect` uses when given none. |
+| `vhconnect sign-in [email]` *(CONNECT only)* | Signs in to the account, so a machine with no window can use its plan. It asks for the password with nothing shown, or reads it from standard input, then a second factor's code the same way. Signed in already, it says as whom. |
+| `vhconnect sign-out` *(CONNECT only)* | Signs out. |
+| `vhconnect premium-code [code\|remove]` *(CONNECT only)* | Sets the premium code the app connects with, as the window's dialog does; `remove` takes it off. Bare, it says whether one is set. |
 | `vhclient update` | Installs the newer version now, downloading it first, even with updates off; the VPN disconnects while it installs. Exit 0 once the install has started, or when there is none; `status` says when the service is back. |
 | `vhclient service start\|stop\|restart` | Drives the systemd unit. Asks for your password. |
 | `vhclient service status` | What systemd says. No password needed. |
@@ -203,6 +207,16 @@ sudo su -c "bash <(wget -qO- https://.../VpnHoodClient-linux.sh) -q"
 sudo vhclient profile add /root/access-key.txt
 vhclient connect --location US/Virginia
 vhclient status
+```
+
+VpnHood! CONNECT has no key to add: it connects on the plan of an account or a premium code, so a machine
+with no window signs in first, and a script gives the password on standard input:
+
+```bash
+vhconnect sign-in you@example.com            # or: vhconnect premium-code XXXX-XXXX-XXXX-XXXX-XXXX
+printf '%s
+' "$PASSWORD" | vhconnect sign-in you@example.com
+vhconnect connect
 ```
 
 To connect on boot, add a unit that waits for the service and then asks it to connect:

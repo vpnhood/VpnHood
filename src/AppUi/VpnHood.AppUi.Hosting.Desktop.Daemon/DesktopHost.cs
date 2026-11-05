@@ -74,6 +74,14 @@ public static class DesktopHost
         if (initParams.IsAddAccessKeySupported)
             rootCommand.Subcommands.Add(ProfileCommand.Create(platform));
 
+        // A head that cannot be given a key has its plan from an account or a premium code instead, which a box
+        // with no window has no other way to give it.
+        if (!initParams.IsAddAccessKeySupported) {
+            rootCommand.Subcommands.Add(SignInCommand.Create(platform));
+            rootCommand.Subcommands.Add(SignInCommand.CreateSignOut(platform));
+            rootCommand.Subcommands.Add(PremiumCodeCommand.Create(platform));
+        }
+
         rootCommand.Subcommands.Add(UpdateCommand.Create(platform));
         rootCommand.Subcommands.Add(ServiceCommand.Create(platform));
         rootCommand.Subcommands.Add(UiCommand.Create(platform, initParams, mainThread));

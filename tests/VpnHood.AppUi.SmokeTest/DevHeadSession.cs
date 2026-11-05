@@ -10,12 +10,14 @@ namespace VpnHood.AppUi.SmokeTest;
 // own and nothing an installed client wrote is read, changed or deleted; the folder is made fresh,
 // so every walk is a first run and sees what a new install sees, the terms page included.
 // "--connect" asks for the Connect product's look, which is the one most people meet. "--no-activate" keeps the
-// keyboard where it is: a person goes on typing in another window while the walk runs.
+// keyboard where it is: a person goes on typing in another window while the walk runs. "--minimized" keeps the window
+// out of their way too, unless the run is for its pictures: a minimized window draws none.
 internal sealed class DevHeadSession : IDisposable
 {
     // Named for what it is, and never anything else, because this folder gets deleted.
     private const string StorageFolderName = "VpnHood.UiSmokeTest";
     private const string ExecutableName = "VpnHoodAvaloniaDev.exe";
+    private const string PicturesVariable = "VH_UI_WALK_PICTURES";
 
     private DevHeadSession(UiDriver driver, string storageFolderPath)
     {
@@ -36,8 +38,11 @@ internal sealed class DevHeadSession : IDisposable
         DeleteStorageFolder(storageFolderPath);
         // --sample-key gives the run a server profile, without which the location row raises a
         // notice instead of opening a page. It reaches no server; the walk never connects.
-        var driver = UiDriver.Start(executablePath,
-            ["--connect", "--sample-key", "--no-activate", "--storage", StorageFolderName], TimeSpan.FromSeconds(90));
+        string[] arguments = ["--connect", "--sample-key", "--no-activate", "--storage", StorageFolderName];
+        if (Environment.GetEnvironmentVariable(PicturesVariable) != "1")
+            arguments = [.. arguments, "--minimized"];
+
+        var driver = UiDriver.Start(executablePath, arguments, TimeSpan.FromSeconds(90));
 
         return new DevHeadSession(driver, storageFolderPath);
     }

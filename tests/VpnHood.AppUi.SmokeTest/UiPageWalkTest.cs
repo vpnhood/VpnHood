@@ -43,7 +43,7 @@ public class UiPageWalkTest
         _termsWereShown = Session.Driver.TryFind("AcceptButton", TimeSpan.FromSeconds(30)) != null;
         Session.Driver.TrySaveScreenshot(Path.Combine(_pictureFolder, "00-terms.png"));
         if (_termsWereShown)
-            Session.Driver.Invoke("AcceptButton");
+            Session.Driver.Press("AcceptButton");
 
         // the home is where every case below starts
         Session.Driver.Find("ConnectButton");
@@ -87,7 +87,7 @@ public class UiPageWalkTest
     public void DrawerOpensAndShowsItsItems()
     {
         Session.Driver.ReturnHome();
-        Session.Driver.Invoke("MenuButton");
+        Session.Driver.Press("MenuButton");
 
         Assert.IsNotNull(Session.Driver.TryFind("SettingsItem", TimeSpan.FromSeconds(5)), "The drawer has no Settings.");
         Assert.IsNotNull(Session.Driver.TryFind("PrivacyItem", TimeSpan.FromSeconds(5)), "The drawer has no Privacy Policy.");
@@ -132,7 +132,7 @@ public class UiPageWalkTest
     private static void OpenSettings()
     {
         Session.Driver.ReturnHome();
-        Session.Driver.Invoke("MenuButton");
+        Session.Driver.Press("MenuButton");
         OpenPage("SettingsItem", "Settings");
     }
 
@@ -143,7 +143,7 @@ public class UiPageWalkTest
     {
         var driver = Session.Driver;
         var titleBefore = driver.PageTitle;
-        driver.Invoke(control);
+        driver.Press(control);
 
         var title = driver.WaitForPageTitleChange(titleBefore, TimeSpan.FromSeconds(15));
         driver.TrySaveScreenshot(Path.Combine(_pictureFolder, $"{control}.png"));

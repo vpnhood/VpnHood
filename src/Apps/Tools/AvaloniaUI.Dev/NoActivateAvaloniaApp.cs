@@ -1,42 +1,34 @@
 using System.Runtime.InteropServices;
+using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Microsoft.Extensions.Logging;
+using Avalonia.VisualTree;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
 
-// The UI whose window keeps away from the keyboard and the eye ("--no-activate"), for a UI walk run while a person
-// types in another window. It opens without activation and under every other window: every show or move of it is told
-// so, as Avalonia shows a window that is visible already with SW_RESTORE, which activates; and Windows activates it on
-// no click
-// (WS_EX_NOACTIVATE, added each time Avalonia sets the window's styles, with WS_EX_APPWINDOW for the taskbar button
-// such a window loses otherwise). UI Automation's Invoke, which drives the walk, activates it all the same, from
-// outside the app: the foreground is handed back at once to the window that had it, which Windows allows the
-// foreground process. A thread of its own watches the foreground, so a UI thread busy drawing a page cannot hold the
-// hand-back.
+// The UI whose window keeps away from the keyboard ("--no-activate"), for a UI walk run while a person types in another
+// window. It opens without activation: every show or move of it is told so, as Avalonia shows a window that is visible
+// already with SW_RESTORE, which activates; and Windows activates it on no click (WS_EX_NOACTIVATE, added each time
+// Avalonia sets the window's styles, with WS_EX_APPWINDOW for the taskbar button such a window loses otherwise). It stays
+// on top, to be watched over the window they type in, and "--minimized" opens it out of their way.
+// A walk presses through WM_COPYDATA, which names the control. Keep it so: UI Automation's Invoke takes the foreground
+// from outside the app and handing it back does not hold, and a posted click misses in a window minimized after it was
+// shown.
 internal sealed class NoActivateAvaloniaApp : ClassicAvaloniaApp
 {
     private const uint WsExAppWindow = 0x00040000;
     private const uint WsExNoActivate = 0x08000000;
     private const uint WmWindowPosChanging = 0x0046;
-    private const int SwpNoZOrder = 0x0004;
+    private const uint WmCopyData = 0x004A;
     private const int SwpNoActivate = 0x0010;
-    private const uint EventSystemForeground = 0x0003;
-    private const uint WinEventOutOfContext = 0x0000;
-    private const uint WmHandBack = 0x8001; // WM_APP + 1, on the watch thread's own queue
-    private static readonly nint HwndBottom = 1;
 
     // WINDOWPOS: the window and the one it goes after, then x, y, cx and cy, then the flags
-    private static readonly int WindowPosInsertAfterOffset = IntPtr.Size;
     private static readonly int WindowPosFlagsOffset = 2 * IntPtr.Size + 4 * sizeof(int);
-    private static readonly uint ProcessId = (uint)Environment.ProcessId;
 
-    // kept for the hook's life: Windows calls it as long as the process runs
-    private static readonly WinEventProc ForegroundChanged = OnForegroundChanged;
-    private static uint _watchThreadId;
-    private static nint _lastForeignForeground;
+    private Window? _window;
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -45,125 +37,70 @@ internal sealed class NoActivateAvaloniaApp : ClassicAvaloniaApp
             return;
 
         window.ShowActivated = false;
+        if (Environment.GetCommandLineArgs().Contains("--minimized"))
+            window.WindowState = WindowState.Minimized;
+
         if (!OperatingSystem.IsWindows())
             return;
 
+        _window = window;
+        window.Topmost = true;
         Win32Properties.AddWindowStylesCallback(window,
             (style, exStyle) => (style, exStyle | WsExNoActivate | WsExAppWindow));
         Win32Properties.AddWndProcHookCallback(window, OnWindowMessage);
-        WatchForeground();
     }
 
-    // every show or move: without activation, and under every other window, where a person does not see it and it
-    // still draws, for the walk's pictures; a minimized window would not
-    private static nint OnWindowMessage(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)
+    private nint OnWindowMessage(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)
     {
-        if (msg == WmWindowPosChanging) {
-            var flags = Marshal.ReadInt32(lParam, WindowPosFlagsOffset);
-            if ((flags & SwpNoZOrder) == 0)
-                Marshal.WriteIntPtr(lParam, WindowPosInsertAfterOffset, HwndBottom);
-            Marshal.WriteInt32(lParam, WindowPosFlagsOffset, flags | SwpNoActivate);
-        }
+        if (msg == WmWindowPosChanging)
+            Marshal.WriteInt32(lParam, WindowPosFlagsOffset, Marshal.ReadInt32(lParam, WindowPosFlagsOffset) | SwpNoActivate);
 
+        if (msg != WmCopyData)
+            return IntPtr.Zero;
+
+        // Avalonia drops what a hook returns, so the walk's answer goes by ReplyMessage
+        handled = true;
+        var data = Marshal.PtrToStructure<CopyData>(lParam);
+        ReplyMessage(Press(Marshal.PtrToStringUni(data.Text, data.Size / sizeof(char))) ? 1 : 0);
         return IntPtr.Zero;
     }
 
-    // The watch thread: the hook, whose events its message loop delivers, and the hand-back, posted to the same loop
-    // so it comes after the switch that raised it - one asked for within the switch is refused. A watch that cannot
-    // start fails the start: the window would take the keyboard.
-    private static void WatchForeground()
+    // A card carries its name on a container whose Button is a CHILD, while a label's button is an ANCESTOR; a finger
+    // resolves both without thinking, so a press does too. Only Invoke is honoured, never Toggle: a walk reads the app,
+    // it does not change its settings.
+    private bool Press(string name)
     {
-        using var started = new ManualResetEventSlim();
-        var isWatching = false;
-        var thread = new Thread(() => {
-            _watchThreadId = GetCurrentThreadId();
-            _lastForeignForeground = GetForegroundWindow();
-            isWatching = SetWinEventHook(EventSystemForeground, EventSystemForeground, IntPtr.Zero, ForegroundChanged,
-                0, 0, WinEventOutOfContext) != IntPtr.Zero;
-            // ReSharper disable once AccessToDisposedClosure
-            started.Set();
-            if (!isWatching)
-                return;
+        var control = _window?.GetVisualDescendants().OfType<Control>()
+            .FirstOrDefault(x => x.Name == name && x.IsEffectivelyVisible && x.Bounds is { Width: >= 1, Height: >= 1 });
 
-            while (GetMessage(out var message, IntPtr.Zero, 0, 0) > 0) {
-                if (message.Message == WmHandBack && !HandBack())
-                    VhLogger.Instance.LogWarning("Could not hand the foreground back, so the window keeps the keyboard.");
-            }
-        }) { IsBackground = true, Name = "Foreground watch" };
-        thread.Start();
-        started.Wait();
-        if (!isWatching)
-            throw new InvalidOperationException("Could not watch the foreground, so the window could take the keyboard.");
+        return control != null && (TryInvoke(control) ||
+                                   control.GetVisualDescendants().OfType<Control>().Any(TryInvoke) ||
+                                   control.GetVisualAncestors().OfType<Control>().Any(TryInvoke));
     }
 
-    // Windows takes a foreground change only from a thread of the foreground input, which this one joins for the call:
-    // owning the foreground is not enough for a thread of its own
-    private static bool HandBack()
+    private static bool TryInvoke(Control control)
     {
-        var foregroundThreadId = GetWindowThreadProcessId(GetForegroundWindow(), out _);
-        var isAttached = foregroundThreadId != _watchThreadId &&
-                         AttachThreadInput(_watchThreadId, foregroundThreadId, true);
+        if (ControlAutomationPeer.CreatePeerForElement(control).GetProvider<IInvokeProvider>() is not { } provider)
+            return false;
+
         try {
-            return SetForegroundWindow(_lastForeignForeground);
+            provider.Invoke();
+            return true;
         }
-        finally {
-            if (isAttached)
-                AttachThreadInput(_watchThreadId, foregroundThreadId, false);
+        catch (ElementNotEnabledException) {
+            return false;
         }
     }
-
-    private static void OnForegroundChanged(nint hook, uint eventType, nint hWnd, int idObject, int idChild,
-        uint eventThread, uint eventTime)
-    {
-        GetWindowThreadProcessId(hWnd, out var processId);
-        if (processId != ProcessId)
-            _lastForeignForeground = hWnd;
-        else if (_lastForeignForeground != IntPtr.Zero)
-            PostThreadMessage(_watchThreadId, WmHandBack, IntPtr.Zero, IntPtr.Zero);
-    }
-
-    private delegate void WinEventProc(nint hook, uint eventType, nint hWnd, int idObject, int idChild,
-        uint eventThread, uint eventTime);
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct NativeMessage
+    private struct CopyData
     {
-        public nint Window;
-        public uint Message;
-        public nint WParam;
-        public nint LParam;
-        public uint Time;
-        public int PointX;
-        public int PointY;
-        public uint Private;
+        public nint Kind;
+        public int Size;
+        public nint Text;
     }
 
     [DllImport("user32.dll")]
-    private static extern nint SetWinEventHook(uint eventMin, uint eventMax, nint module, WinEventProc callback,
-        uint processId, uint threadId, uint flags);
-
-    [DllImport("user32.dll")]
-    private static extern int GetMessage(out NativeMessage message, nint hWnd, uint filterMin, uint filterMax);
-
-    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool PostThreadMessage(uint threadId, uint msg, nint wParam, nint lParam);
-
-    [DllImport("kernel32.dll")]
-    private static extern uint GetCurrentThreadId();
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool AttachThreadInput(uint attachThreadId, uint attachToThreadId,
-        [MarshalAs(UnmanagedType.Bool)] bool attach);
-
-    [DllImport("user32.dll")]
-    private static extern nint GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(nint hWnd, out uint processId);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetForegroundWindow(nint hWnd);
+    private static extern bool ReplyMessage(nint result);
 }

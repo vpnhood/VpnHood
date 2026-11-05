@@ -29,7 +29,7 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // no one, and whose email sign-in asks for a second factor when the email holds "2fa"
 // (DevAuthenticationProvider); with --tv, as Google TV or Apple TV shows them. Connecting needs the WinDivert driver, so a
 // plain run shows the walk and the pairing; run elevated to connect as well. "--no-activate" makes a window that never
-// takes the keyboard (NoActivateAvaloniaApp), as the UI smoke test runs it.
+// takes the keyboard (NoActivateAvaloniaApp), as the UI smoke test runs it; with "--minimized", one that opens minimized.
 internal static class Program
 {
     [STAThread]

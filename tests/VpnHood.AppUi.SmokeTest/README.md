@@ -16,9 +16,19 @@ It takes about 45 seconds. It needs an interactive desktop to draw on; without o
 reports inconclusive rather than failing. It never connects, so it needs no elevation, no WinDivert
 driver and none of your own keys.
 
-Pictures of every page land in `bin/<config>/net11.0-windows/ui-walk/`, one per control, plus the
-terms page and the home. They are artifacts for you to look at, never assertions: nothing here
+With `VH_UI_WALK_PICTURES=1`, pictures of every page land in `bin/<config>/net11.0-windows/ui-walk/`,
+one per control, plus the terms page and the home. They are artifacts for you to look at, never assertions: nothing here
 compares pixels, so a theme or an asset change cannot fail the run.
+
+## Watching it, or not
+
+The window opens minimized, and the walk never touches the keyboard: it reads the window through
+UI Automation, and the head runs each press itself. Click its taskbar button to watch: it comes up
+on top of the others and stays there. Click your own window to go on typing, and minimize it again
+when it is in your way. The walk goes on either way.
+
+A minimized window draws nothing, so the walk takes no pictures while it is minimized. With
+`VH_UI_WALK_PICTURES=1` the window opens on top instead, for a run that needs them.
 
 ## What it drives, and why that head
 

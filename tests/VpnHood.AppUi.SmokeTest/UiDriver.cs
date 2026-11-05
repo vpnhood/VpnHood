@@ -12,7 +12,7 @@ using System.Windows.Automation;
 namespace VpnHood.AppUi.SmokeTest;
 
 // The window as a test can touch it. Windows publishes every Avalonia control through UI
-// Automation, so the tree a screen reader would read is the tree a walk drives, and a control is
+// Automation, so the tree a screen reader would read is the tree a walk reads, and a control is
 // addressed by its x:Name, which Avalonia reports as the automation id. Nothing here knows a page;
 // it knows only where pages are shown (MainView's Host), to tell when a page change is over.
 internal sealed class UiDriver(Process process) : IDisposable
@@ -83,27 +83,25 @@ internal sealed class UiDriver(Process process) : IDisposable
         return null;
     }
 
-    // A card carries its name on a container whose Button is a CHILD, while a label's button is an
-    // ANCESTOR; a finger resolves both without thinking, so the walk does too. Only Invoke is
-    // honoured, never Toggle: a walk reads the app, it does not change its settings.
-    public void Invoke(string name)
+    // The head runs the press itself, as UI Automation's Invoke would, and says whether anything took it. Invoke from
+    // here would take the foreground from the person typing in another window (see the head's NoActivateAvaloniaApp).
+    public void Press(string name)
     {
-        var element = Find(name);
-        if (TryInvoke(element))
-            return;
+        Find(name);
+        process.Refresh();
+        var text = Marshal.StringToHGlobalUni(name);
+        try {
+            var data = new CopyData { Size = name.Length * sizeof(char), Text = text };
+            if (SendMessageTimeout(process.MainWindowHandle, WmCopyData, 0, ref data, 0,
+                    (uint)FindTimeout.TotalMilliseconds, out var isPressed) == 0)
+                throw new InvalidOperationException($"The head did not answer the press on '{name}'.");
 
-        var inside = element.FindFirst(TreeScope.Descendants,
-            new PropertyCondition(AutomationElement.IsInvokePatternAvailableProperty, true));
-        if (inside != null && TryInvoke(inside))
-            return;
-
-        var walker = TreeWalker.ControlViewWalker;
-        for (var node = walker.GetParent(element); node != null; node = walker.GetParent(node)) {
-            if (TryInvoke(node))
-                return;
+            if (isPressed == 0)
+                throw new InvalidOperationException($"Found '{name}' but nothing on its branch could be pressed.");
         }
-
-        throw new InvalidOperationException($"Found '{name}' but nothing on its branch could be invoked.");
+        finally {
+            Marshal.FreeHGlobal(text);
+        }
     }
 
     // What the page calls itself: a page header's own block, or the title a feature page draws.
@@ -148,7 +146,7 @@ internal sealed class UiDriver(Process process) : IDisposable
 
             // a dialog first: it sits over the page and swallows the page's own back
             if (TryFind("CloseButton") != null) {
-                Invoke("CloseButton");
+                Press("CloseButton");
                 Thread.Sleep(PollDelay);
                 continue;
             }
@@ -157,7 +155,7 @@ internal sealed class UiDriver(Process process) : IDisposable
             // included, so the way out is the drawer's own item: it navigates and closes the
             // drawer in one act, and the page it opens is popped on the next turn of this loop.
             if (TryFind("SettingsItem") != null) {
-                Invoke("SettingsItem");
+                Press("SettingsItem");
                 WaitForPageChange(page);
                 continue;
             }
@@ -167,7 +165,7 @@ internal sealed class UiDriver(Process process) : IDisposable
 
             // a page that saves on the way out (ILeaveGuard) goes once the save is done, not at
             // the press
-            Invoke("BackButton");
+            Press("BackButton");
             WaitForPageChange(page);
         }
 
@@ -235,12 +233,19 @@ internal sealed class UiDriver(Process process) : IDisposable
     // failure to take one is said out loud but changes no result.
     // The window draws itself into the picture (PrintWindow's full content, which a composited window needs), so it
     // needs neither the front nor the keyboard: whatever covers it is not in the picture, and the person typing in
-    // another window keeps typing there.
+    // another window keeps typing there. Only a minimized window draws nothing.
     public void TrySaveScreenshot(string path)
     {
         try {
             process.Refresh();
             var handle = process.MainWindowHandle;
+            if (IsIconic(handle)) {
+                Console.WriteLine($"No picture '{path}': the window is minimized.");
+                return;
+            }
+
+            // between two pages the window draws only its background
+            WaitForOnePage();
             var bounds = Root.Current.BoundingRectangle;
             if (handle == IntPtr.Zero || bounds.IsEmpty || bounds.Width < 1 || bounds.Height < 1 ||
                 !GetWindowRect(handle, out var window))
@@ -348,23 +353,16 @@ internal sealed class UiDriver(Process process) : IDisposable
         }
     }
 
-    private static bool TryInvoke(AutomationElement element)
-    {
-        if (!element.TryGetCurrentPattern(InvokePattern.Pattern, out var pattern))
-            return false;
-
-        try {
-            ((InvokePattern)pattern).Invoke();
-            return true;
-        }
-        catch (Exception) {
-            // The peer refused it. Avalonia raises a bare error for a control that cannot take a
-            // click after all, which reads the same as having no pattern: the caller keeps looking.
-            return false;
-        }
-    }
-
     private const uint PrintWindowRenderFullContent = 0x2;
+    private const uint WmCopyData = 0x004A;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CopyData
+    {
+        public nint Kind;
+        public int Size;
+        public nint Text;
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeRect
@@ -375,7 +373,7 @@ internal sealed class UiDriver(Process process) : IDisposable
         public int Bottom;
     }
 
-    // the plain imports on purpose: the generated ones are unsafe code, and these are two calls
+    // the plain imports on purpose: the generated ones are unsafe code, and these are a few calls
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr hWnd, out NativeRect rect);
@@ -383,4 +381,12 @@ internal sealed class UiDriver(Process process) : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool PrintWindow(IntPtr hWnd, IntPtr hdc, uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern nint SendMessageTimeout(IntPtr hWnd, uint message, nint wParam, ref CopyData data, uint flags,
+        uint timeout, out nint result);
 }

@@ -7,10 +7,14 @@
 		<RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
 		<WasmMainJSPath>wwwroot/main.js</WasmMainJSPath>
 
-		<!-- Interpreted, not AOT: the bundle is served over the LAN to a phone for a few minutes of
-		     settings, and AOT would double it. Trimmed to the full extent: the app's own assemblies are
-		     referenced for their DTOs alone, and the API client's JSON is generated ahead of time; the
-		     reflection path stays on for the few places the shared code still uses it. -->
+		<!-- AOT: every touch on the page is CPU on its one thread, which .NET's interpreter makes a phone
+		     wait for. It doubles the bundle, which travels only over the LAN, and adds minutes to a
+		     publish, and a page's start gains nothing from it. -->
+		<RunAOTCompilation>true</RunAOTCompilation>
+
+		<!-- Trimmed to the full extent: the app's own assemblies are referenced for their DTOs alone, and
+		     the API client's JSON is generated ahead of time; the reflection path stays on for the few
+		     places the shared code still uses it. -->
 		<PublishTrimmed>true</PublishTrimmed>
 		<TrimMode>full</TrimMode>
 		<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>

@@ -121,8 +121,9 @@ to be changed for every feature.
 
 What follows from that:
 
-- **Interpreted, not AOT.** The bundle is served over the LAN for a few minutes of settings; AOT
-  roughly doubles the download for no benefit at that duration.
+- **AOT, not interpreted.** A touch on the page is CPU on its one thread, and in .NET's interpreter
+  a phone waits for it. AOT roughly doubles the bundle, which travels only over the LAN, and adds
+  minutes to a publish; the page's start does not change.
 - **Trimmed in full.** The app's own assemblies are referenced for their DTOs alone, so
   `TrimMode=full` is affordable; the reflection JSON path stays on for the few places shared code
   needs it.

@@ -17,4 +17,13 @@ internal class TestDeviceUiProvider : NullDeviceUiProvider
     // the UI the last settings request was carried out through: which window a request ran as
     public IUiContext? LastSettingsUiContext { get; private set; }
     public override void OpenSettings(IUiContext uiContext) => LastSettingsUiContext = uiContext;
+
+    // what the app last asked of the screen's idle sleep
+    public bool IsScreenKeptOn { get; private set; }
+
+    public override Task KeepScreenOn(IUiContext uiContext, bool value)
+    {
+        IsScreenKeptOn = value;
+        return Task.CompletedTask;
+    }
 }

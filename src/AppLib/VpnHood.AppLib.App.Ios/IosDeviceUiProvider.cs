@@ -14,6 +14,11 @@ public class IosDeviceUiProvider : NullDeviceUiProvider
     // (points * screen scale), which a UI converts back by the screen scale it draws at.
     public override SystemBarsInfo GetBarsInfo(IUiContext uiContext)
     {
+        // A TV has no bars: tvOS's safe area is overscan, which a TV page keeps clear by itself
+        // (AppTheme's .tv .page), and a paired phone's browser takes these heights as its own.
+        if (OperatingSystem.IsTvOS())
+            return SystemBarsInfo.Default;
+
         // BuildAppState may call this off the main thread; SafeAreaInsets must be read on the UI thread.
         return IosUtils.RunOnUiThread(() => {
             var window = GetKeyWindow();
@@ -32,6 +37,13 @@ public class IosDeviceUiProvider : NullDeviceUiProvider
                 BottomHeight = (int)Math.Ceiling(insets.Bottom * scale)
             };
         }).GetAwaiter().GetResult();
+    }
+
+    public override Task KeepScreenOn(IUiContext uiContext, bool value)
+    {
+        return IosUtils.RunOnUiThread(() => {
+            UIApplication.SharedApplication.IdleTimerDisabled = value;
+        });
     }
 
     public override bool IsAppSettingsSupported => true;

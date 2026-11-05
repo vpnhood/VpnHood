@@ -256,6 +256,17 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
             };
     }
 
+    public Task KeepScreenOn(IUiContext uiContext, bool value)
+    {
+        var activity = ((AndroidUiContext)uiContext).Activity;
+        return AndroidUtils.RunOnUiThread(activity, () => {
+            if (value)
+                activity.Window?.AddFlags(WindowManagerFlags.KeepScreenOn);
+            else
+                activity.Window?.ClearFlags(WindowManagerFlags.KeepScreenOn);
+        });
+    }
+
     private void OnRequestPermissionsResult(object? sender, RequestPermissionsResultArgs e)
     {
         if (e.RequestCode != RequestPostNotificationId)

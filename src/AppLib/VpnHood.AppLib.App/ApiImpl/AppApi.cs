@@ -260,12 +260,25 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
     {
         var host = RemoteWebHost;
         await host.EnsureStarted(cancellationToken).Vhc();
+        await KeepScreenOn(host, true).Vhc();
         return BuildRemoteAccessState(host);
     }
 
-    public Task StopRemoteAccess(CancellationToken cancellationToken)
+    public async Task StopRemoteAccess(CancellationToken cancellationToken)
     {
-        return RemoteWebHost.Stop(cancellationToken);
+        var host = RemoteWebHost;
+        await host.Stop(cancellationToken).Vhc();
+        await KeepScreenOn(host, false).Vhc();
+    }
+
+    // The pairing page asks to be left open while someone works on their phone, with the remote down.
+    // A TV that sleeps then suspends the app and cuts them off. A developer's always-on listener answers
+    // to no screen, so it holds none on.
+    private Task KeepScreenOn(IAppWebHost host, bool value)
+    {
+        return AppUiContext.Context is { } uiContext && !host.IsAlwaysOn
+            ? app.Services.DeviceUiProvider.KeepScreenOn(uiContext, value)
+            : Task.CompletedTask;
     }
 
     private static RemoteAccessState BuildRemoteAccessState(IAppWebHost host)

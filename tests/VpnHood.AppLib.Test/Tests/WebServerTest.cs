@@ -9,6 +9,7 @@ using VpnHood.AppLib.App;
 using VpnHood.AppLib.App.Settings;
 using VpnHood.AppLib.App.WebHosting;
 using VpnHood.AppLib.Abstractions.UiContexts;
+using VpnHood.AppLib.Test.Providers;
 // ReSharper disable ShortLivedHttpClient
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -236,6 +237,36 @@ public class WebServerTest : TestAppBase
         AppUiContext.Context = null;
         Assert.IsFalse(remote.IsActive);
         Assert.IsTrue(local.IsActive, "the local host outlives every UI context: the next one loads from it");
+    }
+
+    [TestMethod]
+    public async Task Remote_access_keeps_the_screen_on_until_it_stops()
+    {
+        // someone at their phone leaves the remote down, and a screen that sleeps cuts them off
+        var deviceUiProvider = new TestDeviceUiProvider();
+        var appOptions = CreateWebHostOptions(isDebugMode: false);
+        appOptions.DeviceUiProvider = deviceUiProvider;
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+        Assert.IsFalse(deviceUiProvider.IsScreenKeptOn);
+
+        await app.Api.App.StartRemoteAccess(TestCt);
+        Assert.IsTrue(deviceUiProvider.IsScreenKeptOn);
+
+        await app.Api.App.StopRemoteAccess(TestCt);
+        Assert.IsFalse(deviceUiProvider.IsScreenKeptOn);
+    }
+
+    [TestMethod]
+    public async Task An_always_on_listener_keeps_no_screen_on()
+    {
+        // a developer's listener answers to no screen: nothing would ever let the screen go
+        var deviceUiProvider = new TestDeviceUiProvider();
+        var appOptions = CreateWebHostOptions(isDebugMode: true);
+        appOptions.DeviceUiProvider = deviceUiProvider;
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+
+        await app.Api.App.StartRemoteAccess(TestCt);
+        Assert.IsFalse(deviceUiProvider.IsScreenKeptOn);
     }
 
     [TestMethod]

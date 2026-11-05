@@ -7,6 +7,7 @@ public class NullDeviceUiProvider : IDeviceUiProvider
 {
     public virtual PrivateDns? GetPrivateDns() => null;
     public virtual SystemBarsInfo GetBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
+    public virtual Task KeepScreenOn(IUiContext uiContext, bool value) => Task.CompletedTask;
 
     // True by default: every desktop and phone platform has a browser, and a platform that does not
     // is the one that must say so.

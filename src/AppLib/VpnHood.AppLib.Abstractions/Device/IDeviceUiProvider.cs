@@ -43,4 +43,10 @@ public interface IDeviceUiProvider
 
     PrivateDns? GetPrivateDns();
     SystemBarsInfo GetBarsInfo(IUiContext uiContext);
+
+    /// <summary>
+    /// Holds off the screen's idle sleep while the app is in front, for a page that is meant to stay up
+    /// with nobody at the remote. A device whose screen does not sleep on its own does nothing.
+    /// </summary>
+    Task KeepScreenOn(IUiContext uiContext, bool value);
 }

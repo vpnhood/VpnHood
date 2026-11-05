@@ -93,6 +93,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
         ConnectedText.Text = state.ConnectedDevices.Length == 0
             ? Strings.Current.RemoteAccessNoDevice
             : Strings.Current.RemoteAccessConnectedFrom(string.Join(", ", state.ConnectedDevices.Select(x => x.ToString())));
+        LocalNetworkHint.IsVisible = state.ConnectedDevices.Length == 0;
     }
 
     private void OnDoneClick(object? sender, RoutedEventArgs e)

@@ -1972,6 +1972,9 @@ public sealed partial class Strings
     /// <summary>No device connected yet.</summary>
     public string RemoteAccessNoDevice => Get("REMOTE_ACCESS_NO_DEVICE");
 
+    /// <summary>Won't open on your Android phone? In Settings, allow Nearby devices for your browser.</summary>
+    public string RemoteAccessHintLocalNetwork => Get("REMOTE_ACCESS_HINT_LOCAL_NETWORK");
+
     /// <summary>Connected from {address}.</summary>
     public string RemoteAccessConnectedFrom(object address) => Get("REMOTE_ACCESS_CONNECTED_FROM", ("address", address));
 

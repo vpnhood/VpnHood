@@ -54,6 +54,11 @@
           <TextBlock Classes="body" Text="{Binding RemoteAccessKeepOpen, Source={x:Static res:Strings.Current}}" />
         </Border>
         <TextBlock x:Name="ConnectedText" Classes="muted" Text="{Binding RemoteAccessNoDevice, Source={x:Static res:Strings.Current}}" />
+        <!-- Android can bar a phone's browser from the local network, and the browser then shows only
+             an error that names nothing: until a device arrives, this says where the switch is. -->
+        <Border x:Name="LocalNetworkHint" Classes="alert-warning">
+          <TextBlock Classes="body" Text="{Binding RemoteAccessHintLocalNetwork, Source={x:Static res:Strings.Current}}" />
+        </Border>
         <Button x:Name="DoneButton" Classes="action" Content="{Binding Done, Source={x:Static res:Strings.Current}}"
                 HorizontalAlignment="Right" Click="OnDoneClick" />
       </StackPanel>

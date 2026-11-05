@@ -7,7 +7,8 @@ param(
 );
 
 # Build-only orchestrator: builds the client platforms locally for testing. It does NOT bump the
-# version, distribute, or push. The version bump lives in CI (pub/Invoke-VersionBump.ps1 via bump.yml), NuGet
+# version or distribute, and it pushes nothing of this repo. Only -samples 1 pushes: its update of
+# VpnHood.App.Samples. The version bump lives in CI (pub/Invoke-VersionBump.ps1 via bump.yml), NuGet
 # publishing is CI-only (publish_nugets.yml — never published locally), and the GitHub release is
 # created by publish_client.yml in vpnhood/Vpnhood.App.Client. See pub/RELEASE-STRATEGY.md.
 . "$PSScriptRoot/../lib/Common.ps1"

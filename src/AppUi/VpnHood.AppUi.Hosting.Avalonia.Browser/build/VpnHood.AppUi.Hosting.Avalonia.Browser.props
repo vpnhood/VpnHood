@@ -14,10 +14,11 @@
 
 		<!-- Trimmed to the full extent: the app's own assemblies are referenced for their DTOs alone, and
 		     every JSON type the page reaches is generated ahead of time, so reflection is off. A place
-		     that still needs it warns at publish, and would throw on the page. -->
+		     that still needs it stops the publish, as it would throw on the page. -->
 		<PublishTrimmed>true</PublishTrimmed>
 		<TrimMode>full</TrimMode>
 		<JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+		<ILLinkTreatWarningsAsErrors>true</ILLinkTreatWarningsAsErrors>
 
 		<!-- Nager's two reflection places, by name, as its code is not ours to change. -->
 		<_ExtraTrimmerArgs>$(_ExtraTrimmerArgs) --link-attributes "$(MSBuildThisFileDirectory)Nager.Country.Translation.LinkAttributes.xml"</_ExtraTrimmerArgs>

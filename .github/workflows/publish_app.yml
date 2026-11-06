@@ -459,12 +459,15 @@ jobs:
         with:
           name: ${{ inputs.app }}-android-webnoupdate-arm64
           path: ${{ env.MODULE_DIR }}/android-webnoupdate-arm64
+      # A run that skips these jobs has no such artifact, and a failed download shows as an error on a green run.
       - uses: actions/download-artifact@v8
+        if: needs.publish-play-android.result == 'success'
         continue-on-error: true
         with:
           name: ${{ inputs.app }}-android-play-signed
           path: ${{ env.MODULE_DIR }}/android-google
       - uses: actions/download-artifact@v8
+        if: needs.build-ios.result == 'success'
         continue-on-error: true
         with:
           name: ${{ inputs.app }}-ios

@@ -3,9 +3,7 @@ using VpnHood.Net.Toolkit.Graphics;
 namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 // The shape a desktop UI's window takes on its screen (DesktopWindowFit), in the screen's logical
-// units. It is the UI's layout's, so the UI states it: an Avalonia UI its own
-// (VpnHoodAvaloniaAppBase.WindowFit); a web UI, which has no .NET side, through the head that
-// serves it (WindowsWebViewUi).
+// units. It is the UI's layout's, so the UI states it (VpnHoodAvaloniaAppBase.WindowFit).
 public class DesktopWindowFitOptions
 {
     // the phone's shape the window opens in where its screen has room for it

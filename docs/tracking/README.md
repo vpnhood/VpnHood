@@ -25,7 +25,7 @@ switch](#the-switch)).
 ```mermaid
 graph LR
     subgraph device["the user's device"]
-        UI["UI<br/>Avalonia or a web UI"]
+        UI["UI<br/>Avalonia or a fork's own"]
         APP["the app<br/>VpnHoodApp"]
         SVC["the VPN service<br/>VpnHoodClient"]
     end
@@ -161,14 +161,14 @@ server reports to this id too, until the fork turns that off or changes the id.
 ## The UI
 
 The UI is one concept, whichever one a head runs: the Avalonia UI in every head today, in process or
-as its browser build, or a web UI of a fork's own.
+as its browser build, or a UI of a fork's own.
 
 1. It has no id of its own. What it reports goes through the app API into the app's tracker: a
    rating becomes `vh_user_review`.
 2. It shows the switch on its Privacy page
    ([`PrivacyView`](../../src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/Views/PrivacyView.axaml.cs)),
    and hides it where the build collects nothing.
-3. It adds no analytics of its own. A web UI of one's own
+3. It adds no analytics of its own. A UI of one's own
    may, set up from `AppDescriptor.CustomData`, and only while the switch is on.
 
 ## The switch
@@ -195,7 +195,7 @@ UI of one's own shows its first-run page while that state is set and saves the b
 | A successful `vh_connect_attempt`, and the access manager's `session_start` | `VpnHoodClientConfig.AllowAnonymousTracker` |
 | What the access manager reports by itself | the same, in the hello, from the next connect |
 | `vh_endpoint_status`, and a failed `vh_connect_attempt` | endpoint tracking, which runs only with the switch on |
-| A web UI's own analytics | the web UI itself |
+| Analytics in a UI of one's own | that UI itself |
 
 ## Per head
 

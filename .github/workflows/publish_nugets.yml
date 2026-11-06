@@ -73,6 +73,12 @@ jobs:
           Set-Location src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser
           dotnet workload install wasm-tools
           ./_publish.ps1
+      # The test publish_app.yml's test-app-api-types job runs: a type missing from the page's list would
+      # throw on the page these packages carry. TreatNoTestsAsError: a renamed test would otherwise
+      # match nothing and pass.
+      - name: Test that every API call finds its JSON types
+        shell: pwsh
+        run: dotnet test tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj -c Release --filter "FullyQualifiedName~AppApiJsonTypesTest" -- RunConfiguration.TreatNoTestsAsError=true
       # nuget.org Trusted Publishing: the job's OIDC token buys a key valid for one hour, so it is
       # requested right before the publish. The policy (created by trudyhood, package owner vpnhood)
       # names this repo and this file's NAME - renaming the file breaks publishing until it is updated.

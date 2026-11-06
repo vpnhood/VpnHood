@@ -334,8 +334,11 @@ project is on .NET 11.
 
 In CI the page is built **once**: the `build-browser` job in `publish_app.yml` runs on .NET 10,
 publishes it, and uploads it as the `browser-page` artifact, which all four platform build jobs
-download before they build. Locally, a head build that finds no zip warns and names the script to
-run; the app then has a web host with no page to serve.
+download before they build. They wait for `test-app-api-types` too, which calls every method of the
+app's API against a fake server: a type missing from `AppApiJsonContext` gives no warning when the
+page is published, and throws only when the page makes that call. `publish_nugets.yml` runs the same
+test before the pack. Locally, a head build that finds no zip warns and names the script to run; the
+app then has a web host with no page to serve.
 
 ## What a fork copies
 

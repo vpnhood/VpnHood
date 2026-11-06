@@ -145,24 +145,45 @@ jobs:
           retention-days: 1
           path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip
 
+  # The page reads and writes the app's API only through AppApiJsonContext, and a type missing from
+  # that list gives no trim warning: it throws when the page makes that call. The platform builds
+  # `need` this job, so nothing ships with one. It stands beside build-browser, which takes longer,
+  # so a publish waits no longer for it.
+  test-app-api-types:
+    needs: [verify-release-type]
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v7
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v6
+        with: { global-json-file: code/global.json }
+      # TreatNoTestsAsError: a renamed test would otherwise match nothing and pass.
+      - name: Test that every API call finds its JSON types
+        working-directory: code
+        run: dotnet test tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj -c Release --filter "FullyQualifiedName~AppApiJsonTypesTest" -- RunConfiguration.TreatNoTestsAsError=true
+
   # --- Per-platform builds: each is a small standalone reusable module (single source of truth). ---
   build-linux:
     # TEMP/opt: skipped when only_aab is set so the Android/Play path can be iterated quickly.
-    needs: [verify-release-type, build-browser]
+    needs: [verify-release-type, build-browser, test-app-api-types]
     if: ${{ inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_linux.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
 
   build-windows:
-    needs: [verify-release-type, build-browser]
+    needs: [verify-release-type, build-browser, test-app-api-types]
     if: ${{ inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_windows.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
 
   build-android:
-    needs: [verify-release-type, build-browser]
+    needs: [verify-release-type, build-browser, test-app-api-types]
     if: ${{ inputs.build_android == true }}
     uses: ./.github/workflows/_build_app_android.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
@@ -170,7 +191,7 @@ jobs:
 
   # iOS build (client and connect). Off for connect unless the caller passes build_ios=true.
   build-ios:
-    needs: [verify-release-type, build-browser]
+    needs: [verify-release-type, build-browser, test-app-api-types]
     if: ${{ inputs.build_ios != false && inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_ios.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }

@@ -16,7 +16,7 @@
     <!-- One version for the whole solution. Kept in sync with pub/PubVersion.json by the bump. The file
          version follows it, never the clock: a build depends on its source alone, and a time stamp would
          recompile every project at each new minute. The commit is in the informational version. -->
-    <Version>9.1.870</Version>
+    <Version>9.1.871</Version>
   </PropertyGroup>
 
   <PropertyGroup>

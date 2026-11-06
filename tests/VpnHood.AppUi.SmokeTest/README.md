@@ -39,7 +39,8 @@ after each run, so every run is a first run and the terms page is part of what g
 
 `--sample-key` gives it the engine's own sample token, so there is a server profile and the
 location page has something to draw. The walk never connects, and that token reaches no server of
-ours.
+ours. The folder starts with `/null-capture` in its `settings.json`, so a stray key press on Connect
+would still dial no adapter and leave the machine's routes and DNS alone.
 
 The project references that head only so building the test builds it too; no type of it is used.
 Where its build put it is written into this assembly at build time, so the test searches for

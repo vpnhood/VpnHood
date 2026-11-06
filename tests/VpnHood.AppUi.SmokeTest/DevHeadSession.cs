@@ -36,6 +36,7 @@ internal sealed class DevHeadSession : IDisposable
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), StorageFolderName);
 
         DeleteStorageFolder(storageFolderPath);
+        WriteNullCaptureSettings(storageFolderPath);
         // --sample-key gives the run a server profile, without which the location row raises a
         // notice instead of opening a page. It reaches no server; the walk never connects.
         string[] arguments = ["--connect", "--sample-key", "--no-activate", "--storage", StorageFolderName];
@@ -80,6 +81,15 @@ internal sealed class DevHeadSession : IDisposable
                 "The dev head is not built. Run: dotnet build src/Apps/Tools/AvaloniaUI.Dev", path);
 
         return path;
+    }
+
+    // The walk presses no Connect, but the head has a server profile and a stray key could press it, on a shell that may
+    // be elevated. With this command a connect dials no adapter, so the machine's routes and DNS stay as they are.
+    private static void WriteNullCaptureSettings(string storageFolderPath)
+    {
+        Directory.CreateDirectory(storageFolderPath);
+        File.WriteAllText(Path.Combine(storageFolderPath, "settings.json"),
+            """{ "UserSettings": { "DebugData1": "/null-capture" } }""");
     }
 
     // The head keeps a file or two open for a moment after it dies, so a delete is given a few

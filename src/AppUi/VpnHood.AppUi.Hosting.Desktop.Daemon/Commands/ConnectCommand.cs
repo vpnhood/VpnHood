@@ -1,6 +1,7 @@
 using System.CommandLine;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Sessions;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Platform;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -60,8 +61,8 @@ internal static class ConnectCommand
             await api.App.Connect(vpnProfileId, location, ConnectPlanId.Normal, cancellationToken).Vhc();
         }
         catch (Exception ex) when (ex is not OperationCanceledException) {
-            await Console.Error.WriteLineAsync(ex.Message).Vhc();
-            await PrintPlanHint(api, commandName, isAddAccessKeySupported, vpnProfileId, cancellationToken).Vhc();
+            await PrintFailure(api, commandName, isAddAccessKeySupported, vpnProfileId, ex.Message,
+                cancellationToken).Vhc();
             return 1;
         }
 
@@ -79,25 +80,36 @@ internal static class ConnectCommand
 
             default:
                 // the app's own account of it, which is what the window would be showing
-                await CliPrinter.Error(
-                    state.LastError?.Message ?? $"Not connected. State: {state.ConnectionState}").Vhc();
-                await PrintPlanHint(api, commandName, isAddAccessKeySupported, vpnProfileId, cancellationToken).Vhc();
+                await PrintFailure(api, commandName, isAddAccessKeySupported, vpnProfileId,
+                    state.LastError?.Message ?? $"Not connected. State: {state.ConnectionState}",
+                    cancellationToken).Vhc();
                 return 1;
         }
     }
 
     // What a server's refusal does not say: a head with no key of its own to add connects on the plan an account or
-    // a premium code gives it, and with neither the server only names the plan it was asked for.
-    private static async Task PrintPlanHint(VpnHoodApi api, string commandName, bool isAddAccessKeySupported,
-        Guid vpnProfileId, CancellationToken cancellationToken)
+    // a premium code gives it, and with neither the server only names the plan it was asked for. That refusal gives
+    // way to what to do; any other failure keeps its own message, as it may have nothing to do with the plan.
+    private static async Task PrintFailure(VpnHoodApi api, string commandName, bool isAddAccessKeySupported,
+        Guid vpnProfileId, string message, CancellationToken cancellationToken)
     {
-        if (isAddAccessKeySupported)
+        if (isAddAccessKeySupported ||
+            !string.IsNullOrEmpty(await api.VpnProfiles.GetAccessCode(vpnProfileId, cancellationToken).Vhc())) {
+            await CliPrinter.Error(message).Vhc();
             return;
+        }
 
-        var accessCode = await api.VpnProfiles.GetAccessCode(vpnProfileId, cancellationToken).Vhc();
-        if (string.IsNullOrEmpty(accessCode) && await api.Account.Get(cancellationToken).Vhc() == null)
-            await Console.Error.WriteLineAsync(
-                $"Sign in first: {commandName} sign-in, or use a premium code: {commandName} premium-code <code>").Vhc();
+        var state = await api.App.GetState(cancellationToken).Vhc();
+        var isPlanRejected = state.LastError?.Data.GetValueOrDefault("ErrorCode") == nameof(SessionErrorCode.PlanRejected);
+        var isSignedIn = await api.Account.Get(cancellationToken).Vhc() != null;
+        if (!isPlanRejected)
+            await CliPrinter.Error(message).Vhc();
+
+        var premiumCode = $"use a premium code: {commandName} premium-code <code>";
+        if (!isSignedIn)
+            await CliPrinter.Error($"Sign in first: {commandName} sign-in, or {premiumCode}").Vhc();
+        else if (isPlanRejected)
+            await CliPrinter.Error($"This account has no Premium plan. Get one on the account website, or {premiumCode}").Vhc();
     }
 
     // Until the app stops moving: every state but the ones that mean "still trying" is an answer.

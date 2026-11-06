@@ -144,7 +144,7 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    CI never rewrites the changelog — at release time the first H1 (`#`) section becomes the GitHub
    release note (the other product's lines dropped, tags stripped), and the **store release notes**
    are generated from the same section by each store repo's `update-release-notes.yml` (extract →
-   vhtranslator → fastlane; see the store pipeline README in VpnHood.AppUi.Spa `src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store/`) —
+   vhtranslator → fastlane; see `src/Apps/Tools/StoreListing/README.md`) —
    run it after editing the section, before publishing. Update the `# Latest` section yourself each
    cycle. Commit + push as normal work.
 3. Run `pub/Client/PublishByGithub.ps1` (or `pub/Connect/PublishByGithub.ps1`). It prompts for the
@@ -243,7 +243,7 @@ override with `-revision <n>`). Implemented directly in
 [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1) **discovers** the packages to publish
 instead of carrying a hand-maintained list: it globs `src/**/*.csproj` and packs every project that
 does **not** opt out with `<IsPackable>false</IsPackable>` — the standard .NET convention. Apps under
-`src/Apps` and the `VpnHood.AppLib.Api.SwaggerHost` stub declare `IsPackable=false`; every library under
+`src/Apps` declare `IsPackable=false`; every library under
 `src/Net`, `src/Core` and `src/AppLib` is packable by default. To publish a new library, just add it — no script
 edit. To keep one out, set `IsPackable=false` on it.
 

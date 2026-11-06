@@ -66,8 +66,7 @@ or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words o
    no words for, a dialog over the page, an error the UI logged, a missing final at install time —
    each one fails the run. A silent fallback would ship a broken listing.
 5. **Numbers in a patch have the app's own type.** The fixture goes through the typed API, so a
-   value for an integer field must be whole. `82.4 * 100_000` is not an integer in JavaScript, which
-   is what the retired engine used to write.
+   value for an integer field must be whole. `82.4 * 100_000` is not an integer in JavaScript.
 6. **The purchase page is never in a public listing.** It shows prices, and prices change while a
    listing's pictures stay for months. `generate` refuses a store set that names it
    (`PageRoutes.IsReviewOnly`); it is drawn only for a store's reviewers, as below.
@@ -118,10 +117,5 @@ confirm it.
 
 Screenshots are one of six things a listing needs. The others — the translated store texts, the
 release notes, the publish-state gate, the App Store screenshot sync, the icon alpha check and the
-subscription texts — are still JavaScript tools in `vpnhood/VpnHood.AppUi.Spa`, called by the store
-repos' workflows, and are described by that repo's `e2e/store/README.md`. They have to move here
-too before that repo can be archived.
-
-The asset store's images, flags and fonts are still built from that repo as well (`_sync-assets.ps1`
-reads its `dist`), until they become a module of their own; its words are written in the store
-already.
+subscription texts — are the JavaScript tools in [`../StoreListing`](../StoreListing/README.md),
+called by the store repos' workflows. That folder's README is the map of the whole pipeline.

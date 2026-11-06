@@ -4,8 +4,8 @@
 // (the StoreKit product IS the plan+cycle — see AppStoreBillingProvider). This script talks to the
 // App Store Connect REST API to (a) REPORT what is configured today and (b) later CREATE/PRICE the
 // two products. It is deliberately zero-dependency (Node built-ins only: crypto for the ES256 JWT,
-// global fetch for HTTP) so CI needs no `npm install` — the same posture as the WebUI repo's
-// store-asc-screenshots.mjs.
+// global fetch for HTTP) so CI needs no `npm install` — the same posture as
+// src/Apps/Tools/StoreListing/store-asc-screenshots.mjs.
 //
 // Auth: the three standard secrets this repo already uses for the App Store (see docs/cicd/deployment.md),
 // read from the environment:

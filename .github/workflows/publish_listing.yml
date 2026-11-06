@@ -31,8 +31,8 @@ on:
         description: "iOS bundle identifier of the app whose listing is being published."
         type: string
         required: true
-      webui_ref:
-        description: "vpnhood/VpnHood.AppUi.Spa ref supplying the store tooling."
+      tools_ref:
+        description: "vpnhood/VpnHood ref supplying the store tooling."
         type: string
         required: false
         default: develop
@@ -67,14 +67,16 @@ jobs:
       - name: Checkout the store assets (caller repo)
         uses: actions/checkout@v7
 
-      # The store tooling lives beside the generators that produce this listing. store-publish-state
-      # uses only Node built-ins, so there is nothing to install.
+      # The store tooling is one folder of the main repo, and only that folder is checked out.
+      # store-publish-state uses only Node built-ins, so there is nothing to install.
       - name: Checkout the store tooling
         uses: actions/checkout@v7
         with:
-          repository: vpnhood/VpnHood.AppUi.Spa
-          ref: ${{ inputs.webui_ref }}
-          path: .webui
+          repository: vpnhood/VpnHood
+          ref: ${{ inputs.tools_ref }}
+          path: .vh
+          sparse-checkout: src/Apps/Tools/StoreListing
+          sparse-checkout-cone-mode: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -83,7 +85,7 @@ jobs:
 
       - name: Compare against the last published listing
         id: state
-        run: node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE"
+        run: node .vh/src/Apps/Tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE"
 
       # Apple never carries "What's New" over to a newly created version — the field starts empty
       # and is required per localization — while the fingerprint above compares only repo content.
@@ -96,7 +98,7 @@ jobs:
         if: steps.state.outputs.ios_changed != 'true' && inputs.force != true && inputs.skip_metadata != true && inputs.skip_screenshots != true && env.APPSTORE_CONNECT_API_KEY != ''
         run: |
           set +e
-          node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --whatsnew-check
+          node .vh/src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --whatsnew-check
           rc=$?
           set -e
           if [ "$rc" = "4" ]; then
@@ -134,7 +136,7 @@ jobs:
     uses: ./.github/workflows/_publish_listing_appstore.yml
     with:
       app_identifier: ${{ inputs.app_identifier }}
-      webui_ref: ${{ inputs.webui_ref }}
+      tools_ref: ${{ inputs.tools_ref }}
       skip_metadata: ${{ inputs.skip_metadata }}
       skip_screenshots: ${{ inputs.skip_screenshots }}
     secrets: inherit
@@ -161,9 +163,11 @@ jobs:
       - name: Checkout the store tooling
         uses: actions/checkout@v7
         with:
-          repository: vpnhood/VpnHood.AppUi.Spa
-          ref: ${{ inputs.webui_ref }}
-          path: .webui
+          repository: vpnhood/VpnHood
+          ref: ${{ inputs.tools_ref }}
+          path: .vh
+          sparse-checkout: src/Apps/Tools/StoreListing
+          sparse-checkout-cone-mode: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -174,11 +178,11 @@ jobs:
       # other half as "already published". Only a complete push may be recorded.
       - name: Record the App Store listing
         if: needs.appstore.outputs.published == 'true' && !inputs.skip_metadata && !inputs.skip_screenshots
-        run: node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update ios
+        run: node .vh/src/Apps/Tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update ios
 
       - name: Record the Google Play listing
         if: needs.play.outputs.published == 'true'
-        run: node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update android
+        run: node .vh/src/Apps/Tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update android
 
       - name: Commit the published fingerprints
         run: |

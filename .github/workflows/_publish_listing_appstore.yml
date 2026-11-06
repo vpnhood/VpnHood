@@ -7,7 +7,7 @@ name: Publish Listing · App Store (module)
 #
 # The push is split in two on purpose:
 #   text        fastlane deliver (skip_screenshots) — small payload, reliable.
-#   screenshots store-asc-screenshots.mjs from the WebUI repo — a checksum SYNC, not deliver.
+#   screenshots store-asc-screenshots.mjs — a checksum SYNC, not deliver.
 # deliver's own screenshot mode deletes every screenshot on the version and re-creates all of them
 # each run; Apple's deletes are eventually consistent, so a re-created file can collide with a
 # half-deleted ghost, the API 500s that write, and deliver retries forever — that wedged this
@@ -28,8 +28,8 @@ on:
         description: "iOS bundle identifier whose listing is being pushed (e.g. com.vpnhood.client.ios)."
         type: string
         required: true
-      webui_ref:
-        description: "vpnhood/VpnHood.AppUi.Spa ref supplying the screenshot sync tool."
+      tools_ref:
+        description: "vpnhood/VpnHood ref supplying the screenshot sync tool."
         type: string
         required: false
         default: develop
@@ -70,15 +70,17 @@ jobs:
         if: env.APPSTORE_CONNECT_API_KEY != ''
         uses: actions/checkout@v7
 
-      # The sync tool ships with the screenshot engine that generates these images. It has no npm
-      # dependencies — Node built-ins only — so no install step is needed.
+      # The sync tool is in one folder of the main repo, and only that folder is checked out. It has
+      # no npm dependencies — Node built-ins only — so no install step is needed.
       - name: Checkout the store tooling
         if: env.APPSTORE_CONNECT_API_KEY != ''
         uses: actions/checkout@v7
         with:
-          repository: vpnhood/VpnHood.AppUi.Spa
-          ref: ${{ inputs.webui_ref }}
-          path: .webui
+          repository: vpnhood/VpnHood
+          ref: ${{ inputs.tools_ref }}
+          path: .vh
+          sparse-checkout: src/Apps/Tools/StoreListing
+          sparse-checkout-cone-mode: false
 
       - name: Set up Node.js
         if: env.APPSTORE_CONNECT_API_KEY != ''
@@ -94,7 +96,7 @@ jobs:
         if: env.APPSTORE_CONNECT_API_KEY != ''
         run: |
           set +e
-          node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --editable-check
+          node .vh/src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --editable-check
           rc=$?
           set -e
           if [ "$rc" = "0" ]; then
@@ -147,7 +149,7 @@ jobs:
 
       - name: Sync the listing screenshots (checksum diff)
         if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true' && inputs.skip_screenshots != true
-        run: node .webui/src/VpnHood.AppUi.Presentation.Classic.Spa/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE"
+        run: node .vh/src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE"
 
       # published=true only when the listing was actually writable: a locked listing must NOT be
       # recorded, so the gate publishes the pending content once a new version opens.

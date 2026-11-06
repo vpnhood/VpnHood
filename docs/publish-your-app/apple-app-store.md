@@ -156,7 +156,7 @@ review round for the products. Write the English strings once in
 store text, and push them with:
 
 ```bash
-node e2e/store-subscriptions.mjs --bundle-id <your.bundle.id> --root <your store repo> --keys-dir <your keys>
+node src/Apps/Tools/StoreListing/store-subscriptions.mjs --bundle-id <your.bundle.id> --root <your store repo> --keys-dir <your keys>
 ```
 
 It refuses over-length text rather than truncating it (Apple allows 30 characters for a display name

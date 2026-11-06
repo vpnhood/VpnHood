@@ -141,6 +141,7 @@ src/Apps/
 └── Tools/
     ├── AvaloniaUI.Dev/             the Avalonia UI on a PC, for a developer
     ├── MacShim/                    an Xcode stub that installs iOS dev profiles on a Mac
+    ├── StoreListing/               the store listing's tools: texts, release notes, the publish gate
     └── StoreScreenshots/           renders the store screenshots
 ```
 
@@ -236,7 +237,7 @@ heads build on, and any product-wide constant — Connect's premium feature list
 CLIENT's access-key forms (`ClientAccessKeys`). Its `android/locales_config.xml` is the languages its
 Android heads offer ([What every Android app shares](#what-every-android-app-shares)). A
 setting the appsettings do not name takes its default: a switch and the look have one in code
-(`ShowPoweredBy` on, `UiTheme` blue), the web UI's port is 9090, or 9091 in a Debug build, and an
+(`ShowPoweredBy` on, `UiTheme` blue), the web host's port is 9090, or 9091 in a Debug build, and an
 address, an id or a key stays null, so what needs it is off or fails where it is used.
 
 It is deliberately small. Everything that varies per platform stays in the head, and everything

@@ -1,9 +1,11 @@
 using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 
@@ -13,7 +15,8 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // window. It opens without activation: every show or move of it is told so, as Avalonia shows a window that is visible
 // already with SW_RESTORE, which activates; and Windows activates it on no click (WS_EX_NOACTIVATE, added each time
 // Avalonia sets the window's styles, with WS_EX_APPWINDOW for the taskbar button such a window loses otherwise). It stays
-// on top, to be watched over the window they type in, and "--minimized" opens it out of their way.
+// on top, to be watched over the window they type in, and "--minimized" opens it out of their way. A walk may park it
+// off the screen, where it still draws for its pictures: its taskbar button brings it back, and it then stays in view.
 // A walk presses through WM_COPYDATA, which names the control. Keep it so: UI Automation's Invoke takes the foreground
 // from outside the app and handing it back does not hold, and a posted click misses in a window minimized after it was
 // shown.
@@ -21,14 +24,20 @@ internal sealed class NoActivateAvaloniaApp : ClassicAvaloniaApp
 {
     private const uint WsExAppWindow = 0x00040000;
     private const uint WsExNoActivate = 0x08000000;
+    private const uint WmActivate = 0x0006;
     private const uint WmWindowPosChanging = 0x0046;
     private const uint WmCopyData = 0x004A;
+    private const int SwpNoSize = 0x0001;
+    private const int SwpNoMove = 0x0002;
     private const int SwpNoActivate = 0x0010;
+    private const int MinimizedPosition = -32000;
 
     // WINDOWPOS: the window and the one it goes after, then x, y, cx and cy, then the flags
-    private static readonly int WindowPosFlagsOffset = 2 * IntPtr.Size + 4 * sizeof(int);
+    private static readonly int WindowPosXOffset = 2 * IntPtr.Size;
+    private static readonly int WindowPosFlagsOffset = WindowPosXOffset + 4 * sizeof(int);
 
     private Window? _window;
+    private bool _isWatched;
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -52,8 +61,19 @@ internal sealed class NoActivateAvaloniaApp : ClassicAvaloniaApp
 
     private nint OnWindowMessage(nint hWnd, uint msg, nint wParam, nint lParam, ref bool handled)
     {
-        if (msg == WmWindowPosChanging)
-            Marshal.WriteInt32(lParam, WindowPosFlagsOffset, Marshal.ReadInt32(lParam, WindowPosFlagsOffset) | SwpNoActivate);
+        if (msg == WmWindowPosChanging) {
+            var flags = Marshal.ReadInt32(lParam, WindowPosFlagsOffset) | SwpNoActivate;
+            if (_isWatched && IsMoveOffScreen(lParam, flags))
+                flags |= SwpNoMove;
+            Marshal.WriteInt32(lParam, WindowPosFlagsOffset, flags);
+        }
+
+        // Only a person activates this window, by its taskbar button: a walk's presses and posted keys never do. A walk
+        // that activates it would pull it onto their screen.
+        if (msg == WmActivate && (wParam & 0xFFFF) != 0) {
+            _isWatched = true;
+            Dispatcher.UIThread.Post(BringOnScreen);
+        }
 
         if (msg != WmCopyData)
             return IntPtr.Zero;
@@ -63,6 +83,41 @@ internal sealed class NoActivateAvaloniaApp : ClassicAvaloniaApp
         var data = Marshal.PtrToStructure<CopyData>(lParam);
         ReplyMessage(Press(Marshal.PtrToStringUni(data.Text, data.Size / sizeof(char))) ? 1 : 0);
         return IntPtr.Zero;
+    }
+
+    // Windows parks a minimized window at MinimizedPosition, which is no one's move to refuse.
+    private bool IsMoveOffScreen(nint windowPos, int flags)
+    {
+        var x = Marshal.ReadInt32(windowPos, WindowPosXOffset);
+        if ((flags & SwpNoMove) != 0 || x == MinimizedPosition || _window is not { } window)
+            return false;
+
+        var y = Marshal.ReadInt32(windowPos, WindowPosXOffset + sizeof(int));
+        var size = (flags & SwpNoSize) != 0
+            ? PixelSize.FromSize(window.ClientSize, window.RenderScaling)
+            : new PixelSize(Marshal.ReadInt32(windowPos, WindowPosXOffset + 2 * sizeof(int)),
+                Marshal.ReadInt32(windowPos, WindowPosXOffset + 3 * sizeof(int)));
+
+        return !IsOnAScreen(window, new PixelRect(new PixelPoint(x, y), size));
+    }
+
+    private void BringOnScreen()
+    {
+        if (_window is not { WindowState: not WindowState.Minimized } window || window.Screens.Primary is not { } screen)
+            return;
+
+        var size = PixelSize.FromSize(window.ClientSize, window.RenderScaling);
+        if (IsOnAScreen(window, new PixelRect(window.Position, size)))
+            return;
+
+        var area = screen.WorkingArea;
+        window.Position = new PixelPoint(area.X + Math.Max(0, (area.Width - size.Width) / 2),
+            area.Y + Math.Max(0, (area.Height - size.Height) / 2));
+    }
+
+    private static bool IsOnAScreen(Window window, PixelRect rect)
+    {
+        return window.Screens.All.Any(x => x.Bounds.Intersects(rect));
     }
 
     // A card carries its name on a container whose Button is a CHILD, while a label's button is an ANCESTOR; a finger

@@ -349,9 +349,10 @@ if ! icu_found; then
 	fi
 fi
 
-# nftables, for the kill switch's block: the service runs nft as the adapter runs ip. Most systems have it;
-# a minimal one, Debian 13's cloud image among them, does not. In /usr/sbin, off a person's PATH. Optional:
-# without it the client connects, and a connect with the kill switch on fails and says why.
+# nftables, for the kill switch's block and to keep a container's DNS off the local network: the service runs
+# nft as the adapter runs ip. Most systems have it; a minimal one, Debian 13's cloud image among them, does not.
+# In /usr/sbin, off a person's PATH. Optional: without it the client connects, a warning says a container's DNS
+# may reach the local network, and a connect with the kill switch on fails and says why.
 function nft_found() {
 	[ -x /usr/sbin/nft ] || [ -x /sbin/nft ] || [ -x /usr/bin/nft ];
 }

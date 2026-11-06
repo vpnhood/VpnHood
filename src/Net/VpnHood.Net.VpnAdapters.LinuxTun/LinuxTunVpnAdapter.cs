@@ -52,6 +52,11 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private string? _primaryAdapterName;
     private bool _isResolvconfDnsSet;
 
+    // The VPN's servers while forwarded DNS goes to them. Set before the rule, so a stop's cleanup finds the rule of a
+    // start it overtook; a network change rewrites the rule only while they are set.
+    private readonly Lock _dnsRedirectLock = new();
+    private IPAddress[]? _dnsRedirectServers;
+
     // The networks AddNat added rules for, which AdapterRemove removes. Not the adapter's networks, which a stop
     // clears, and kept after a removal: a start the stop overtook may still add rules, which its cleanup removes
     private IpNetwork? _natNetworkV4;
@@ -80,6 +85,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
         _adapterAlias = adapterSettings.AppId == null ? null : GetAdapterAlias(adapterSettings.AppId);
         _senderStopWaitTimeout = StopWaitTimeout + adapterSettings.MaxPacketSendDelay * 2;
+
+        // a client keeps its adapter on a new network, whose addresses the redirect names
+        PrimaryNetworkChanged += (_, _) => ApplyDnsRedirect();
     }
 
     // A set-down link stays listed but loses IFF_UP, and the kernel drops its routes; a fresh tun has the
@@ -170,14 +178,17 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     // At the daemon's start, after its single-instance lock, rather than at the next connect: what a crashed
     // run left. Its tun went with its process, but the resolvconf fallback's DNS entry outlives it, which
-    // would keep resolv.conf on the VPN's nameserver. Nothing here throws but for a name the kernel refuses.
+    // would keep resolv.conf on the VPN's nameserver, and the kernel keeps the DNS redirect's tables. Nothing
+    // here throws but for a name the kernel refuses.
     public static void RemoveLeftovers(string appId, string adapterName)
     {
         if (!IsValidAdapterName(adapterName))
             throw new ArgumentException($"'{adapterName}' is not a valid Linux interface name.", nameof(adapterName));
 
-        if (!LinuxTunInfo.InterfaceExists(adapterName))
+        if (!LinuxTunInfo.InterfaceExists(adapterName)) {
             TryRemoveResolvconfDns(adapterName);
+            TryRemoveDnsRedirect(adapterName, LogLevel.Debug);
+        }
 
 #pragma warning disable CS0618 // Type or member is obsolete
         RemoveKeptTuns(appId);
@@ -368,6 +379,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // stop removed the interface
         if (tunAdapterFd != InvalidFd || _isResolvconfDnsSet)
             RemoveOwnResolvconfDns();
+
+        RemoveDnsRedirect();
 
         // the tun goes with its last open file, which a reader's poll may still hold: the delete takes it
         // now, and wakes that poll
@@ -574,6 +587,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     private const string ResolvConfPath = "/etc/resolv.conf";
 
+    // What systemd-resolved knows, every link's servers: not its stub, which a container cannot reach
+    private const string ResolvedServersPath = "/run/systemd/resolve/resolv.conf";
+
     private const string DnsServersError =
         "Could not set the VPN's DNS servers. Install and turn on systemd-resolved " +
         "(systemctl enable --now systemd-resolved) and link /etc/resolv.conf to " +
@@ -695,6 +711,11 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             : string.Empty;
         if (!IsResolvConfOnVpnDns(resolvConf, dnsServers))
             throw new Exception($"{DnsServersError}\n{ResolvConfPath} does not use them, so DNS would go around the VPN.");
+
+        lock (_dnsRedirectLock)
+            _dnsRedirectServers = dnsServers.ToArray();
+
+        ApplyDnsRedirect();
     }
 
     // Every server in resolv.conf is systemd-resolved's stub or one of the VPN's. A file with none counts as
@@ -702,13 +723,140 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     public static bool IsResolvConfOnVpnDns(string resolvConf, IEnumerable<IPAddress> dnsServers)
     {
         var allowed = dnsServers.Select(x => x.ToString()).Concat(["127.0.0.53", "127.0.0.54"]).ToHashSet();
-        var servers = resolvConf.Split('\n')
+        var servers = GetNameservers(resolvConf).ToArray();
+        return servers.Length > 0 && servers.All(allowed.Contains);
+    }
+
+    private static IEnumerable<string> GetNameservers(string resolvConf)
+    {
+        return resolvConf.Split('\n')
             .Select(x => x.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
             .Where(x => x.Length >= 2 && x[0] == "nameserver")
-            .Select(x => x[1])
+            .Select(x => x[1]);
+    }
+
+    // Docker gives a container on its default network every server systemd-resolved knows, the local network's too,
+    // and a container started before the connect has only that one. Its lookup is forwarded, past systemd-resolved,
+    // and the local network stays off the tunnel, so that server saw every name. While connected, such DNS goes to the
+    // VPN's server. Nothing else changes: a program on this machine never passes prerouting, and what comes in from the
+    // local network or is for this machine is no container's way out, so a DNS server here keeps working. By address:
+    // prerouting is before the route, and nft's fib, which could look it up, is missing from some kernels.
+    // nft, not iptables, as a client has it from the installer. Only forwarded DNS depends on the rule, so a machine
+    // that cannot load it still connects. Never throws: a network change runs it on the OS's thread.
+    private void ApplyDnsRedirect()
+    {
+        lock (_dnsRedirectLock) {
+            if (_dnsRedirectServers == null)
+                return;
+
+            try {
+                ExecuteCommand(LoadNftCommand(CreateDnsRedirectRuleset(_dnsRedirectServers)));
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex,
+                    "Could not keep forwarded DNS off the local network, so a container's lookups may reach it. " +
+                    "Is nftables installed?");
+            }
+        }
+    }
+
+    private string CreateDnsRedirectRuleset(IReadOnlyCollection<IPAddress> vpnDnsServers)
+    {
+        var primaryIps = new[] { PrimaryAdapterIpV4, PrimaryAdapterIpV6 }.OfType<IPAddress>().ToArray();
+        var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(x => IsValidAdapterName(x.Name) &&
+                        x.GetIPProperties().UnicastAddresses.Any(y => primaryIps.Contains(y.Address)))
             .ToArray();
 
-        return servers.Length > 0 && servers.All(allowed.Contains);
+        // a link's fe80:: is on every link and nothing forwards to it
+        var networks = interfaces
+            .SelectMany(x => x.GetIPProperties().UnicastAddresses)
+            .Where(x => !x.Address.IsIPv6LinkLocal)
+            .Select(x => new IpNetwork(x.Address, x.PrefixLength))
+            .ToArray();
+
+        var servers = File.Exists(ResolvedServersPath)
+            ? GetNameservers(File.ReadAllText(ResolvedServersPath))
+            : [];
+
+        return CreateDnsRedirectRuleset(AdapterName, interfaces.Select(x => x.Name), networks, servers, vpnDnsServers);
+    }
+
+    // The old tables go in the same load, so no packet meets neither. A table a family, not one inet table, whose NAT
+    // needs Linux 5.2. Each network's prefix is this machine's address on it. A server off those networks stays off
+    // the tunnel too, as the routes leave out every private range. NAT cannot change a query's family, and the VPN's
+    // servers are often IPv4 alone, so a family with none of them is refused instead, in the forward chain, as a NAT
+    // chain cannot: the resolver goes on to its next server at once.
+    internal static string CreateDnsRedirectRuleset(string adapterName, IEnumerable<string> localInterfaces,
+        IReadOnlyCollection<IpNetwork> localNetworks, IEnumerable<string> localServers,
+        IReadOnlyCollection<IPAddress> vpnDnsServers)
+    {
+        var interfaces = string.Join(", ", localInterfaces.Select(x => $"\"{x}\""));
+        var servers = localServers
+            .Select(x => IPAddress.TryParse(x, out var ipAddress) ? ipAddress : null)
+            .OfType<IPAddress>()
+            .Where(x => !IPAddress.IsLoopback(x) && !x.IsIPv6LinkLocal && !vpnDnsServers.Contains(x))
+            .Select(x => new IpNetwork(x))
+            .ToArray();
+
+        var builder = new StringBuilder(CreateDnsRedirectRemoval(adapterName));
+        foreach (var addressFamily in new[] { AddressFamily.InterNetwork, AddressFamily.InterNetworkV6 }) {
+            var ownNetworks = localNetworks.Where(x => x.AddressFamily == addressFamily).ToArray();
+            var targets = ownNetworks.Concat(servers.Where(x => x.AddressFamily == addressFamily)).Sort().ToArray();
+            if (targets.Length == 0)
+                continue;
+
+            var family = addressFamily == AddressFamily.InterNetwork ? "ip" : "ip6";
+            var vpnDnsServer = vpnDnsServers.FirstOrDefault(x => x.AddressFamily == addressFamily);
+            var ownAddresses = string.Join(", ", ownNetworks.Select(x => x.Prefix));
+            var targetList = string.Join(", ", targets);
+            var udpAction = vpnDnsServer != null ? $"dnat to {vpnDnsServer}" : "reject";
+            var tcpAction = vpnDnsServer != null ? $"dnat to {vpnDnsServer}" : "reject with tcp reset";
+
+            builder.Append($"table {family} {GetDnsRedirectTable(adapterName)} {{\n");
+            builder.Append("  chain dns {\n");
+            builder.Append(vpnDnsServer != null
+                ? "    type nat hook prerouting priority -100; policy accept;\n"
+                : "    type filter hook forward priority 0; policy accept;\n");
+            if (interfaces.Length > 0)
+                builder.Append($"    iifname {{ {interfaces} }} return\n");
+            if (ownAddresses.Length > 0)
+                builder.Append($"    {family} daddr {{ {ownAddresses} }} return\n");
+            builder.Append($"    {family} daddr {{ {targetList} }} udp dport 53 {udpAction}\n");
+            builder.Append($"    {family} daddr {{ {targetList} }} tcp dport 53 {tcpAction}\n");
+            builder.Append("  }\n}\n");
+        }
+
+        return builder.ToString();
+    }
+
+    private static string GetDnsRedirectTable(string adapterName) => $"vpnhood_dns_{adapterName}";
+
+    // A table is made first, as deleting one that is not there would fail the whole load
+    private static string CreateDnsRedirectRemoval(string adapterName)
+    {
+        var table = GetDnsRedirectTable(adapterName);
+        return $"table ip {table}\ndelete table ip {table}\ntable ip6 {table}\ndelete table ip6 {table}\n";
+    }
+
+    private static string LoadNftCommand(string ruleset) => $"printf '%s' '{ruleset}' | nft -f -";
+
+    private void RemoveDnsRedirect()
+    {
+        lock (_dnsRedirectLock) {
+            if (_dnsRedirectServers == null)
+                return;
+
+            _dnsRedirectServers = null;
+            TryRemoveDnsRedirect(AdapterName, LogLevel.Warning);
+        }
+    }
+
+    private static void TryRemoveDnsRedirect(string adapterName, LogLevel failureLevel)
+    {
+        VhInvoker.TryInvoke($"remove the DNS redirect of {adapterName}", failureLevel, () =>
+            ExecuteCommand(
+                $"if command -v nft >/dev/null; then {LoadNftCommand(CreateDnsRedirectRemoval(adapterName))}; fi"));
     }
 
     protected override void WaitForTunRead()

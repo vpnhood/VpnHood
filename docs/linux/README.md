@@ -368,8 +368,9 @@ Points that are easy to get wrong:
 5. **A tun lives with its process, and says whose it is.** The adapter makes its tun itself
    (`TUNSETIFF`), not with `ip tuntap add`, whose tun outlives its process: the kernel removes it, its
    routes and its `resolvectl` DNS with it, once the service ends, by a crash too, as WinTun does on
-   Windows. Only the `resolvconf` fallback's DNS entry outlives a crash, and the service's start,
-   after its single-instance lock on the app id, takes it off. A tun's name says nothing about its
+   Windows. Only the `resolvconf` fallback's DNS entry and the nftables tables that keep a container's
+   DNS off the local network outlive a crash, and the service's start, after its single-instance lock
+   on the app id, takes them off. A tun's name says nothing about its
    owner, so the adapter writes the app id on each one as the interface's alias
    (`ip link set dev VpnHoodClient alias <app id>`; the server writes `com.vpnhood.server`), or its
    first 64 characters, a dash and a hash where an alias cannot hold it as it is. A version before

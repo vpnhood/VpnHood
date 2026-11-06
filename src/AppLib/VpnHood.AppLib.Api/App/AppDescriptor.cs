@@ -76,7 +76,7 @@ public class AppDescriptor
     // a NullTracker — so the UI drops the privacy consent in a build that collects nothing instead of
     // asking which product is running. The user's choice is UserSettings.AllowAnonymousTracker.
     public required bool IsAnonymousTrackerSupported { get; init; }
-    public required bool IsTv { get; init; }
+    public required bool IsTv { get; set; }
     public required AppOsType OsType { get; init; }
     public required string ClientId { get; init; }
     public required bool IsDebugMode { get; init; }

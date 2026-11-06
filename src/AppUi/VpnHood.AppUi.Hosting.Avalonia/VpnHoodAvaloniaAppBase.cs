@@ -74,6 +74,14 @@ public abstract class VpnHoodAvaloniaAppBase : Application
         }
     }
 
+    // A new view in the desktop window, for what the views read only as they are made; a view of any
+    // other host stays as it is.
+    public void ReloadMainView()
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window })
+            window.Content = CreateConfiguredMainView();
+    }
+
     // The view, once the head has configured the UI: the folder it draws from, and the app told
     // which languages it has (VhApp.Configure).
     private Control CreateConfiguredMainView()

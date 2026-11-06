@@ -2,6 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Threading;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
@@ -18,6 +19,7 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
     private readonly MainView _host;
     private readonly DebugCommandItem[] _commands;
     private readonly string[] _unknown;
+    private readonly bool _isTvUi = VhApp.IsTvUi;
 
     public DeveloperView(MainView host)
     {
@@ -86,12 +88,17 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         base.OnDetachedFromVisualTree(e);
     }
 
-    public void Dispose()
+    // Against the layout this page opened in, not the last save: the log page's save may have changed it.
+    // Queued, as the host is still taking this page off its stack, and not at a background priority,
+    // which the home's animation while connecting would hold back.
+    private async Task SaveAndFollowLayout(CancellationToken cancellationToken)
     {
-        Save(CancellationToken.None).Forget("Could not save the debug settings.");
+        await Save(cancellationToken);
+        if (VhApp.IsTvUi != _isTvUi)
+            await Dispatcher.UIThread.InvokeAsync(_host.Recreate, DispatcherPriority.Normal, cancellationToken);
     }
 
-    // Saving applies the settings, so it happens only when something differs: a debug command takes
+    // Saving applies the settings, so it happens only when something differs: most debug commands take
     // effect at the next launch, but the save itself reaches the running app.
     private async Task Save(CancellationToken cancellationToken)
     {
@@ -108,5 +115,10 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
         settings.DebugData1 = newData1;
         settings.DebugData2 = newData2;
         await VhApp.SaveUserSettings(settings, cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        SaveAndFollowLayout(CancellationToken.None).Forget("Could not save the debug settings.");
     }
 }

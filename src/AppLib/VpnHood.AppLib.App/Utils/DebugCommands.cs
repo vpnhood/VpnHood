@@ -15,9 +15,9 @@ public static class DebugCommands
     public const string OsTcpStack = "/os-tcp-stack";
 
     // Reports the device as a TV (AppDescriptor.IsTv), so the TV layout and its reductions can be
-    // worked on from a phone or a desktop. Applies at the next launch, like every feature. Only
-    // what keys off AppDescriptor.IsTv follows it; the device-side gating in AndroidDeviceUiProvider
-    // still reads the real device.
+    // worked on from a phone or a desktop. A desktop window follows it as the developer page closes;
+    // elsewhere it applies at the next launch. Only what keys off AppDescriptor.IsTv follows it; the
+    // device-side gating in AndroidDeviceUiProvider still reads the real device.
     public const string TvMode = "/tv-mode";
 
     // Read by the UI only: it reveals the Starlink Tools page in Settings. The app itself never

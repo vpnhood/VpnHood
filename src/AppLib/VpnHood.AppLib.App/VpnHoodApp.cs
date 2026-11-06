@@ -470,6 +470,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             TaskExtensions.DefaultContinueOnCapturedContext =
                 HasDebugCommand(DebugCommands.CaptureContext);
 
+            // Only where the window makes its views again for it (MainView.Recreate): a phone's stay as they
+            // were made, and would be half in the TV layout until the next launch.
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+                Descriptor.IsTv = _device.IsTv || HasDebugCommand(DebugCommands.TvMode);
+
             // the developer's open door, opened or shut from the running app
             _webHostManager.ApplySettings();
 

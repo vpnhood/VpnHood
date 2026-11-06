@@ -81,7 +81,7 @@ public static class AvaloniaDesktopHost
                      throw new InvalidOperationException("The UI has made no main window.");
         var ui = Application.Current as VpnHoodAvaloniaAppBase ??
                  throw new InvalidOperationException($"The UI is no {nameof(VpnHoodAvaloniaAppBase)}, so it states no window shape.");
-        AvaloniaWindowFit.Apply(window, ui.WindowFit, VhApp.IsTvUi);
+        AvaloniaWindowFit.Apply(window, ui.WindowFit);
         SetTitleBar(window, ui.ChromeColor);
 
         // A person's close only hides the window while the desktop shows the tray, which the UI waits

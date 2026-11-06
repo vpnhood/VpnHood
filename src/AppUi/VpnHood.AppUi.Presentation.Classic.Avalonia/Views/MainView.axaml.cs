@@ -66,8 +66,8 @@ public partial class MainView : UserControl
         InitializeComponent();
         Host.AddHandler(GotFocusEvent, OnPageGotFocus);
         // what a television gets and nothing else does - today the overscan inset of every page's
-        // root (AppTheme). The device's answer never changes while the app runs, so it is a class,
-        // not a binding.
+        // root (AppTheme). The answer holds for this view's life (Recreate), so it is a class, not a
+        // binding.
         Classes.Set("tv", ViewModel.IsTv);
         _snackbarTimer = new DispatcherTimer(DispatcherPriority.Background);
         _snackbarTimer.Tick += (_, _) => HideSnackbar();
@@ -117,6 +117,18 @@ public partial class MainView : UserControl
     {
         _pages.Push(page);
         Show(page, back: false);
+    }
+
+    // The views read the layout as they are made, so a new layout takes a new view, on its home page.
+    // The clock stops here and not in the app's CreateMainView: Android makes a view per activity, and
+    // the activity behind the new one is still alive. Left running, it would read the app beside the
+    // new view's.
+    public void Recreate()
+    {
+        var app = Application.Current as VpnHoodAvaloniaAppBase ??
+                  throw new InvalidOperationException($"The UI is no {nameof(VpnHoodAvaloniaAppBase)}, so it cannot make its view again.");
+        ViewModel.Dispose();
+        app.ReloadMainView();
     }
 
     // The web UI's router.replace: the page takes the current one's place, so Back skips it - the

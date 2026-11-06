@@ -2,11 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Styles.VioletTheme">
 
-  <!-- Violet, the look a head names by setting AppOptions.UiTheme. The keys are the web UI's
-       violet theme, key for key (VioletTheme.Brushes.axaml, generated from theme/themes.ts by
-       _sync-theme.ps1); below them, what the web UI writes as CSS rather than as a key. This file
-       and BlueTheme.axaml carry the same keys and nothing else: a key added to one belongs in
-       the other the same day.
+  <!-- Violet, the look a head names by setting AppOptions.UiTheme. The plain keys are in
+       VioletTheme.Brushes.axaml; below them, what a key of one colour cannot say. This file and
+       BlueTheme.axaml carry the same keys and nothing else: a key added to one belongs in the other
+       the same day.
 
        A class, where BlueTheme.axaml is a file the App's XAML names: nothing but a run-time Uri
        asked for this one, so the trimmer dropped its compiled XAML from the browser bundle and
@@ -18,33 +17,31 @@
     <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/VioletTheme.Brushes.axaml" />
   </ResourceDictionary.MergedDictionaries>
 
-  <!-- #connectBtn.connect-app: flat, where the client's is a gradient -->
+  <!-- the connect button: flat, where the client's is a gradient -->
   <SolidColorBrush x:Key="ConnectBtnBrush" Color="{StaticResource Cream100}" />
 
-  <!-- #homeContainer: both stops purple 500, so a flat ground -->
+  <!-- the home's ground: both stops purple 500, so flat -->
   <SolidColorBrush x:Key="HomeBgBrush" Color="{StaticResource Purple500}" />
 
-  <!-- .primary-bg-grad: colored-bg-dark up to 60%, then to colored-bg-light at the top -->
+  <!-- the feature pages' sheet: colored-bg-dark up to 60%, then to colored-bg-light at the top -->
   <LinearGradientBrush x:Key="PrimaryBgGradBrush" StartPoint="50%,100%" EndPoint="50%,0%">
     <GradientStop Offset="0" Color="{StaticResource Purple600}" />
     <GradientStop Offset="0.6" Color="{StaticResource Purple600}" />
     <GradientStop Offset="1" Color="{StaticResource Purple500}" />
   </LinearGradientBrush>
 
-  <!-- .config-item: config-btn-bg at 70%, its border on-config-btn-bg at 30% -->
+  <!-- a home row: config-btn-bg at 70%, its border on-config-btn-bg at 30% -->
   <SolidColorBrush x:Key="HomeConfigBtnBgBrush" Color="#B3150E3D" />
   <SolidColorBrush x:Key="HomeConfigBtnBorderBrush" Color="#4DE7B481" />
 
   <!-- the update notice's surface: a tone over the home's, as config-btn-bg is the home's own colour
-       here and the notice would melt into it; opaque, as the page under it must not show through;
-       this UI's own -->
+       here and the notice would melt into it; opaque, as the page under it must not show through -->
   <SolidColorBrush x:Key="UpdateNoticeBrush" Color="{StaticResource Purple400}" />
 
-  <!-- .card-on-grad-bg: card-on-grad-bg at 30% -->
+  <!-- a card on the sheet: card-on-grad-bg at 30% -->
   <SolidColorBrush x:Key="CardOnGradBgAlphaBrush" Color="#4D2F296E" />
 
-  <!-- a premium session's connection circle, gold where ConnectionCircleShineBrush is green; this
-       UI's own, not the web UI's -->
+  <!-- a premium session's connection circle, gold where ConnectionCircleShineBrush is green -->
   <SolidColorBrush x:Key="ConnectionCirclePremiumShineBrush" Color="#FFC83D" />
 
 </ResourceDictionary>

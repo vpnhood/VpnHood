@@ -1,15 +1,11 @@
 namespace VpnHood.AppUi.Common;
 
-// Material Design Icons, the web UI's icon set, drawn by code point from the icon font in the
-// assets folder: the same glyph the web UI shows for the same name, and nothing to convert when a
-// page is ported. The code points are the ones @mdi/font's stylesheet names
-// (materialdesignicons.css), read from the web UI's node_modules - a guess at one draws the wrong
-// glyph without a word of warning.
+// Material Design Icons, drawn by code point from the icon font in the assets folder. The code
+// points are the ones @mdi/font's stylesheet names (materialdesignicons.css) - a guess at one draws
+// the wrong glyph without a word of warning.
 //
-// That font is a subset: the SPA build cuts it to the icons its own pages name plus the ones
-// listed in its build/native-ui-icons.txt, which _sync-native-assets.ps1 (in the Avalonia UI
-// project) writes from THIS file. Add an icon here, run that script, and rebuild the SPA - or the
-// glyph is a blank box.
+// That font is a subset, cut to the icons THIS file names. Add an icon here and run
+// _cut-icon-font.py in VpnHood.AppUi.Assets.Classic, or the glyph is a blank box.
 public static class Mdi
 {
     public const string FontFamily = AppFonts.IconFamily;

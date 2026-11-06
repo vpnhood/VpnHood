@@ -38,7 +38,7 @@ internal static class ConnectCommand
             command.Options.Add(profileOption);
 
         command.SetAction((parseResult, cancellationToken) => DaemonSession.Run(platform,
-            (api, token) => Run(api, platform.Paths.CommandName,
+            (api, token) => Run(api, platform.Paths.CommandName, isAddAccessKeySupported,
                 isAddAccessKeySupported ? parseResult.GetValue(profileOption) : null,
                 parseResult.GetValue(locationOption),
                 parseResult.GetValue(noWaitOption), token),
@@ -47,8 +47,8 @@ internal static class ConnectCommand
         return command;
     }
 
-    private static async Task<int> Run(VpnHoodApi api, string commandName, string? profile, string? location,
-        bool noWait, CancellationToken cancellationToken)
+    private static async Task<int> Run(VpnHoodApi api, string commandName, bool isAddAccessKeySupported,
+        string? profile, string? location, bool noWait, CancellationToken cancellationToken)
     {
         // Resolved here rather than left to the app: told nothing, the app connects with the
         // profile it is set to and fails with "VpnProfile is not set" when it is set to none -
@@ -56,7 +56,15 @@ internal static class ConnectCommand
         var info = await api.App.GetInfo(cancellationToken).Vhc();
         var vpnProfileId = ProfileLookup.Resolve(info, profile, commandName);
 
-        await api.App.Connect(vpnProfileId, location, ConnectPlanId.Normal, cancellationToken).Vhc();
+        try {
+            await api.App.Connect(vpnProfileId, location, ConnectPlanId.Normal, cancellationToken).Vhc();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) {
+            await Console.Error.WriteLineAsync(ex.Message).Vhc();
+            await PrintPlanHint(api, commandName, isAddAccessKeySupported, vpnProfileId, cancellationToken).Vhc();
+            return 1;
+        }
+
         if (noWait)
             return 0;
 
@@ -73,8 +81,23 @@ internal static class ConnectCommand
                 // the app's own account of it, which is what the window would be showing
                 await CliPrinter.Error(
                     state.LastError?.Message ?? $"Not connected. State: {state.ConnectionState}").Vhc();
+                await PrintPlanHint(api, commandName, isAddAccessKeySupported, vpnProfileId, cancellationToken).Vhc();
                 return 1;
         }
+    }
+
+    // What a server's refusal does not say: a head with no key of its own to add connects on the plan an account or
+    // a premium code gives it, and with neither the server only names the plan it was asked for.
+    private static async Task PrintPlanHint(VpnHoodApi api, string commandName, bool isAddAccessKeySupported,
+        Guid vpnProfileId, CancellationToken cancellationToken)
+    {
+        if (isAddAccessKeySupported)
+            return;
+
+        var accessCode = await api.VpnProfiles.GetAccessCode(vpnProfileId, cancellationToken).Vhc();
+        if (string.IsNullOrEmpty(accessCode) && await api.Account.Get(cancellationToken).Vhc() == null)
+            await Console.Error.WriteLineAsync(
+                $"Sign in first: {commandName} sign-in, or use a premium code: {commandName} premium-code <code>").Vhc();
     }
 
     // Until the app stops moving: every state but the ones that mean "still trying" is an answer.

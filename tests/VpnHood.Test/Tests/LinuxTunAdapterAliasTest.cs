@@ -1,3 +1,4 @@
+using System.Net;
 using VpnHood.Net.VpnAdapters.LinuxTun;
 
 namespace VpnHood.Test.Tests;
@@ -5,6 +6,21 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class LinuxTunAdapterAliasTest
 {
+    [TestMethod]
+    [DataRow("nameserver 127.0.0.53\noptions edns0 trust-ad\nsearch .\n", true)]
+    [DataRow("# a comment\r\nnameserver 127.0.0.54\r\n", true)]
+    [DataRow("nameserver 8.8.8.8\nnameserver 8.8.4.4\n", true)]
+    [DataRow("nameserver 192.168.1.1\n", false)]
+    [DataRow("nameserver 127.0.0.53\nnameserver 192.168.1.1\n", false)]
+    [DataRow("nameserver 127.0.0.1\n", false)]
+    [DataRow("# nameserver 127.0.0.53\n", false)]
+    [DataRow("", false)]
+    public void ResolvConfMustUseTheVpnDns(string resolvConf, bool expected)
+    {
+        var vpnDns = new[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
+        Assert.AreEqual(expected, LinuxTunVpnAdapter.IsResolvConfOnVpnDns(resolvConf, vpnDns));
+    }
+
     [TestMethod]
     public void ExistingAliasesRemainCompatible()
     {

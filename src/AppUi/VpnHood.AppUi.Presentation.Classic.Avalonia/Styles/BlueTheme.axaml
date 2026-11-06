@@ -3,7 +3,7 @@
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Styles.BlueTheme">
 
   <!-- Blue, the default look. The keys are the web UI's blue theme, key for key
-       (BlueTheme.g.axaml, generated from theme/themes.ts by _sync-theme.ps1); below them, what
+       (BlueTheme.Brushes.axaml, generated from theme/themes.ts by _sync-theme.ps1); below them, what
        the web UI writes as CSS rather than as a key - a gradient, a colour at an alpha - so a page
        ported here paints what it painted there. This file and VioletTheme.axaml carry the same
        keys and nothing else: a key added to one belongs in the other the same day.
@@ -14,7 +14,7 @@
 
   <ResourceDictionary.MergedDictionaries>
     <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/Colors.axaml" />
-    <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/BlueTheme.g.axaml" />
+    <ResourceInclude Source="avares://VpnHood.AppUi.Presentation.Classic.Avalonia/Styles/BlueTheme.Brushes.axaml" />
   </ResourceDictionary.MergedDictionaries>
 
   <!-- #connectBtn.client-app: left to right, the second tone landing at 90%; connected, flat -->

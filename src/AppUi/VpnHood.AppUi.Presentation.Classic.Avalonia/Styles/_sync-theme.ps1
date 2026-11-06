@@ -1,6 +1,6 @@
 # Brings the web UI's palette here: reads theme/colors.ts (the tones) and theme/themes.ts (the two
 # themes, the same keys with two sets of values) from VpnHood.AppUi.Spa and writes
-# Colors.axaml, BlueTheme.g.axaml and VioletTheme.g.axaml - one Color per tone, one brush per
+# Colors.axaml, BlueTheme.Brushes.axaml and VioletTheme.Brushes.axaml - one Color per tone, one brush per
 # theme key, named by the key in PascalCase plus "Brush": 'on-config-btn-bg' is
 # OnConfigBtnBgBrush. A page ported from the web UI names the key it named there, and a key added
 # there arrives here by running this. The hand-written BlueTheme.axaml and VioletTheme.axaml
@@ -124,5 +124,5 @@ function WriteTheme([string] $variable, [string] $fileName, [string] $theme) {
     Write-Host "${fileName}: $count keys.";
 }
 
-WriteTheme "vhBlueThemeColors" "BlueTheme.g.axaml" "blue";
-WriteTheme "vhVioletThemeColors" "VioletTheme.g.axaml" "violet";
+WriteTheme "vhBlueThemeColors" "BlueTheme.Brushes.axaml" "blue";
+WriteTheme "vhVioletThemeColors" "VioletTheme.Brushes.axaml" "violet";

@@ -43,7 +43,7 @@ public static class ClientAppOptions
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AllowEndPointStrategy = appConfigs.AllowEndPointStrategy,
-            WebUiPort = appConfigs.WebUiPort,
+            WebHostPort = appConfigs.WebHostPort,
             IpLocationZipAsset = new Asset(packagedAssetProvider, "iplocations/IpLocations.zip"),
             UiZipAssets = [new Asset(packagedAssetProvider, "assets/ui.zip")],
             // the page a paired phone opens: this same UI, as its browser build

@@ -10,7 +10,7 @@ public class AppConfigs
     public AppLinks Links { get; set; } = new();
     public bool ShowPoweredBy { get; set; } = true;
     public string UiTheme { get; set; } = "blue";
-    public int? WebUiPort { get; set; }
+    public int? WebHostPort { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
     public string? Ga4MeasurementId { get; set; }
     public bool AllowEndPointTracker { get; set; }

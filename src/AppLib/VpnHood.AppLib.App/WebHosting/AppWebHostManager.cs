@@ -17,7 +17,7 @@ namespace VpnHood.AppLib.App.WebHosting;
 // loser bound and unreachable, and Dispose reads the fields - building a host in order to dispose it
 // would be absurd on a head that never opened one.
 internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IAssetProvider? webRoot,
-    int? webUiPort) : IDisposable
+    int? webHostPort) : IDisposable
 {
     private readonly Lock _lock = new();
     private IAppWebHost? _local;
@@ -37,7 +37,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     AppName = app.Descriptor.AppName,
                     LogoAssetPath = app.Descriptor.LogoAssetPath,
                     UiTheme = app.Descriptor.UiTheme,
-                    WebUiPort = WebUiPort,
+                    WebHostPort = WebHostPort,
                     IsAlwaysOn = false,
                     IsTokenRequired = !app.Descriptor.IsDebugMode // a debug build keeps its open door here too
                 });
@@ -59,7 +59,7 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
                     AppName = app.Descriptor.AppName,
                     LogoAssetPath = app.Descriptor.LogoAssetPath,
                     UiTheme = app.Descriptor.UiTheme,
-                    WebUiPort = WebUiPort,
+                    WebHostPort = WebHostPort,
                     IsAlwaysOn = _remoteIsDeveloperAccess, // otherwise a pairing screen holds it
                     IsTokenRequired = !_remoteIsDeveloperAccess
                 });
@@ -73,8 +73,8 @@ internal class AppWebHostManager(VpnHoodApp app, IAppWebHostFactory? factory, IA
         $"The head has set {nameof(AppOptions)}.{nameof(AppOptions.WebHostFactory)} but no " +
         $"{nameof(AppOptions.WebRootZipAsset)}: a web host has no page to serve.");
 
-    // The head's port, or the default AppOptions.WebUiPort promises when it names none.
-    private int WebUiPort => webUiPort ?? (app.Descriptor.IsDebugMode ? 9091 : 9090);
+    // The head's port, or the default AppOptions.WebHostPort promises when it names none.
+    private int WebHostPort => webHostPort ?? (app.Descriptor.IsDebugMode ? 9091 : 9090);
 
     // The developer's open door: remote access comes up without a screen and asks for no pairing, so a
     // UI developer can reach a device from their own machine. A host keeps what it was told when it was

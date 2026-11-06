@@ -153,7 +153,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAssets, NoBackupStorageFolderPath, "ui");
         _webHostManager = new AppWebHostManager(this, options.WebHostFactory,
             AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, NoBackupStorageFolderPath, "web-root"),
-            options.WebUiPort);
+            options.WebHostPort);
 
         _device = device;
         _vpnEngineInfo = options.VpnEngineInfo;

@@ -232,7 +232,7 @@ public class VpnHoodAppWebHost : IAppWebHost
         if (_isRemote && kept.Count == 0 && added.Count == 0 && wanted.Length > 0) {
             _port = VhUtils.GetFreeTcpEndPoint(wanted[0]).Port;
             VhLogger.Instance.LogWarning("Remote access could not take port {ConfiguredPort}; using {Port} instead.",
-                _createParams.WebUiPort, _port);
+                _createParams.WebHostPort, _port);
             added = TryBind(wanted, _port, out lastError);
         }
 
@@ -272,7 +272,7 @@ public class VpnHoodAppWebHost : IAppWebHost
     // and only when no address at all could take it.
     private int ResolvePort()
     {
-        var configuredPort = _createParams.WebUiPort;
+        var configuredPort = _createParams.WebHostPort;
         if (!_isRemote)
             return VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, configuredPort).Port;
 

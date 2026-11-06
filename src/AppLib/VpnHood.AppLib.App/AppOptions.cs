@@ -202,5 +202,5 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // The web host's port, which a paired phone's address and a UI developer's dev server name; two
     // apps on one device need two. Null takes 9090, and 9091 in a Debug build, so a Debug build runs
     // beside the installed app with no settings at all.
-    public int? WebUiPort { get; set; }
+    public int? WebHostPort { get; set; }
 }

@@ -29,7 +29,7 @@ public partial class OptionRow : UserControl
         }
     }
 
-    // the description's own direction: a note the web UI pins dir="ltr" keeps its order under a
+    // the description's own direction: a note pinned left to right keeps its order under a
     // right-to-left row
     public FlowDirection DescriptionFlowDirection {
         get => DescriptionText.FlowDirection;

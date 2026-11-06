@@ -5,7 +5,7 @@ using VpnHood.AppLib.Api.Sessions;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
-// The web UI's getStatusQualityDisplay: a proxy's quality as a word and the theme brush it is
+// A proxy's quality as a word and the theme brush it is
 // shown in; no brush for a quality nothing is known about.
 internal static class ProxyQuality
 {

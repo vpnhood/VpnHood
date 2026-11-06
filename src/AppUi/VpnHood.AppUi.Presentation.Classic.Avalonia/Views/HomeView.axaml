@@ -7,13 +7,13 @@
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.HomeView"
              x:DataType="vm:MainViewModel"
              Background="{StaticResource HomeBgBrush}">
-  <!-- The web UI's home (pages/index.vue): the header - the drawer's door off the TV, the app name,
+  <!-- The header - the drawer's door off the TV, the app name,
        the build - the badges and the premium mark or the countdown, the hero - the speeds, the
        circle, the Connect pill - and the rows: the server or location, the countries split, the
        apps split where the device has apps, the protocol, and on a TV Settings, which hands the
        rest to a phone, with the language and the account in the corner under them. Portrait
-       stacks them, header to rows, as the web UI's single column does; over 600 logical px the
-       hero and the rows sit side by side, as its landscape-home grid does. The placement lives in
+       stacks them, header to rows; over 600 logical px the
+       hero and the rows sit side by side. The placement lives in
        styles, not on the elements: a local value would beat the query. -->
   <UserControl.Styles>
     <Style Selector="StackPanel.hero">
@@ -37,7 +37,7 @@
   </UserControl.Styles>
 
   <Panel>
-    <!-- #homeContainer: the web UI's body-bg over the home's gradient, which is the page's own
+    <!-- The body-bg over the home's gradient, which is the page's own
          background, so it runs under the system bars (MainView); the body-bg reaches under them
          too (the code-behind). Its premium art on the sides is not drawn: a phone's corners on a
          solid fill, it broke a wide page; a premium session shows in the circle's gold instead. -->
@@ -49,8 +49,8 @@
 
     <Grid Classes="page" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto,Auto">
 
-      <!-- HomePageHeader: the drawer's door, the app name in the middle, the build at the end.
-           A row of its own height, held at the top. The name at the web UI's size: an h4 there is
+      <!-- The header: the drawer's door, the app name in the middle, the build at the end.
+           A row of its own height, held at the top. The name is
            bold body text, 15px. -->
       <Grid x:Name="Header" Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" Height="48" VerticalAlignment="Top">
         <Button x:Name="MenuButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -60,8 +60,8 @@
         </Button>
         <TextBlock Grid.Column="1" Classes="h4" FontSize="15" Text="{Binding AppName}" TextAlignment="Center" VerticalAlignment="Center" FlowDirection="LeftToRight" />
         <!-- The version, and the way to the developer page: five taps, or one once a debug field is
-             set - which the chip shows by filling. It never takes the focus, as the web UI's chip
-             does not (tabindex="-1"): a remote has no use for it. A tap counts as the finger lands,
+             set - which the chip shows by filling. It never takes the focus:
+             a remote has no use for it. A tap counts as the finger lands,
              and lands on the header's full height around the chip: the chip is no taller than its
              words, and a tap beside it was lost. -->
         <Panel Grid.Column="2" Background="Transparent" Cursor="Hand" HorizontalAlignment="Right"
@@ -134,7 +134,7 @@
               <TextBlock Classes="mdi muted40" FontSize="16" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
           </Button>
-          <!-- the figures read left to right in every language (ConnectionInfo.vue's dir="ltr") -->
+          <!-- the figures read left to right in every language -->
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16" FlowDirection="LeftToRight">
             <StackPanel Orientation="Horizontal" Spacing="3">
               <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource ActiveBrush}" Text="{x:Static res:Mdi.ArrowDownThin}" />

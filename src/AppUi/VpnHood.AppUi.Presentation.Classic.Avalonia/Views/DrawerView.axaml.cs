@@ -25,8 +25,7 @@ public partial class DrawerView : UserControl
         // the product's logo, by the store path the head named; not the look's to choose
         AppImage.SetSource(Logo, features.LogoAssetPath);
         AppNameText.Text = features.AppName;
-        // app.major.minor.build; the web UI adds its own bundle's build as a fourth segment, which
-        // this UI has none of
+        // app.major.minor.build
         VersionText.Text = features.Version.ToString(3);
 
         PremiumItem.IsVisible = !VhApp.IsPremiumUser && VhApp.IsPremiumSupported && VhApp.CanGoPremium;

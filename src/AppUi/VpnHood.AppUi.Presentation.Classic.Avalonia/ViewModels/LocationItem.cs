@@ -4,7 +4,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 
-// One row of the location list, the web UI's LocationListItem: what the app needs to connect
+// One row of the location list: what the app needs to connect
 // there, and what the person sees. A record with value equality, so the view model replaces the
 // list only when a row differs; the flag and the name are looked up on demand, never compared - the
 // lists are built on every refresh, and a country's name is not needed until its row is drawn

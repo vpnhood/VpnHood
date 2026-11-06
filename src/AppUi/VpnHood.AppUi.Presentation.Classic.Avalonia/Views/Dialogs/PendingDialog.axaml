@@ -3,7 +3,7 @@
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.PendingDialog">
-  <!-- The web UI's PendingDialog: the order is with the store; nothing to press until it answers. -->
+  <!-- The order is with the store; nothing to press until it answers. -->
   <Border Classes="dialog" MaxWidth="360">
     <StackPanel Spacing="12">
       <TextBlock x:Name="TitleText" Classes="dialog-title" IsVisible="False" />

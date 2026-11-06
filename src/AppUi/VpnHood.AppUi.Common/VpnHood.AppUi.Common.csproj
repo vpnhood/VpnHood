@@ -4,7 +4,7 @@
 		<Description>The VpnHood app as a UI sees it, for any UI toolkit: the app's state and API in one place, the words of every language read from the assets folder, and the code that turns the app's state into text - errors, dates, traffic, country names, documents. No toolkit, no theme, no picture, no file of its own</Description>
 	</PropertyGroup>
 
-	<!-- The web UI's src/services and src/helpers, in C#: what a page needs that is not drawing.
+	<!-- What a page needs that is not drawing.
 	     Avalonia, MAUI or anything else builds its pages on this and brings its own toolkit; nothing
 	     here references one. Nothing here references an asset package either: the files - the
 	     pictures and the words alike, locales/<culture>.json - are named here and read through the

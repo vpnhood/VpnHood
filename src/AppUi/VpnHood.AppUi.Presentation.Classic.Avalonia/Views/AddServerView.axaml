@@ -4,7 +4,7 @@
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.AddServerView">
-  <!-- The web UI's AddServerDialog as a page: the key field and what it is for. Shown only where a
+  <!-- The key field and what it is for. Shown only where a
        key can be typed - a TV sends the person to their phone instead (LocationsView). Adding
        connects with the new server, as that dialog does. -->
   <DockPanel Classes="page">

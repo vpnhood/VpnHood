@@ -28,7 +28,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 // (IRootPage), it is left to the host, so Android leaves the app as it should. Every view on the
 // stack takes the input on arrival (FocusDefault), and back on a view where it last was: a remote
 // has no pointer to put focus anywhere, and a keyboard should not need a Tab first. The dialogs,
-// the drawer and the snackbar the web UI's App.vue mounts once beside the router live here too,
+// the drawer and the snackbar live here too,
 // and a page reaches them through its host.
 public partial class MainView : UserControl
 {
@@ -88,13 +88,13 @@ public partial class MainView : UserControl
 
         DrawerContent.RenderTransform = _drawerOffset;
 
-        // the consent a first run asks for, over everything until it is given (App.vue's
-        // isShowPrivacyPolicyDialog), and the usage-data question where the law wants a yes first,
+        // the consent a first run asks for, over everything until it is given,
+        // and the usage-data question where the law wants a yes first,
         // on a build that skips the terms too and for a person who accepted them before
         var features = VhApp.Descriptor;
         if (MainViewModel.IsConsentPending(VhApp.State))
             Navigate(new PrivacyPolicyView(this));
-        // the account, once, for a build that has one (App.vue's onMounted); the pages that change
+        // the account, once, for a build that has one; the pages that change
         // it read it again themselves
         if (features.IsAccountSupported)
             _ = LoadAccount(CancellationToken.None);
@@ -131,12 +131,10 @@ public partial class MainView : UserControl
         app.ReloadMainView();
     }
 
-    // The web UI's router.replace: the page takes the current one's place, so Back skips it - the
+    // The page takes the current one's place, so Back skips it - the
     // drawer's rows, and the pages a dialog opens in place of the one beneath it. The home view is
     // the one page it never takes: replacing it would leave the arriving page at the bottom of the
-    // stack with nothing to go back to, and its Back key dead. (The web UI has that hole - replace
-    // over its first history entry, where router.go(-1) has nowhere to go - and Settings, opened
-    // from the drawer, falls straight into it.)
+    // stack with nothing to go back to, and its Back key dead.
     public void Replace(IPage page)
     {
         if (_pages.Count > 1)
@@ -197,14 +195,13 @@ public partial class MainView : UserControl
 
     // The focus is asked for once the page is laid out: a control that is not yet measured cannot
     // take it, and a remote must find the ring on arrival. The direction picks the transition's
-    // way, as the web UI's router does from the route depth, and where the focus lands.
+    // way and where the focus lands.
     private void Show(IPage page, bool back)
     {
         // The page on its way out takes no more input. The swap is not instant - the transition
         // keeps the leaving page in the tree while it fades - so the second click of a double-click
         // still lands on the row that was just pressed and opens its page a second time; the stack
-        // then holds two of them and Back looks dead, because it comes back to the same page. (The
-        // web UI is spared this by its router, which drops a push of the route it is already on.)
+        // then holds two of them and Back looks dead, because it comes back to the same page.
         if (Host.Content is Control leaving)
             leaving.IsHitTestVisible = false;
         if (page is Control arriving)
@@ -354,7 +351,7 @@ public partial class MainView : UserControl
             e.Handled = true;
     }
 
-    // A keyboard's stand-ins for the Back key, as on the web UI's TV mode - not Backspace in a
+    // A keyboard's stand-ins for the Back key - not Backspace in a
     // field, where it deletes - and the Apple TV remote's Menu (‹ on the newer remotes), which
     // Avalonia hands over as the context-menu key: tvOS's rule is that it goes back, and leaves
     // the app from its first page, where GoBack leaves it to the system. Heard on the top level
@@ -461,7 +458,7 @@ public partial class MainView : UserControl
         return ShowErrorMessage(ErrorMessages.ForText(message, AppErrors.Context));
     }
 
-    // The web UI's processError: the sentence for the failure, with its buttons; a private DNS
+    // The sentence for the failure, with its buttons; a private DNS
     // error opens its page instead, and a silenced one shows nothing.
     public async Task ProcessError(Exception exception)
     {
@@ -627,7 +624,7 @@ public partial class MainView : UserControl
         UpdateNotice.IsVisible = false;
     }
 
-    // UpdateSnackbar.vue: a newer version, with the way to it - the store, else the direct link -
+    // A newer version, with the way to it - the store, else the direct link -
     // and Later, which postpones the notice
     public void ShowUpdateNotice(AppUpdaterStatus status)
     {
@@ -862,7 +859,7 @@ public partial class MainView : UserControl
         _ = SlideDrawer(open: false);
     }
 
-    // Vuetify's temporary navigation drawer, value for value: the panel slides in from the start
+    // The temporary navigation drawer: the panel slides in from the start
     // edge and the scrim comes up with it, over 200ms on the standard curve. The offset is the
     // drawer's own measured width rather than the 300 of its style, and it is taken before the
     // first frame is drawn, so the panel is never seen in place. A slide that is still running when
@@ -896,7 +893,7 @@ public partial class MainView : UserControl
 
     // ---- outbound links ----
 
-    // The web UI's onExternalLinkClick: a TV is not guaranteed a browser, so there the link
+    // A TV is not guaranteed a browser, so there the link
     // becomes a code to scan; anywhere else the device's browser opens it, through the host's shell
     // where it names one (a sandboxed app's, AvaloniaUiHosting.Shell), else through Avalonia's launcher.
     public async Task OpenLink(Uri url, string title, CancellationToken cancellationToken)

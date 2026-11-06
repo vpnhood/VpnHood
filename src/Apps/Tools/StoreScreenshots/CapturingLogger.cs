@@ -4,7 +4,7 @@ namespace VpnHood.App.StoreScreenshots;
 
 // What the UI logs while it renders, kept so an error fails the shot: the pages report a failure
 // through VhLogger before they show it, and a screenshot with an error behind it is not one to
-// ship. The web UI engine reads the browser console for the same reason. It is its own provider,
+// ship. It is its own provider,
 // the one sink of the run.
 internal sealed class CapturingLogger : ILogger, ILoggerProvider
 {

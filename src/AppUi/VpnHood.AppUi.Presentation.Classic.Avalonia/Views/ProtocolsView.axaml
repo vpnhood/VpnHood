@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.ProtocolsView">
-  <!-- The web UI's protocols page: the cloak switch with its reasons and, while cloaked, the blocks
+  <!-- The cloak switch with its reasons and, while cloaked, the blocks
        on other apps' QUIC and UDP under it; then the tunnel's transports as radios under a heading of
        their own, as the QUIC there is not the QUIC blocked above, the one the server cannot carry marked. -->
   <DockPanel Classes="page">

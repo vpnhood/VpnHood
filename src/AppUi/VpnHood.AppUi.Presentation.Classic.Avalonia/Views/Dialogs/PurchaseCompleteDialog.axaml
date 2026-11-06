@@ -3,7 +3,7 @@
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.PurchaseCompleteDialog">
-  <!-- The web UI's PurchaseCompleteDialog: the congratulation, in the active colour, and Close to
+  <!-- The congratulation, in the active colour, and Close to
        the home view. -->
   <Border Classes="dialog active" MaxWidth="420">
     <StackPanel Spacing="12">

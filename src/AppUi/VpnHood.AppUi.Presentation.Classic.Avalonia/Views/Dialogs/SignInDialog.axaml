@@ -3,7 +3,7 @@
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.SignInDialog">
-  <!-- The web UI's SignInDialog: the store's sign-in as the one prominent button, the portal's own
+  <!-- The store's sign-in as the one prominent button, the portal's own
        email and password beneath it - which a TV offers to type on the phone - then the second
        factor in here, and the new backup code shown exactly once. -->
   <Border Classes="dialog" MaxWidth="420">

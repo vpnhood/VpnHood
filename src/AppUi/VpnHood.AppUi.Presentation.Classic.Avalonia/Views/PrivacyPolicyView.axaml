@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.PrivacyPolicyView">
-  <!-- The web UI's privacy-policy page, the consent a first run asks for: the product's own
+  <!-- The consent a first run asks for: the product's own
        summary, the links to the full documents, the usage-data box where the law wants a yes
        first, and Accept - which stay on screen at every text length; only the text scrolls. -->
   <DockPanel Classes="page">

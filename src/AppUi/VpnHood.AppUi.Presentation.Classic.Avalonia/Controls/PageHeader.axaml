@@ -3,9 +3,9 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.PageHeader"
              Padding="0,8,0,20">
-  <!-- The web UI's AppBar: a round back button at the start (not on a TV, whose remote has its
-       own Back), the page's title over the middle, and the page's icon at the end when it has one
-       (a v-card's append-icon). A picture page, whose own picture or big title comes up close
+  <!-- A round back button at the start (not on a TV, whose remote has its
+       own Back), the page's title over the middle, and the page's icon at the end when it has one.
+       A picture page, whose own picture or big title comes up close
        under it, sets a smaller bottom padding. -->
   <Grid Height="43">
     <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick"

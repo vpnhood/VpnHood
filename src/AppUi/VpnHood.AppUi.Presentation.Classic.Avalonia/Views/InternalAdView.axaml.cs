@@ -31,7 +31,7 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
         CountButton.LandFocus();
     }
 
-    // the page holds the leave until the ad has run, as the web UI's route guard does - a debug
+    // the page holds the leave until the ad has run - a debug
     // build is let out
     public Task<bool> CanLeave(CancellationToken cancellationToken)
     {

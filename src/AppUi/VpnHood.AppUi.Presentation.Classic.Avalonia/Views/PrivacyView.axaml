@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.PrivacyView">
-  <!-- The web UI's settings/privacy: the consent to anonymous data, where the build collects any,
+  <!-- The consent to anonymous data, where the build collects any,
        the ad network's consent, where it asked for one, and the privacy policy's link. -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Privacy, Source={x:Static res:Strings.Current}}" />

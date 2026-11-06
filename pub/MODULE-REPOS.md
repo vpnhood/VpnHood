@@ -193,9 +193,7 @@ real work; this is only ergonomics. Copy `VpnHood.Net.Proxies/_publish.ps1` verb
 ## Variant: modules whose payload is generated
 
 The checklist above assumes the package content is committed. A module that generates it at publish
-time (as `VpnHood.AppLib.Assets.ClassicSpa` built its `Resources/spa.zip`, until the SPA became a
-sample, `VpnHood.AppUi.Spa`, 2026-09-21, that ships no package) adds its payload step to the same
-workflow, before the publish step.
+time adds its payload step to the same workflow, before the publish step.
 
 Two rules for the payload step: run it **before** the publish step (the script bumps and commits the
 version before packing, so a payload failure afterwards would burn a version number), and do **not**

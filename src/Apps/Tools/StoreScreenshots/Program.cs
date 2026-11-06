@@ -13,7 +13,7 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.App.StoreScreenshots;
 
 // The Avalonia UI drawn into a PNG, for the store listings: the UI over a fixture of the app's API
-// - the same fixture.json the web UI's screenshot engine answers /api/** from - in a headless top
+// in a headless top
 // level sized as the device, at the device's pixel ratio. No app runs; the pages read VhApp, and
 // VhApp is given the fixture the way a head gives it the app (AvaloniaDesktopHost.Run's second
 // overload, whose API came over HTTP from another process).
@@ -23,10 +23,10 @@ namespace VpnHood.App.StoreScreenshots;
 //       [--patch fixture.ios.json,fixture.app-review.json]
 //
 // One process per shot, deliberately: VhApp and the UI's stores are static, so a page that changed
-// a setting cannot leak into the next shot, and the engine runs shots in parallel as processes the
-// way it runs browser contexts. The exit code says whether the PNG may be used.
+// a setting cannot leak into the next shot, and `generate` runs shots in parallel as processes.
+// The exit code says whether the PNG may be used.
 //
-// The output is lines of `tag       text` (the tag padded to nine columns) that the engine reads:
+// The output is lines of `tag       text` (the tag padded to nine columns) that `generate` reads:
 // captured, opened, hidden, filled, warning and unmocked on stdout, FAILED on stderr.
 internal static class Program
 {
@@ -34,8 +34,7 @@ internal static class Program
     {
         // `generate` makes a whole set (GenerateCommand) and runs the other two itself: `shot`
         // draws one screen with the UI, `frame` dresses one capture in its device. A command line
-        // that names no command takes one shot, which is what the web UI's engine spawns while it
-        // is being retired.
+        // that names no command takes one shot.
         switch (args.FirstOrDefault()) {
             case "generate":
                 return GenerateCommand.Run(args.Skip(1).ToArray(), CancellationToken.None);
@@ -56,7 +55,7 @@ internal static class Program
         }
 
         // what goes wrong before the UI is up is reported the way the shot itself would be: one
-        // line on stderr, exit 1 - the engine relays it under the shot's name
+        // line on stderr, exit 1 - `generate` relays it under the shot's name
         try {
             return Run(args, options, CancellationToken.None);
         }

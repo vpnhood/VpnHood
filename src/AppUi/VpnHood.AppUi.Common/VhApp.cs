@@ -14,8 +14,8 @@ namespace VpnHood.AppUi.Common;
 // paired browser. The pages read plain values held here - the features, the state, the settings,
 // the profiles - and never the app itself, so the same pages run on the device and in a browser.
 // The values are read again through the API: the state every second by the home's clock and after
-// every action, the rest when the state says the configuration moved (AppState.ConfigTime, the
-// web UI's own signal) or a page saved. The web UI's VpnHoodAppData, question for question.
+// every action, the rest when the state says the configuration moved (AppState.ConfigTime)
+// or a page saved.
 public static class VhApp
 {
     private static VpnHoodApi? _api;
@@ -43,7 +43,7 @@ public static class VhApp
     }
 
     // The head's second step, once the UI can say which languages it has: they are declared to
-    // the app as the web UI's configure call declares its own, so the app's language list and its
+    // the app, so the app's language list and its
     // best-culture choice are made from the words that exist. A UI whose words live in files it
     // must first place has placed them by now - that moment is the head's, not a page's.
     public static async Task Configure(IReadOnlyList<string> availableCultures, CancellationToken cancellationToken)
@@ -94,7 +94,7 @@ public static class VhApp
     public static AppState State => _state ?? Info.State;
 
     // Whether this UI is the remote: served by the app to a browser on another device, which is
-    // what the API says of the request that read the configuration (the web UI's isRemote). Never
+    // what the API says of the request that read the configuration. Never
     // on the device itself.
     public static bool IsRemote => Info.IsRemote;
 
@@ -133,8 +133,8 @@ public static class VhApp
         await ReloadInfo(cancellationToken);
     }
 
-    // The account, as the web UI keeps it in UserState: read once at start and after a sign-in,
-    // sign-out or purchase, never polled (account.vue says why).
+    // The account: read once at start and after a sign-in,
+    // sign-out or purchase, never polled.
     public static Account? Account { get; private set; }
 
     public static async Task LoadAccount(bool withRefresh, CancellationToken cancellationToken)
@@ -156,8 +156,8 @@ public static class VhApp
         Account = await Api.Account.Get(cancellationToken);
     }
 
-    // The TV layout: the device's word, unless this UI is the remote - the web UI's isTvUi, which
-    // asks the same two questions. A phone driving a TV gets the phone's layout.
+    // The TV layout: the device's word, unless this UI is the remote.
+    // A phone driving a TV gets the phone's layout.
     public static bool IsTvUi => Descriptor.IsTv && !IsRemote;
 
     // A browser driving a TV: what the TV's own screen asks - a store's sheet, Android's VPN prompt,
@@ -165,7 +165,7 @@ public static class VhApp
     public static bool IsTvRemote => Descriptor.IsTv && IsRemote;
 
     // One built-in profile, called "location", against a list of servers the user adds keys for:
-    // the list is fixed exactly when no key can be added. The web UI's isSingleProfileMode.
+    // the list is fixed exactly when no key can be added.
     public static bool IsSingleProfileMode => !Descriptor.IsAddAccessKeySupported;
 
     public static bool IsConnected(AppState state)
@@ -207,7 +207,7 @@ public static class VhApp
     }
 
     // the crown marks what this session does not have yet: a feature a tier sells, a location's
-    // premium plan (PremiumIcon.vue)
+    // premium plan
     public static bool ShowCrown(bool isPremium)
     {
         return isPremium && !IsPremiumUser;

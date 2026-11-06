@@ -2,8 +2,8 @@
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 
-// A card of the location list - the web UI's LocationGroup: Free or Premium when the list is split,
-// or the one untitled card when it is not. Open by default, as the web UI opens both.
+// A card of the location list: Free or Premium when the list is split,
+// or the one untitled card when it is not. Open by default.
 public sealed class LocationGroup : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -14,7 +14,7 @@ public sealed class LocationGroup : INotifyPropertyChanged
     public bool HasTitle => Title.Length > 0;
 
     // A card of a server's card, in the client's list of servers, rather than a card of the page:
-    // the web UI gives it the darker of the two (LocationGroup.vue's expansion-panels-collapsed).
+    // it takes the darker of the two.
     public bool IsNested { get; init; }
 
     public bool IsExpanded {

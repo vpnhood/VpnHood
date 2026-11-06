@@ -6,9 +6,9 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
-// The web UI's feature pages, each a FeaturePageLayout with its own words and picture: the pages
+// The feature pages, each a FeaturePageView with its own words and picture: the pages
 // under Settings that explain a device feature and open the device's settings for it
-// (settings/notifications.vue and friends), the premium pitch of a feature this session has not
+// (notifications and the like), the premium pitch of a feature this session has not
 // bought, and the two with text of their own. The device's settings open through the app's
 // intents, on the device that runs the app - a phone driving a TV opens them on the TV.
 public static class FeaturePages

@@ -47,7 +47,7 @@ so treat them as the preview.5 baseline).
   TLS, stacks). So **GC/csproj knobs (`soft-heap-limit`, `ConserveMemory`) can't help** — they only touch the
   ~6 MB managed slice. (They're still required to keep the managed heap from spiking; don't remove them.)
 - **NativeAOT** would shrink the floor but for iOS it only engages via whole-app publish and needs the entire
-  closure (incl. the SPA web server + reflection-based JSON) to be trim/AOT-safe — a large detour. **Superseded
+  closure (incl. the local web server + reflection-based JSON) to be trim/AOT-safe — a large detour. **Superseded
   by CoreCLR.**
 - **.NET 11 / CoreCLR** (the new default mobile runtime in net11 P4) cut the floor ~in half and, crucially, its
   real generational GC **absorbs the per-packet allocation churn that Mono spiked on** → flat under load.

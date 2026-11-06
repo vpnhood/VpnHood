@@ -6,7 +6,7 @@ using Net.Codecrete.QrCodeGenerator;
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
 // A QR code drawn straight into the control's rectangle: white plate, black modules, a two-module
-// quiet zone. Level M, the same as the web UI's plate, and no image in between - a TV's panel is
+// quiet zone. Level M, and no image in between - a TV's panel is
 // large and a phone scans a code of a tenth of the viewing distance first time.
 public class QrCodeControl : Control
 {

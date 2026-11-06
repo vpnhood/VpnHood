@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
-// What a feature page shows (FeaturePageLayout.vue's props): the marked-up title, the picture, the
+// What a feature page shows: the marked-up title, the picture, the
 // steps, the button that opens the device's own settings, and whether the feature is sold.
 public sealed record FeaturePageOptions
 {

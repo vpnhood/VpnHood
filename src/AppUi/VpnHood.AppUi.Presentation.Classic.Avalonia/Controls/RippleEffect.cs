@@ -11,12 +11,12 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Animation;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
-// Vuetify's v-ripple (directives/ripple, VRipple.css), value for value, for the buttons and the
+// The Material ripple, for the buttons and the
 // rows: the panel a control template puts around its content presenter, drawing over it. A press
 // starts a circle of the text colour under the pointer, its radius the half-diagonal of the
 // control, at 30% of its size and transparent: over 250ms it grows to full while it slides to the
-// centre, and in 100ms it comes to its opacity (Vuetify's 0.25 of the colour unless the theme says
-// otherwise; doubled on a light button, as Vuetify's overlay multiplier does). The release fades
+// centre, and in 100ms it comes to its opacity (0.25 of the colour unless the theme says
+// otherwise; doubled on a light button). The release fades
 // it out in 300ms, never before 250ms after it started. A finger's ripple waits 80ms, so a scroll
 // that starts on a row does not flash one (a tap released sooner shows it on the release); Enter
 // and Space ripple from the centre. The events are taken on the templated parent, with the pointer

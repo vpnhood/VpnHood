@@ -3,7 +3,7 @@
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.PremiumCodeCompleteDialog">
-  <!-- The web UI's PremiumCodeCompleteDialog: the congratulation, the code's dates and devices, and
+  <!-- The congratulation, the code's dates and devices, and
        a word when it is already used elsewhere. -->
   <Border Classes="dialog active" MaxWidth="420">
     <StackPanel Spacing="12">

@@ -48,7 +48,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
     }
 
     // The countries the split database knows, the excluded ones OFF. The smaller group comes first,
-    // so the exceptions are in view whichever way the list leans (split-countries.vue).
+    // so the exceptions are in view whichever way the list leans.
     private async Task LoadCountries(CancellationToken cancellationToken)
     {
         _isListLoaded = true;
@@ -99,7 +99,7 @@ public partial class SplitCountriesView : UserControl, IPage, ILeaveGuard
     private void OnExcludeMyCountryClick(object? sender, EventArgs e) => Choose(SplitCountryMode.ExcludeMyCountry);
     private void OnExcludeListClick(object? sender, EventArgs e) => Choose(SplitCountryMode.ExcludeList);
 
-    // the setting follows the switches; the save waits for the leave, as it does in the web UI
+    // the setting follows the switches; the save waits for the leave
     private void OnSelectionChanged(object? sender, EventArgs e)
     {
         Split.Countries = _items.Where(x => !x.IsSelected).Select(x => x.Id).ToArray();

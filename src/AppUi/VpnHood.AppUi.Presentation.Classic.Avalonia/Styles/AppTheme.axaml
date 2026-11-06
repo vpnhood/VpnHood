@@ -3,22 +3,21 @@
         xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls">
 
   <!-- The shapes, in the theme's keys: what a key is worth is the theme's, and lives in
-       BlueTheme.axaml or VioletTheme.axaml (the web UI's two themes, theme/themes.ts), so a
-       page ported here paints what it painted there in either theme. Nothing below names a
+       BlueTheme.axaml or VioletTheme.axaml, so a
+       page paints in either theme. Nothing below names a
        colour of its own. Type and focus fit a TV first (TV plan §3.4): every control wears a ring
-       while a remote or a keyboard has it (:focus-visible - a finger's focus shows nothing, as on
-       the web UI), and the layouts query the page host's width (the "Page"
+       while a remote or a keyboard has it (:focus-visible - a finger's focus shows nothing), and the layouts query the page host's width (the "Page"
        container, MainView): under 600 logical px a two-column page stacks. -->
 
   <Styles.Resources>
     <FontFamily x:Key="IconFont">fonts:VpnHood#Material Design Icons</FontFamily>
 
-    <!-- What the web UI writes as an opacity rather than a colour, so the same in both products:
-         secondary text at Vuetify's medium emphasis (60%: 4.5:1 or more on every surface of both
-         themes, where the web UI's 38% and 40% fell to 3.1:1), but the home's values, statistics
-         and version, kept at the web UI's 50% and 40%: faded on purpose, under 4.5:1, so they do
+    <!-- What is an opacity rather than a colour, so the same in both products:
+         secondary text at medium emphasis (60%: 4.5:1 or more on every surface of both
+         themes, where 38% and 40% fall to 3.1:1), but the home's values, statistics
+         and version, at 50% and 40%: faded on purpose, under 4.5:1, so they do
          not draw the eye; white at half for a line or a mark, its 3% border, the ring, a tonal
-         wash of white, and the scrim behind a dialog (override.css: black at 60%). -->
+         wash of white, and the scrim behind a dialog (black at 60%). -->
     <SolidColorBrush x:Key="AppText60Brush" Color="#99FFFFFF" />
     <SolidColorBrush x:Key="AppText50Brush" Color="#80FFFFFF" />
     <SolidColorBrush x:Key="AppText40Brush" Color="#66FFFFFF" />
@@ -56,7 +55,7 @@
     <x:Double x:Key="RippleOpacity">0.12</x:Double>
     <x:Double x:Key="LightRippleOpacity">0.24</x:Double>
 
-    <!-- The Fluent button template (one content presenter) with v-ripple around the presenter and,
+    <!-- The Fluent button template (one content presenter) with the ripple around the presenter and,
          under the ripple, the light a hover fades in: every button, toggle button and row takes it
          below, the location rows their own. -->
     <ControlTemplate x:Key="RippleButtonTemplate" TargetType="Button">
@@ -148,10 +147,10 @@
     </ControlTheme>
   </Styles.Resources>
 
-  <!-- Every page's root, inset from the edge: the web UI's 16px sides, whatever the window's size -
+  <!-- Every page's root, inset from the edge: 16px sides, whatever the window's size -
        a desktop window and a tablet are given no more than a phone there. 48x27 is the 5% overscan
-       inset of a TV at 960x540, and it belongs to a television alone, as the web UI gives it only
-       to a tv-device (general.css, "TV page inset and measure"): a window on a desk crops nothing,
+       inset of a TV at 960x540, and it belongs to a television alone:
+       a window on a desk crops nothing,
        and the inset there only pushes the page's header down the screen. MainView carries the
        class, from the device's own word (AppDescriptor.IsTv). -->
   <Style Selector=":is(Panel).page">
@@ -173,13 +172,13 @@
     <Setter Property="Padding" Value="48,0,48,27" />
   </Style>
 
-  <!-- The web UI's type scale (Vuetify's MD2 metrics kept by override.css): Poppins Light for
+  <!-- The type scale: Poppins Light for
        text, Poppins Bold for titles, both inherited from MainView. -->
   <Style Selector="TextBlock">
     <Setter Property="Foreground" Value="{StaticResource OnBackgroundBrush}" />
   </Style>
-  <!-- Words inside a button take the button's colour, as a web page's words take their v-btn's
-       (Vuetify's on-colour): the rule above would paint them the page's white on a green button.
+  <!-- Words inside a button take the button's colour:
+       the rule above would paint them the page's white on a green button.
        A word with a colour of its own keeps it, its style coming later. -->
   <Style Selector="Button TextBlock">
     <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground, FallbackValue={StaticResource OnBackgroundBrush}}" />
@@ -214,14 +213,14 @@
   <Style Selector="TextBlock.error">
     <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
   </Style>
-  <!-- an icon: one glyph of the icon font, sized like the web UI's v-icon (default 24) -->
+  <!-- an icon: one glyph of the icon font, 24 by default -->
   <Style Selector="TextBlock.mdi">
     <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
     <Setter Property="FontSize" Value="24" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="TextAlignment" Value="Center" />
   </Style>
-  <!-- the web UI's .flasher: an opacity pulse -->
+  <!-- an opacity pulse -->
   <Style Selector="TextBlock.flasher">
     <Style.Animations>
       <Animation Duration="0:0:2" IterationCount="INFINITE">
@@ -231,7 +230,7 @@
       </Animation>
     </Style.Animations>
   </Style>
-  <!-- the web UI's .animation-translate-y: a slow rise and fall, easing at both ends -->
+  <!-- a slow rise and fall, easing at both ends -->
   <Style Selector="Image.floating">
     <Style.Animations>
       <Animation Duration="0:0:1.5" IterationCount="INFINITE" PlaybackDirection="Alternate" Easing="SineEaseInOut">
@@ -268,8 +267,8 @@
     <Setter Property="Foreground" Value="{StaticResource OnNoteBrush}" />
   </Style>
 
-  <!-- alert-warning: the same shape in the warning colour, its title a touch heavier (the web UI's
-       VAlert with type="warning", whose text colour is the theme's on-warning) -->
+  <!-- alert-warning: the same shape in the warning colour, its title a touch heavier, its text
+       colour the theme's on-warning -->
   <Style Selector="Border.alert-warning">
     <Setter Property="Background" Value="{StaticResource WarningBrush}" />
     <Setter Property="CornerRadius" Value="8" />
@@ -283,8 +282,8 @@
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
-  <!-- Buttons: the web UI's v-btn, which neither uppercases nor fills, with its ripple; each class
-       below is one of its shapes. The transparent 3px border keeps the size from jumping when the
+  <!-- Buttons, which neither uppercase nor fill, with their ripple; each class
+       below is one of the shapes. The transparent 3px border keeps the size from jumping when the
        ring lights. The ring is the border's, so Fluent's focus adorner (a rectangle in the top
        level's adorner layer, which neither rounds nor fades with its page) is dropped. -->
   <Style Selector="Button">
@@ -317,8 +316,8 @@
     <Setter Property="Opacity" Value="0.5" />
   </Style>
 
-  <!-- The hand over whatever presses: the browser's cursor: pointer on a v-btn, a v-switch and a
-       link v-list-item. Avalonia leaves the arrow everywhere, and a disabled control is no press. -->
+  <!-- The hand over whatever presses: a button, a switch and a link row. Avalonia leaves the
+       arrow everywhere, and a disabled control is no press. -->
   <Style Selector="Button, ToggleButton, ToggleSwitch, ListBoxItem">
     <Setter Property="Cursor" Value="Hand" />
   </Style>
@@ -381,8 +380,8 @@
     <Setter Property="Background" Value="{StaticResource ConnectBtnConnectedBrush}" />
     <Setter Property="Foreground" Value="{StaticResource OnConnectBtnConnectedBrush}" />
   </Style>
-  <!-- a filled button's ripple: Vuetify doubles the overlay on a light background (its
-       overlay multiplier for cream and for the connected purple, both light by its measure) -->
+  <!-- a filled button's ripple: the overlay doubles on a light background (cream and the
+       connected purple are both light) -->
   <Style Selector="Button.connect-btn /template/ controls|RippleEffect, Button.action /template/ controls|RippleEffect">
     <Setter Property="RippleOpacity" Value="{StaticResource LightRippleOpacity}" />
   </Style>
@@ -474,7 +473,7 @@
     <Setter Property="CornerRadius" Value="20" />
   </Style>
 
-  <!-- The version at the end of the home header (HomePageHeader.vue): 40% white text while there
+  <!-- The version at the end of the home header: 40% white text while there
        is nothing to debug, a filled cream chip once a debug field is set. -->
   <Style Selector="Button.version-chip">
     <Setter Property="FontSize" Value="12" />
@@ -591,7 +590,7 @@
     <Setter Property="BorderThickness" Value="2" />
   </Style>
 
-  <!-- Chips: v-chip x-small flat (Active) and small tonal (Auto). -->
+  <!-- Chips: extra small flat (Active) and small tonal (Auto). -->
   <Style Selector="Border.chip">
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="8,1" />
@@ -615,7 +614,7 @@
     <Setter Property="Foreground" Value="{StaticResource AppText50Brush}" />
   </Style>
 
-  <!-- a flag: the web UI's 23x15 with 3px corners on the home row, 24x16 with 2px in the list -->
+  <!-- a flag: 23x15 with 3px corners on the home row, 24x16 with 2px in the list -->
   <Style Selector="Border.flag">
     <Setter Property="Width" Value="24" />
     <Setter Property="Height" Value="16" />
@@ -641,7 +640,7 @@
     <Setter Property="Background" Value="{StaticResource ExpansionPanelsCollapsedBrush}" />
   </Style>
 
-  <!-- A server's row in the client's list (ExpansionPanel.vue's title row): the mark, the name and
+  <!-- A server's row in the client's list: the mark, the name and
        the +/- that opens it. The whole row is the button, as the panel's title is there. -->
   <Style Selector="Button.profile-header">
     <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />
@@ -681,7 +680,7 @@
     <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
   </Style>
 
-  <!-- a location group's header: v-list-group's activator, the title with a rule and a chevron -->
+  <!-- a location group's header: the title with a rule and a chevron -->
   <Style Selector="ToggleButton.group-header">
     <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />
     <Setter Property="FocusAdorner" Value="{x:Null}" />
@@ -716,7 +715,7 @@
     <Setter Property="RenderTransform" Value="rotate(180deg)" />
   </Style>
 
-  <!-- The location list: v-list-item rows separated by a rule, each with the other rows' hover
+  <!-- The location list: rows separated by a rule, each with the other rows' hover
        light and ripple; the active one in the active colour; the focused one wears the ring. The
        Fluent selection colours and its selection pipe are not wanted, so the rows take their own
        template. -->
@@ -791,12 +790,12 @@
   </Style>
 
   <!-- ======================================================================================
-       The rest of the web UI's shapes, for the pages ported after the home: its button styles
-       (theme/defaults.ts: BtnStyle1..7, TonalIconBtn), its chips and alerts, its cards, the
+       The rest of the shapes, for the pages beyond the home: the button styles
+       (BtnStyle1..7, TonalIconBtn), the chips and alerts, the cards, the
        switch, the radio and check rows, the drawer, the dialogs and the snackbar.
        ====================================================================================== -->
 
-  <!-- v-btn shapes. A pill unless said otherwise; "block" stretches; "small" is Vuetify's small. -->
+  <!-- Button shapes. A pill unless said otherwise; "block" stretches. -->
   <Style Selector="Button.pill">
     <Setter Property="CornerRadius" Value="20" />
     <Setter Property="FontSize" Value="14" />
@@ -908,7 +907,7 @@
     <Setter Property="MinHeight" Value="0" />
   </Style>
 
-  <!-- A row of a list (v-list-item): a button the width of its list, a rule under it. A card row
+  <!-- A row of a list: a button the width of its list, a rule under it. A card row
        (SettingsItem, ConfigCard with a click) is the same shape with the card's radius. -->
   <Style Selector="Button.list-item">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -925,8 +924,7 @@
   <Style Selector="Button.list-item.last">
     <Setter Property="BorderThickness" Value="0" />
   </Style>
-  <!-- a filter list's rows are divided, not underlined: the last has no line on the card's edge
-       (FilterList.vue: border-b while an item follows) -->
+  <!-- a filter list's rows are divided, not underlined: the last has no line on the card's edge -->
   <Style Selector="ItemsControl.filter-list ContentPresenter:nth-last-child(1) Button.list-item">
     <Setter Property="BorderThickness" Value="0" />
   </Style>
@@ -996,7 +994,7 @@
     <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
-  <!-- a rule (v-divider) -->
+  <!-- a rule -->
   <Style Selector="Border.divider">
     <Setter Property="Height" Value="1" />
     <Setter Property="Background" Value="{StaticResource AppBorderBrush}" />
@@ -1008,7 +1006,7 @@
     <Setter Property="VerticalAlignment" Value="Stretch" />
   </Style>
 
-  <!-- Chips, tonal by default: the colour as text on a wash of itself (v-chip variant="tonal"),
+  <!-- Chips, tonal by default: the colour as text on a wash of itself,
        density comfortable. A flat chip fills. -->
   <Style Selector="Border.chip TextBlock">
     <Setter Property="FontSize" Value="12" />
@@ -1140,8 +1138,8 @@
     <Setter Property="TextDecorations" Value="Underline" />
   </Style>
 
-  <!-- A switch (v-switch, colour switch-btn). Never focused itself: the row it sits in is the
-       thing a remote lands on (the web UI's data-tv-row), and the row's press flips it. -->
+  <!-- A switch (colour switch-btn). Never focused itself: the row it sits in is the
+       thing a remote lands on, and the row's press flips it. -->
   <Style Selector="ToggleSwitch">
     <Setter Property="Focusable" Value="False" />
     <Setter Property="OnContent" Value="{x:Null}" />
@@ -1168,7 +1166,7 @@
     <Setter Property="Opacity" Value="0.5" />
   </Style>
 
-  <!-- The web UI's radio and check rows: a title over a description, the mark at the start, the
+  <!-- A title over a description, the mark at the start, the
        whole row the target. A Button carrying a glyph, so the ring and the ripple are the row's. -->
   <Style Selector="Button.option-row">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -1201,7 +1199,7 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
 
-  <!-- a text field with the outlined look of the settings pages (v-text-field variant="outlined") -->
+  <!-- a text field with the outlined look of the settings pages -->
   <Style Selector="TextBox.outlined">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{StaticResource AppText50Brush}" />
@@ -1224,7 +1222,7 @@
     <Setter Property="Opacity" Value="0.5" />
   </Style>
 
-  <!-- The drawer (NavigationDrawer.vue), off the TV UI: a panel from the start edge, its header
+  <!-- The drawer, off the TV UI: a panel from the start edge, its header
        in the darker tone, its rows -->
   <Style Selector="Border.drawer">
     <Setter Property="Background" Value="{StaticResource NavigationDrawerBrush}" />
@@ -1260,7 +1258,7 @@
     <Setter Property="Background" Value="#14FFFFFF" />
   </Style>
 
-  <!-- Dialogs (v-dialog, VCard rounded xl): the general dialog's card, the alert card, and the
+  <!-- Dialogs: the general dialog's card, the alert card, and the
        text buttons of their actions - the buttons' general colour first, since a later style wins
        and each card's own colour must -->
   <Style Selector="Button.dialog-btn">
@@ -1272,8 +1270,8 @@
   <Style Selector="Button.dialog-btn.plain">
     <Setter Property="Opacity" Value="0.7" />
   </Style>
-  <!-- A dialog is as wide as the window lets it be, up to its MaxWidth, whatever its words: the web
-       UI's v-dialog is, and a dialog that goes through steps keeps one width through them. -->
+  <!-- A dialog is as wide as the window lets it be, up to its MaxWidth, whatever its words: a
+       dialog that goes through steps keeps one width through them. -->
   <Style Selector="Border.dialog">
     <Setter Property="Background" Value="{StaticResource GeneralDialogBrush}" />
     <Setter Property="CornerRadius" Value="24" />
@@ -1368,7 +1366,7 @@
     <Setter Property="Padding" Value="8,10" />
   </Style>
 
-  <!-- The snackbar (GeneralSnackbar.vue): a white pill at the top, lifted off the page by a shadow, its
+  <!-- The snackbar: a white pill at the top, lifted off the page by a shadow, its
        kind in its icon's colour (the brushes above). At the top rather than Android's bottom, where it
        would cover the home's rows - the server row an imported key's message is about. -->
   <Style Selector="Border.snackbar">
@@ -1411,7 +1409,7 @@
   <Style Selector="Border.snackbar Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderThickness" Value="1" />
   </Style>
-  <!-- The update notice (UpdateSnackbar.vue's): a bar along the top of the app, its colour to the
+  <!-- The update notice: a bar along the top of the app, its colour to the
        screen's edges and under the status bar, edged below - attached, as a browser's info bar is to
        its toolbar - not a card floating over the page. In the app's own dark tones, not light: it
        stays until Later and carries actions, so it is a banner, not a passing snackbar's inverse light
@@ -1472,7 +1470,7 @@
     <Setter Property="FontWeight" Value="Normal" />
   </Style>
 
-  <!-- the feature pages (FeaturePageLayout.vue): the gradient sheet, the image, the numbered steps.
+  <!-- the feature pages: the gradient sheet, the image, the numbered steps.
        The sheet is the page itself, so it runs under the system bars (MainView). -->
   <Style Selector=":is(UserControl).grad-sheet">
     <Setter Property="Background" Value="{StaticResource PrimaryBgGradBrush}" />
@@ -1489,7 +1487,7 @@
     <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
   </Style>
 
-  <!-- a spinner: one glyph turning (v-progress-circular indeterminate) -->
+  <!-- a spinner: one glyph turning -->
   <Style Selector="TextBlock.spinner">
     <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
     <Setter Property="RenderTransformOrigin" Value="50%,50%" />
@@ -1570,7 +1568,7 @@
   <Style Selector="Button.go-premium:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderThickness" Value="2" />
   </Style>
-  <!-- the top-right badges of the home (HomeBadge.vue): small, white at 60% -->
+  <!-- the top-right badges of the home: small, white at 60% -->
   <Style Selector="Button.badge">
     <Setter Property="Width" Value="36" />
     <Setter Property="Height" Value="36" />
@@ -1626,7 +1624,7 @@
     <Setter Property="BorderThickness" Value="2" />
     <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
   </Style>
-  <!-- a menu (v-menu) -->
+  <!-- a menu -->
   <Style Selector="FlyoutPresenter.menu">
     <Setter Property="FontFamily" Value="fonts:VpnHood#Poppins" />
     <Setter Property="FontWeight" Value="Light" />
@@ -1651,7 +1649,7 @@
   <Style Selector="FlyoutPresenter.menu Button.menu-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="#14FFFFFF" />
   </Style>
-  <!-- the closed server's row of flags (ExpansionPanelCollapsed.vue), a press opening the server -->
+  <!-- the closed server's row of flags, a press opening the server -->
   <Style Selector="Button.collapsed-row">
     <Setter Property="Background" Value="{StaticResource ExpansionPanelsCollapsedBrush}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />

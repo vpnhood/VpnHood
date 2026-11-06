@@ -14,7 +14,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
 // This page owns the listener the phone dials into: it starts it on arrival and stops it on the way
 // out, whichever way that is (Done, Back, the host tearing the view down), and polls the presence
-// list every two seconds while it is shown - the same contract as the web UI's dialog.
+// list every two seconds while it is shown.
 public partial class PairingView : UserControl, IPage, IDisposable
 {
     private readonly MainView _host;
@@ -23,7 +23,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
     private bool _isRefreshFailing;
     private bool _disposed;
 
-    // The hint is what the web UI's dialog shows when it was opened for a job a remote cannot do -
+    // The hint is what the page shows when it was opened for a job a remote cannot do -
     // adding a server, say: it names the page to open on the phone (RemoteAccessHint).
     public PairingView(MainView host, string? hint = null)
     {

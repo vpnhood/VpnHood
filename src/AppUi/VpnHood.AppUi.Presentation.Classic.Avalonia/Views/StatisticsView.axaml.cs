@@ -32,7 +32,7 @@ public partial class StatisticsView : UserControl, IPage
         var access = session.AccessInfo;
         var isPremiumUser = VhApp.IsPremiumUser;
         var isConnected = VhApp.IsConnected(state);
-        // no traffic figures for a person in China (statistics.vue's isChinaCountry)
+        // no traffic figures for a person in China
         var isChina = string.Equals(state.ClientCountryCode, "CN", StringComparison.OrdinalIgnoreCase);
 
         if (isPremiumUser && access != null) {
@@ -117,7 +117,7 @@ public partial class StatisticsView : UserControl, IPage
     }
 
     // a label at the start, the value at the end in its colour, a hairline under all but the last;
-    // a traffic figure is pinned left to right, as statistics.vue pins it (dir="ltr")
+    // a traffic figure is pinned left to right
     private static void AddRow(StackPanel card, string label, string value, string valueClass, bool isLast = false, bool isLtr = false)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(0, 5) };

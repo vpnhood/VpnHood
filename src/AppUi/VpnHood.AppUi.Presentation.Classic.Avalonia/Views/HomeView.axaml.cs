@@ -66,7 +66,7 @@ public partial class HomeView : UserControl, IPage
         CountdownChip.Classes.Set("warning-time", _viewModel.CountdownKind == "warning");
     }
 
-    // Connect is where the input starts, as on the web UI's home.
+    // Connect is where the input starts.
     public void FocusDefault()
     {
         ConnectButton.LandFocus();
@@ -82,7 +82,7 @@ public partial class HomeView : UserControl, IPage
         }
     }
 
-    // The web UI's ServersButton: the page opens unless there is nothing behind it to choose, and
+    // The page opens unless there is nothing behind it to choose, and
     // then the row says why rather than opening an empty page.
     private void OnServersClick(object? sender, RoutedEventArgs e)
     {
@@ -199,7 +199,7 @@ public partial class HomeView : UserControl, IPage
         CountVersionTap();
     }
 
-    // The developer page, opened as the web UI opens its dialog (HomePageHeader.vue): the fifth
+    // The developer page, opened by the fifth
     // tap of a run, or the first when a debug field is already set.
     private void CountVersionTap()
     {

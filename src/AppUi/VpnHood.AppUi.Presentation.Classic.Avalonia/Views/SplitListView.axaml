@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitListView">
-  <!-- The shape the web UI's split-domains, split-ips-via-app and split-ips-via-device share: the
+  <!-- The shape the domain and IP split pages share: the
        alert while splitting is off, the split's own switch, the lists, and Revert once a save
        failed. Saved on the way out; a save that fails holds the page. -->
   <DockPanel Classes="page">

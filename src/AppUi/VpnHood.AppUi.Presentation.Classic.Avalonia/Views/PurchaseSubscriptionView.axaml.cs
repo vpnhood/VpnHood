@@ -221,7 +221,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         return Math.Max(0, (int)Math.Round((basePrice - plan.CurrentPrice) / basePrice * 100));
     }
 
-    // ---- the store purchase (PurchaseByStore.vue) ----
+    // ---- the store purchase ----
 
     // Is the signed-in account already served - a store subscription, or the code the backend chose
     // for it? Asked after signing in, before the store's sheet: after it the money has moved.
@@ -291,7 +291,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         }
     }
 
-    // ---- restoring a premium already owned (RestorePremium.vue) ----
+    // ---- restoring a premium already owned ----
 
     private async void OnRestoreClick(object? sender, RoutedEventArgs e)
     {

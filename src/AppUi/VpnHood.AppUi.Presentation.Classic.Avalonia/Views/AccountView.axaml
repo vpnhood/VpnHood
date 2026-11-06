@@ -4,7 +4,7 @@
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.AccountView">
-  <!-- The web UI's account page: who is signed in; what makes the session premium - the account's
+  <!-- Who is signed in; what makes the session premium - the account's
        subscription, or a code - with its details and the ways to change it; the upgrade otherwise;
        and the way to delete the account. -->
   <DockPanel Classes="page">

@@ -161,14 +161,14 @@ server reports to this id too, until the fork turns that off or changes the id.
 ## The UI
 
 The UI is one concept, whichever one a head runs: the Avalonia UI in every head today, in process or
-as its browser build, or a web UI such as the SPA sample.
+as its browser build, or a web UI of a fork's own.
 
 1. It has no id of its own. What it reports goes through the app API into the app's tracker: a
    rating becomes `vh_user_review`.
 2. It shows the switch on its Privacy page
    ([`PrivacyView`](../../src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/Views/PrivacyView.axaml.cs)),
    and hides it where the build collects nothing.
-3. It adds no analytics of its own, the Avalonia UI and the SPA sample alike. A web UI of one's own
+3. It adds no analytics of its own. A web UI of one's own
    may, set up from `AppDescriptor.CustomData`, and only while the switch is on.
 
 ## The switch

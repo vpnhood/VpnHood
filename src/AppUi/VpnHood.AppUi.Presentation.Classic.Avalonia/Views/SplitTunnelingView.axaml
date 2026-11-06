@@ -4,7 +4,7 @@
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitTunnelingView">
-  <!-- The web UI's split-tunneling/index: the master switch, then the splits in their sections -
+  <!-- The master switch, then the splits in their sections -
        apps and domains, IP addresses, locations, DNS - every state read off the app's own effective
        picture, so a split the switch or the plan silenced reads Off. -->
   <DockPanel Classes="page">

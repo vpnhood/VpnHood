@@ -91,7 +91,7 @@ public partial class AccountView : UserControl, IPage
             : Strings.Current.CodeRefusedRejectedNotice(date);
     }
 
-    // SubscriptionDetails.vue: the dates, the renewal, the price with its period
+    // The dates, the renewal, the price with its period
     private void FillSubscription(Subscription? subscription)
     {
         var s = Strings.Current;
@@ -122,7 +122,7 @@ public partial class AccountView : UserControl, IPage
         };
     }
 
-    // PremiumCodeDetails.vue: the code behind the eye, and the access it gives
+    // The code behind the eye, and the access it gives
     private void FillCode(AccessInfo? access)
     {
         var s = Strings.Current;
@@ -190,7 +190,7 @@ public partial class AccountView : UserControl, IPage
         await _host.ShowDialog(new ViewPremiumCodeDialog(code));
     }
 
-    // a label and a value, zebra-striped as the web UI's lists are
+    // a label and a value, zebra-striped
     private static void AddRow(StackPanel rows, string label, string value, string? valueClass)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };

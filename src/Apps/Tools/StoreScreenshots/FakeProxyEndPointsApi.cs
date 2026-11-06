@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.Generics;
 namespace VpnHood.App.StoreScreenshots;
 
 // An empty proxy list, which is what the Proxies page shows on a fresh install - the fixture
-// records no proxies, and the web UI engine's screenshot of that page shows none either.
+// records no proxies.
 internal sealed class FakeProxyEndPointsApi : IProxyEndPointsApi
 {
     public Task<ListResult<AppProxyEndPointInfo>> List(string? search, bool includeSucceeded, bool includeFailed, bool includeUnknown,

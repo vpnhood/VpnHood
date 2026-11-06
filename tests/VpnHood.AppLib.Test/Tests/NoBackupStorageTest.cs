@@ -19,7 +19,7 @@ public class NoBackupStorageTest : TestAppBase
         WriteFile(storagePath, "account/portalSession.json", "session");
         WriteFile(storagePath, "app.log", "log");
         WriteFile(storagePath, "assets/ui/version/marker", "ui");
-        WriteFile(storagePath, "Temp/SPA/file", "temp");
+        WriteFile(storagePath, "Temp/WebRoot/file", "temp");
         WriteFile(storagePath, "settings.json", "settings");
         WriteFile(storagePath, "profiles/vpn_profiles.json", "access keys and codes");
 
@@ -28,7 +28,7 @@ public class NoBackupStorageTest : TestAppBase
         Assert.AreEqual("session", ReadFile(noBackupStoragePath, "account/portalSession.json"));
         Assert.AreEqual("log", ReadFile(noBackupStoragePath, "app.log"));
         Assert.AreEqual("ui", ReadFile(noBackupStoragePath, "assets/ui/version/marker"));
-        Assert.AreEqual("temp", ReadFile(noBackupStoragePath, "Temp/SPA/file"));
+        Assert.AreEqual("temp", ReadFile(noBackupStoragePath, "Temp/WebRoot/file"));
         foreach (var name in new[] { "account", "app.log", "assets", "Temp" })
             Assert.IsFalse(Path.Exists(Path.Combine(storagePath, name)), $"{name} is still in the storage.");
 

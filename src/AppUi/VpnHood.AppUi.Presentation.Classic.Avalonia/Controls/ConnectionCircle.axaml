@@ -2,13 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.ConnectionCircle"
              Width="150" Height="150" ClipToBounds="False">
-  <!-- The web UI's #connectionCircleIndicator (general.css "Home Circle Section"), value for value:
+  <!-- The connection circle:
        a 150px ring, white at rest and cream while the app works - at rest the whole indicator is
-       faint, ring, dots and words alike, as the web UI fades it; two dots on a 3s turn while
+       faint, ring, dots and words alike; two dots on a 3s turn while
        connecting; on connect the dots slide to the centre, a green ring grows past the circle and
        glows (resize-and-shine), a green flash fills it and fades (resize-and-hide), and the ring
        turns white. A premium session's shine, glow and flash are gold instead (.premium), the
-       mark that replaced the web UI's side art. The phase drives the classes on RootGrid
+       mark of that session. The phase drives the classes on RootGrid
        (code-behind); the styles below do the
        rest, with the CSS's durations and delays. ClipToBounds is off because a UserControl clips
        by default, and the turning dots and the glow both reach past the 150px box. -->
@@ -43,8 +43,8 @@
       <Setter Property="BorderBrush" Value="White" />
     </Style>
 
-    <!-- the rotor: the 3s turn while connecting (#rotateCircle) is the code-behind's, because the
-         web UI's turn only pauses and never ends (animation-play-state) and a style animation here
+    <!-- the rotor: the 3s turn while connecting is the code-behind's, because the
+         turn only pauses and never ends, and a style animation here
          cannot; a 2s pulse while unstable (.flasher) -->
     <Style Selector="Grid.unstable Canvas#Rotor">
       <Style.Animations>
@@ -94,8 +94,8 @@
     <!-- The end of every connect animation is a setter of the connected style, never a held last
          keyframe (FillMode Forward): a held value outlives the class, so a disconnect kept the
          glow and lost the dots. Backward holds the first keyframe through a delay instead.
-         The setters are the connected picture and the animations are the arrival at it, split as
-         the web UI splits .connected from .animation-true: a style's animations run every time the
+         The setters are the connected picture and the animations are the arrival at it, split
+         because a style's animations run every time the
          style is applied, and leaving the home page takes the circle out of the tree, so a
          connected circle coming back would play the arrival again. Only the code-behind's .animate
          class, set for a connect the page watched happen, brings the animations. -->
@@ -204,7 +204,7 @@
     <Border x:Name="Shine" HorizontalAlignment="Center" VerticalAlignment="Center" />
     <Ellipse x:Name="Flash" HorizontalAlignment="Center" VerticalAlignment="Center" />
     <Border x:Name="Ring" CornerRadius="75" BorderThickness="1" />
-    <!-- turns clockwise in every language, as the web UI's CSS animation does: a right-to-left
+    <!-- turns clockwise in every language: a right-to-left
          root would mirror it the other way round -->
     <Canvas x:Name="Rotor" Width="150" Height="150" RenderTransformOrigin="50%,50%" FlowDirection="LeftToRight">
       <!-- the turn's transform belongs to the code-behind, which owns the angle -->

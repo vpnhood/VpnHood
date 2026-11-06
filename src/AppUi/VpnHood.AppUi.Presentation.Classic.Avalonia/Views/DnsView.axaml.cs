@@ -44,7 +44,7 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         Show();
     }
 
-    // the pitch while the feature is sold and this session has not bought it (dns/index.vue)
+    // the pitch while the feature is sold and this session has not bought it
     public static IPage Create(MainView host)
     {
         return VhApp.IsPremiumFeatureAllowed(AppFeature.CustomDns)
@@ -99,7 +99,7 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         Validate();
     }
 
-    // DNS 1 is required once Custom is chosen; both must be addresses (dns/index.vue's rules)
+    // DNS 1 is required once Custom is chosen; both must be addresses
     private bool Validate()
     {
         var s = Strings.Current;

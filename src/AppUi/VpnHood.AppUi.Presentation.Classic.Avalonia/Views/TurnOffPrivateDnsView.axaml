@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.TurnOffPrivateDnsView">
-  <!-- The web UI's turn-off-private-dns: how to turn the device's private DNS off, in steps, with
+  <!-- How to turn the device's private DNS off, in steps, with
        the device's settings a press away where the device opens them. -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding TurnOffPrivateDns, Source={x:Static res:Strings.Current}}" />

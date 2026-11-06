@@ -6,7 +6,7 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Animation;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
-// The connection circle's properties, pushed into its named parts. Phase is the web UI's class on
+// The connection circle's properties, pushed into its named parts. Phase is the class on
 // the indicator: none, connecting, waiting, connected, unstable, disconnecting.
 public partial class ConnectionCircle : UserControl
 {
@@ -38,7 +38,7 @@ public partial class ConnectionCircle : UserControl
     public static readonly StyledProperty<bool> IsPremiumProperty =
         AvaloniaProperty.Register<ConnectionCircle, bool>(nameof(IsPremium));
 
-    // The dots' turn (#rotateCircle). The web UI's turn never ends: it is a 3s linear rotate whose
+    // The dots' turn. It never ends: it is a 3s linear rotate whose
     // play state goes from running to paused, so a connect freezes the ring at the angle it had
     // reached and the dots slide to the centre from there. A style animation has no pause - when
     // the class goes the angle reverts to its base value in one frame, and the dots jump back to
@@ -125,9 +125,9 @@ public partial class ConnectionCircle : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
-    // The connect animation belongs to a connect this page watched happen: the web UI's
-    // showConnectedAnimation, which starts null on every mount, so a page that opens on a live
-    // session shows the connected picture and nothing moves (its .animation-false). The circle
+    // The connect animation belongs to a connect this page watched happen: the flag
+    // starts null on every mount, so a page that opens on a live
+    // session shows the connected picture and nothing moves. The circle
     // outlives the page it sits on, so leaving home forgets what it saw and a return finds a
     // session it did not watch begin - the arrival the user reads as "just connected" is exactly
     // what must not play. The classes are the split in the styles: .connected is the picture,

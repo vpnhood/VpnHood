@@ -6,7 +6,7 @@
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.LocationsView"
              x:DataType="vm:MainViewModel">
-  <!-- The web UI's servers page (pages/servers + components/Servers), both products. Connect has
+  <!-- The servers page, both products. Connect has
        one server and shows its locations: a card per group - Free and Premium when both exist and
        the person is not premium - each a collapsible list of rows with the flag or the bolt of the
        fastest choice, the name, and at the end the Active chip, the unblockable mark and the crown.
@@ -79,7 +79,7 @@
           </StackPanel>
         </Button>
 
-        <!-- nothing added yet: the web UI's alert-warning, title and all -->
+        <!-- nothing added yet: the alert-warning, title and all -->
         <Border Classes="alert-warning" Margin="0,0,0,16" IsVisible="{Binding HasNoServer}">
           <StackPanel Spacing="2">
             <TextBlock Classes="alert-title" Text="{Binding Warning, Source={x:Static res:Strings.Current}}" />
@@ -105,7 +105,7 @@
                       <TextBlock Grid.Column="1" Classes="profile-name" Classes.inactive="{Binding !IsActive}"
                                  Text="{Binding Name}" VerticalAlignment="Center" />
 
-                      <!-- the server's menu (ExpansionPanel.vue), off the TV -->
+                      <!-- the server's menu, off the TV -->
                       <Button Grid.Column="2" Classes="icon small" VerticalAlignment="Center" Margin="0,0,4,0"
                               IsVisible="{Binding ShowMenu}" Click="OnMenuClick"
                               AutomationProperties.Name="{Binding Menu, Source={x:Static res:Strings.Current}}">
@@ -153,7 +153,7 @@
                     </Grid>
                   </Button>
 
-                  <!-- closed: the first flags of its locations, and how many more (ExpansionPanelCollapsed.vue) -->
+                  <!-- closed: the first flags of its locations, and how many more -->
                   <Button Classes="collapsed-row" Margin="16,0,16,8" IsVisible="{Binding ShowCollapsedFlags}" Click="OnCollapsedClick">
                     <StackPanel Orientation="Horizontal">
                       <ItemsControl ItemsSource="{Binding CollapsedFlags}">

@@ -118,7 +118,7 @@ public partial class LocationsView : UserControl, IPage
     }
 
     // A server's row: it opens on its locations, unless it has a single one - then there is nothing
-    // to open and choosing it connects, as the web UI's panel click does.
+    // to open and choosing it connects.
     private void OnProfileClick(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is not ProfileItem profile)
@@ -135,7 +135,7 @@ public partial class LocationsView : UserControl, IPage
 
     // A vh: key is a long base64 blob no remote can type, so a TV sends the person to their phone
     // - the page that hands the address out - and says so there; anything with a keyboard gets the
-    // field. The web UI's onAddServer, with its dialog as our page.
+    // field.
     private void OnAddServerClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel.IsTv)
@@ -149,7 +149,7 @@ public partial class LocationsView : UserControl, IPage
         return (source as Visual)?.FindAncestorOfType<ListBoxItem>(true)?.DataContext as LocationItem;
     }
 
-    // ---- the server's menu (ExpansionPanel.vue), off the TV ----
+    // ---- the server's menu, off the TV ----
 
     // The server whose menu is open: taken from the menu button, which sits in the server's own
     // template, rather than from the items, which sit in a popup of their own - a popup whose
@@ -269,7 +269,7 @@ public partial class LocationsView : UserControl, IPage
     private async Task Choose(LocationItem location, CancellationToken cancellationToken)
     {
         _host.GoBack();
-        // already there: the web UI says so in a snackbar and does not reconnect
+        // already there: says so in a snackbar and does not reconnect
         if (_viewModel.IsConnected && location.IsActive)
             return;
         await _viewModel.ConnectTo(location, cancellationToken);

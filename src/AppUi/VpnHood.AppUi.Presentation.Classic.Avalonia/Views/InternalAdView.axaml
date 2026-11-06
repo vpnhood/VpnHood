@@ -4,9 +4,9 @@
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.InternalAdView"
              Background="#0b0923">
-  <!-- The web UI's internal-ad page: the app's own promotion, held for a moment before it can be
-       closed, with Learn more leading to the purchase page. The web UI plays a short film here;
-       this head has no video player, so the countdown runs over the promotion's still. -->
+  <!-- The app's own promotion, held for a moment before it can be
+       closed, with Learn more leading to the purchase page. This head has no video player,
+       so the countdown runs over the promotion's still. -->
   <DockPanel Classes="page">
     <Grid DockPanel.Dock="Top" HorizontalAlignment="Right">
       <Button x:Name="CountButton" Classes="pill small tonal-white" Click="OnCloseClick" />

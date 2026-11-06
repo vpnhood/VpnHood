@@ -4,7 +4,7 @@
                     xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.ProxyEditDialog">
-  <!-- The web UI's AddOrEditProxy sheet: one proxy's fields - or a list to import - and, for one
+  <!-- One proxy's fields - or a list to import - and, for one
        already saved, its record and the way to remove it. -->
   <Border Classes="dialog" MaxWidth="520">
     <ScrollViewer MaxHeight="520" HorizontalScrollBarVisibility="Disabled">

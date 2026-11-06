@@ -4,7 +4,7 @@
                     xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.CustomEndpointDialog">
-  <!-- The web UI's custom endpoint dialog: an address of the person's own for the server, and the
+  <!-- An address of the person's own for the server, and the
        switch that puts it in force. -->
   <Border Classes="dialog" MaxWidth="520">
     <StackPanel Spacing="12">

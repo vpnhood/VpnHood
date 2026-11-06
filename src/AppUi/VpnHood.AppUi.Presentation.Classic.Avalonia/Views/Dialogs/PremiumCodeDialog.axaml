@@ -4,7 +4,7 @@
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.PremiumCodeDialog">
-  <!-- The web UI's PremiumByCode sheet: the code, in the shape it comes in, and Activate. -->
+  <!-- The code, in the shape it comes in, and Activate. -->
   <Border Classes="dialog" MaxWidth="480">
     <StackPanel Spacing="12">
       <StackPanel Orientation="Horizontal" Spacing="10">

@@ -4,7 +4,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.FilterList">
-  <!-- The web UI's FilterList: Select all, Clear all and Search over a list of rows, each an icon
+  <!-- Select all, Clear all and Search over a list of rows, each an icon
        or a flag, a name and a switch. A row is a button and its press flips its switch; on a TV
        the search box is behind its button, since a remote types nothing until asked. -->
   <Border Classes="config-card" Padding="0,12,0,4">

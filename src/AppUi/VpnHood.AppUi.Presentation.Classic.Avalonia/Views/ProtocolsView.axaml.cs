@@ -28,7 +28,7 @@ public partial class ProtocolsView : UserControl, IPage
         DropUdpItem.Title = s.ProtocolBlockUdp;
         DropUdpItem.Description = s.ProtocolBlockUdpDesc;
 
-        // protocols.vue's protocolItems: TCP the default, each shown when the build offers it
+        // TCP the default, each shown when the build offers it
         AddRow(ChannelProtocol.Tcp, s.ProtocolTcpDesc, isDefault: true);
         AddRow(ChannelProtocol.Udp, s.ProtocolUdpDesc, isDefault: false);
         AddRow(ChannelProtocol.Quic, s.ProtocolQuicDesc, isDefault: false);
@@ -118,7 +118,7 @@ public partial class ProtocolsView : UserControl, IPage
         }
     }
 
-    // the first time the cloak is turned on, its page explains it (protocols.vue's cloakMode setter)
+    // the first time the cloak is turned on, its page explains it
     private async void OnCloakToggled(object? sender, EventArgs e)
     {
         try {

@@ -5,7 +5,7 @@
      already has one — see Client.Ios/PrivacyInfo.xcprivacy.
 
      This one is deliberately smaller than the app's: the extension links only
-     VpnHood.Core.Client.Devices.Ios (no AppLib, no SPA, no Firebase), so it collects nothing and never
+     VpnHood.Core.Client.Devices.Ios (no AppLib, no UI, no Firebase), so it collects nothing and never
      touches NSUserDefaults — what does, the culture provider and an Apple TV's file store, lives in the
      app process. Keep the two in sync when a reference is added here, and re-check both against the
      upload's privacy report. -->

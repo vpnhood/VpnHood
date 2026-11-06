@@ -2,8 +2,8 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
 namespace VpnHood.App.StoreScreenshots;
 
-// The web UI's routes, as the Avalonia UI's pages: the screenshot config names a screen by the
-// route the SPA showed it at (e2e/store/project.mjs), and this is the one place that says which
+// The Avalonia UI's pages by route: the screenshot config names a screen by its route,
+// and this is the one place that says which
 // view that is here. The home is the page the host starts on, so its route opens nothing.
 internal static class PageRoutes
 {

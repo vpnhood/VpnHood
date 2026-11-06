@@ -1,7 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.PromoteRow">
-  <!-- The web UI's PromoteConnectButton: an icon in the premium colour, a title over a
+  <!-- An icon in the premium colour, a title over a
        description, and a filled chip naming the act at the end. The row is the button. -->
   <Button x:Name="Row" Classes="card-on-grad" Click="OnClick">
     <Grid ColumnDefinitions="Auto,*,Auto">

@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SettingsView">
-  <!-- The web UI's settings/index: three sections of rows, each a page - how the app presents
+  <!-- Three sections of rows, each a page - how the app presents
        itself, how traffic is carried, and what it guarantees about exposure - but the automatic
        updates' switch, which has nothing more to show. A row a platform cannot serve is left out,
        and a section left with no rows loses its title too. -->

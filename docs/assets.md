@@ -1,6 +1,6 @@
 ﻿# Assets — how data files ship, and how code reads them
 
-Pictures, fonts, words, a country database and a whole web UI all reach the app the same way: as a
+Pictures, fonts, words, a country database and a whole web page all reach the app the same way: as a
 zip placed beside it by MSBuild, read through one interface.
 
 ## What ships as a zip

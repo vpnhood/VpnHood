@@ -13,8 +13,8 @@ using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 namespace VpnHood.App.StoreScreenshots;
 
 // One shot, on the UI thread: the page is opened, given time to arrive and settle, checked for
-// anything that must not be in a store screenshot, and captured. The checks are the web UI
-// engine's, made for this toolkit: a dialog over the page (an error the page caught and showed),
+// anything that must not be in a store screenshot, and captured. The checks:
+// a dialog over the page (an error the page caught and showed),
 // an error the UI logged, an exception the dispatcher caught - and a settle that never comes.
 internal sealed class ShotRunner(ShotOptions options, Window window, MainView view, CapturingLogger log)
 {
@@ -38,7 +38,7 @@ internal sealed class ShotRunner(ShotOptions options, Window window, MainView vi
 
     private async Task CaptureAsync()
     {
-        // the device's pixel ratio, times the engine's supersampling: what the frame pass expects
+        // the device's pixel ratio, times the supersampling: what the frame pass expects
         window.SetRenderScaling(options.Scale);
         await Frames(2);
 
@@ -133,7 +133,7 @@ internal sealed class ShotRunner(ShotOptions options, Window window, MainView vi
     }
 
     // Fails rather than quietly ships the element: a renamed control would otherwise put a hidden
-    // chip back into the listing (the web UI engine's rule for its selectors).
+    // chip back into the listing.
     private void Hide(string path)
     {
         Find(path, "hidden").IsVisible = false;

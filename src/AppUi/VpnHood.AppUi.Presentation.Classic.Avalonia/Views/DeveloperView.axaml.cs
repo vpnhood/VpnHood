@@ -10,7 +10,7 @@ using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
-// The debug fields of UserSettings, edited as the web UI's developer dialog edits them: DebugData1
+// The debug fields of UserSettings: DebugData1
 // a space-separated set of commands, DebugData2 free text, and both saved when the page closes. A
 // command the app does not know is not shown but is not lost either: it is kept and written back
 // beside the ones that are.

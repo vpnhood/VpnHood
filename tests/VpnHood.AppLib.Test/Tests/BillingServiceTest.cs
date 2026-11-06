@@ -194,7 +194,7 @@ public class BillingServiceTest : TestAppBase
     [TestMethod]
     public async Task OpenSubscriptionManagement_is_refused_when_the_store_cannot_show_it()
     {
-        // The SPA withholds the control in this state, but withholding is not enforcement: a stale
+        // The UI withholds the control in this state, but withholding is not enforcement: a stale
         // page or a fork's own UI can still ask, and the answer must be a refusal with a reason —
         // not a call into a store that opens nothing and reports success.
         var accountProvider = new TestAccountProvider {

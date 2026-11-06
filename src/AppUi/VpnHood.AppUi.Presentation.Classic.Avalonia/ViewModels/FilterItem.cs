@@ -3,7 +3,7 @@ using Avalonia.Media.Imaging;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 
-// One row of a filter list (the web UI's IListItemInfo): an app or a country, with its icon and
+// One row of a filter list: an app or a country, with its icon and
 // whether it is in.
 public sealed class FilterItem : INotifyPropertyChanged
 {

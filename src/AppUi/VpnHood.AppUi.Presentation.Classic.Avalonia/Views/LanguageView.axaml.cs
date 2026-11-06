@@ -81,7 +81,7 @@ public partial class LanguageView : UserControl, IPage
 
     private OptionRow AddRow(string code)
     {
-        // the note under the system row reads left to right in every language, as language.vue pins it
+        // the note under the system row reads left to right in every language
         var row = new OptionRow { DescriptionFlowDirection = FlowDirection.LeftToRight };
         row.Clicked += (_, _) => Choose(code);
         _rows.Add((code, row));

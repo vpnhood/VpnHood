@@ -4,8 +4,7 @@ using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
-// The UI's own flags in UserSettings.CustomData, the bag the web UI keeps its
-// enableAutoRefreshProxyList in: read and written by the same names, so both UIs see one setting.
+// The UI's own flags in UserSettings.CustomData, read and written by the names saved there.
 internal static class UserCustomData
 {
     public static bool GetBool(string key)

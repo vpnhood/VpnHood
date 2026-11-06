@@ -14,7 +14,7 @@ public partial class UserReviewDialog : DialogBase
     private readonly int _recommendation;
     private int _rate;
 
-    // recommendation 2 is the app's second ask, which the web UI shows without a way to close
+    // recommendation 2 is the app's second ask, shown without a way to close
     // until a face is picked; iOS keeps Later, as App Review requires a dismissible prompt
     public UserReviewDialog(MainView host, int recommendation)
     {

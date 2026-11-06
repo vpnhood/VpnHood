@@ -3,7 +3,7 @@
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.ErrorDialog">
-  <!-- The web UI's ErrorDialog: "Message" with the alert mark, the sentence, then the buttons the
+  <!-- "Message" with the alert mark, the sentence, then the buttons the
        failure earned - a retry on the automatic location, the premium trial, the ways to replace a
        refused code, a diagnosis, the report - and Close, where the remote lands. -->
   <Border Classes="dialog alert">

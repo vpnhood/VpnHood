@@ -67,7 +67,7 @@ public class TestAppHelper(CancellationToken testCt) : TestHelper(testCt)
                 IsPurchaseUrlSupported = true
             },
             DeviceUiProvider = new TestDeviceUiProvider(),
-            EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
+            EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no UI in test, so we need to use event watcher
             TrackerFactories = [new TestTrackerFactory()],
             AllowEndPointTracker = true,
             AutoDiagnose = false,

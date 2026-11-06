@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.PairingView">
-  <!-- The web UI's Remote Access dialog, as a page: the code and its address on one side, every
+  <!-- The code and its address on one side, every
        line of text on the other, Done under the remote, the two together in the screen's middle,
        as a TV app shows its code. Under 600 logical px the text drops under the code and the page
        scrolls. The listener lives exactly as long as this page is shown (TV plan §4.3). -->
@@ -53,7 +53,7 @@
         <Border Background="White" CornerRadius="6" Padding="10" HorizontalAlignment="Center">
           <controls:QrCodeControl x:Name="Qr" Width="256" Height="256" />
         </Border>
-        <!-- pinned left to right, as QrPlate.vue and the other-addresses line are: an RTL locale
+        <!-- pinned left to right, as the other-addresses line is: an RTL locale
              would reorder an address into something that cannot be typed -->
         <TextBlock x:Name="AddressText" Classes="address" HorizontalAlignment="Center" TextAlignment="Center" FlowDirection="LeftToRight" />
       </StackPanel>

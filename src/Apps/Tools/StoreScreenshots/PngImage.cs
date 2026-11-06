@@ -12,8 +12,8 @@ namespace VpnHood.App.StoreScreenshots;
 // them.
 internal static class PngImage
 {
-    // Mitchell over a plain box filter: the same deliberate 2:1 reduction of an already-rasterized
-    // picture the web UI's engine did with a canvas, and the reason the frames are drawn above
+    // Mitchell over a plain box filter: a deliberate 2:1 reduction of an already-rasterized
+    // picture, and the reason the frames are drawn above
     // size in the first place - text drawn straight at the output scale reads soft.
     private static readonly SKSamplingOptions Sampling = new(SKCubicResampler.Mitchell);
 

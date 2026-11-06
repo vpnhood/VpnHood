@@ -4,7 +4,7 @@
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.DnsView">
-  <!-- The web UI's dns/index: the device's private DNS as the first card, opening its page, and the
+  <!-- The device's private DNS as the first card, opening its page, and the
        adapter DNS - the default, or two addresses of the person's own - as the second. -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Dns, Source={x:Static res:Strings.Current}}" />
@@ -25,7 +25,7 @@
               </StackPanel>
               <TextBlock x:Name="PrivateDnsCrown" Grid.Column="1" Classes="crown" Text="{x:Static res:Mdi.Crown}" IsVisible="False" />
             </Grid>
-            <!-- a host name, left to right in every language (dns/index.vue's dir="ltr") -->
+            <!-- a host name, left to right in every language -->
             <TextBlock x:Name="ProviderText" Classes="body-small highlight" TextTrimming="CharacterEllipsis" IsVisible="False" FlowDirection="LeftToRight" />
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="card-subtitle" Text="{Binding PrivateDnsDesc, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
@@ -52,8 +52,7 @@
               <controls:OptionRow x:Name="DefaultRow" Clicked="OnDefaultClick" />
               <controls:OptionRow x:Name="CustomRow" Clicked="OnCustomClick" />
             </StackPanel>
-            <!-- the addresses read left to right in every language, as the web UI's locale provider
-                 keeps the whole form -->
+            <!-- the addresses read left to right in every language, the whole form -->
             <StackPanel x:Name="CustomPanel" Spacing="6" IsVisible="False" Margin="0,8,0,0" FlowDirection="LeftToRight">
               <TextBlock Classes="body-medium" Text="DNS 1" />
               <TextBox x:Name="Dns1Box" AutomationProperties.Name="DNS 1" Classes="outlined" PlaceholderText="8.8.8.8" TextChanged="OnDnsChanged" />

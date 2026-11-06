@@ -1,9 +1,9 @@
 namespace VpnHood.App.StoreScreenshots;
 
-// One shot, as the command line describes it. The vocabulary is the web UI engine's (e2e/store/
-// project.mjs): a route names the page, the size is the device's viewport in logical pixels, and
-// the scale is the device's pixel ratio times the engine's supersampling - so a raw PNG from here
-// drops into the same raw/ folder and the same frame pass.
+// One shot, as the command line describes it: a route names the page, the size is the device's
+// viewport in logical pixels, and
+// the scale is the device's pixel ratio times the supersampling - so a raw PNG from here
+// drops into the raw/ folder and the frame pass.
 internal sealed class ShotOptions
 {
     public required string FixturePath { get; init; }

@@ -4,7 +4,7 @@
                     xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.UserReviewDialog">
-  <!-- The web UI's UserReviewDialog: three faces to pick from; the sad ones open a box for the
+  <!-- Three faces to pick from; the sad ones open a box for the
        words, the happy one thanks and hands over to the store's own prompt. -->
   <Border Classes="dialog" BorderBrush="{StaticResource RateDialogBorderBrush}" BorderThickness="1">
     <StackPanel Spacing="12">

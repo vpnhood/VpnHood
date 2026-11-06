@@ -3,7 +3,7 @@
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.ConfirmDialog">
-  <!-- The web UI's ConfirmDialog: a title with the alert mark, the question, No and Yes. No is
+  <!-- A title with the alert mark, the question, No and Yes. No is
        where the remote lands - the safe answer - and Back answers No too. -->
   <Border Classes="dialog">
     <StackPanel Spacing="12">

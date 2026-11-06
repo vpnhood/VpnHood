@@ -123,10 +123,9 @@ public sealed partial class Strings : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
     }
 
-    // The way the words run, which the web UI takes from Vuetify's rtl map (ar and fa). The UI's
+    // The way the words run: right to left in ar and fa. The UI's
     // root mirrors its layout by it - the panels, the grids, the margins, the drawer's side. Text
-    // and images are never mirrored, and the spots the web UI pins with dir="ltr" or a locale
-    // provider - addresses, keys, figures - are pinned the same way.
+    // and images are never mirrored, and addresses, keys and figures are pinned left to right.
     public bool IsRightToLeft { get; private set; }
 
     // The chevrons that point the way through the pages - Util.getLocalizedRightChevron and its
@@ -134,11 +133,10 @@ public sealed partial class Strings : INotifyPropertyChanged
     public string ChevronForward => IsRightToLeft ? Mdi.ChevronLeft : Mdi.ChevronRight;
     public string ChevronBack => IsRightToLeft ? Mdi.ChevronRight : Mdi.ChevronLeft;
 
-    // The web UI hardcodes this unit in ConnectionInfo.vue, so it has no key to follow.
+    // The unit reads the same in every language, so it has no key.
     public string Mbps => "Mbps";
 
-    // The address the phone dials, before the listener has one. The web UI's dialog has no such
-    // moment - it asks the app that is already running - so there is no key for it either.
+    // The address the phone dials, before the listener has one. It has no key either.
     public string RemoteAccessStarting => "Starting…";
 
     // A connection's state in words, as the home page and the desktop's tray show it.
@@ -174,7 +172,7 @@ public sealed partial class Strings : INotifyPropertyChanged
         return English.GetValueOrDefault(key, key);
     }
 
-    // vue-i18n's named placeholders: "Connected from {address}."
+    // the named placeholders: "Connected from {address}."
     private string Get(string key, params (string Name, object Value)[] arguments)
     {
         var text = Get(key);

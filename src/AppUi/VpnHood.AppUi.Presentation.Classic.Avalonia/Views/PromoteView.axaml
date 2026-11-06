@@ -4,7 +4,7 @@
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.PromoteView"
              Classes="grad-sheet">
-  <!-- The web UI's promote-premium page: the location asks to be asked - stay on the free side,
+  <!-- The location asks to be asked - stay on the free side,
        for a while or after an ad; or the premium side, by an ad, a trial or an upgrade. Each row
        is a plan, and Connect on it connects with that plan. The header stays as the page scrolls,
        with the title once the big one has scrolled away. -->

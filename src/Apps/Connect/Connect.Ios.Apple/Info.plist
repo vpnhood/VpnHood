@@ -15,7 +15,7 @@
 	     ships every build as 1.0 (1.0), which also collides on the next TestFlight upload. -->
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<!-- The SPA is served over plain HTTP from an in-process loopback web server; allow it. -->
+	<!-- The app's web host answers over plain HTTP on loopback, in process; allow it. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

@@ -3,7 +3,7 @@
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.RenameServerDialog">
-  <!-- The web UI's rename dialog: the name, with the word that an empty one restores the default. -->
+  <!-- The name, with the word that an empty one restores the default. -->
   <Border Classes="dialog" MaxWidth="480">
     <StackPanel Spacing="12">
       <TextBlock Classes="dialog-title" Text="{Binding Rename, Source={x:Static res:Strings.Current}}" />

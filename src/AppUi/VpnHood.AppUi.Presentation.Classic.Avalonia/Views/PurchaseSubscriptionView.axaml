@@ -4,7 +4,7 @@
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.PurchaseSubscriptionView"
              Classes="grad-sheet">
-  <!-- The web UI's purchase-subscription page: what premium brings, in a carousel; then the ways to
+  <!-- What premium brings, in a carousel; then the ways to
        it - the store's plans, or the reason the store cannot be reached; the website, where a link
        can reach the person; a code; and the way back to a premium already owned. From 800 logical
        px - every TV, a wide window - the ways stand beside the carousel, so a TV shows the plans
@@ -84,7 +84,7 @@
             <StackPanel x:Name="PlanNotes" Spacing="4" Margin="16,8,0,8" Opacity="0.5">
               <TextBlock x:Name="AutoRenewText" Classes="body-small" TextWrapping="Wrap" />
               <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding CancelAnytimeInStore, Source={x:Static res:Strings.Current}}" />
-              <!-- links, but white as the notes are (the web UI's text-white) -->
+              <!-- links, but white as the notes are -->
               <StackPanel x:Name="LinksRow" Orientation="Horizontal" Spacing="4">
                 <Button x:Name="TermsLink" Classes="text-highlight" Foreground="{StaticResource WhiteBrush}" Padding="0" Click="OnTermsClick">
                   <TextBlock Classes="body-small" Text="{Binding TermsOfUse, Source={x:Static res:Strings.Current}}" />

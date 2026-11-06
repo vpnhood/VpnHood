@@ -22,12 +22,12 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 
-// What the home shows, read off the app through its API (VhApp) - the same values the web UI
-// reads, shaped the way its home and servers pages shape them. Read again once a second, because
+// What the home shows, read off the app through its API (VhApp), and shaped for the home and
+// the servers page. Read again once a second, because
 // the state's progress values and speeds move without an event and a paired browser has no other
 // way to hear of a change, and after every action; always on the UI thread. The connect flows of
-// the web UI's VpnHoodApp.ts and ConnectManager live here too, and the prompts its reloadState
-// raises - the error dialog, the update notice, the review, the ad - go through the host.
+// the app live here too, and the prompts the state raises - the error dialog, the update notice,
+// the review, the ad - go through the host.
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private const double Megabyte = 1_000_000;
@@ -69,15 +69,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // Connect ships one server and lets the person pick a location in it; the client keeps a list of
     // servers, each with locations of its own. That one difference names the home row, fills it,
-    // and decides whether the page behind it is a list of servers or of locations - the web UI's
-    // isSingleProfileMode, everywhere it reads it.
+    // and decides whether the page behind it is a list of servers or of locations.
     public bool IsSingleProfileMode => VhApp.IsSingleProfileMode;
     public string ServersRowTitle => (IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Server).ToUpperInvariant();
     public string ServersPageTitle => IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Servers;
 
     // A server is added by its access key, which only a client head takes (IsAddAccessKeySupported).
-    // A remote cannot type a vh: key, so on a TV the button says so and leads to the phone -
-    // exactly what the web UI's servers page does with it.
+    // A remote cannot type a vh: key, so on a TV the button says so and leads to the phone.
     public bool CanAddServer => VhApp.Descriptor.IsAddAccessKeySupported;
     public string AddServerText => IsTv ? Strings.Current.AddOrRemoveServers : Strings.Current.AddServer;
     public string AddServerGlyph => IsTv ? Mdi.Cellphone : Mdi.PlusCircle;
@@ -93,7 +91,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool HasSplitCountriesRow => VhApp.Descriptor.IsSplitCountrySupported;
 
     // A debug field that is set shows on the version chip, and opens the developer page on the
-    // first tap rather than the fifth - the web UI's isDebugDataHasValue.
+    // first tap rather than the fifth.
     public bool HasDebugData { get; private set => Set(ref field, value); }
 
     // The person's choice when there is one, the device's language otherwise - the pair
@@ -162,8 +160,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string LanguageText { get; private set => Set(ref field, value); } = "";
     public string AccountText { get; private set => Set(ref field, value); } = "";
 
-    // Nothing to show on the servers page but the way to add one: the web UI's NO_SERVER_AVAILABLE
-    // warning, which it shows only where a key can be added at all.
+    // Nothing to show on the servers page but the way to add one: the NO_SERVER_AVAILABLE
+    // warning, shown only where a key can be added at all.
     public bool HasNoServer { get; private set => Set(ref field, value); }
     public string NoServerText => Strings.Current.NoServerAvailable;
 
@@ -379,7 +377,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         IsExpireWarning = (expiration.Value - DateTime.UtcNow).TotalDays <= 3;
     }
 
-    // GoPremiumButton.vue: the countdown of a trial or a rewarded session, else the premium mark,
+    // The countdown of a trial or a rewarded session, else the premium mark,
     // else the pitch when the profile can be upgraded
     private void RefreshPremiumButton(AppState state)
     {
@@ -440,7 +438,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private string[]? _flagCodes;
 
-    // The prompts the web UI's reloadState raises off the state: the last error as a dialog, the
+    // The prompts raised off the state: the last error as a dialog, the
     // internal ad and the quick launch page, the update notice, the 'suppressed to' notice and the
     // review; and the usage-data question. Each once per occasion, so a poll never nags.
     private void RefreshPrompts(AppState state)
@@ -592,7 +590,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return VhApp.VpnProfileInfos;
     }
 
-    // The web UI's ExpansionPanel: every server the app holds, the one it is set to marked, each
+    // Every server the app holds, the one it is set to marked, each
     // opened when it is that one or has a single location - nothing to open.
     private static IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<VpnProfileInfo> infos)
     {
@@ -618,7 +616,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             }).ToArray();
     }
 
-    // ExpansionPanelCollapsed.vue: the first flags of a closed server, the fastest choice as the earth
+    // The first flags of a closed server, the fastest choice as the earth
     private static IReadOnlyList<CollapsedFlag> CollapsedFlags(VpnProfileInfo profile)
     {
         return profile.LocationInfos
@@ -634,20 +632,20 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return profile.LocationInfos.Count(x => x.CountryCode != "*" && !x.IsNestedCountry);
     }
 
-    // "United States (California)", "USA (California)" as the web UI abbreviates it
+    // "United States (California)", abbreviated "USA (California)"
     private static string LocationDisplay(string countryName, string? regionName)
     {
         var text = regionName == null ? countryName : $"{countryName} ({regionName})";
         return text.Replace("United States (", "USA (");
     }
 
-    // (bytes/s * 10) / 1e6 with two decimals - the web UI's formatSpeed
+    // (bytes/s * 10) / 1e6 with two decimals
     private static string FormatSpeed(long bytesPerSecond)
     {
         return (bytesPerSecond * 10 / Megabyte).ToString("0.00", CultureInfo.InvariantCulture);
     }
 
-    // "12MB of 1GB" for a session with a traffic cap; empty otherwise (the web UI's bandwidthUsage)
+    // "12MB of 1GB" for a session with a traffic cap; empty otherwise
     private static string BandwidthUsage(AppState state)
     {
         var max = state.SessionInfo?.AccessInfo?.MaxTotalTraffic ?? 0;
@@ -657,7 +655,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return $"{Format.TrafficTight(traffic.Sent + traffic.Received)} {Strings.Current.Of} {Format.TrafficTight(max)}";
     }
 
-    // The web UI's LocationList: Free and Premium cards when the profile has both and the person is
+    // Free and Premium cards when the profile has both and the person is
     // not premium; only the premium rows when the person is; one card of everything otherwise.
     // In an app that sells no premium too: the one premium mark it shows, since it compares a key's
     // locations only with each other, and a free key's premium location fails without an ad
@@ -691,8 +689,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                     IsNested: x.IsNestedCountry,
                     IsAuto: x.IsAuto,
                     // only under the server the app is set to: another server's own choice is not
-                    // where this app is going (the web UI's isActiveItem, which returns false for
-                    // any profile but the active one)
+                    // where this app is going
                     IsActive: isActiveProfile && x.ServerLocation == selected &&
                               profile.IsPremiumLocationSelected == isPremiumGroup,
                     IsPremiumGroup: isPremiumGroup,
@@ -708,12 +705,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return [Group("", premium.Length > 0, all)];
     }
 
-    // ---- connecting, as the web UI's VpnHoodApp.connect and ConnectManager do it ----
+    // ---- connecting ----
 
     private long _lastConnectPress = Environment.TickCount64 - 1000;
 
-    // Connect, or disconnect: the one button's two meanings, decided by the app's own flags, as the
-    // web UI's onConnectButtonClick decides them - with its guard against a double press.
+    // Connect, or disconnect: the one button's two meanings, decided by the app's own flags - with
+    // a guard against a double press.
     public async Task ToggleConnect(CancellationToken cancellationToken)
     {
         if (_lastConnectPress >= Environment.TickCount64 - 1000)
@@ -877,7 +874,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // A server the person typed the key of. The key is the app's to judge: an unreadable one throws,
-    // and the page that called this says so (INVALID_ACCESS_KEY_FORMAT), as the web UI's dialog does.
+    // and the page that called this says so (INVALID_ACCESS_KEY_FORMAT).
     public async Task<Guid> AddAccessKey(string accessKey, CancellationToken cancellationToken)
     {
         var profile = await VhApp.Api.VpnProfiles.AddByAccessKey(accessKey, cancellationToken);
@@ -953,7 +950,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // Why the servers row leads nowhere, when it does: a head that takes no keys can hold nothing
-    // to choose between. The web UI's buttonClickHandler, which says this and stays home.
+    // to choose between: this says so and stays home.
     public string? ServersUnreachableReason()
     {
         if (CanAddServer)
@@ -968,7 +965,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             : null;
     }
 
-    // ---- the account, as the web UI's VpnHoodApp.signIn and friends ----
+    // ---- the account ----
 
     // The store's sign-in. Its sheet is the device's own; the loading dialog covers the wait.
     // Cancelled silently, unless a purchase was waiting on it.

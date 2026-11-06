@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitIpv6View">
-  <!-- The web UI's split-ipv6: what becomes of IPv6 on a server that cannot carry it - blocked,
+  <!-- What becomes of IPv6 on a server that cannot carry it - blocked,
        or let out with its warning -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding SplitIpv6, Source={x:Static res:Strings.Current}}" />

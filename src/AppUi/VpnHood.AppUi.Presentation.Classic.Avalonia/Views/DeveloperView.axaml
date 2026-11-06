@@ -4,10 +4,10 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.DeveloperView">
-  <!-- The web UI's developer dialog (components/Home/DeveloperDialog.vue) as a page: the title
-       with its bug icon, the debug commands, the free debug field and the log - not the dialog's
-       support id, which a developer has no use for here and a profile often lacks. The dialog's
-       Close is the page's Back, which saves. DebugData1 is that dialog's combobox: the chosen
+  <!-- The title
+       with its bug icon, the debug commands, the free debug field and the log - not the
+       support id, which a developer has no use for here and a profile often lacks.
+       The page's Back saves. DebugData1 is a combobox: the chosen
        commands as chips in a field, and the list behind the chevron, as wide as the field and
        scrolling on its own so the page never does. The items are the app's own
        (AppDescriptor.DebugCommands); a chip is dropped by unticking it in the list, not by a close

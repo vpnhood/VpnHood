@@ -14,8 +14,7 @@ namespace VpnHood.App.StoreScreenshots;
 //
 // Drawn above size and reduced once, deliberately: a mockup drawn straight at the output scale has
 // visibly soft text, because the capture inside it is being shrunk as it is drawn. Two passes -
-// draw at twice the size, then one high-quality reduction - is what the web UI's engine did with a
-// browser and a canvas, and this keeps it.
+// draw at twice the size, then one high-quality reduction - keep it sharp.
 internal static class FrameRenderer
 {
     private const int Supersample = 2;

@@ -72,7 +72,7 @@ public partial class ProxyEditDialog : DialogBase
         UpdateSaveButton();
     }
 
-    // ProxyStatus.vue: the record, one line each; nothing to show before the proxy was tried
+    // The record, one line each; nothing to show before the proxy was tried
     private void FillStatus(ProxyEndPointStatus? status)
     {
         var s = Strings.Current;
@@ -131,7 +131,7 @@ public partial class ProxyEditDialog : DialogBase
             : HostRule == null && PortRule == null);
     }
 
-    // The host's rule shows once the host has been typed in, as the web UI's field shows it: an
+    // The host's rule shows once the host has been typed in: an
     // empty new form is not a mistake yet, and Add waits for a host anyway. The fields' first
     // fill runs before the dialog is loaded.
     private void OnFieldChanged(object? sender, TextChangedEventArgs e)

@@ -177,7 +177,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
         }
     }
 
-    // DeviceProxy.vue: the device's proxy, read once on arrival
+    // The device's proxy, read once on arrival
     private async Task ShowDeviceProxy(CancellationToken cancellationToken)
     {
         try {

@@ -74,7 +74,7 @@ The shipped privacy manifest already matches that answer.
 
 Re-enabling iOS analytics requires changing the iOS app boundary, not merely adding configuration.
 If a fork does so, it must also restore the corresponding manifest entries and App Store Connect
-answers. The inventory below was written for the web UI's Firebase Analytics, which no build ships
+answers. The inventory below was written for Firebase Analytics, which no build ships
 any more; re-check it against the shared GA4 tracker before relying on it:
 
 1. **"Do you or your third-party partners collect data from this app?"** → **Yes**.

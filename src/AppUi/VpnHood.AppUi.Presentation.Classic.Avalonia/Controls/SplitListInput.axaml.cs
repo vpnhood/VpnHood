@@ -15,7 +15,7 @@ public partial class SplitListInput : UserControl
         InitializeComponent();
     }
 
-    // the format hints of an IP list (SplitIpInput.vue)
+    // the format hints of an IP list
     public void UseIpFormat(bool hasBlocks)
     {
         var s = Strings.Current;
@@ -28,7 +28,7 @@ public partial class SplitListInput : UserControl
         SetTitles(s.ExcludeIps, s.IncludeIps, s.BlockIps, s.SplitIpPlaceHolder, hasBlocks);
     }
 
-    // the format hints of a domain list (SplitDomainInput.vue)
+    // the format hints of a domain list
     public void UseDomainFormat()
     {
         var s = Strings.Current;

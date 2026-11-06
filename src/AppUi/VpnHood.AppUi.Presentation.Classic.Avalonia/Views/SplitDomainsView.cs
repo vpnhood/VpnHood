@@ -7,7 +7,7 @@ using VpnHood.AppLib.Api.SplitTunneling;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
-// The web UI's split-domains: the domain lists, behind their switch; the pitch while the feature is
+// The domain lists, behind their switch; the pitch while the feature is
 // sold and not bought (Create).
 public sealed class SplitDomainsView : SplitListView
 {

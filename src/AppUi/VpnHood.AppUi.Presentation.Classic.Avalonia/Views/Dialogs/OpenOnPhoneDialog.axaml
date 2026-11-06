@@ -4,9 +4,9 @@
                     xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.OpenOnPhoneDialog">
-  <!-- The web UI's OpenOnPhoneDialog: what a TV shows in place of following an outbound link - a
+  <!-- What a TV shows in place of following an outbound link - a
        code to scan, the address beneath it for anyone who would rather type it, and Close under
-       the remote. The address is pinned left to right, as QrPlate.vue pins it: an RTL locale
+       the remote. The address is pinned left to right: an RTL locale
        would reorder it into something that cannot be typed. -->
   <Border Classes="dialog" MaxWidth="480">
     <StackPanel Spacing="12" HorizontalAlignment="Center">

@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.AppUi.Common;
 
-// The web UI's ErrorHandler: the sentence for a failure, and the buttons that go with it. The app
+// The sentence for a failure, and the buttons that go with it. The app
 // reports a failure as an ApiError - a type name and a bag of data - whether it happened behind an
 // HTTP call there or a method call here, so the two read the same fields. What the sentence depends
 // on besides the failure comes in as the ErrorContext, read by the UI that holds the app's state.

@@ -21,7 +21,7 @@ public partial class PremiumFeaturesCarousel : UserControl
         var intents = VhApp.Intents;
         var features = VhApp.Descriptor;
 
-        // PremiumFeaturesCarousel.vue's carouselItems: a feature the device cannot have is not
+        // A feature the device cannot have is not
         // promised, and a build with no premium tier does not sell speed
         var slides = new List<(string? Image, string Title, string Description, bool IsSupported)> {
             (null, s.UltraFastSpeed, s.UltraFastSpeedDesc, VhApp.IsPremiumSupported),

@@ -4,7 +4,7 @@
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.ProxiesView">
-  <!-- The web UI's proxies page: the mode - none, the device's, a list of the person's own - and
+  <!-- The mode - none, the device's, a list of the person's own - and
        under it what the mode needs: the device's proxy as it reads it; or the list, its source URL,
        its statistics, and the ways to add to it and to clean it. -->
   <DockPanel Classes="page">

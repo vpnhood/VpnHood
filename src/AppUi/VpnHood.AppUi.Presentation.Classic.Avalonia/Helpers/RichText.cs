@@ -6,8 +6,8 @@ using Avalonia.Media;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
-// Some of the web UI's strings carry markup - a word in the premium colour, a bold name, a short
-// document with headings and bullets - which it renders with v-html. This puts the same marks on a
+// Some of the strings carry markup - a word in the premium colour, a bold name, a short
+// document with headings and bullets. This puts those marks on a
 // TextBlock's inlines: the few tags the strings use, the classes the theme names, and nothing else.
 internal static partial class RichText
 {
@@ -112,7 +112,7 @@ internal static partial class RichText
         }
     }
 
-    // the theme's text colours, by the class the web UI's stylesheet names them
+    // the theme's text colours, by the class the strings name them
     private static IBrush? BrushOf(string attributes, Control context)
     {
         var classes = ClassRegex().Match(attributes).Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);

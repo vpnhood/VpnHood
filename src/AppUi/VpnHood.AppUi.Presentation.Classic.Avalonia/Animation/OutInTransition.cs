@@ -5,8 +5,8 @@ using Avalonia.Media;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Animation;
 
-// The web UI's route transition (App.vue: translate-with-fade going deeper, short-translate coming
-// back, both mode="out-in"), value for value: the leaving page fades out in 90ms, dropping 50px on
+// The page transition (translate-with-fade going deeper, short-translate coming
+// back, one after the other): the leaving page fades out in 90ms, dropping 50px on
 // the way back, and only then the arriving page fades in over 130ms, rising 50px going deeper or
 // settling 30px coming back; both on the CSS 'ease' curve. Out-in keeps one page in the box at a
 // time, so nothing ghosts through anything. The visuals are the host's two presenters, which it

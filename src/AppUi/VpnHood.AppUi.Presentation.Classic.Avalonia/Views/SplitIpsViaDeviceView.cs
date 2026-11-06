@@ -6,7 +6,7 @@ using VpnHood.AppLib.Api.SplitTunneling;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
-// The web UI's split-ips-via-device: the IP lists handed to the device's own routing, behind their
+// The IP lists handed to the device's own routing, behind their
 // switch - no block list, the device cannot drop; the pitch while the feature is sold and not
 // bought (Create).
 public sealed class SplitIpsViaDeviceView : SplitListView

@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.StatisticsView">
-  <!-- The web UI's statistics page: a card per subject - the premium access, the server, the
+  <!-- A card per subject - the premium access, the server, the
        devices, the session's, the month's and the lifetime's traffic - each a table of label and
        value rows, built in code from the session the app reports. -->
   <DockPanel Classes="page">

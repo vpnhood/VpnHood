@@ -5,7 +5,7 @@ using ShapePath = Avalonia.Controls.Shapes.Path;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
-// The sign-in marks Google and Apple require on their buttons (SignInDialog.vue's inline SVGs):
+// The sign-in marks Google and Apple require on their buttons:
 // the same paths, as shapes on a canvas of the SVG's own size. The Google G keeps the fills baked
 // into its paths; the Apple mark takes the button's text colour.
 public static class BrandMarks

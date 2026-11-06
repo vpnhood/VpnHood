@@ -19,7 +19,7 @@ public partial class AddServerView : UserControl, IPage
         InitializeComponent();
     }
 
-    // the field, as the web UI's dialog opens with it focused
+    // the field
     public void FocusDefault()
     {
         KeyBox.LandFocus();
@@ -48,7 +48,7 @@ public partial class AddServerView : UserControl, IPage
     }
 
     // The key is the app's to judge: whatever it refuses is an unreadable key, and the page says so
-    // in the web UI's own words rather than the exception's.
+    // in its own words rather than the exception's.
     private async Task Add(CancellationToken cancellationToken)
     {
         var accessKey = KeyBox.Text?.Trim();

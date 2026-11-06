@@ -8,8 +8,7 @@ using VpnHood.AppUi.Common;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
-// The app's log, read through the API as the web UI reads /api/app/log.txt. Nothing here is
-// localized, as nothing is in the dialog this page comes from.
+// The app's log, read through the API. Nothing here is localized.
 public partial class LogView : UserControl, IPage
 {
     public LogView()

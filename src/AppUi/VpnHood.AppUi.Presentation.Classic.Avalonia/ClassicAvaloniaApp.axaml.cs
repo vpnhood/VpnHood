@@ -15,7 +15,7 @@ using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
 
-// VpnHood's own Avalonia UI: the web UI's pages, page for page, in one responsive layout. A head
+// VpnHood's own Avalonia UI: every page, in one responsive layout. A head
 // names this class as its UI (AvaloniaDesktopHost.Run<ClassicAvaloniaApp>, the Android
 // application's type argument, the iOS delegate's) and gets these pages, these controls and these
 // two palettes; a head that names another gets that one instead, and none of this is in its build.

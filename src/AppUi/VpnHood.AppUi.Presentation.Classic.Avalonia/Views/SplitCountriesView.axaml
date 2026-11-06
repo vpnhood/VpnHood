@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitCountriesView">
-  <!-- The web UI's split-countries: three modes, and the country list with its switches when the
+  <!-- Three modes, and the country list with its switches when the
        list is the mode. Inert while splitting is off; the alert on top repairs that. -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding SplitCountries, Source={x:Static res:Strings.Current}}" />

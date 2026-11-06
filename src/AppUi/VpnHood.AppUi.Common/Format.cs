@@ -56,7 +56,7 @@ public static class Format
         return latency == null ? "-" : $"{(long)latency.Value.TotalMilliseconds} ms";
     }
 
-    // "1.5 GB" or "12 MB" (statistics.vue's calcUnit)
+    // "1.5 GB" or "12 MB"
     public static string Traffic(long bytes)
     {
         var isGb = bytes >= Gigabyte;

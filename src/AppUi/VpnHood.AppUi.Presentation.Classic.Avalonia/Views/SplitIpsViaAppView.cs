@@ -6,7 +6,7 @@ using VpnHood.AppLib.Api.SplitTunneling;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
-// The web UI's split-ips-via-app: the IP lists the app applies itself, behind their switch; the
+// The IP lists the app applies itself, behind their switch; the
 // pitch while the feature is sold and not bought (Create).
 public sealed class SplitIpsViaAppView : SplitListView
 {

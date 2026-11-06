@@ -5,7 +5,7 @@ using VpnHood.AppUi.Common;
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
 
 // The fonts of the asset store, as one Avalonia font collection: the text faces (Poppins, and the
-// Persian and Arabic faces the web UI lists beside it) and the icon font, out of the store rather
+// Persian and Arabic faces beside it) and the icon font, out of the store rather
 // than out of this assembly, so the bytes ship once - and as bytes the provider read, since the
 // store may be a web server.
 //

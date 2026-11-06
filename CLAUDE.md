@@ -49,7 +49,7 @@ opened (a question, a plan), read the rule file first. A new convention for one 
 rule file.
 
 - [`.claude/rules/csharp.md`](.claude/rules/csharp.md) — C# language and `await`/`ConfigureAwait` conventions.
-- [`.claude/rules/ui.md`](.claude/rules/ui.md) — the Avalonia UI, its Assets submodule and the SPA sample repo.
+- [`.claude/rules/ui.md`](.claude/rules/ui.md) — the Avalonia UI and its Assets submodule.
 - [`.claude/rules/quic.md`](.claude/rules/quic.md) — our QUIC is a transport treated like TCP, not HTTP3.
 - [`.claude/rules/ios.md`](.claude/rules/ios.md) — iOS heads and extensions: where the code lives, `docs/ios/`,
   the .NET 11 build, the default app, App Store-only updates.

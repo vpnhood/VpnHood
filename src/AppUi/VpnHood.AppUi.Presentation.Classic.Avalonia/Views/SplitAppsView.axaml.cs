@@ -11,7 +11,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 
 public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
 {
-    // the row standing for apps installed later (split-apps.vue's "$")
+    // the row standing for apps installed later
     private const string FutureAppsId = "$";
 
     private readonly MainView _host;
@@ -62,7 +62,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         }
     }
 
-    // split-apps.vue's sortApps: the enabled first when future apps are in, the disabled first when
+    // The enabled first when future apps are in, the disabled first when
     // they are not; "All future apps" ahead of its group; then by name
     private static IReadOnlyList<FilterItem> Sort(IReadOnlyList<FilterItem> items)
     {
@@ -84,7 +84,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
         }
     }
 
-    // one per theme, as in the web UI's split-apps page
+    // one per theme
     private static Task<Bitmap?> FutureAppsIcon()
     {
         return AppAssets.LoadBitmapAsync(AppAssets.ImagePath($"future-apps-{VhApp.Descriptor.UiTheme}.png"));

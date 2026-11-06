@@ -3,8 +3,8 @@ using System.Text.RegularExpressions;
 
 namespace VpnHood.AppUi.Common;
 
-// The web UI's content documents (src/content/<lang>/*.md) are markdown its build renders to HTML.
-// This renders the same subset - the front matter's title, paragraphs, headings, bullet and
+// The content documents (assets/content/<lang>/*.md) are markdown.
+// This renders the subset they use - the front matter's title, paragraphs, headings, bullet and
 // numbered lists, bold, links - to the markup RichText draws, so a document reads the same here.
 public static partial class Markdown
 {

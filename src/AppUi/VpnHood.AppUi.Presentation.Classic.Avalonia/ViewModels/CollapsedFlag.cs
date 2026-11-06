@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels;
 
-// One of the flags a closed server shows in a row (ExpansionPanelCollapsed.vue); the automatic
+// One of the flags a closed server shows in a row; the automatic
 // choice has no country and shows the earth instead.
 public sealed record CollapsedFlag(string? CountryCode)
 {

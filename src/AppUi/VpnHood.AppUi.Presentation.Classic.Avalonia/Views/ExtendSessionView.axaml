@@ -4,7 +4,7 @@
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.ExtendSessionView"
              Classes="grad-sheet">
-  <!-- The web UI's servers/extend-session: more time on a premium session, by an ad while the
+  <!-- More time on a premium session, by an ad while the
        session allows it, or by an upgrade. The header stays as the page scrolls, with the title
        once the big one has scrolled away. -->
   <DockPanel Classes="page">

@@ -2,10 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.SettingsToggleItem">
-  <!-- The web UI's SettingsToggleItem: a card that changes a setting where it stands - the title,
+  <!-- A card that changes a setting where it stands - the title,
        a warning chip while the caller provides one (under the title when a long language leaves
        no room beside it), the switch, and a paragraph under them. The card is the button and the
-       switch only shows: on a TV the row is the thing the remote is on (data-tv-row), and the
+       switch only shows: on a TV the row is the thing the remote is on, and the
        press flips it. -->
   <controls:SwitchRow x:Name="Card" Classes="card-row" Click="OnCardClick" Margin="0,0,0,12">
     <StackPanel Spacing="6">

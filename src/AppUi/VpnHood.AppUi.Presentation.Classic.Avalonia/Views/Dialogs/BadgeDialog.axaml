@@ -4,7 +4,7 @@
                     xmlns:vm="using:VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.BadgeDialog">
-  <!-- The web UI's BadgeDialog: the features in use, each a row to its page - or, on a TV, to the
+  <!-- The features in use, each a row to its page - or, on a TV, to the
        phone, since those pages are its work there. -->
   <Border Classes="dialog">
     <StackPanel Spacing="8">

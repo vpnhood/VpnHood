@@ -9,10 +9,9 @@ using VpnHood.AppLib.Api.Premium;
 
 namespace VpnHood.App.StoreScreenshots;
 
-// The web UI engine's fixture.json, read as the app's API would answer it: the whole document is
+// fixture.json, read as the app's API would answer it: the whole document is
 // the AppInfo that Configure returns (descriptor, state, settings, profiles, languages), and
-// installedApps beside it is what GetInstalledApps returns. The same file, so the two renderers
-// draw the same mocked app and a change to the fixture reaches both.
+// installedApps beside it is what GetInstalledApps returns.
 //
 // The fixture was recorded from an older client, and the contract has grown since: a member the
 // API now requires and the fixture does not carry is filled here with the value a plain CLIENT
@@ -67,8 +66,7 @@ internal sealed class StoreFixture
 
     // The language, the way the app itself reports one: the person's choice in the settings, and the
     // state's current and system cultures - what the view model reads to pick the words, and what the
-    // settings page shows. The web UI engine patches only state.currentUiCultureInfo, which is all the
-    // SPA reads; the Avalonia UI follows the settings first.
+    // settings page shows; the Avalonia UI follows the settings first.
     private static void ApplyCulture(JsonObject root, string culture)
     {
         var cultureInfo = CultureInfo.GetCultureInfo(culture);

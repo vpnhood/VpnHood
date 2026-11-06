@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.SplitDnsView">
-  <!-- The web UI's split-dns: two ways to resolve names while splitting, the permissive one with
+  <!-- Two ways to resolve names while splitting, the permissive one with
        its warning -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding SplitDns, Source={x:Static res:Strings.Current}}" />

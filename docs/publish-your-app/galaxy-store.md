@@ -39,9 +39,12 @@ Work through it in order. Come back to [start here](README.md) when you are done
    the company's principals verifies: a live photo-ID check on a phone, and two official documents
    naming them at the company's address, such as a tax-agency letter and the state's annual statement.
    D&B allows itself eight business days; it can take one. The industry is a search by SIC code there
-   (software publishers: 7372, *Prepackaged software*). The website field is read-only in Profile
-   Manager: ask D&B's support to add it. Let the person Samsung will show as your representative do
-   the verifying: D&B may record whoever verifies on its file of your company.
+   (software publishers: 7372, *Prepackaged software*). The website is locked there: the info icon
+   beside *Company Website* opens D&B's update form, *Open Web Form*. D&B refuses a website that does
+   not belong to the company, so have the site name your company, as your terms and privacy policy
+   do. Each change takes D&B up to seven business days, and a pending one blocks further edits. Let
+   the person Samsung will show as your representative do the verifying: D&B may record whoever
+   verifies on its file of your company.
 4. **Commercial seller status**: *Request Commercial Seller* on your profile. It is required for
    free apps too, and until it is approved, *Add New App* refuses Android apps. Samsung copies the
    company's name, representative and address from the D‑U‑N‑S record, read-only. In *Comments to

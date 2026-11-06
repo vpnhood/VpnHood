@@ -13,20 +13,22 @@ public static class AotPreserveHelper
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Version))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TimeSpan))]
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArrayConverter<,>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(NullToEmptyArrayConverter<>))]
+    // A converter only has to be made. All would also keep JsonConverter's reflection members, which the
+    // trim analysis then reports wherever this call is kept.
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(ArrayConverter<,>))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(NullToEmptyArrayConverter<>))]
 
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPAddressConverter))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPEndPointConverter))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TimeSpanConverter))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(VersionConverter))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(IPAddressConverter))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(IPEndPointConverter))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(TimeSpanConverter))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(VersionConverter))]
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IpRange))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IpRangeConverter))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(IpRangeConverter))]
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPNetwork))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IpNetwork))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IpNetworkConverter))]
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(IpNetworkConverter))]
 
     // The trimmer reads the attributes, not the body: the types stay wherever this call is kept.
     [MethodImpl(MethodImplOptions.NoInlining)]

@@ -15,8 +15,6 @@ namespace VpnHood.AppUi.Common;
 // it and answers the built-in look.
 public class ThemeColors
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
     public VhColor? WindowBackgroundColor { get; init; }
     public VhColor? NavigationBarColor { get; init; }
     public VhColor? ProgressBarColor { get; init; }
@@ -69,7 +67,7 @@ public class ThemeColors
         if (stream is null)
             return null;
 
-        return await JsonSerializer.DeserializeAsync<ThemeManifest>(stream, JsonOptions, cancellationToken).ConfigureAwait(false)
+        return await JsonSerializer.DeserializeAsync(stream, AssetJsonContext.Default.ThemeManifest, cancellationToken).ConfigureAwait(false)
                ?? throw new InvalidOperationException($"The theme's manifest '{folder}/manifest.json' is empty.");
     }
 

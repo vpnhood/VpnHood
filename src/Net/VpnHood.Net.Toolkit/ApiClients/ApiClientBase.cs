@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
@@ -24,7 +25,7 @@ public class ApiClientBase : ApiClientCommon
         public required string Text { get; init; }
     }
 
-    protected JsonSerializerOptions JsonSerializerSettings => field ??= CreateSerializerSettings();
+    protected JsonSerializerOptions JsonSerializerSettings => field ??= PrepareSerializerSettings();
     protected HttpClient? HttpClient;
     public ILogger Logger { get; set; } = NullLogger.Instance;
     public EventId LoggerEventId { get; set; } = new();
@@ -42,6 +43,22 @@ public class ApiClientBase : ApiClientCommon
     {
         var settings = new JsonSerializerOptions();
         return settings;
+    }
+
+    // Each read and write goes through the settings' GetTypeInfo, which needs a resolver. A client with no
+    // context of its own reads by reflection: where that is off, the browser page, the trimmer drops this line.
+    private JsonSerializerOptions PrepareSerializerSettings()
+    {
+        var settings = CreateSerializerSettings();
+        if (settings.TypeInfoResolver == null && JsonSerializer.IsReflectionEnabledByDefault)
+            settings.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+
+        return settings;
+    }
+
+    private JsonTypeInfo<T> GetJsonTypeInfo<T>()
+    {
+        return (JsonTypeInfo<T>)JsonSerializerSettings.GetTypeInfo(typeof(T));
     }
 
     public bool ReadResponseAsString { get; set; }
@@ -68,7 +85,7 @@ public class ApiClientBase : ApiClientCommon
         if (ReadResponseAsString) {
             var responseText = await response.Content.ReadAsStringAsync(cancellationToken).Vhc();
             try {
-                var typedBody = JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
+                var typedBody = JsonSerializer.Deserialize(responseText, GetJsonTypeInfo<T>());
                 return new HttpResult<T?> { ResponseMessage = response, Object = typedBody, Text = responseText };
             }
             catch (JsonException exception) {
@@ -80,7 +97,7 @@ public class ApiClientBase : ApiClientCommon
         try {
             await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).Vhc();
             var typedBody = await JsonSerializer
-                .DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).Vhc();
+                .DeserializeAsync(responseStream, GetJsonTypeInfo<T>(), cancellationToken).Vhc();
             return new HttpResult<T?> { ResponseMessage = response, Object = typedBody, Text = string.Empty };
         }
         catch (JsonException exception) {
@@ -98,9 +115,11 @@ public class ApiClientBase : ApiClientCommon
         if (value is Enum) {
             var name = Enum.GetName(value.GetType(), value);
             if (name != null) {
-                var field = value.GetType().GetTypeInfo().GetDeclaredField(name);
-                if (field != null) {
-                    if (field.GetCustomAttribute(typeof(EnumMemberAttribute)) is EnumMemberAttribute attribute) {
+                // Read by reflection: where that is off, the browser page, the trimmer drops this, and a value
+                // goes as its number.
+                if (JsonSerializer.IsReflectionEnabledByDefault) {
+                    var field = value.GetType().GetTypeInfo().GetDeclaredField(name);
+                    if (field?.GetCustomAttribute(typeof(EnumMemberAttribute)) is EnumMemberAttribute attribute) {
                         return attribute.Value ?? name;
                     }
                 }
@@ -152,7 +171,7 @@ public class ApiClientBase : ApiClientCommon
 
         // A body only when there is data: no data is no body, not the JSON null.
         if (data != null) {
-            var content = new StringContent(JsonSerializer.Serialize(data, JsonSerializerSettings));
+            var content = new StringContent(JsonSerializer.Serialize(data, JsonSerializerSettings.GetTypeInfo(data.GetType())));
             content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
             request.Content = content;
         }
@@ -273,7 +292,7 @@ public class ApiClientBase : ApiClientCommon
         if (!string.IsNullOrWhiteSpace(responseData)) {
             ApiError? apiError = null;
             try {
-                apiError = JsonSerializer.Deserialize<ApiError>(responseData, JsonSerializerSettings);
+                apiError = JsonSerializer.Deserialize(responseData, GetJsonTypeInfo<ApiError>());
             }
             catch (JsonException) {
                 // not an ApiError body

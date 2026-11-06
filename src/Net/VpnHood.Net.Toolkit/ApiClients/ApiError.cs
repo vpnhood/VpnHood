@@ -9,8 +9,9 @@ public class ApiError : ICloneable, IEquatable<ApiError>
 {
     public const string Flag = "IsApiError";
 
-    // either casing: .NET's default (TypeName) or a web host's camelCase (typeName), as the app's own API writes it
-    private static readonly JsonSerializerOptions ParseOptions = new() { PropertyNameCaseInsensitive = true };
+    // A copy of the context's settings, as new ones would write by reflection, which the browser page has off.
+    private static readonly JsonSerializerOptions IndentedOptions = new(ApiErrorJsonContext.Default.Options) { WriteIndented = true };
+
     public required string TypeName { get; init; }
     public string? TypeFullName { get; init; }
     public required string Message { get; init; }
@@ -31,7 +32,7 @@ public class ApiError : ICloneable, IEquatable<ApiError>
         apiError = null;
 
         try {
-            var res = JsonSerializer.Deserialize<ApiError>(value, ParseOptions);
+            var res = JsonSerializer.Deserialize(value, ApiErrorJsonContext.Default.ApiError);
             if (res?.TypeName == null)
                 return false;
 
@@ -53,7 +54,8 @@ public class ApiError : ICloneable, IEquatable<ApiError>
 
     public string ToJson(bool writeIndented = false)
     {
-        return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = writeIndented });
+        var options = writeIndented ? IndentedOptions : ApiErrorJsonContext.Default.Options;
+        return JsonSerializer.Serialize(this, options.GetTypeInfo(typeof(ApiError)));
     }
 
     public bool Is<T>()

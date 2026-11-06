@@ -235,7 +235,10 @@ public sealed partial class Strings
     /// <summary>Protocol</summary>
     public string ProtocolTitle => Get("PROTOCOL_TITLE");
 
-    /// <summary>A VPN protocol defines how data is transferred between your device and the VPN server after the initial connection is...</summary>
+    /// <summary>Tunnel protocol</summary>
+    public string ProtocolTunnelTitle => Get("PROTOCOL_TUNNEL_TITLE");
+
+    /// <summary>How data travels between your device and the VPN server once connected.</summary>
     public string ProtocolDesc => Get("PROTOCOL_DESC");
 
     /// <summary>UDP</summary>
@@ -256,11 +259,17 @@ public sealed partial class Strings
     /// <summary>Modern protocol over UDP for faster, more reliable connections, but access may be restricted.</summary>
     public string ProtocolQuicDesc => Get("PROTOCOL_QUIC_DESC");
 
-    /// <summary>Block QUIC</summary>
+    /// <summary>Block QUIC in other apps</summary>
     public string ProtocolBlockQuic => Get("PROTOCOL_BLOCK_QUIC");
 
-    /// <summary>Block QUIC so apps switch to standard streaming, which may improve video playback in Cloak Mode.</summary>
+    /// <summary>Stops the QUIC that browsers and other apps use, so they switch to TCP, which may improve video playback in Cloak Mod...</summary>
     public string ProtocolBlockQuicDesc => Get("PROTOCOL_BLOCK_QUIC_DESC");
+
+    /// <summary>Block UDP in other apps</summary>
+    public string ProtocolBlockUdp => Get("PROTOCOL_BLOCK_UDP");
+
+    /// <summary>Stops all UDP except DNS, so apps that can use TCP go through Cloak Mode instead. Voice and video calls and games tha...</summary>
+    public string ProtocolBlockUdpDesc => Get("PROTOCOL_BLOCK_UDP_DESC");
 
     /// <summary>Cloak</summary>
     public string Cloak => Get("CLOAK");
@@ -1972,8 +1981,38 @@ public sealed partial class Strings
     /// <summary>No device connected yet.</summary>
     public string RemoteAccessNoDevice => Get("REMOTE_ACCESS_NO_DEVICE");
 
-    /// <summary>Won't open on your Android phone? In Settings, allow Nearby devices for your browser.</summary>
-    public string RemoteAccessHintLocalNetwork => Get("REMOTE_ACCESS_HINT_LOCAL_NETWORK");
+    /// <summary>Can't open it on your phone?</summary>
+    public string RemoteAccessHelp => Get("REMOTE_ACCESS_HELP");
+
+    /// <summary>If your phone can't open it</summary>
+    public string RemoteAccessHelpTitle => Get("REMOTE_ACCESS_HELP_TITLE");
+
+    /// <summary>Try these in order, then scan the code again.</summary>
+    public string RemoteAccessHelpDesc => Get("REMOTE_ACCESS_HELP_DESC");
+
+    /// <summary>Use the same network</summary>
+    public string RemoteAccessHelpNetworkTitle => Get("REMOTE_ACCESS_HELP_NETWORK_TITLE");
+
+    /// <summary>Connect your phone to the same Wi-Fi or router as this TV. Mobile data and guest networks can't reach it.</summary>
+    public string RemoteAccessHelpNetworkDesc => Get("REMOTE_ACCESS_HELP_NETWORK_DESC");
+
+    /// <summary>Turn off the VPN on your phone</summary>
+    public string RemoteAccessHelpVpnTitle => Get("REMOTE_ACCESS_HELP_VPN_TITLE");
+
+    /// <summary>A VPN on your phone can keep it from reaching this TV. Turn it off while you use this page.</summary>
+    public string RemoteAccessHelpVpnDesc => Get("REMOTE_ACCESS_HELP_VPN_DESC");
+
+    /// <summary>Allow Nearby devices on Android</summary>
+    public string RemoteAccessHelpNearbyTitle => Get("REMOTE_ACCESS_HELP_NEARBY_TITLE");
+
+    /// <summary>Android can keep a browser off your local network. In Settings, open Apps, choose your browser, open Permissions and ...</summary>
+    public string RemoteAccessHelpNearbyDesc => Get("REMOTE_ACCESS_HELP_NEARBY_DESC");
+
+    /// <summary>Check your router</summary>
+    public string RemoteAccessHelpRouterTitle => Get("REMOTE_ACCESS_HELP_ROUTER_TITLE");
+
+    /// <summary>Some routers keep devices apart. In your router's settings, turn off AP isolation, also called client isolation.</summary>
+    public string RemoteAccessHelpRouterDesc => Get("REMOTE_ACCESS_HELP_ROUTER_DESC");
 
     /// <summary>Connected from {address}.</summary>
     public string RemoteAccessConnectedFrom(object address) => Get("REMOTE_ACCESS_CONNECTED_FROM", ("address", address));

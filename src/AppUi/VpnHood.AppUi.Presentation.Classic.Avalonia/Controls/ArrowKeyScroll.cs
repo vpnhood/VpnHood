@@ -37,22 +37,27 @@ public static class ArrowKeyScroll
             scroller.KeyDown += OnKeyDown;
     }
 
-    // the scroller's own keys only: one from a control inside it is that control's
-    private static void OnKeyDown(object? sender, KeyEventArgs e)
+    // Moves a scroller as Up and Down do, for a page that keeps the focus on a control of its own; false
+    // for any other key, or at that end.
+    public static bool Scroll(ScrollViewer scroller, Key key)
     {
-        if (sender is not ScrollViewer scroller || !ReferenceEquals(e.Source, scroller))
-            return;
-
         var step = scroller.Viewport.Height * 0.75;
         var offset = scroller.Offset.Y;
         var end = scroller.ScrollBarMaximum.Y;
-        if (e.Key == Key.Up && offset > 0)
+        if (key == Key.Up && offset > 0)
             scroller.Offset = scroller.Offset.WithY(Math.Max(offset - step, 0));
-        else if (e.Key == Key.Down && offset < end)
+        else if (key == Key.Down && offset < end)
             scroller.Offset = scroller.Offset.WithY(Math.Min(offset + step, end));
         else
-            return;
+            return false;
 
-        e.Handled = true;
+        return true;
+    }
+
+    // the scroller's own keys only: one from a control inside it is that control's
+    private static void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (sender is ScrollViewer scroller && ReferenceEquals(e.Source, scroller) && Scroll(scroller, e.Key))
+            e.Handled = true;
     }
 }

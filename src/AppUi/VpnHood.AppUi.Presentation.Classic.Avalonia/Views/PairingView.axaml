@@ -14,6 +14,23 @@
     <Style Selector="StackPanel.text-pane">
       <Setter Property="Grid.Column" Value="2" />
     </Style>
+    <!-- a warning card that is a button as a whole, so a remote's ring reads from across a room -->
+    <Style Selector="Button.help-card">
+      <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource OnWarningBrush}" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="BorderThickness" Value="3" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.help-card:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
+    </Style>
+    <Style Selector="Button.help-card TextBlock">
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
     <ContainerQuery Name="Page" Query="max-width:600">
       <Style Selector="StackPanel.code-pane">
         <Setter Property="Grid.ColumnSpan" Value="3" />
@@ -54,11 +71,12 @@
           <TextBlock Classes="body" Text="{Binding RemoteAccessKeepOpen, Source={x:Static res:Strings.Current}}" />
         </Border>
         <TextBlock x:Name="ConnectedText" Classes="muted" Text="{Binding RemoteAccessNoDevice, Source={x:Static res:Strings.Current}}" />
-        <!-- Android can bar a phone's browser from the local network, and the browser then shows only
-             an error that names nothing: until a device arrives, this says where the switch is. -->
-        <Border x:Name="LocalNetworkHint" Classes="alert-warning">
-          <TextBlock Classes="body" Text="{Binding RemoteAccessHintLocalNetwork, Source={x:Static res:Strings.Current}}" />
-        </Border>
+        <!-- A phone that cannot reach the page shows only an error that names nothing, and the TV never
+             hears of it, so this stays up for any phone. It opens a dialog, not a page: leaving this page
+             stops the listener the phone is about to try again. -->
+        <Button x:Name="HelpButton" Classes="help-card" Click="OnHelpClick">
+          <TextBlock Classes="body" Text="{Binding RemoteAccessHelp, Source={x:Static res:Strings.Current}}" />
+        </Button>
         <Button x:Name="DoneButton" Classes="action" Content="{Binding Done, Source={x:Static res:Strings.Current}}"
                 HorizontalAlignment="Right" Click="OnDoneClick" />
       </StackPanel>

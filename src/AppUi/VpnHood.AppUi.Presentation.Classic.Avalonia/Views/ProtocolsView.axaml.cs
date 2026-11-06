@@ -25,6 +25,8 @@ public partial class ProtocolsView : UserControl, IPage
         CloakItem.Description = s.CloakModeShortDesc;
         DropQuicItem.Title = s.ProtocolBlockQuic;
         DropQuicItem.Description = s.ProtocolBlockQuicDesc;
+        DropUdpItem.Title = s.ProtocolBlockUdp;
+        DropUdpItem.Description = s.ProtocolBlockUdpDesc;
 
         // protocols.vue's protocolItems: TCP the default, each shown when the build offers it
         AddRow(ChannelProtocol.Tcp, s.ProtocolTcpDesc, isDefault: true);
@@ -63,11 +65,18 @@ public partial class ProtocolsView : UserControl, IPage
         DomainEnforcedAlert.IsVisible = reason == TcpProxyUsageReason.SplitDomainRequiredOn;
         QuicPanel.IsVisible = CloakItem.IsOn;
 
-        // a server that does not carry QUIC enforces the block; else the setting, as for the cloak
+        // a server that does not carry UDP or QUIC enforces its block; else the setting, as for the cloak
+        var isUdpPacketSupported = state.SessionInfo?.IsUdpPacketSupported ?? true;
+        var isUdpBlocked = !isUdpPacketSupported || settings.DropUdp;
+        DropUdpItem.IsOn = isUdpBlocked;
+        DropUdpItem.IsDisabled = !isUdpPacketSupported;
+        DropUdpEnforcedAlert.IsVisible = !isUdpPacketSupported;
+
+        // QUIC runs over UDP, so a block on UDP holds its switch on; the setting is left as it is, for when it lifts
         var isQuicPacketSupported = state.SessionInfo?.IsQuicPacketSupported ?? true;
-        DropQuicItem.IsOn = !isQuicPacketSupported || settings.DropQuic;
-        DropQuicItem.IsDisabled = !isQuicPacketSupported;
-        DropQuicEnforcedAlert.IsVisible = !isQuicPacketSupported;
+        DropQuicItem.IsOn = isUdpBlocked || !isQuicPacketSupported || settings.DropQuic;
+        DropQuicItem.IsDisabled = isUdpBlocked || !isQuicPacketSupported;
+        DropQuicEnforcedAlert.IsVisible = !isQuicPacketSupported && isUdpPacketSupported;
 
         var active = VhApp.ActiveProtocol(state);
         foreach (var (protocol, row) in _rows) {
@@ -133,6 +142,19 @@ public partial class ProtocolsView : UserControl, IPage
             var settings = VhApp.UserSettings;
             settings.DropQuic = DropQuicItem.IsOn;
             await VhApp.SaveUserSettings(settings, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
+    }
+
+    private async void OnDropUdpToggled(object? sender, EventArgs e)
+    {
+        try {
+            var settings = VhApp.UserSettings;
+            settings.DropUdp = DropUdpItem.IsOn;
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
+            Show();
         }
         catch (Exception ex) {
             await _host.ProcessError(ex);

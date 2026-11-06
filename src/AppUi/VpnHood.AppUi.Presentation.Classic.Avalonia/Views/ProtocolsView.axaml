@@ -3,14 +3,13 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.ProtocolsView">
-  <!-- The web UI's protocols page: the cloak switch with its reasons and, while cloaked, the QUIC
-       block under it; then the transports as radios, the one the server cannot carry marked. -->
+  <!-- The web UI's protocols page: the cloak switch with its reasons and, while cloaked, the blocks
+       on other apps' QUIC and UDP under it; then the tunnel's transports as radios under a heading of
+       their own, as the QUIC there is not the QUIC blocked above, the one the server cannot carry marked. -->
   <DockPanel Classes="page">
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Protocols, Source={x:Static res:Strings.Current}}" />
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel MaxWidth="720" Spacing="16">
-        <TextBlock Classes="card-subtitle" Text="{Binding ProtocolDesc, Source={x:Static res:Strings.Current}}" />
-
         <Border Classes="config-card" Padding="0,4,0,12">
           <StackPanel>
             <controls:SettingsToggleItem x:Name="CloakItem" Margin="0" Toggled="OnCloakToggled" />
@@ -34,9 +33,19 @@
               <Border x:Name="DropQuicEnforcedAlert" Classes="alert-warning" Margin="16,0,16,0" IsVisible="False">
                 <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByServer, Source={x:Static res:Strings.Current}}" />
               </Border>
+              <Border Classes="divider" Margin="16,8,16,4" />
+              <controls:SettingsToggleItem x:Name="DropUdpItem" Margin="0" Toggled="OnDropUdpToggled" />
+              <Border x:Name="DropUdpEnforcedAlert" Classes="alert-warning" Margin="16,0,16,0" IsVisible="False">
+                <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByServer, Source={x:Static res:Strings.Current}}" />
+              </Border>
             </StackPanel>
           </StackPanel>
         </Border>
+
+        <StackPanel Spacing="4">
+          <TextBlock Classes="card-title" Text="{Binding ProtocolTunnelTitle, Source={x:Static res:Strings.Current}}" />
+          <TextBlock Classes="card-subtitle" Text="{Binding ProtocolDesc, Source={x:Static res:Strings.Current}}" />
+        </StackPanel>
 
         <Border Classes="config-card" Padding="4,8">
           <StackPanel x:Name="ProtocolRows" />

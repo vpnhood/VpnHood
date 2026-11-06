@@ -9,7 +9,7 @@
        press flips it. -->
   <controls:SwitchRow x:Name="Card" Classes="card-row" Click="OnCardClick" Margin="0,0,0,12">
     <StackPanel Spacing="6">
-      <Grid ColumnDefinitions="*,Auto">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
         <WrapPanel ItemSpacing="8" LineSpacing="4" VerticalAlignment="Center">
           <TextBlock x:Name="TitleText" Classes="body-medium" VerticalAlignment="Center" TextWrapping="Wrap" />
           <Border x:Name="WarningChip" Classes="chip warning comfortable" IsVisible="False">

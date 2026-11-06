@@ -23,6 +23,8 @@
 * Update: The app's name on iOS is written as on its other platforms, VpnHood! CONNECT #ios #connect
 * Update: On a plan with a speed limit, the first megabytes after a pause go at full speed, so pages load quickly, and only steady heavy use is held to the limit
 * Improve: Buying on the website opens the checkout in the app's language #connect
+* Feature: In Cloak Mode, the Protocols page has Block UDP in other apps, which stops all UDP except DNS; voice and video calls and games that need UDP stop working with it
+* Update: The Protocols page tells two QUICs apart: the switch is now Block QUIC in other apps, and TCP, UDP and QUIC sit under a heading of their own, Tunnel protocol
 * Fix: Split Local Network does what it says: on, local devices such as a printer or a TV are reached directly; off, their traffic stays in the VPN. It did the opposite while Allow Split Tunneling was off, or on a server that carries local addresses
 * Fix: With "Share anonymous usage data" off, the app no longer reports each start, nor the VPN each connection and its usage, and turning it off while connected stops the VPN's reports at once #android
 * Fix: Where the app asks you to accept its terms at first run, it sends no usage data before you accept them #android #windows #linux

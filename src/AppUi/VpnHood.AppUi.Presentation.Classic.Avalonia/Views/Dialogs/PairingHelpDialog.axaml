@@ -1,0 +1,79 @@
+<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppUi.Common"
+                    xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
+                    xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+                    xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.PairingHelpDialog">
+  <!-- Why a phone cannot open the pairing page: the TV cannot tell, so every check is here, the
+       likeliest first, read from the sofa. The pictures carry no words, so one set serves every
+       language. -->
+  <dialogs:DialogBase.Styles>
+    <Style Selector="Image.step-image">
+      <Setter Property="DockPanel.Dock" Value="Left" />
+      <Setter Property="Width" Value="176" />
+      <Setter Property="Height" Value="110" />
+      <Setter Property="Margin" Value="0,0,20,0" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="VerticalAlignment" Value="Top" />
+    </Style>
+    <Style Selector="TextBlock.help-title">
+      <Setter Property="FontSize" Value="22" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.step-title">
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.step-text">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="Foreground" Value="{StaticResource GeneralDialogTextBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+  </dialogs:DialogBase.Styles>
+
+  <Border Classes="dialog" MaxWidth="860">
+    <DockPanel>
+      <TextBlock DockPanel.Dock="Top" Classes="help-title" Text="{Binding RemoteAccessHelpTitle, Source={x:Static res:Strings.Current}}" />
+      <TextBlock DockPanel.Dock="Top" Classes="step-text" Margin="0,4,0,12" Text="{Binding RemoteAccessHelpDesc, Source={x:Static res:Strings.Current}}" />
+      <Button x:Name="CloseButton" DockPanel.Dock="Bottom" Classes="dialog-btn" HorizontalAlignment="Right" Margin="0,12,0,0"
+              Content="{Binding Close, Source={x:Static res:Strings.Current}}" Click="OnCloseClick" KeyDown="OnCloseKeyDown" />
+      <!-- The text takes no focus: a ring around it would frame the whole dialog, and Select could do
+           nothing there. The ring stays on Close, and Up and Down move the text from it. -->
+      <ScrollViewer x:Name="Scroller" HorizontalScrollBarVisibility="Disabled" controls:ScrollEdgeFade.IsEnabled="True">
+        <StackPanel Spacing="18" Margin="0,0,12,0">
+          <DockPanel>
+            <Image Classes="step-image" ui:AppImage.Source="images/remote-access-network.webp" />
+            <StackPanel Spacing="4">
+              <TextBlock Classes="step-title" Text="{Binding RemoteAccessHelpNetworkTitle, Source={x:Static res:Strings.Current}}" />
+              <TextBlock Classes="step-text" Text="{Binding RemoteAccessHelpNetworkDesc, Source={x:Static res:Strings.Current}}" />
+            </StackPanel>
+          </DockPanel>
+          <DockPanel>
+            <Image Classes="step-image" ui:AppImage.Source="images/remote-access-vpn.webp" />
+            <StackPanel Spacing="4">
+              <TextBlock Classes="step-title" Text="{Binding RemoteAccessHelpVpnTitle, Source={x:Static res:Strings.Current}}" />
+              <TextBlock Classes="step-text" Text="{Binding RemoteAccessHelpVpnDesc, Source={x:Static res:Strings.Current}}" />
+            </StackPanel>
+          </DockPanel>
+          <DockPanel>
+            <Image Classes="step-image" ui:AppImage.Source="images/remote-access-nearby.webp" />
+            <StackPanel Spacing="4">
+              <TextBlock Classes="step-title" Text="{Binding RemoteAccessHelpNearbyTitle, Source={x:Static res:Strings.Current}}" />
+              <TextBlock Classes="step-text" Text="{Binding RemoteAccessHelpNearbyDesc, Source={x:Static res:Strings.Current}}" />
+            </StackPanel>
+          </DockPanel>
+          <DockPanel>
+            <Image Classes="step-image" ui:AppImage.Source="images/remote-access-router.webp" />
+            <StackPanel Spacing="4">
+              <TextBlock Classes="step-title" Text="{Binding RemoteAccessHelpRouterTitle, Source={x:Static res:Strings.Current}}" />
+              <TextBlock Classes="step-text" Text="{Binding RemoteAccessHelpRouterDesc, Source={x:Static res:Strings.Current}}" />
+            </StackPanel>
+          </DockPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</dialogs:DialogBase>

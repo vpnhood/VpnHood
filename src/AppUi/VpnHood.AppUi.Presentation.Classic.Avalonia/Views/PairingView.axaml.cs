@@ -7,6 +7,7 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
@@ -93,7 +94,11 @@ public partial class PairingView : UserControl, IPage, IDisposable
         ConnectedText.Text = state.ConnectedDevices.Length == 0
             ? Strings.Current.RemoteAccessNoDevice
             : Strings.Current.RemoteAccessConnectedFrom(string.Join(", ", state.ConnectedDevices.Select(x => x.ToString())));
-        LocalNetworkHint.IsVisible = state.ConnectedDevices.Length == 0;
+    }
+
+    private void OnHelpClick(object? sender, RoutedEventArgs e)
+    {
+        _ = _host.ShowDialog(new PairingHelpDialog());
     }
 
     private void OnDoneClick(object? sender, RoutedEventArgs e)

@@ -146,6 +146,12 @@ else {
 		$assets += "$packageDir/android-samsung/$packageFileTitle-android-samsung.apk";
 		$assets += "$packageDir/android-samsung/$packageFileTitle-android-samsung.json";
 	}
+
+	# CLIENT's website APK with no updater, which IzzyOnDroid takes from here (issue 803). It has no feed,
+	# as it reads none. Only where it was built: Connect has none.
+	if (Test-Path "$packageDir/android-webnoupdate-arm64") {
+		$assets += "$packageDir/android-webnoupdate-arm64/$packageFileTitle-android-webnoupdate-arm64.apk";
+	}
 }
 
 $missingAssets = $assets | Where-Object { -not (Test-Path $_) };

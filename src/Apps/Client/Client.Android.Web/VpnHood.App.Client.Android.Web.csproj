@@ -28,6 +28,14 @@
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
 
+	<!-- -p:VhAppNoUpdate=true: the same app with no updater, for a repository whose own client keeps it
+	     updated. IzzyOnDroid refuses an app that asks for REQUEST_INSTALL_PACKAGES (issue 803). Only the
+	     updater goes, in this head rather than one of its own, so the id, the key and the Java names
+	     stay, and the people already on that repository's builds update as before. -->
+	<PropertyGroup Condition="'$(VhAppNoUpdate)'=='true'">
+		<DefineConstants>$(DefineConstants);VH_APP_NO_UPDATE</DefineConstants>
+	</PropertyGroup>
+
 	<PropertyGroup>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -41,7 +49,7 @@
 		<!-- the VPN service, which the APK carries beside the app -->
 		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.Android\VpnHood.Core.Client.VpnServices.Host.Android.csproj" />
 		<!-- The APK updates itself; never in a store's head. -->
-		<ProjectReference Include="..\..\..\AppLib\VpnHood.AppLib.Stores.AndroidWeb\VpnHood.AppLib.Stores.AndroidWeb.csproj" />
+		<ProjectReference Condition="'$(VhAppNoUpdate)'!='true'" Include="..\..\..\AppLib\VpnHood.AppLib.Stores.AndroidWeb\VpnHood.AppLib.Stores.AndroidWeb.csproj" />
 		<!-- The UI this head runs, which MainActivity is the activity of. -->
 		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Hosting.Avalonia.Android\VpnHood.AppUi.Hosting.Avalonia.Android.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->

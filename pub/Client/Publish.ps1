@@ -39,6 +39,7 @@ if ($android) {
 	& "$solutionDir/src/Apps/Client/Client.Android.Samsung/_publish.ps1";
 	& "$solutionDir/src/Apps/Client/Client.Android.Web/_publish.ps1";
 	& "$solutionDir/src/Apps/Client/Client.Android.Web/_publish-arm64.ps1";
+	& "$solutionDir/src/Apps/Client/Client.Android.Web/_publish-webnoupdate-arm64.ps1";
 }
 
 # update and push samples nugets

@@ -454,6 +454,12 @@ jobs:
           name: ${{ inputs.app }}-android-web-arm64
           path: ${{ env.MODULE_DIR }}/android-web-arm64
       - uses: actions/download-artifact@v8
+        if: inputs.app == 'client'
+        continue-on-error: true
+        with:
+          name: ${{ inputs.app }}-android-webnoupdate-arm64
+          path: ${{ env.MODULE_DIR }}/android-webnoupdate-arm64
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: ${{ inputs.app }}-android-play-signed

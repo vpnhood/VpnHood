@@ -52,6 +52,35 @@ function Get-ProjectProperty([string]$projectFile, [string]$name, [string]$confi
 	return "$value".Trim();
 }
 
+# Throws if an APK asks for a permission. An APK's manifest is binary, with its strings in UTF-16 or
+# UTF-8, so the name is looked for in both, and no Android tool has to be on the path. INTERNET, which
+# every build of ours has, proves the search still finds a name: a guard that can no longer read the
+# manifest must not pass.
+function Assert-ApkLacksPermission([string]$apkFile, [string]$permission)
+{
+	Add-Type -AssemblyName System.IO.Compression.FileSystem;
+	$zip = [System.IO.Compression.ZipFile]::OpenRead($apkFile);
+	try {
+		$entry = $zip.GetEntry("AndroidManifest.xml");
+		if (-not $entry) { Throw "$apkFile has no AndroidManifest.xml."; }
+		$memory = [System.IO.MemoryStream]::new();
+		$stream = $entry.Open();
+		try { $stream.CopyTo($memory); } finally { $stream.Dispose(); }
+	}
+	finally { $zip.Dispose(); }
+
+	# Latin-1 maps each byte to one char, so a plain search compares raw bytes
+	$latin1 = [System.Text.Encoding]::GetEncoding(28591);
+	$manifest = $latin1.GetString($memory.ToArray());
+	$hasName = {
+		param([string]$name)
+		$manifest.Contains($name) -or $manifest.Contains($latin1.GetString([System.Text.Encoding]::Unicode.GetBytes($name)));
+	};
+
+	if (-not (& $hasName "android.permission.INTERNET")) { Throw "Could not read the permissions of $apkFile."; }
+	if (& $hasName $permission) { Throw "$apkFile must not ask for $permission."; }
+}
+
 function PrepareModuleFolder([string]$moduleDir, [string]$moduleDirLatest)
 {
 	# Remove old files

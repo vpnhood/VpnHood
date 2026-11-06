@@ -8,11 +8,15 @@ param(
 	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
 	[switch]$connect,
 	[String]$archs = "",
+	# The app with no updater (the head's VhAppNoUpdate): no feed goes with its APK, as it reads none, and
+	# the publish fails if the APK still asks to install apps.
+	[switch]$noUpdate,
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
 
-# store: google distribution -> google; web and web-arm64 share the web key/id (same as the keystore).
+# store: google distribution -> google; web, web-arm64 and webnoupdate-arm64 share the web key/id (same as
+# the keystore).
 # samsung, the Galaxy Store's APK, is the Play build's app - its id, and its key, which Play signs CLIENT
 # with too (checked 2026-10-31 on Play's own APK) - so either store's install takes the other's update.
 $store = if ($distribution -eq 'google' -or $distribution -eq 'samsung') { 'google' } else { 'web' }
@@ -134,11 +138,15 @@ try {
 			/p:OutputPath=$outputPath `
 			/p:ArchiveOnBuild=true `
 			/p:AndroidPackageFormat="apk" `
+			/p:VhAppNoUpdate=$($noUpdate.IsPresent) `
 			/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 			/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
 			;
 
 		if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
+
+		# IzzyOnDroid stops the app's updates at this permission, so it must never reach a release
+		if ($noUpdate) { Assert-ApkLacksPermission $signedPacakgeFile "android.permission.REQUEST_INSTALL_PACKAGES"; }
 
 		# publish info. The Galaxy Store's release goes up by hand and through its review, which takes days:
 		# its feed waits as Play's does, so the notice does not open a store page that has no update yet
@@ -154,7 +162,7 @@ try {
 			NotificationDelay = $apkNotificationDelay;
 		};
 
-		$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
+		if (-not $noUpdate) { $json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII; }
 
 		# Same payload under the distribution's retired file name, while a rename's grace period is open
 		# (pub/lib/LegacyAssetAliases.ps1 — it returns $null once that lapses, or when this distribution

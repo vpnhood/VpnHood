@@ -396,6 +396,8 @@ fi
 # nor openresolv, systemd-resolved comes in: Debian's resolvconf refuses the adapter's exclusive entry,
 # and systemd's own is resolvectl under another name. After MsQuic, as the machine's DNS changes here.
 # One that is installed and turned off stays off, as someone chose that: the connect's error says what to do.
+# One that is on while programs ask another server gets the link, here and at every update: the adapter refuses
+# to connect without it, as a server of the local network stays off the tunnel.
 function dns_way_found() {
 	command -v resolvectl >/dev/null 2>&1 || resolvconf --version 2>/dev/null | grep -q openresolv;
 }
@@ -410,27 +412,44 @@ function install_resolved() {
 		ZYPP_LOCK_TIMEOUT=300 zypper --non-interactive --quiet install systemd-resolved;
 	fi
 }
+function machine_dns() {
+	awk '$1 == "nameserver" && $2 !~ /^127\./ && $2 != "::1" { print $2 }' /etc/resolv.conf 2>/dev/null | tr '\n' ' ';
+}
+function on_resolved() {
+	[ "$(readlink -f /etc/resolv.conf)" = /run/systemd/resolve/stub-resolv.conf ];
+}
+# The machine's own DNS servers, the argument, stay as a fallback. With no network manager to tell
+# systemd-resolved about them, a plain resolv.conf's are all it has, and without them no name resolves: seen on
+# Ubuntu 24.04 and Debian 13. A network manager's servers replace them, and they never take a query from the
+# VPN's. They stay at an uninstall: they are the machine's DNS.
+function use_resolved() {
+	if [ -n "$1" ]; then
+		mkdir -p /etc/systemd/resolved.conf.d;
+		printf '[Resolve]\nFallbackDNS=%s\n' "$1" >/etc/systemd/resolved.conf.d/vpnhood-machine-dns.conf;
+	fi
+	# Debian's and Ubuntu's package links it; without the link, programs would not ask systemd-resolved
+	on_resolved || ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf;
+	systemctl enable systemd-resolved;
+	systemctl restart systemd-resolved;
+	systemctl try-restart NetworkManager 2>/dev/null;
+}
 if ! dns_way_found; then
 	echo "Installing systemd-resolved, which $productName needs to set the VPN's DNS...";
-	# The machine's own DNS servers, read before the package replaces the file. With no network manager to
-	# tell systemd-resolved about them, a plain resolv.conf's are all it has, and without them no name
-	# resolves: seen on Ubuntu 24.04 and Debian 13. As a fallback, which a network manager's servers replace
-	# and which never takes a query from the VPN's. It stays at an uninstall: it is the machine's DNS.
-	dnsServers=$(awk '$1 == "nameserver" && $2 !~ /^127\./ && $2 != "::1" { print $2 }' /etc/resolv.conf 2>/dev/null | tr '\n' ' ');
+	# Read before the package replaces the file
+	dnsServers=$(machine_dns);
 	install_resolved;
 	if command -v resolvectl >/dev/null 2>&1; then
-		if [ -n "$dnsServers" ]; then
-			mkdir -p /etc/systemd/resolved.conf.d;
-			printf '[Resolve]\nFallbackDNS=%s\n' "$dnsServers" >/etc/systemd/resolved.conf.d/vpnhood-machine-dns.conf;
-		fi
-		# Debian's and Ubuntu's package links it; without the link, programs would not ask systemd-resolved
-		[ "$(readlink -f /etc/resolv.conf)" = /run/systemd/resolve/stub-resolv.conf ] || ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf;
-		systemctl enable systemd-resolved;
-		systemctl restart systemd-resolved;
-		systemctl try-restart NetworkManager 2>/dev/null;
+		use_resolved "$dnsServers";
 	else
 		echo "WARNING: Could not install systemd-resolved, without which $productName cannot connect.";
 		echo "WARNING: Install it with your package manager.";
+	fi
+elif systemctl is-active --quiet systemd-resolved && ! on_resolved; then
+	# With only a resolver on this machine, the link would leave systemd-resolved with no server to ask
+	dnsServers=$(machine_dns);
+	if [ -n "$dnsServers" ]; then
+		echo "Linking /etc/resolv.conf to systemd-resolved, so that DNS cannot go around the VPN...";
+		use_resolved "$dnsServers";
 	fi
 fi
 

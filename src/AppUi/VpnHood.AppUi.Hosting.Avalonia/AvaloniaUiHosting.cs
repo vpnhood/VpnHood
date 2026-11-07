@@ -45,6 +45,14 @@ public static class AvaloniaUiHosting
     // (IDesktopShell), as its desktop host names them before the UI starts; null: Avalonia's own.
     public static IDesktopShell? Shell { get; set; }
 
+    // A text file handed to the person (its name, its text) through a browser page's downloads, so it
+    // lands on the device in their hand; the browser host names it, and null anywhere else.
+    public static Action<string, string>? DownloadText { get; set; }
+
+    // The text put on the clipboard by a browser page on plain http, where the browser gives it no
+    // clipboard for Avalonia's own way to reach; the browser host names it, and null anywhere else.
+    public static Action<string>? CopyText { get; set; }
+
     // The second half: the UI's content and its theme's colours, and its languages told to the app.
     public static async Task PrepareAsync<TUi>(IAssetProvider? uiAssetProvider, CancellationToken cancellationToken)
         where TUi : IAvaloniaUi

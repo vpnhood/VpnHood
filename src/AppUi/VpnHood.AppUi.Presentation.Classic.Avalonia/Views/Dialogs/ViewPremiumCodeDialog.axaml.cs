@@ -1,8 +1,6 @@
 ﻿using Avalonia.Controls;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Common;
-using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
@@ -40,13 +38,9 @@ public partial class ViewPremiumCodeDialog : DialogBase
 
     private async Task Copy(CancellationToken cancellationToken)
     {
-        // through the host's shell where it names one (a sandboxed app's, AvaloniaUiHosting.Shell)
-        if (AvaloniaUiHosting.Shell is { } shell)
-            shell.CopyText(_code);
-        else if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-            await clipboard.SetTextAsync(_code);
-        else
+        if (!await this.CopyText(_code))
             return;
+
         CopyGlyph.Text = Mdi.Check;
         await Task.Delay(2000, cancellationToken);
         CopyGlyph.Text = Mdi.ContentCopy;

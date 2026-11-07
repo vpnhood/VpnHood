@@ -1,7 +1,6 @@
 ﻿using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
@@ -15,15 +14,21 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 // The app's log, read through the API. Nothing here is localized.
 public partial class LogView : UserControl, IPage
 {
+    // A remote is a browser on another device: a share sheet would open on the device it drives, far
+    // from the person, and the page is plain http, where a browser gives it no clipboard and no share.
+    private static bool IsDownload => VhApp.IsRemote;
+    private static bool IsShare => VhApp.Intents.IsShareSupported && !VhApp.IsRemote;
+
     public LogView()
     {
         InitializeComponent();
 
         // a TV has neither a share sheet nor anywhere to paste
-        ShareIcon.IsVisible = VhApp.Intents.IsShareSupported;
-        CopyGlyph.IsVisible = !VhApp.Intents.IsShareSupported;
-        ShareButton.IsVisible = VhApp.Intents.IsShareSupported || !VhApp.IsTvUi;
-        AutomationProperties.SetName(ShareButton, VhApp.Intents.IsShareSupported ? "Share" : "Copy");
+        ShareIcon.IsVisible = IsShare;
+        DownloadIcon.IsVisible = IsDownload;
+        CopyGlyph.IsVisible = !IsShare && !IsDownload;
+        ShareButton.IsVisible = IsShare || !VhApp.IsTvUi;
+        AutomationProperties.SetName(ShareButton, IsDownload ? "Download" : IsShare ? "Share" : "Copy");
 
         _ = Load(CancellationToken.None);
     }
@@ -62,7 +67,9 @@ public partial class LogView : UserControl, IPage
     private async void OnShareClick(object? sender, RoutedEventArgs e)
     {
         try {
-            if (VhApp.Intents.IsShareSupported)
+            if (IsDownload)
+                AvaloniaUiHosting.DownloadText?.Invoke("report.txt", LogText.Text ?? string.Empty);
+            else if (IsShare)
                 await VhApp.Api.Intents.ShareLog(CancellationToken.None);
             else
                 await Copy(CancellationToken.None);
@@ -74,13 +81,7 @@ public partial class LogView : UserControl, IPage
 
     private async Task Copy(CancellationToken cancellationToken)
     {
-        // through the host's shell where it names one (a sandboxed app's, AvaloniaUiHosting.Shell)
-        var text = LogText.Text ?? string.Empty;
-        if (AvaloniaUiHosting.Shell is { } shell)
-            shell.CopyText(text);
-        else if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-            await clipboard.SetTextAsync(text);
-        else
+        if (!await this.CopyText(LogText.Text ?? string.Empty))
             return;
 
         CopyGlyph.Text = Mdi.Check;

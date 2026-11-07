@@ -1,7 +1,9 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
 using VpnHood.Net.Toolkit.Logging;
 
@@ -27,6 +29,23 @@ internal static class ControlExtensions
 
         VhLogger.Instance.LogError(exception, "The UI caught an error outside a page host.");
         return Task.CompletedTask;
+    }
+
+    // The text put on the person's clipboard, by the first way the host has: the OS's where Avalonia's
+    // is refused (a sandboxed app's), a browser page's on plain http, then Avalonia's own. False when
+    // it has none. A browser page's must be reached with no wait since the person's tap.
+    public static async Task<bool> CopyText(this Control control, string text)
+    {
+        if (AvaloniaUiHosting.Shell is { } shell)
+            shell.CopyText(text);
+        else if (AvaloniaUiHosting.CopyText is { } copyText)
+            copyText(text);
+        else if (TopLevel.GetTopLevel(control)?.Clipboard is { } clipboard)
+            await clipboard.SetTextAsync(text);
+        else
+            return false;
+
+        return true;
     }
 
     // the first button inside a control: where a page's input lands when the page is a list of

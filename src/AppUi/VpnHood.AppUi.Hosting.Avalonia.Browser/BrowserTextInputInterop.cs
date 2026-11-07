@@ -1,22 +1,15 @@
 using System.Runtime.InteropServices.JavaScript;
-using System.Text;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Browser;
 
-// BrowserTextInput.js, the page's side of BrowserTextInput. The script ships inside this assembly
-// and is imported from its own text: a library has no folder of its own on the page.
+// BrowserTextInput.js, the page's side of BrowserTextInput.
 internal static partial class BrowserTextInputInterop
 {
     private const string ModuleName = "VhBrowserTextInput";
 
-    public static async Task ImportAsync(CancellationToken cancellationToken)
+    public static Task ImportAsync(CancellationToken cancellationToken)
     {
-        await using var stream = typeof(BrowserTextInputInterop).Assembly.GetManifestResourceStream(ModuleName + ".js")
-            ?? throw new InvalidOperationException($"The page script {ModuleName}.js is not in the assembly.");
-        using var reader = new StreamReader(stream, Encoding.UTF8);
-        var script = await reader.ReadToEndAsync(cancellationToken);
-        await JSHost.ImportAsync(ModuleName, "data:text/javascript;base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes(script)),
-            cancellationToken);
+        return BrowserScript.ImportAsync(ModuleName, cancellationToken);
     }
 
     [JSImport("create", ModuleName)]

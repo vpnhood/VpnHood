@@ -268,7 +268,7 @@ prerequisites:
 
 - **Runner.** The project targets `net11.0-ios` and needs the .NET 11 SDK + `ios` workload and **the exact
   Xcode that workload names** (27.0 for RC3). `build-ios` runs on GitHub's hosted **`xcode-27`** image and
-  installs .NET 11 itself; `publish-appstore-ios` only uploads the `.ipa` and stays on `macos-26` — no
+  installs .NET 11 itself; `publish-appstore-ios` only uploads the `.ipa`, on the same image — no
   self-hosted mac required.
 - **Signing can't self-sign.** An App Store `.ipa` requires an **Apple Distribution** certificate and
   **App Store** provisioning profiles issued by Apple — there is no ephemeral fallback. Without them the
@@ -356,6 +356,22 @@ cross-builds on Linux). Secrets/variables live on **that** repo, not here:
 Locally, `pub/Server/Publish.ps1` is **build-only** for smoke tests (add `-docker 1` for a local
 host-arch image via `buildx --load`); it never pushes and never creates a release — distribution is
 CI-only, like the client.
+
+## When a release goes out
+
+The `release` job of `publish_app.yml` runs when `publish_release` is on, Linux succeeded, and no other
+job failed or was cancelled. Each platform is then judged by its own job:
+
+| The platform's job | The release |
+| --- | --- |
+| Succeeded | Takes its files. A missing file stops the release. |
+| Was skipped | Goes out without that platform. |
+| Failed or was cancelled | Does not go out at all. |
+
+The one file that may be absent is the Play-signed APK: without `GOOGLE_PLAY_API_KEY` its job succeeds and
+makes none. GitHub sometimes cancels a single job, such as one that waited too long for a runner, so a run
+can stop here with nothing wrong in your code. Re-run its failed jobs within a day, while the artifacts
+last: a release that fails keeps them for that.
 
 ## Maintainers: keep this in sync
 When you add or remove a `secrets.*` reference in any workflow under

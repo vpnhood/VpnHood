@@ -397,17 +397,17 @@ jobs:
             fi
           fi
 
+  # Goes out when Linux, which every release has, succeeded and nothing else failed or was cancelled; a
+  # skipped job only leaves its platform off. Cancelled counts because GitHub can cancel one job and run
+  # the rest on, and !cancelled() rather than always() keeps a run someone stopped from releasing.
   release:
     needs: [build-linux, build-windows, build-android, publish-play-android, build-ios, publish-appstore-ios]
     if: >-
-      ${{ always()
+      ${{ !cancelled()
         && inputs.publish_release == true
         && needs.build-linux.result == 'success'
-        && needs.build-windows.result != 'failure'
-        && needs.build-android.result != 'failure'
-        && needs.publish-play-android.result != 'failure'
-        && needs.build-ios.result != 'failure'
-        && needs.publish-appstore-ios.result != 'failure' }}
+        && !contains(needs.*.result, 'failure')
+        && !contains(needs.*.result, 'cancelled') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -441,51 +441,45 @@ jobs:
         run: |
           . "$env:GITHUB_WORKSPACE/code/pub/lib/Common.ps1"
           "MODULE_DIR=$releaseRootDir/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
-      # Reassemble the code/pub/bin/<tag>/<pkg> layout Publish-GithubRelease.ps1 expects. Windows/Android/iOS
-      # are optional (skipped builds upload nothing), so those downloads are best-effort.
+      # Reassemble the code/pub/bin/<tag>/<pkg> layout Publish-GithubRelease.ps1 expects. Each platform is
+      # judged by its own job: a job that succeeded left its files, so a missing one stops the release, as
+      # the script only warns and a release without a platform's feed leaves its updater with a 404.
       - uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.app }}-linux
           path: ${{ env.MODULE_DIR }}
       - uses: actions/download-artifact@v8
-        continue-on-error: true
+        if: needs.build-windows.result == 'success'
         with:
           name: ${{ inputs.app }}-windows
           path: ${{ env.MODULE_DIR }}/windows-web
       - uses: actions/download-artifact@v8
-        continue-on-error: true
+        if: needs.build-android.result == 'success'
         with:
           name: ${{ inputs.app }}-android-google-aab
           path: ${{ env.MODULE_DIR }}/android-google
       - uses: actions/download-artifact@v8
-        continue-on-error: true
+        if: needs.build-android.result == 'success'
         with:
           name: ${{ inputs.app }}-android-web-apk
           path: ${{ env.MODULE_DIR }}/android-web
       - uses: actions/download-artifact@v8
-        continue-on-error: true
+        if: needs.build-android.result == 'success'
         with:
           name: ${{ inputs.app }}-android-web-arm64
           path: ${{ env.MODULE_DIR }}/android-web-arm64
       - uses: actions/download-artifact@v8
-        if: inputs.app == 'client'
-        continue-on-error: true
+        if: needs.build-android.result == 'success' && inputs.app == 'client'
         with:
           name: ${{ inputs.app }}-android-webnoupdate-arm64
           path: ${{ env.MODULE_DIR }}/android-webnoupdate-arm64
-      # A run that skips these jobs has no such artifact, and a failed download shows as an error on a green run.
+      # The one that may be absent: with no Play key its job succeeds and makes no file. A pattern may find
+      # nothing, where a name is an error.
       - uses: actions/download-artifact@v8
-        if: needs.publish-play-android.result == 'success'
-        continue-on-error: true
         with:
-          name: ${{ inputs.app }}-android-play-signed
+          pattern: ${{ inputs.app }}-android-play-signed
+          merge-multiple: true
           path: ${{ env.MODULE_DIR }}/android-google
-      - uses: actions/download-artifact@v8
-        if: needs.build-ios.result == 'success'
-        continue-on-error: true
-        with:
-          name: ${{ inputs.app }}-ios
-          path: ${{ env.MODULE_DIR }}/ios
       # Resolve the exact commit the version tag will be pinned to. The tag is created in the RELEASE
       # repo, so --target MUST name a commit that exists THERE; left unset, GitHub silently falls back
       # to that repo's default-branch tip, which is not the released code (and changes meaning whenever
@@ -545,9 +539,9 @@ jobs:
             -dropChangelogTag "$env:DROP_TAG" `
             -targetCommitish "$env:RELEASE_TARGET" `
             -codeCommit "$env:CODE_COMMIT"
-      # All but the Galaxy Store APK, which goes up to the store by hand from this run.
+      # All but the Galaxy Store APK, which goes up to the store by hand from this run. Only after a
+      # release that worked: re-running a failed one needs them.
       - name: Delete this run's artifacts
-        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

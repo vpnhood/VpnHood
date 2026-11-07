@@ -221,8 +221,12 @@ $isTaskEnabled = (Get-ScheduledTask -TaskName $jobName -ErrorAction Ignore).Stat
 $isServerStopped = $true;
 Disable-ScheduledTask -TaskName $jobName -ErrorAction Ignore | Out-Null;
 if (Test-Path "$destinationPath/$launcher.ps1") {
-	# a native command's stderr is an error here
-	try { & "$destinationPath/$launcher.ps1" stop | Out-Null; }
+	# In a process of its own: this script comes through iex, and Windows 10 and 11 run no script file by
+	# default, which left the server to be ended below. A native command's stderr is an error here.
+	try {
+		powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$destinationPath/$launcher.ps1" stop | Out-Null;
+		if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE"; }
+	}
 	catch { Write-Output "$jobName did not stop by its stop command: $_"; }
 }
 Start-Process "schtasks" "/end /tn $jobName" -Wait;

@@ -2,6 +2,7 @@ using Android.Content;
 using Android.Views;
 using Android.Webkit;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.App.Android;
 using VpnHood.Net.Toolkit.Logging;
 using Uri = System.Uri;
 

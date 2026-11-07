@@ -12,7 +12,7 @@
         <TextBlock Classes="dialog-title" FontSize="22" TextAlignment="Center" Text="{Binding Congratulations, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
       <TextBlock Classes="dialog-text" Text="{Binding PurchaseAndProcessIsCompleteMessage, Source={x:Static res:Strings.Current}}" />
-      <Button x:Name="CloseButton" Classes="dialog-btn plain" HorizontalAlignment="Right" Click="OnCloseClick"
+      <Button x:Name="CloseButton" Classes="btn-text" HorizontalAlignment="Right" Click="OnCloseClick"
               Content="{Binding Close, Source={x:Static res:Strings.Current}}" />
     </StackPanel>
   </Border>

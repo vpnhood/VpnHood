@@ -41,7 +41,7 @@
           </StackPanel>
         </Button>
       </StackPanel>
-      <Button x:Name="CloseButton" Classes="dialog-btn" HorizontalAlignment="Right"
+      <Button x:Name="CloseButton" Classes="btn-text" HorizontalAlignment="Right"
               Content="{Binding Close, Source={x:Static res:Strings.Current}}" Click="OnCloseClick" />
     </StackPanel>
   </Border>

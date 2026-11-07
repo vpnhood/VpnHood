@@ -25,7 +25,7 @@
           <TextBlock Grid.Column="1" Classes="body-small disabled" Margin="12,0" Text="{Binding Or, Source={x:Static res:Strings.Current}}" />
           <Border Grid.Column="2" Classes="divider" VerticalAlignment="Center" />
         </Grid>
-        <Button x:Name="EmailButton" Classes="outlined pill block" Height="44" Click="OnEmailClick" IsVisible="False">
+        <Button x:Name="EmailButton" Classes="btn-secondary block" Height="44" Click="OnEmailClick" IsVisible="False">
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.EmailOutline}" VerticalAlignment="Center" />
             <TextBlock Text="{Binding SignInWithEmail, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
@@ -33,7 +33,7 @@
         </Button>
         <TextBlock x:Name="EmailScopeHint" Classes="body-small disabled" TextWrapping="Wrap" TextAlignment="Center" IsVisible="False"
                    Text="{Binding SignInEmailScopeHint, Source={x:Static res:Strings.Current}}" />
-        <Button x:Name="StartCancelButton" Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick"
+        <Button x:Name="StartCancelButton" Classes="btn-text" HorizontalAlignment="Right" Click="OnCancelClick"
                 Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
 
@@ -46,7 +46,7 @@
         <TextBox x:Name="EmailBox" Classes="outlined" TextInputOptions.ContentType="Email" TextChanged="OnFieldChanged" />
         <TextBox x:Name="PasswordBox" Classes="outlined" PasswordChar="•" TextInputOptions.ContentType="Password"
                  TextChanged="OnFieldChanged" KeyDown="OnPasswordKeyDown" />
-        <Button x:Name="SubmitPasswordButton" Classes="pill block" Height="44" Background="{StaticResource HighlightBrush}" IsEnabled="False"
+        <Button x:Name="SubmitPasswordButton" Classes="btn-main block" Height="44" IsEnabled="False"
                 Click="OnSubmitPasswordClick" Content="{Binding SignIn, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="PasswordError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />
         <Button x:Name="PhoneLink" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnPhoneClick" IsVisible="False">
@@ -57,7 +57,7 @@
         </Button>
         <!-- a remote's Up from Cancel goes to the password, past the two links: Avalonia's XY focus
              prefers what spans Cancel's column. Down from the password reaches them. -->
-        <Button Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+        <Button Classes="btn-text" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
 
       <!-- step 3: the second factor -->
@@ -65,11 +65,11 @@
         <TextBlock Classes="dialog-title" Text="{Binding TwoFactorTitle, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="dialog-text" Text="{Binding TwoFactorDesc, Source={x:Static res:Strings.Current}}" />
         <TextBox x:Name="CodeBox" Classes="outlined" TextChanged="OnFieldChanged" KeyDown="OnCodeKeyDown" />
-        <Button x:Name="SubmitCodeButton" Classes="pill block" Height="44" Background="{StaticResource HighlightBrush}" IsEnabled="False"
+        <Button x:Name="SubmitCodeButton" Classes="btn-main block" Height="44" IsEnabled="False"
                 Click="OnSubmitCodeClick" Content="{Binding Confirm, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="CodeError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />
         <TextBlock Classes="body-small disabled" TextWrapping="Wrap" Text="{Binding TwoFactorBackupHint, Source={x:Static res:Strings.Current}}" />
-        <Button Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+        <Button Classes="btn-text" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
 
       <!-- step 4: the replacement backup code, shown once -->
@@ -77,7 +77,7 @@
         <TextBlock Classes="dialog-title" Text="{Binding NewBackupCodeTitle, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="dialog-text" Text="{Binding NewBackupCodeDesc, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="BackupCodeText" Classes="h3" TextAlignment="Center" Margin="0,8" />
-        <Button x:Name="SavedButton" Classes="dialog-btn plain" HorizontalAlignment="Right" Click="OnSavedClick"
+        <Button x:Name="SavedButton" Classes="btn-main" HorizontalAlignment="Right" Click="OnSavedClick"
                 Content="{Binding ISavedIt, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
 

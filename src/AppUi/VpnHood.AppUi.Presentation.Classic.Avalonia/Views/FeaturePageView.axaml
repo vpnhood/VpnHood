@@ -59,7 +59,7 @@
           <StackPanel Spacing="12">
             <TextBlock x:Name="CloakText1" Classes="body-medium" TextWrapping="Wrap" LineHeight="25" />
             <TextBlock Classes="body-medium" TextWrapping="Wrap" LineHeight="25" Text="{Binding CloakModeDesc2, Source={x:Static res:Strings.Current}}" />
-            <Button x:Name="OkButton" Classes="dialog-btn" HorizontalAlignment="Right" Click="OnBackClick" IsVisible="False"
+            <Button x:Name="OkButton" Classes="btn-main" HorizontalAlignment="Right" Click="OnBackClick" IsVisible="False"
                     Content="{Binding Ok, Source={x:Static res:Strings.Current}}" />
           </StackPanel>
         </Border>

@@ -18,8 +18,8 @@
       <TextBlock Classes="dialog-text" Opacity="0.6" Text="{Binding DeleteAccountInvoicesNote, Source={x:Static res:Strings.Current}}" />
       <controls:OptionRow x:Name="UnderstoodRow" IsCheckBox="True" Clicked="OnUnderstoodClick" />
       <Grid ColumnDefinitions="Auto,*,Auto">
-        <Button x:Name="CancelButton" Classes="dialog-btn" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
-        <Button x:Name="DeleteButton" Grid.Column="2" Classes="dialog-btn plain text-error" IsEnabled="False" Click="OnDeleteClick"
+        <Button x:Name="CancelButton" Classes="btn-text" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="DeleteButton" Grid.Column="2" Classes="btn-danger" IsEnabled="False" Click="OnDeleteClick"
                 Content="{Binding DeleteMyAccount, Source={x:Static res:Strings.Current}}" />
       </Grid>
     </StackPanel>

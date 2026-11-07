@@ -63,11 +63,11 @@
 
         <Border Classes="divider" />
         <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-          <Button x:Name="RemoveButton" Classes="dialog-btn text-error" Click="OnRemoveClick" IsVisible="False"
+          <Button x:Name="RemoveButton" Classes="btn-danger" Click="OnRemoveClick" IsVisible="False"
                   Content="{Binding Remove, Source={x:Static res:Strings.Current}}" />
-          <Button x:Name="CancelButton" Grid.Column="2" Classes="dialog-btn" Click="OnCancelClick"
+          <Button x:Name="CancelButton" Grid.Column="2" Classes="btn-text" Click="OnCancelClick"
                   Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
-          <Button x:Name="SaveButton" Grid.Column="3" Classes="dialog-btn plain bold" Click="OnSaveClick" />
+          <Button x:Name="SaveButton" Grid.Column="3" Classes="btn-main" Click="OnSaveClick" />
         </Grid>
       </StackPanel>
     </ScrollViewer>

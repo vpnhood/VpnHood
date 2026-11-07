@@ -20,6 +20,9 @@
   <!-- the connect button: flat, where the client's is a gradient -->
   <SolidColorBrush x:Key="ConnectBtnBrush" Color="{StaticResource Cream100}" />
 
+  <!-- the Main button look: the connect button's fill, so the app's first button and its Main never part -->
+  <StaticResource x:Key="BtnMainBrush" ResourceKey="ConnectBtnBrush" />
+
   <!-- the home's ground: both stops purple 500, so flat -->
   <SolidColorBrush x:Key="HomeBgBrush" Color="{StaticResource Purple500}" />
 

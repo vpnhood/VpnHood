@@ -53,8 +53,6 @@
   <SolidColorBrush x:Key="PremiumCodeBtnTonalBrush" Color="#2916a3fe" />
   <SolidColorBrush x:Key="PurchaseSubscriptionBtnBrush" Color="{StaticResource Green200}" />
   <SolidColorBrush x:Key="OnPurchaseSubscriptionBtnBrush" Color="{StaticResource Blue500}" />
-  <SolidColorBrush x:Key="ActivateCodeBtnBrush" Color="{StaticResource Blue200}" />
-  <SolidColorBrush x:Key="OnActivateCodeBtnBrush" Color="#ffffff" />
   <SolidColorBrush x:Key="SuppressSnackbarBrush" Color="{StaticResource Purple200}" />
   <SolidColorBrush x:Key="OnSuppressSnackbarBrush" Color="{StaticResource Purple500}" />
   <SolidColorBrush x:Key="UpdateSnackbarAlertBrush" Color="{StaticResource Blue20}" />
@@ -91,7 +89,6 @@
   <SolidColorBrush x:Key="CardOnGradBgBrush" Color="{StaticResource Blue330}" />
   <SolidColorBrush x:Key="OnCardOnGradBgBrush" Color="#ffffff" />
   <SolidColorBrush x:Key="GeneralDialogBrush" Color="{StaticResource Blue330}" />
-  <SolidColorBrush x:Key="OnGeneralDialogBrush" Color="{StaticResource Blue100}" />
   <SolidColorBrush x:Key="OnGeneralDialogTonalBrush" Color="#2916a3fe" />
   <SolidColorBrush x:Key="GeneralDialogTextBrush" Color="{StaticResource Gray200}" />
   <SolidColorBrush x:Key="DialogAlertBrush" Color="#ffffff" />
@@ -101,6 +98,16 @@
   <SolidColorBrush x:Key="DialogAlertBtnTonalBrush" Color="#2906124b" />
   <SolidColorBrush x:Key="SampleIpFilterBgBrush" Color="{StaticResource Gray800}" />
   <SolidColorBrush x:Key="SampleIpFilterTextBrush" Color="{StaticResource Gray400}" />
+  <!-- The button looks (AppTheme.axaml): a colour here changes every button of that look. Main's fill
+       is the connect button's, in BlueTheme.axaml. -->
+  <SolidColorBrush x:Key="OnBtnMainBrush" Color="{StaticResource Blue400}" />
+  <SolidColorBrush x:Key="BtnSecondaryBrush" Color="#29ffffff" />
+  <SolidColorBrush x:Key="OnBtnSecondaryBrush" Color="#ffffff" />
+  <SolidColorBrush x:Key="OnBtnTextBrush" Color="#ffffff" />
+  <SolidColorBrush x:Key="BtnDangerBrush" Color="{StaticResource Red50}" />
+  <SolidColorBrush x:Key="OnBtnDangerBrush" Color="{StaticResource Blue330}" />
+  <SolidColorBrush x:Key="BtnDisabledBrush" Color="{StaticResource Blue200}" />
+  <SolidColorBrush x:Key="OnBtnDisabledBrush" Color="#ffffff" />
   <SolidColorBrush x:Key="BtnStyle1Brush" Color="{StaticResource Green200}" />
   <SolidColorBrush x:Key="OnBtnStyle1Brush" Color="{StaticResource Blue500}" />
   <SolidColorBrush x:Key="BtnStyle2Brush" Color="{StaticResource Blue50}" />
@@ -108,14 +115,9 @@
   <SolidColorBrush x:Key="OnBtnStyle2Brush" Color="{StaticResource Blue400}" />
   <SolidColorBrush x:Key="BtnStyle3Brush" Color="{StaticResource Cream100}" />
   <SolidColorBrush x:Key="OnBtnStyle3Brush" Color="{StaticResource Purple500}" />
-  <SolidColorBrush x:Key="BtnStyle4Brush" Color="{StaticResource Blue50}" />
-  <SolidColorBrush x:Key="BtnStyle4TonalBrush" Color="#2952bbfe" />
   <SolidColorBrush x:Key="BtnStyle5Brush" Color="{StaticResource Gray300}" />
   <SolidColorBrush x:Key="BtnStyle5TonalBrush" Color="#29eaeaea" />
   <SolidColorBrush x:Key="OnBtnStyle5Brush" Color="#ffffff" />
-  <SolidColorBrush x:Key="BtnStyle6Brush" Color="{StaticResource Blue100}" />
-  <SolidColorBrush x:Key="OnBtnStyle6Brush" Color="{StaticResource Blue400}" />
-  <SolidColorBrush x:Key="BtnStyle7Brush" Color="#000000" />
   <SolidColorBrush x:Key="SwitchBtnBrush" Color="{StaticResource Blue50}" />
   <SolidColorBrush x:Key="SwitchBtnTonalBrush" Color="#2952bbfe" />
   <SolidColorBrush x:Key="ConnectionCircleBorderBrush" Color="{StaticResource Blue100}" />

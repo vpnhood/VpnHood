@@ -1981,19 +1981,19 @@ public sealed partial class Strings
     /// <summary>No device connected yet.</summary>
     public string RemoteAccessNoDevice => Get("REMOTE_ACCESS_NO_DEVICE");
 
-    /// <summary>Can't open it on your phone?</summary>
+    /// <summary>Trouble using your phone?</summary>
     public string RemoteAccessHelp => Get("REMOTE_ACCESS_HELP");
 
-    /// <summary>If your phone can't open it</summary>
+    /// <summary>Trouble using your phone?</summary>
     public string RemoteAccessHelpTitle => Get("REMOTE_ACCESS_HELP_TITLE");
 
-    /// <summary>Try these in order, then scan the code again.</summary>
+    /// <summary>Try these 5 steps in order. After each one, scan the code again.</summary>
     public string RemoteAccessHelpDesc => Get("REMOTE_ACCESS_HELP_DESC");
 
     /// <summary>Use the same network</summary>
     public string RemoteAccessHelpNetworkTitle => Get("REMOTE_ACCESS_HELP_NETWORK_TITLE");
 
-    /// <summary>Connect your phone to the same Wi-Fi or router as this TV. Mobile data and guest networks can't reach it.</summary>
+    /// <summary>Put your phone on the same Wi-Fi or router as this TV. Mobile data and guest networks can't reach it.</summary>
     public string RemoteAccessHelpNetworkDesc => Get("REMOTE_ACCESS_HELP_NETWORK_DESC");
 
     /// <summary>Turn off the VPN on your phone</summary>
@@ -2002,10 +2002,10 @@ public sealed partial class Strings
     /// <summary>A VPN on your phone can keep it from reaching this TV. Turn it off while you use this page.</summary>
     public string RemoteAccessHelpVpnDesc => Get("REMOTE_ACCESS_HELP_VPN_DESC");
 
-    /// <summary>Allow Nearby devices on Android</summary>
+    /// <summary>On an Android phone, allow Nearby devices</summary>
     public string RemoteAccessHelpNearbyTitle => Get("REMOTE_ACCESS_HELP_NEARBY_TITLE");
 
-    /// <summary>Android can keep a browser off your local network. In Settings, open Apps, choose your browser, open Permissions and ...</summary>
+    /// <summary>In your phone's Settings, open Apps, choose your browser, open Permissions and allow Nearby devices.</summary>
     public string RemoteAccessHelpNearbyDesc => Get("REMOTE_ACCESS_HELP_NEARBY_DESC");
 
     /// <summary>Check your router</summary>
@@ -2013,6 +2013,12 @@ public sealed partial class Strings
 
     /// <summary>Some routers keep devices apart. In your router's settings, turn off AP isolation, also called client isolation.</summary>
     public string RemoteAccessHelpRouterDesc => Get("REMOTE_ACCESS_HELP_ROUTER_DESC");
+
+    /// <summary>If the page is slow, use a computer instead</summary>
+    public string RemoteAccessHelpComputerTitle => Get("REMOTE_ACCESS_HELP_COMPUTER_TITLE");
+
+    /// <summary>On a computer on the same network, type the full address shown under the code into a browser.</summary>
+    public string RemoteAccessHelpComputerDesc => Get("REMOTE_ACCESS_HELP_COMPUTER_DESC");
 
     /// <summary>Connected from {address}.</summary>
     public string RemoteAccessConnectedFrom(object address) => Get("REMOTE_ACCESS_CONNECTED_FROM", ("address", address));

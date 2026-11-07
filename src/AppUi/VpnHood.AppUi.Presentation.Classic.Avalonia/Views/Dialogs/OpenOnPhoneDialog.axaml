@@ -16,7 +16,7 @@
         <controls:QrCodeControl x:Name="Qr" Width="220" Height="220" />
       </Border>
       <TextBlock x:Name="AddressText" Classes="dialog-text" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="400" FlowDirection="LeftToRight" />
-      <Button x:Name="CloseButton" Classes="dialog-btn" HorizontalAlignment="Right" Margin="0,8,0,0"
+      <Button x:Name="CloseButton" Classes="btn-main" HorizontalAlignment="Right" Margin="0,8,0,0"
               Content="{Binding Close, Source={x:Static res:Strings.Current}}" Click="OnCloseClick" />
     </StackPanel>
   </Border>

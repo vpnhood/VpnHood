@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
@@ -21,6 +22,11 @@ public partial class PairingHelpDialog : DialogBase
     {
         if (ArrowKeyScroll.Scroll(Scroller, e.Key))
             e.Handled = true;
+    }
+
+    private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        MoreIcon.IsVisible = Scroller.Offset.Y < Scroller.ScrollBarMaximum.Y;
     }
 
     private void OnCloseClick(object? sender, RoutedEventArgs e)

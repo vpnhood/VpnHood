@@ -14,19 +14,13 @@
     <Style Selector="StackPanel.text-pane">
       <Setter Property="Grid.Column" Value="2" />
     </Style>
-    <!-- a warning card that is a button as a whole, so a remote's ring reads from across a room -->
+    <!-- Secondary in the shape of a card, so a remote's ring reads from across a room. No warning
+         colour: it stays up while everything works -->
     <Style Selector="Button.help-card">
-      <Setter Property="Background" Value="{StaticResource WarningBrush}" />
-      <Setter Property="Foreground" Value="{StaticResource OnWarningBrush}" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
       <Setter Property="Padding" Value="14,10" />
       <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="BorderThickness" Value="3" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-    </Style>
-    <Style Selector="Button.help-card:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
     </Style>
     <Style Selector="Button.help-card TextBlock">
       <Setter Property="FontWeight" Value="Bold" />
@@ -49,12 +43,14 @@
     <Grid Classes="page" ColumnDefinitions="Auto,40,*" RowDefinitions="Auto,Auto" VerticalAlignment="Center"
           HorizontalAlignment="Center">
 
-      <StackPanel Classes="code-pane" Spacing="12" MaxWidth="300">
+      <StackPanel Classes="code-pane" Spacing="12" MaxWidth="340">
         <Border Background="White" CornerRadius="6" Padding="10" HorizontalAlignment="Center">
           <controls:QrCodeControl x:Name="Qr" Width="256" Height="256" />
         </Border>
         <!-- pinned left to right, as the other-addresses line is: an RTL locale
-             would reorder an address into something that cannot be typed -->
+             would reorder an address into something that cannot be typed. The pane is wide enough
+             for an IPv4 address with its pairing code on one line: broken in two, a second address
+             under it reads as a third -->
         <TextBlock x:Name="AddressText" Classes="address" HorizontalAlignment="Center" TextAlignment="Center" FlowDirection="LeftToRight" />
       </StackPanel>
 
@@ -74,10 +70,10 @@
         <!-- A phone that cannot reach the page shows only an error that names nothing, and the TV never
              hears of it, so this stays up for any phone. It opens a dialog, not a page: leaving this page
              stops the listener the phone is about to try again. -->
-        <Button x:Name="HelpButton" Classes="help-card" Click="OnHelpClick">
+        <Button x:Name="HelpButton" Classes="btn-secondary help-card" Click="OnHelpClick">
           <TextBlock Classes="body" Text="{Binding RemoteAccessHelp, Source={x:Static res:Strings.Current}}" />
         </Button>
-        <Button x:Name="DoneButton" Classes="action" Content="{Binding Done, Source={x:Static res:Strings.Current}}"
+        <Button x:Name="DoneButton" Classes="btn-main" Content="{Binding Done, Source={x:Static res:Strings.Current}}"
                 HorizontalAlignment="Right" Click="OnDoneClick" />
       </StackPanel>
       <!-- ReSharper restore Xaml.MissingGridIndex -->

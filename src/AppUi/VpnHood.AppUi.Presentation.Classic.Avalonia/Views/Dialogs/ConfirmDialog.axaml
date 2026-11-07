@@ -13,8 +13,8 @@
       </Grid>
       <TextBlock x:Name="MessageText" Classes="dialog-text" />
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,8,0,0">
-        <Button x:Name="NoButton" Classes="dialog-btn" Content="{Binding No, Source={x:Static res:Strings.Current}}" Click="OnNoClick" />
-        <Button x:Name="YesButton" Classes="dialog-btn plain" Content="{Binding Yes, Source={x:Static res:Strings.Current}}" Click="OnYesClick" />
+        <Button x:Name="NoButton" Classes="btn-text" Content="{Binding No, Source={x:Static res:Strings.Current}}" Click="OnNoClick" />
+        <Button x:Name="YesButton" Classes="btn-text" Content="{Binding Yes, Source={x:Static res:Strings.Current}}" Click="OnYesClick" />
       </StackPanel>
     </StackPanel>
   </Border>

@@ -250,9 +250,9 @@
     <Setter Property="FontSize" Value="16" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
+  <!-- typed by hand from across a room, so as plain as the text beside it -->
   <Style Selector="TextBlock.address">
-    <Setter Property="FontSize" Value="14" />
-    <Setter Property="Foreground" Value="{StaticResource AppText60Brush}" />
+    <Setter Property="FontSize" Value="16" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="Border.note">
@@ -382,7 +382,7 @@
   </Style>
   <!-- a filled button's ripple: the overlay doubles on a light background (cream and the
        connected purple are both light) -->
-  <Style Selector="Button.connect-btn /template/ controls|RippleEffect, Button.action /template/ controls|RippleEffect">
+  <Style Selector="Button.connect-btn /template/ controls|RippleEffect, Button.btn-main /template/ controls|RippleEffect">
     <Setter Property="RippleOpacity" Value="{StaticResource LightRippleOpacity}" />
   </Style>
 
@@ -461,16 +461,6 @@
   </Style>
   <Style Selector="Button.back-btn:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderThickness" Value="2" />
-  </Style>
-
-  <!-- the pairing page's Done -->
-  <Style Selector="Button.action">
-    <Setter Property="Background" Value="{StaticResource ConnectBtnBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource OnConnectBtnDisconnectedBrush}" />
-    <Setter Property="FontSize" Value="14" />
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="Padding" Value="28,8" />
-    <Setter Property="CornerRadius" Value="20" />
   </Style>
 
   <!-- The version at the end of the home header: 40% white text while there
@@ -813,6 +803,37 @@
   <Style Selector="Button.bold">
     <Setter Property="FontWeight" Value="Bold" />
   </Style>
+  <!-- Button looks. Main is the one thing a screen is for, Secondary any other action, Text the way
+       out, Danger what cannot be undone. A button names its look and no colour of its own, so a look
+       changes in one place: its colours are the Btn keys of the two themes, its shape is here. Rows,
+       icon buttons and links are not looks: a link's colour is what says it is one. -->
+  <Style Selector="Button.btn-main, Button.btn-secondary, Button.btn-text, Button.btn-danger">
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Padding" Value="16,6" />
+  </Style>
+  <Style Selector="Button.btn-main">
+    <Setter Property="Background" Value="{StaticResource BtnMainBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnBtnMainBrush}" />
+    <Setter Property="Padding" Value="28,8" />
+  </Style>
+  <Style Selector="Button.btn-secondary">
+    <Setter Property="Background" Value="{StaticResource BtnSecondaryBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnBtnSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.btn-text">
+    <Setter Property="Foreground" Value="{StaticResource OnBtnTextBrush}" />
+  </Style>
+  <Style Selector="Button.btn-danger">
+    <Setter Property="Background" Value="{StaticResource BtnDangerBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnBtnDangerBrush}" />
+  </Style>
+  <!-- A full fill at half strength still says press me, so a disabled Main or Danger drops it -->
+  <Style Selector="Button.btn-main:disabled /template/ ContentPresenter#PART_ContentPresenter, Button.btn-danger:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource BtnDisabledBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnBtnDisabledBrush}" />
+  </Style>
   <!-- BtnStyle1: flat, btn-style-1 -->
   <Style Selector="Button.btn1">
     <Setter Property="Background" Value="{StaticResource BtnStyle1Brush}" />
@@ -829,23 +850,10 @@
     <Setter Property="Background" Value="{StaticResource BtnStyle3Brush}" />
     <Setter Property="Foreground" Value="{StaticResource OnBtnStyle3Brush}" />
   </Style>
-  <!-- BtnStyle4: tonal, btn-style-4, block, the content spread -->
-  <Style Selector="Button.btn4">
-    <Setter Property="Background" Value="{StaticResource BtnStyle4TonalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource BtnStyle4Brush}" />
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="CornerRadius" Value="4" />
-  </Style>
   <!-- BtnStyle5: tonal, btn-style-5 (gray), comfortable -->
   <Style Selector="Button.btn5">
     <Setter Property="Background" Value="{StaticResource BtnStyle5TonalBrush}" />
     <Setter Property="Foreground" Value="{StaticResource BtnStyle5Brush}" />
-  </Style>
-  <!-- BtnStyle6: flat, btn-style-6 -->
-  <Style Selector="Button.btn6">
-    <Setter Property="Background" Value="{StaticResource BtnStyle6Brush}" />
-    <Setter Property="Foreground" Value="{StaticResource OnBtnStyle6Brush}" />
   </Style>
   <!-- variant="text" in the highlight colour: a link-like button -->
   <Style Selector="Button.text-highlight">
@@ -866,16 +874,9 @@
     <Setter Property="Background" Value="{StaticResource ErrorBrush}" />
     <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
   </Style>
-  <Style Selector="Button.text-error">
-    <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
-  </Style>
   <Style Selector="Button.tonal-white">
     <Setter Property="Background" Value="{StaticResource WhiteTonalBrush}" />
     <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
-  </Style>
-  <Style Selector="Button.tonal-active">
-    <Setter Property="Background" Value="{StaticResource ActiveTonalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource ActiveBrush}" />
   </Style>
   <Style Selector="Button.outlined">
     <Setter Property="BorderBrush" Value="{StaticResource AppText50Brush}" />
@@ -1258,18 +1259,7 @@
     <Setter Property="Background" Value="#14FFFFFF" />
   </Style>
 
-  <!-- Dialogs: the general dialog's card, the alert card, and the
-       text buttons of their actions - the buttons' general colour first, since a later style wins
-       and each card's own colour must -->
-  <Style Selector="Button.dialog-btn">
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="CornerRadius" Value="20" />
-    <Setter Property="Padding" Value="16,6" />
-    <Setter Property="Foreground" Value="{StaticResource OnGeneralDialogBrush}" />
-  </Style>
-  <Style Selector="Button.dialog-btn.plain">
-    <Setter Property="Opacity" Value="0.7" />
-  </Style>
+  <!-- Dialogs: the general dialog's card and the alert card -->
   <!-- A dialog is as wide as the window lets it be, up to its MaxWidth, whatever its words: a
        dialog that goes through steps keeps one width through them. -->
   <Style Selector="Border.dialog">
@@ -1307,7 +1297,7 @@
   <Style Selector="Border.dialog.alert Button TextBlock">
     <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground, FallbackValue={StaticResource DialogAlertTextBrush}}" />
   </Style>
-  <Style Selector="Border.dialog.alert Button.dialog-btn">
+  <Style Selector="Border.dialog.alert Button.btn-text">
     <Setter Property="Foreground" Value="{StaticResource OnDialogAlertBrush}" />
   </Style>
   <!-- its "learn more" link too: a button's white words would not show on the card -->
@@ -1329,7 +1319,7 @@
   <Style Selector="Border.dialog.active TextBlock">
     <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
   </Style>
-  <Style Selector="Border.dialog.active Button.dialog-btn">
+  <Style Selector="Border.dialog.active Button.btn-text">
     <Setter Property="Foreground" Value="{StaticResource OnActiveBrush}" />
   </Style>
   <!-- a dark inset in the active card (the premium code's details): its words white, and each row

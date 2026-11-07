@@ -20,7 +20,7 @@
                hosting:NativeTextInput.IsPreferred="True" />
       <TextBlock x:Name="ErrorText" AutomationProperties.LiveSetting="Assertive" Classes="body-small error" IsVisible="False" TextWrapping="Wrap" />
       <!-- the page's one action: the header's Back is its cancel, as on any page -->
-      <Button x:Name="AddButton" Classes="action" HorizontalAlignment="Right" Margin="0,6,0,0"
+      <Button x:Name="AddButton" Classes="btn-main" HorizontalAlignment="Right" Margin="0,6,0,0"
               Content="{Binding Add, Source={x:Static res:Strings.Current}}" Click="OnAddClick" />
     </StackPanel>
   </DockPanel>

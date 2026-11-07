@@ -21,6 +21,9 @@
     <GradientStop Offset="0.9" Color="{StaticResource Green100}" />
   </LinearGradientBrush>
 
+  <!-- the Main button look: the connect button's fill, so the app's first button and its Main never part -->
+  <StaticResource x:Key="BtnMainBrush" ResourceKey="ConnectBtnBrush" />
+
   <!-- the home's ground: home-bg-grad-1 over home-bg-grad-2, top to bottom -->
   <LinearGradientBrush x:Key="HomeBgBrush" StartPoint="50%,0%" EndPoint="50%,100%">
     <GradientStop Offset="0" Color="{StaticResource Blue200}" />

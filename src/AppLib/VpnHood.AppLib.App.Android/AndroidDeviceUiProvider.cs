@@ -148,6 +148,23 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
+    public bool IsShareSupported => !IsTv;
+
+    // As a file, never as Intent.ExtraText: ReportFileProvider says why.
+    public void ShareFile(IUiContext uiContext, string fileName, byte[] content)
+    {
+        if (!IsShareSupported)
+            throw new NotSupportedException("Sharing is not supported on this device.");
+
+        var activity = ((AndroidUiContext)uiContext).Activity;
+        var intent = new Intent(Intent.ActionSend);
+        intent.SetType("text/plain");
+        intent.PutExtra(Intent.ExtraSubject, fileName);
+        intent.PutExtra(Intent.ExtraStream, ReportFileProvider.SaveAndGetUri(activity, fileName, content));
+        intent.AddFlags(ActivityFlags.GrantReadUriPermission);
+        activity.StartActivity(Intent.CreateChooser(intent, fileName));
+    }
+
     public void OpenAppNotificationSettings(IUiContext context)
     {
         if (!IsAppNotificationSettingsSupported)

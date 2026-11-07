@@ -53,6 +53,11 @@ public class NullDeviceUiProvider : IDeviceUiProvider
     public virtual void OpenAppNotificationSettings(IUiContext uiContext) =>
         throw new NotSupportedException();
 
+    public virtual bool IsShareSupported => false;
+
+    public virtual void ShareFile(IUiContext uiContext, string fileName, byte[] content) =>
+        throw new NotSupportedException();
+
     public virtual bool IsProxySettingsSupported => false;
     public virtual DeviceProxySettings? GetProxySettings() => null;
 }

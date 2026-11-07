@@ -8,6 +8,7 @@ internal sealed class FakeIntentsApi : IIntentsApi
     public Task<bool> RequestNotification(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Intents.RequestNotification");
     public Task<bool> RequestQuickLaunch(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Intents.RequestQuickLaunch");
     public Task RequestUserReview(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Intents.RequestUserReview");
+    public Task ShareLog(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Intents.ShareLog");
     public Task OpenKillSwitchSettings(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Intents.OpenKillSwitchSettings");
     public Task OpenAlwaysOnSettings(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Intents.OpenAlwaysOnSettings");
     public Task OpenSettings(CancellationToken cancellationToken) => throw UnmockedCalls.Record("Intents.OpenSettings");

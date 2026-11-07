@@ -60,6 +60,34 @@ public class IosDeviceUiProvider : NullDeviceUiProvider
         OpenUrl(UIApplication.OpenSettingsUrlString);
     }
 
+#if !__TVOS__
+    public override bool IsShareSupported => true;
+
+    public override void ShareFile(IUiContext uiContext, string fileName, byte[] content)
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), fileName);
+        File.WriteAllBytes(filePath, content);
+
+        IosUtils.RunOnUiThread(() => {
+            var presenter = GetKeyWindow()?.RootViewController ??
+                            throw new InvalidOperationException("There is no window to share from.");
+            while (presenter.PresentedViewController is { } presented)
+                presenter = presented;
+
+            var sheet = new UIActivityViewController([NSUrl.FromFilename(filePath)], applicationActivities: null);
+
+            // an iPad shows the sheet as a popover, which needs something to point at
+            if (sheet.PopoverPresentationController is { } popover && presenter.View is { } view) {
+                popover.SourceView = view;
+                popover.SourceRect = new CGRect(view.Bounds.GetMidX(), view.Bounds.GetMidY(), 0, 0);
+                popover.PermittedArrowDirections = 0;
+            }
+
+            presenter.PresentViewController(sheet, animated: true, completionHandler: null);
+        }).GetAwaiter().GetResult();
+    }
+#endif
+
     private static void OpenUrl(string urlString)
     {
         var url = new NSUrl(urlString);

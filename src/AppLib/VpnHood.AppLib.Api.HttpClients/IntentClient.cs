@@ -22,6 +22,11 @@ internal sealed class IntentClient(HttpClient httpClient) : AppApiClientBase(htt
         return HttpPostAsync(BaseUrl + "request-user-review", null, null, cancellationToken);
     }
 
+    public Task ShareLog(CancellationToken cancellationToken)
+    {
+        return HttpPostAsync(BaseUrl + "share-log", null, null, cancellationToken);
+    }
+
     public Task OpenKillSwitchSettings(CancellationToken cancellationToken)
     {
         return HttpPostAsync(BaseUrl + "open-kill-switch-settings", null, null, cancellationToken);

@@ -20,4 +20,5 @@ public class DeviceIntentFeatures
     public required bool IsSettingsSupported { get; init; }
     public required bool IsAppSettingsSupported { get; init; }
     public required bool IsAppNotificationSettingsSupported { get; init; }
+    public required bool IsShareSupported { get; init; }
 }

@@ -38,6 +38,13 @@ public interface IDeviceUiProvider
     bool IsAppNotificationSettingsSupported { get; }
     void OpenAppNotificationSettings(IUiContext uiContext);
 
+    /// <summary>
+    /// Whether the device has a share sheet, which hands a file to an app the user picks. False on a
+    /// TV and a computer, where the UI copies the text instead.
+    /// </summary>
+    bool IsShareSupported { get; }
+    void ShareFile(IUiContext uiContext, string fileName, byte[] content);
+
     bool IsProxySettingsSupported { get; }
     DeviceProxySettings? GetProxySettings();
 

@@ -40,6 +40,11 @@ internal class IntentsController(IIntentsApi api) : ControllerBase
             await ctx.SendNoContent().Vhc();
         });
 
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "share-log", async ctx => {
+            await api.ShareLog(ctx.Token).Vhc();
+            await ctx.SendNoContent().Vhc();
+        });
+
         mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-settings", async ctx => {
             await api.OpenAppSettings(ctx.Token).Vhc();
             await ctx.SendNoContent().Vhc();

@@ -10,4 +10,5 @@ public interface IIntentsApi
     Task OpenSettings(CancellationToken cancellationToken);
     Task OpenAppSettings(CancellationToken cancellationToken);
     Task OpenAppNotificationSettings(CancellationToken cancellationToken);
+    Task ShareLog(CancellationToken cancellationToken);
 }

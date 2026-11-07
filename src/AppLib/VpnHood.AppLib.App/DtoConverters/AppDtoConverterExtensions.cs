@@ -149,6 +149,7 @@ public static class AppDtoConverterExtensions
             IsKillSwitchSettingsSupported = uiProvider?.IsKillSwitchSettingsSupported ?? false,
             IsSettingsSupported = uiProvider?.IsSettingsSupported ?? false,
             IsAppSettingsSupported = uiProvider?.IsAppSettingsSupported ?? false,
+            IsShareSupported = uiProvider?.IsShareSupported ?? false,
             IsAppNotificationSettingsSupported = uiProvider?.IsAppNotificationSettingsSupported ?? false
         };
     }

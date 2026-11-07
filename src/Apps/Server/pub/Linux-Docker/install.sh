@@ -156,7 +156,13 @@ fi
 # The compose file, through a temp file: a download that fails leaves the one in place alone.
 echo "Downloading VpnHoodServer Docker Compose...";
 composeTempFile=$(mktemp "$composeFile.XXXXXX") || exit 1;
-if ! wget -nv -O "$composeTempFile" "$composeUrl"; then
+# wget or curl, whichever the machine has: Fedora's, Arch's and their kin's base systems have only curl
+if command -v wget >/dev/null 2>&1; then
+	composeDownload=(wget -nv -O "$composeTempFile" "$composeUrl");
+else
+	composeDownload=(curl -fsSL -o "$composeTempFile" "$composeUrl");
+fi
+if ! "${composeDownload[@]}"; then
 	echo "Could not download $composeUrl";
 	rm -f "$composeTempFile";
 	exit 1;

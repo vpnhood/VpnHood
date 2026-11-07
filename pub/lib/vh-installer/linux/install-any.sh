@@ -19,8 +19,8 @@ fi
 # Pass all arguments to the downloaded script
 echo "Executing VpnHood! $arch_raw installer ..."
 
-# Download the script content first
-script_content=$(wget -qO- "$script_url") || {
+# Download the script content first, by wget or, on a machine with only curl, curl: the installer then adds wget
+script_content=$(wget -qO- "$script_url" 2>/dev/null || curl -fsSL "$script_url") || {
     echo "Error: Failed to download installation script from $script_url" >&2
     exit 1
 }

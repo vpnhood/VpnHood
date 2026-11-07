@@ -2,6 +2,8 @@
 
 * Improve: VpnHoodServer logs a warning while advanced probe resistance is off, that is, while `MinClientProtocolVersion` is below 15. Protocol 14 and older are supported until April 2027, so update all apps and servers by then
 * Improve: A new VpnHoodServer makes up its certificate's name in no fixed shape: of any length, on a host such as `cdn.`, under a common ending, so new servers' names no longer follow one pattern a network could match. A server already installed keeps its certificate.
+* Fix: On Alpine and other Linux systems built on musl, the installer stops and says to run VpnHoodServer in Docker, where it said it had installed a server that cannot start
+* Improve: The install commands work without wget, as on Arch and the base systems of Fedora and its family: they download with curl, and the Linux installer adds wget
 
 # v9.1.866
 

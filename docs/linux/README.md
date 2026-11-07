@@ -26,7 +26,7 @@ VPN host it starts.
 
 ```bash
 # x64 and arm64, picked for you. Through su: sudo bash <(...) fails, as sudo closes what <(...) opens.
-sudo su -c "bash <(wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-linux.sh)"
+sudo bash -c 'u=https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-linux.sh; bash <(wget -qO- $u 2>/dev/null || curl -fsSL $u)'
 ```
 
 The installer must run as root and will say so rather than half-install. It:
@@ -42,7 +42,13 @@ The installer must run as root and will say so rather than half-install. It:
   timer on and off, and an update keeps that choice
 - on a machine with a display manager, or WSLg, adds **VpnHood! CLIENT** to the application menu and
   installs the libraries the window needs (`libx11-6`, `libice6`, `libsm6`, `libfontconfig1`,
-  `xdg-utils`); without `apt`, it names any of them it cannot find, for you to install
+  `xdg-utils`, as `apt` names them), by `dnf`, `zypper` or `pacman` where there is no `apt`, and
+  names any it still cannot find, for you to install
+- adds `wget`, which it and the updater use, where the command came down by `curl`
+- adds `systemd-resolved` where the machine has no way to set the VPN's DNS, and at a new install
+  turns it on where it comes installed and off, as on Arch, keeping the machine's servers as a
+  fallback. Not where it is masked or only a resolver on the machine answers: the connect's error
+  then says what to do
 - installs MsQuic, for the QUIC channel, from Microsoft's package feed, which it removes again
   unless it was there before; a distribution built on another, such as Linux Mint, takes that
   one's feed. Arch has no package for it: there it puts Microsoft's build in the
@@ -203,7 +209,7 @@ With no display manager the installer adds no window: the service and the comman
 forces that anywhere). Drive it from the shell or from a unit of your own:
 
 ```bash
-sudo su -c "bash <(wget -qO- https://.../VpnHoodClient-linux.sh) -q"
+sudo bash -c 'u=https://.../VpnHoodClient-linux.sh; bash <(wget -qO- $u 2>/dev/null || curl -fsSL $u) -q'
 sudo vhclient profile add /root/access-key.txt
 vhclient connect --location US/Virginia
 vhclient status

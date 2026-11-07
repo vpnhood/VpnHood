@@ -122,13 +122,21 @@ if [ "$lastArg" != "" ]; then
 	exit 1;
 fi
 
+# The build needs glibc. On musl, Alpine's, the server cannot start, so nothing goes in; its Docker image, which
+# carries its own glibc, runs there. By what ldd says: a machine that cannot say is not refused.
+if ldd --version 2>&1 | grep -qi musl; then
+	echo "$productName cannot run on this system: it needs glibc, and this system uses musl, as Alpine does.";
+	echo "Run it in Docker instead.";
+	exit 1;
+fi
+
 # Root, said here: everything below writes where only root may, and a run that finds that out one
 # folder at a time leaves half an install behind.
 if [ "$(id -u)" != "0" ]; then
 	# Not $0, which names nothing to run again under bash <(...): /dev/fd/63. Nor sudo bash <(...):
 	# sudo closes the descriptor that /dev/fd/63 is.
 	echo "This installer must run as root. Try:";
-	echo "  sudo su -c \"bash <(wget -qO- $releaseUrl/$assemblyName-linux.sh) $*\"";
+	echo "  sudo bash -c 'u=$releaseUrl/$assemblyName-linux.sh; bash <(wget -qO- \$u 2>/dev/null || curl -fsSL \$u) $*'";
 	exit 1;
 fi
 
@@ -257,6 +265,29 @@ if [ "$container" = "y" ]; then
 		! DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --only-upgrade \
 			-o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold $libraries; then
 		echo "WARNING: Could not upgrade the libraries the server runs on. Installing the server anyway.";
+	fi
+fi
+
+# wget, for the package, MsQuic and the updater. The command that brought this script here also takes curl, as the
+# base systems of Fedora, the Red Hat family, openSUSE and Arch have no wget, and Ubuntu's desktop no curl.
+function install_wget() {
+	if command -v apt-get >/dev/null 2>&1; then
+		DEBIAN_FRONTEND=noninteractive apt-get update -qq;
+		DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+			-o DPkg::Lock::Timeout=300 wget;
+	elif command -v dnf >/dev/null 2>&1; then
+		dnf install -y -q wget;
+	elif command -v zypper >/dev/null 2>&1; then
+		ZYPP_LOCK_TIMEOUT=300 zypper --non-interactive --quiet install wget;
+	elif command -v pacman >/dev/null 2>&1; then
+		pacman -S --noconfirm --needed wget;
+	fi
+}
+if ! command -v wget >/dev/null 2>&1; then
+	echo "Installing wget, which $productName's installer and updater need...";
+	install_wget;
+	if ! command -v wget >/dev/null 2>&1; then
+		echo "WARNING: Could not install wget. Install it with your package manager.";
 	fi
 fi
 

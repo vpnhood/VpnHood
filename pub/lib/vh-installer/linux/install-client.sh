@@ -138,13 +138,20 @@ if [ "$lastArg" != "" ]; then
 	exit 1;
 fi
 
+# The build needs glibc. On musl, Alpine's, neither the service nor the commands can start, with a desktop
+# or without, so nothing goes in. By what ldd says: a machine that cannot say is not refused.
+if ldd --version 2>&1 | grep -qi musl; then
+	echo "$productName cannot run on this system: it needs glibc, and this system uses musl, as Alpine does.";
+	exit 1;
+fi
+
 # Root, said here. Everything below writes to /opt, /etc and /usr, and a run that discovers that
 # one directory at a time leaves half an install behind.
 if [ "$(id -u)" != "0" ]; then
 	# Not $0, which names nothing to run again: /dev/fd/63 under bash <(...), "--" under the any-CPU
 	# script. Nor sudo bash <(...): sudo closes the descriptor that /dev/fd/63 is.
 	echo "This installer must run as root. Try:";
-	echo "  sudo su -c \"bash <(wget -qO- $releaseUrl/$assemblyName-linux.sh) $*\"";
+	echo "  sudo bash -c 'u=$releaseUrl/$assemblyName-linux.sh; bash <(wget -qO- \$u 2>/dev/null || curl -fsSL \$u) $*'";
 	exit 1;
 fi
 
@@ -247,20 +254,40 @@ if [ "$withDesktop" == "y" ] && command -v dpkg >/dev/null 2>&1 && command -v ap
 		fi
 	fi
 
-# Not Debian: no package names to go by, so the files themselves - the libraries as the loader finds
-# them, and xdg-open - and a warning names only what is missing.
+# Not Debian: the files themselves - the libraries as the loader finds them, and xdg-open - as each family
+# names its packages differently. What is missing comes in by the family's manager, without what its packages
+# only recommend, as above, and a warning names what still is.
 elif [ "$withDesktop" == "y" ]; then
-	missing="";
-	loaderLibs=$(ldconfig -p 2>/dev/null | awk '{ print $1 }');
-	for lib in libX11.so.6 libICE.so.6 libSM.so.6 libfontconfig.so.1; do
-		if ! grep -qxF "$lib" <<< "$loaderLibs"; then
-			missing="$missing $lib";
+	function window_files_missing() {
+		local lib loaderLibs;
+		loaderLibs=$(ldconfig -p 2>/dev/null | awk '{ print $1 }');
+		for lib in libX11.so.6 libICE.so.6 libSM.so.6 libfontconfig.so.1; do
+			if ! grep -qxF "$lib" <<< "$loaderLibs"; then
+				printf ' %s' "$lib";
+			fi
+		done
+		if ! command -v xdg-open >/dev/null 2>&1; then
+			printf ' xdg-open';
 		fi
-	done
-	if ! command -v xdg-open >/dev/null 2>&1; then
-		missing="$missing xdg-open";
-	fi
+	}
+	function install_window_files() {
+		if command -v dnf >/dev/null 2>&1; then
+			dnf install -y -q --setopt=install_weak_deps=False libX11 libICE libSM fontconfig xdg-utils;
+		elif command -v zypper >/dev/null 2>&1; then
+			ZYPP_LOCK_TIMEOUT=300 zypper --non-interactive --quiet install --no-recommends \
+				libX11-6 libICE6 libSM6 libfontconfig1 xdg-utils;
+		elif command -v pacman >/dev/null 2>&1; then
+			pacman -S --noconfirm --needed libx11 libice libsm fontconfig xdg-utils;
+		fi
+	}
 
+	missing=$(window_files_missing);
+	if [ -n "$missing" ]; then
+		echo "Installing the libraries the window needs:$missing";
+		install_window_files;
+		ldconfig 2>/dev/null;
+		missing=$(window_files_missing);
+	fi
 	if [ -n "$missing" ]; then
 		echo "WARNING: The window needs these, which were not found:$missing";
 		echo "WARNING: Install them with your package manager; the commands and the service work without them.";
@@ -270,6 +297,29 @@ fi
 # ------------------------------------------------------------------
 # The package
 # ------------------------------------------------------------------
+# wget, for the package, MsQuic and the updater. The command that brought this script here also takes curl, as the
+# base systems of Fedora, the Red Hat family, openSUSE and Arch have no wget, and Ubuntu's desktop no curl.
+function install_wget() {
+	if command -v apt-get >/dev/null 2>&1; then
+		DEBIAN_FRONTEND=noninteractive apt-get update -qq;
+		DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+			-o DPkg::Lock::Timeout=300 wget;
+	elif command -v dnf >/dev/null 2>&1; then
+		dnf install -y -q wget;
+	elif command -v zypper >/dev/null 2>&1; then
+		ZYPP_LOCK_TIMEOUT=300 zypper --non-interactive --quiet install wget;
+	elif command -v pacman >/dev/null 2>&1; then
+		pacman -S --noconfirm --needed wget;
+	fi
+}
+if ! command -v wget >/dev/null 2>&1; then
+	echo "Installing wget, which $productName's installer and updater need...";
+	install_wget;
+	if ! command -v wget >/dev/null 2>&1; then
+		echo "WARNING: Could not install wget. Install it with your package manager.";
+	fi
+fi
+
 # Into the install's own folder, not the current one: the updater's is /, where every update used to
 # leave the package. A crashed run's leftovers go first. 755 even where an earlier run under a
 # stricter umask made them.
@@ -396,11 +446,15 @@ fi
 # tunnel, and a minimal system, Ubuntu 24.04's among them, has none. So where there is neither resolvectl
 # nor openresolv, systemd-resolved comes in: Debian's resolvconf refuses the adapter's exclusive entry,
 # and systemd's own is resolvectl under another name. After MsQuic, as the machine's DNS changes here.
-# One that is installed and turned off stays off, as someone chose that: the connect's error says what to do.
+# One that comes installed and off, as on Arch and AlmaLinux 8, goes on at a new install, or the app could not
+# connect there. Not at an update, when someone may have turned it off since; nor where it is masked, which
+# only a person does: for both, the connect's error says what to do.
 # One that is on while programs ask another server gets the link, here and at every update: the adapter refuses
 # to connect without it, as a server of the local network stays off the tunnel.
 function dns_way_found() {
-	command -v resolvectl >/dev/null 2>&1 || resolvconf --version 2>/dev/null | grep -q openresolv;
+	# resolvectl alone is not enough: Fedora's systemd has it, and the service it talks to is a package of its own
+	{ command -v resolvectl >/dev/null 2>&1 && systemctl cat systemd-resolved.service >/dev/null 2>&1; } ||
+		resolvconf --version 2>/dev/null | grep -q openresolv;
 }
 function install_resolved() {
 	if command -v apt-get >/dev/null 2>&1; then
@@ -418,6 +472,11 @@ function machine_dns() {
 }
 function on_resolved() {
 	[ "$(readlink -f /etc/resolv.conf)" = /run/systemd/resolve/stub-resolv.conf ];
+}
+function resolved_left_off() {
+	[ ! -f "$destinationPath/publish.json" ] && ! resolvconf --version 2>/dev/null | grep -q openresolv &&
+		! systemctl is-active --quiet systemd-resolved &&
+		[ "$(systemctl is-enabled systemd-resolved 2>/dev/null)" = disabled ];
 }
 # The machine's own DNS servers, the argument, stay as a fallback. With no network manager to tell
 # systemd-resolved about them, a plain resolv.conf's are all it has, and without them no name resolves: seen on
@@ -439,14 +498,20 @@ if ! dns_way_found; then
 	# Read before the package replaces the file
 	dnsServers=$(machine_dns);
 	install_resolved;
-	if command -v resolvectl >/dev/null 2>&1; then
+	if dns_way_found; then
 		use_resolved "$dnsServers";
 	else
 		echo "WARNING: Could not install systemd-resolved, without which $productName cannot connect.";
 		echo "WARNING: Install it with your package manager.";
 	fi
-elif systemctl is-active --quiet systemd-resolved && ! on_resolved; then
+elif resolved_left_off; then
 	# With only a resolver on this machine, the link would leave systemd-resolved with no server to ask
+	dnsServers=$(machine_dns);
+	if [ -n "$dnsServers" ]; then
+		echo "Turning on systemd-resolved, which $productName needs to set the VPN's DNS...";
+		use_resolved "$dnsServers";
+	fi
+elif systemctl is-active --quiet systemd-resolved && ! on_resolved; then
 	dnsServers=$(machine_dns);
 	if [ -n "$dnsServers" ]; then
 		echo "Linking /etc/resolv.conf to systemd-resolved, so that DNS cannot go around the VPN...";
@@ -693,6 +758,8 @@ Keywords=VPN;Privacy;Proxy;
 StartupNotify=true
 $actionLines
 ";
+	# -desktop on a machine with none yet, where a bare Debian or Ubuntu has no such folder
+	mkdir -p /usr/share/applications;
 	echo "$desktopEntry" > "/usr/share/applications/$assemblyName.desktop";
 	# readable by the desktop even where an earlier run left the file at its caller's umask, as the icon
 	chmod 644 "/usr/share/applications/$assemblyName.desktop";

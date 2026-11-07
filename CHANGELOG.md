@@ -37,6 +37,7 @@
 * Fix: A VPN started without opening the app - always-on, the quick-settings tile, the phone's VPN settings, or the system restarting it - follows your latest settings, "Share anonymous usage data" among them, and the server and location you chose, never a server you removed #android #ios
 * Fix: Where Google Play works only through the VPN, the app's update now comes once you connect #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
+* Fix: The app's language can be set in your device's settings as well as in the app, and each shows the other's choice: on Android the app used to put back its own at the next start, and on iPhone and iPad the app's page in Settings now has a Language row when the device has more than one language #android #ios
 * Fix: On Android 13 and older, the app connects to a server whose certificate is one of Let's Encrypt's new ones; its certificate check refused it #android
 * Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts, and on 7.0 it can check for updates, and the app from our website can download them #android
 * Fix: On Android, the app no longer closes when you connect or disconnect just as a connection is ending, when you connect again right after a disconnect or a failed connect, or, on Android 12 and older, when Android's quick settings restart just as they show the app's tile #android

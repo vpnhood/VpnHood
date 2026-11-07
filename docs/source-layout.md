@@ -216,6 +216,14 @@ they travel to a new phone. Android 14 and later replace the language list at ru
 own languages (`AndroidAppCultureProvider`): the file is the list before the app's first start, and
 Android 13's.
 
+The language chosen lives in the OS, on Android and on iOS, so it can be changed from the app or from
+the OS's settings for the app: `VpnHoodApp` reads the OS's at start and on every return to the front,
+and writes it when the app's own setting changes (`IAppCultureProvider.SelectedCultures`). An iOS head
+states nothing for this: the build reads the languages from the UI's store (`locales/index.json` in
+`ui.zip`) and declares them in `CFBundleLocalizations` (`VhWriteLanguages`), and iOS Settings then shows
+the app a Language row on a device with more than one language. An Apple TV's Settings has no page for
+an app, so there the language is chosen in the app alone.
+
 What only one product registers stays in its heads. CLIENT opens access keys from links and files,
 so its Android heads' `MainActivity` declares the intent filters, in the forms its product project
 names (`ClientAccessKeys`: the `vh` and `vhkey` schemes and three MIME types, `.cdy` among them); its

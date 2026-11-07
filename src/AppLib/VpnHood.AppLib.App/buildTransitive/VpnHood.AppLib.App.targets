@@ -444,6 +444,65 @@ Blue = component(4);
 		</ItemGroup>
 	</Target>
 
+	<!-- iOS: the languages the app has words for, which the UI's store lists (locales/index.json in
+	     VhAssetsZip) and Info.plist then declares (CFBundleLocalizations), so an app of any brand gets them
+	     with nothing to state, and iOS Settings gives it a Language row. A code-only checkout has no store
+	     and declares none. The SDK merges a partial plist added through CollectAppManifestsDependsOn, its
+	     hook for that, over the head's Info.plist. -->
+	<UsingTask TaskName="VhReadLanguages" TaskFactory="RoslynCodeTaskFactory"
+	           AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+		<ParameterGroup>
+			<StoreZip ParameterType="System.String" Required="true" />
+			<Languages ParameterType="System.String[]" Output="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System.IO.Compression" />
+			<Using Namespace="System.Linq" />
+			<Using Namespace="System.Text.RegularExpressions" />
+			<Code Type="Fragment" Language="cs"><![CDATA[
+const string entryName = "locales/index.json";
+string index = null;
+using (var zip = ZipFile.OpenRead(StoreZip.Replace('\\', '/'))) {
+    var entry = zip.GetEntry(entryName);
+    if (entry != null)
+        using (var reader = new StreamReader(entry.Open()))
+            index = reader.ReadToEnd();
+}
+
+if (index == null) {
+    Log.LogError("The UI's store lists no languages: no " + entryName + " in " + StoreZip + ".");
+    return false;
+}
+
+Languages = Regex.Matches(index, "\"([^\"]+)\"").Cast<Match>().Select(x => x.Groups[1].Value).ToArray();
+]]></Code>
+		</Task>
+	</UsingTask>
+
+	<PropertyGroup>
+		<CollectAppManifestsDependsOn>VhWriteLanguages;$(CollectAppManifestsDependsOn)</CollectAppManifestsDependsOn>
+	</PropertyGroup>
+	<Target Name="VhWriteLanguages"
+	        Condition="'$(VhAppIsApp)' == 'true' And '$(VhAppPlatform)' == 'ios' And '$(VhAssetsZip)' != '' And Exists('$(VhAssetsZip)')">
+		<VhReadLanguages StoreZip="$(VhAssetsZip)">
+			<Output TaskParameter="Languages" ItemName="_VhLanguage" />
+		</VhReadLanguages>
+		<PropertyGroup>
+			<_VhLanguagesPlist>$(IntermediateOutputPath)vh-languages.plist</_VhLanguagesPlist>
+		</PropertyGroup>
+		<ItemGroup>
+			<_VhLanguagesPlistLine Include="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;" />
+			<_VhLanguagesPlistLine Include="&lt;plist version=&quot;1.0&quot;&gt;&lt;dict&gt;&lt;key&gt;CFBundleLocalizations&lt;/key&gt;&lt;array&gt;" />
+			<_VhLanguagesPlistLine Include="@(_VhLanguage->'&lt;string&gt;%(Identity)&lt;/string&gt;')" />
+			<_VhLanguagesPlistLine Include="&lt;/array&gt;&lt;/dict&gt;&lt;/plist&gt;" />
+		</ItemGroup>
+		<WriteLinesToFile File="$(_VhLanguagesPlist)" Lines="@(_VhLanguagesPlistLine)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+		<ItemGroup>
+			<PartialAppManifest Include="$(_VhLanguagesPlist)" />
+			<FileWrites Include="$(_VhLanguagesPlist)" />
+		</ItemGroup>
+	</Target>
+
 	<!-- Android: the cold start - the activity's window background, which Android 12 and later also put
 	     behind the splash screen's icon - in that colour. Theme.VpnHood.Avalonia names
 	     @color/vh_launch_background, which this resource of the app's overrides over the library's. -->

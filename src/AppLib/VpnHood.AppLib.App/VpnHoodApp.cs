@@ -84,6 +84,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private CultureInfo? _systemUiCulture;
+    private string? _osCultureCode; // as last read from the OS: a setting that differs was changed in the app
     private IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>? _installedApps;
     private bool _isConnecting;
     private int _connectNumber; // the latest connect's: an older one, which it cancelled, leaves the app to it
@@ -371,7 +372,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a VPN profile change", LogLevel.Warning,
                 () => ReconfigureVpnService(CancellationToken.None));
 
-        // Apply settings but no error on startup
+        // Apply settings but no error on startup; the OS's language first, as the person may have changed
+        // it in the OS's settings since the saved one
+        ReadOsCulture();
         ApplySettings();
 
         // schedule job
@@ -489,9 +492,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // the trackers follow the first-run terms and the usage-data switch
             Services.TrackerService.ApplySettings();
 
-            // sync culture to app settings
-            Services.CultureProvider.SelectedCultures =
-                UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
+            // sync culture to app settings: only a change made here, as settings also apply with nothing
+            // changed, for one each time Android makes a new activity, and that must not undo the OS's
+            if (UserSettings.CultureCode != _osCultureCode)
+                Services.CultureProvider.SelectedCultures =
+                    UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
 
             InitCulture();
         }
@@ -571,6 +576,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // the user may have installed or removed an app while we were in the background. this runs
         // on the platform resume hook, so it must stay cheap and never block
         _installedApps = null;
+
+        // the app's language may have been changed in the OS's settings, which Android does with the
+        // process running: the words follow on the UI's next beat
+        ReadOsCulture();
 
         // an ad that came while the window was in the background could not show and still waits; the
         // window was there all along, so its return to the front is what shows it
@@ -1436,6 +1445,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ??
                         CultureInfo.InstalledUICulture.Name);
 
+    private void ReadOsCulture()
+    {
+        VhInvoker.TryInvoke("read the language the OS has for the app", LogLevel.Warning, InitCulture);
+    }
+
     private void InitCulture()
     {
         // find the first available culture that matches with the system culture
@@ -1443,11 +1457,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // set default culture
         var firstSelected = Services.CultureProvider.SelectedCultures.FirstOrDefault();
-        CultureInfo.CurrentUICulture = firstSelected != null ? new CultureInfo(firstSelected) : _systemUiCulture;
+        var selectedCulture = firstSelected != null
+            ? Services.CultureProvider.ToAvailableCulture(new CultureInfo(firstSelected))
+            : null;
+        CultureInfo.CurrentUICulture = selectedCulture ?? _systemUiCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
         // sync UserSettings from the System App Settings
-        UserSettings.CultureCode = firstSelected;
+        _osCultureCode = selectedCulture?.Name;
+        UserSettings.CultureCode = _osCultureCode;
     }
 
     private void SettingsBeforeSave(object? sender, EventArgs e)

@@ -1,41 +1,50 @@
-using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Globalization;
-using Nager.Country;
-using Nager.Country.Translation;
+using System.Text.Json;
+using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Common;
 
-// Country names in the language the words are in (Strings), out of Nager's translations: the app's
-// API carries codes alone, and the device's own data names a country in that country's language
-// whatever the UI's (RegionInfo.DisplayName). A language Nager lacks falls back to English, then to
-// the caller's name (a location's own, from the server), then to the code. The home asks on every
-// refresh, so each answer is kept.
+// Country names in the language the words are in, out of the asset store (countries/<language>.json,
+// a country's code to its name): the app's API carries codes alone, and the device's own data names a
+// country in that country's language whatever the UI's (RegionInfo.DisplayName). Strings reads them
+// with the words, as a row asks for a name while it is drawn and a page in a browser cannot wait for a
+// file. A language or a country the store has no name for falls back to English, then to the caller's
+// name (a location's own, from the server), then to the code.
 public static class CountryNames
 {
+    private const string Folder = "countries";
     private const string EnglishName = "en";
 
-    // Nager's provider scans every type of every assembly the app has loaded for its languages - a
-    // fifth of a second of a phone's start - so it is made on first use, and the start asks for no
-    // name unless the home shows one (a location row looks its name up as it is drawn). Add no
-    // warm-up on a worker: that scan contends with Avalonia's own setup and made the start slower.
-    private static readonly Lazy<TranslationProvider> Provider = new(() => new TranslationProvider());
-    private static readonly ConcurrentDictionary<(string CountryCode, string CultureName), string?> Names = new();
+    private static IReadOnlyDictionary<string, string> _english = ReadOnlyDictionary<string, string>.Empty;
+    private static IReadOnlyDictionary<string, string> _names = ReadOnlyDictionary<string, string>.Empty;
 
     public static string Get(string countryCode, string? fallback = null)
     {
-        return Find(countryCode, Strings.Current.CultureName) ?? Find(countryCode, EnglishName) ?? fallback ?? countryCode;
+        var code = countryCode.ToUpperInvariant();
+        return _names.GetValueOrDefault(code) ?? _english.GetValueOrDefault(code) ?? fallback ?? countryCode;
     }
 
-    private static string? Find(string countryCode, string cultureName)
+    internal static async Task LoadEnglishAsync(IAssetProvider assets, CancellationToken cancellationToken)
     {
-        return Names.GetOrAdd((countryCode.ToUpperInvariant(), cultureName), key => Translate(key.CountryCode, key.CultureName));
+        _english = await LoadFile(assets, EnglishName, cancellationToken).ConfigureAwait(false)
+                   ?? ReadOnlyDictionary<string, string>.Empty;
     }
 
-    private static string? Translate(string countryCode, string cultureName)
+    // A culture the store has no file for falls back to the language alone (pt-BR to pt), as the words do.
+    internal static async Task LoadAsync(IAssetProvider assets, CultureInfo culture, CancellationToken cancellationToken)
     {
-        // a number parses too, so the code must also name a member
-        return Enum.TryParse<Alpha2Code>(countryCode, ignoreCase: true, out var alpha2Code) && Enum.IsDefined(alpha2Code)
-            ? Provider.Value.GetCountryTranslatedName(alpha2Code, CultureInfo.GetCultureInfo(cultureName))
-            : null;
+        _names = await LoadFile(assets, culture.Name, cancellationToken).ConfigureAwait(false)
+                 ?? await LoadFile(assets, culture.TwoLetterISOLanguageName, cancellationToken).ConfigureAwait(false)
+                 ?? ReadOnlyDictionary<string, string>.Empty;
+    }
+
+    private static async Task<IReadOnlyDictionary<string, string>?> LoadFile(IAssetProvider assets, string cultureName,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = await assets.TryOpenReadAsync($"{Folder}/{cultureName}.json", cancellationToken).ConfigureAwait(false);
+        return stream == null
+            ? null
+            : await JsonSerializer.DeserializeAsync(stream, AssetJsonContext.Default.DictionaryStringString, cancellationToken).ConfigureAwait(false);
     }
 }

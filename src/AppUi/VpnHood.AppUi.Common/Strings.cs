@@ -64,6 +64,7 @@ public sealed partial class Strings : INotifyPropertyChanged
             _english = await JsonSerializer.DeserializeAsync(english, AssetJsonContext.Default.DictionaryStringString, cancellationToken).ConfigureAwait(false)
                        ?? throw new InvalidOperationException($"{FilePathOf(EnglishName)} holds no words.");
         _shippedCultures = await AssetIndex.ReadAsync(assets, IndexPath, cancellationToken).ConfigureAwait(false);
+        await CountryNames.LoadEnglishAsync(assets, cancellationToken).ConfigureAwait(false);
         Current._texts ??= _english;
     }
 
@@ -116,6 +117,7 @@ public sealed partial class Strings : INotifyPropertyChanged
     {
         var texts = await Load(culture.Name, cancellationToken).ConfigureAwait(false)
                     ?? await Load(culture.TwoLetterISOLanguageName, cancellationToken).ConfigureAwait(false);
+        await CountryNames.LoadAsync(Assets, culture, cancellationToken).ConfigureAwait(false);
         _texts = texts ?? English;
         // the direction of the words shown, not of the culture asked for: a language we have no
         // file for is shown in English, which runs left to right

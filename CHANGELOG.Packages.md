@@ -1,5 +1,6 @@
 # Latest
 
+* Breaking: Country names come from the UI store's countries/<language>.json instead of Nager.Country, which VpnHood.AppUi.Common no longer references. A zip laid over VpnHood.AppUi.Assets.Classic needs nothing, and can add a language's names as one more file. A store of your own needs these files, or a country shows its location's name or its code.
 * Breaking: VpnHood.AppLib.Stores.GalaxyStore.Core is gone, with GalaxyStoreAppUpdaterProvider: a Galaxy Store head sets no UpdaterOptions, as the store updates the app itself. The publish keeps the Galaxy Store APK on its run, and neither it nor a feed goes on the GitHub release (docs/publish-your-app/galaxy-store.md).
 * Breaking: AppOptions.WebUiPort, AppConfigs.WebUiPort with its appsettings key, and WebHostCreateParams.WebUiPort are WebHostPort. An old key in an appsettings is skipped, and the app takes the default port.
 * Breaking: IDeviceUiProvider has KeepScreenOn, which holds off the screen's idle sleep while Remote Access is open. A provider made on NullDeviceUiProvider needs no change; one that implements the interface itself adds it.

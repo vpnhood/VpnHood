@@ -22,10 +22,4 @@
 		<!-- IAssetProvider: the store's files, wherever this platform reads them from. -->
 		<ProjectReference Include="..\..\Net\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<!-- Country names in every language (CountryNames). -->
-		<PackageReference Include="Nager.Country" Version="4.8.0" />
-		<PackageReference Include="Nager.Country.Translation" Version="4.7.1" />
-	</ItemGroup>
 </Project>

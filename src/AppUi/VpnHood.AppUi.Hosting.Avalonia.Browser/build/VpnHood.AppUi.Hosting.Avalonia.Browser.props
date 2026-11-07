@@ -19,9 +19,6 @@
 		<TrimMode>full</TrimMode>
 		<JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
 		<ILLinkTreatWarningsAsErrors>true</ILLinkTreatWarningsAsErrors>
-
-		<!-- Nager's two reflection places, by name, as its code is not ours to change. -->
-		<_ExtraTrimmerArgs>$(_ExtraTrimmerArgs) --link-attributes "$(MSBuildThisFileDirectory)Nager.Country.Translation.LinkAttributes.xml"</_ExtraTrimmerArgs>
 	</PropertyGroup>
 
 	<!-- Published under the .NET 10 SDK, named by a global.json in the page project's folder: SkiaSharp's

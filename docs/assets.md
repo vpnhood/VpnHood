@@ -7,7 +7,7 @@ zip placed beside it by MSBuild, read through one interface.
 
 | Placed at | Built by | Named in `AppOptions` as | Holds |
 | --- | --- | --- | --- |
-| `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `UiZipAssets` | images, country flags, fonts, content documents, the words of every language, each theme's colours for the OS chrome and the launch screen |
+| `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `UiZipAssets` | images, country flags, fonts, content documents, the words of every language, country names, each theme's colours for the OS chrome and the launch screen |
 | `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia.Browser`, into the UI's own package `VpnHood.AppUi.Presentation.Classic.Avalonia` | `WebRootZipAsset` | the page the app's web host serves to a paired device |
 | `iplocations/IpLocations.zip` | `VpnHood.Net.IpLocations.Assets.Ip2LocationLite` | `IpLocationZipAsset` | the IP-to-country ranges |
 
@@ -193,6 +193,21 @@ build, working app, wrong result.
 9. **Never assume a stream can seek.** An Android asset and an HTTP body cannot. A reader that needs
    two passes opens the asset twice, or buys it into memory with
    `ToMemoryStreamIfNotSeekableAsync` — so the cost is paid where it is decided.
+
+## A language of a fork's own
+
+A fork names a zip of its own before ours in `UiZipAssets`. The first zip that holds a file is the one
+it is read from, so everything else still comes from the store. No code changes:
+
+1. `locales/vi.json` holds the words.
+2. `locales/index.json` lists the languages to offer. It replaces ours, so it names every language
+   the fork wants.
+3. `countries/vi.json` holds the country names, by code: `{ "DE": "Đức" }`. The store has them in 49
+   languages, so this file is only for a language it lacks, such as Vietnamese.
+
+Start that file from the store's `countries/en.json`. A country left out shows in English, so a fork
+can translate only the countries it serves. To change a name in a language the store has, copy the
+store's file and edit it: the fork's file replaces it whole.
 
 ## See also
 

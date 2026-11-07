@@ -107,6 +107,10 @@ internal static class SignInCommand
         if (Console.IsInputRedirected)
             return ReadLine(prompt);
 
+        // The terminal stops echoing when a read starts, and the first read takes a moment to get there: a password
+        // pasted as the prompt showed was drawn on the screen. Asking about a key sets the terminal up the same way.
+        _ = Console.KeyAvailable;
+
         Console.Error.Write(prompt);
         var secret = new StringBuilder();
         while (true) {

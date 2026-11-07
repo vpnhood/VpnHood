@@ -591,9 +591,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private const string ResolvedServersPath = "/run/systemd/resolve/resolv.conf";
 
     private const string DnsServersError =
-        "Could not set the VPN's DNS servers. Install and turn on systemd-resolved " +
-        "(systemctl enable --now systemd-resolved) and link /etc/resolv.conf to " +
-        "/run/systemd/resolve/stub-resolv.conf.";
+        "Could not set the VPN's DNS servers. Run the app's install command again, which turns on " +
+        "systemd-resolved and links /etc/resolv.conf to it.";
 
     private async Task SetDnsServersByResolvectl(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {

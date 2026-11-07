@@ -447,10 +447,13 @@ fi
 # nor openresolv, systemd-resolved comes in: Debian's resolvconf refuses the adapter's exclusive entry,
 # and systemd's own is resolvectl under another name. After MsQuic, as the machine's DNS changes here.
 # One that comes installed and off, as on Arch and AlmaLinux 8, goes on at a new install, or the app could not
-# connect there. Not at an update, when someone may have turned it off since; nor where it is masked, which
-# only a person does: for both, the connect's error says what to do.
+# connect there, and when a person runs this script again, which is what the connect's error tells them to do. Not
+# at an update, run with -q, when someone may have turned it off since; nor where it is masked, which only a person
+# does: for both, the error still names what the app needs.
 # One that is on while programs ask another server gets the link, here and at every update: the adapter refuses
 # to connect without it, as a server of the local network stays off the tunnel.
+# One that runs and does not answer gets a restart, here and at every update, or the connect would time out on it:
+# seen in a container, where it was turned on right after its package came in.
 function dns_way_found() {
 	# resolvectl alone is not enough: Fedora's systemd has it, and the service it talks to is a package of its own
 	{ command -v resolvectl >/dev/null 2>&1 && systemctl cat systemd-resolved.service >/dev/null 2>&1; } ||
@@ -474,9 +477,13 @@ function on_resolved() {
 	[ "$(readlink -f /etc/resolv.conf)" = /run/systemd/resolve/stub-resolv.conf ];
 }
 function resolved_left_off() {
-	[ ! -f "$destinationPath/publish.json" ] && ! resolvconf --version 2>/dev/null | grep -q openresolv &&
+	{ [ ! -f "$destinationPath/publish.json" ] || [ "$quiet" != "y" ]; } &&
+		! resolvconf --version 2>/dev/null | grep -q openresolv &&
 		! systemctl is-active --quiet systemd-resolved &&
-		[ "$(systemctl is-enabled systemd-resolved 2>/dev/null)" = disabled ];
+		[[ "$(systemctl is-enabled systemd-resolved 2>/dev/null)" != masked* ]];
+}
+function resolved_stuck() {
+	systemctl is-active --quiet systemd-resolved && ! timeout 10 resolvectl status >/dev/null 2>&1;
 }
 # The machine's own DNS servers, the argument, stay as a fallback. With no network manager to tell
 # systemd-resolved about them, a plain resolv.conf's are all it has, and without them no name resolves: seen on
@@ -517,6 +524,9 @@ elif systemctl is-active --quiet systemd-resolved && ! on_resolved; then
 		echo "Linking /etc/resolv.conf to systemd-resolved, so that DNS cannot go around the VPN...";
 		use_resolved "$dnsServers";
 	fi
+elif resolved_stuck; then
+	echo "Restarting systemd-resolved, which does not answer...";
+	systemctl restart systemd-resolved;
 fi
 
 # The service goes down for the switch and comes back at the end - which is also what makes this

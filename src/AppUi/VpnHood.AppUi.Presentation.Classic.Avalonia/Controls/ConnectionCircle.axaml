@@ -223,10 +223,11 @@
                  Foreground="{StaticResource ExpireDateAlertBrush}" />
     </StackPanel>
 
-    <!-- the progress of a connection, at the bottom of the circle -->
+    <!-- the progress of a connection, at the bottom of the circle; the bar's MinWidth is cleared
+         because the theme's 200 beats the panel's 75 and runs past the circle -->
     <StackPanel x:Name="ProgressPanel" VerticalAlignment="Bottom" HorizontalAlignment="Center"
                 Margin="0,0,0,10" Width="75" IsVisible="False">
-      <ProgressBar x:Name="Bar" Height="5" MinHeight="5" Minimum="0" Maximum="100" CornerRadius="3"
+      <ProgressBar x:Name="Bar" Height="5" MinHeight="5" MinWidth="0" Minimum="0" Maximum="100" CornerRadius="3"
                    Foreground="{StaticResource ConnectionCircleShineBrush}" Background="#1AFFFFFF" />
       <TextBlock x:Name="ProgressText" FontSize="10" TextAlignment="Center" />
     </StackPanel>

@@ -14,6 +14,7 @@ versionTag="$(versionTagParam)";
 assemblyName="$(assemblyNameParam)";
 productName="$(productNameParam)";
 launcher="$(launcherNameParam)";
+packageCpu="$(cpuParam)";
 
 # Calculated path
 destinationPath="/opt/$assemblyName";
@@ -127,6 +128,28 @@ fi
 if ldd --version 2>&1 | grep -qi musl; then
 	echo "$productName cannot run on this system: it needs glibc, and this system uses musl, as Alpine does.";
 	echo "Run it in Docker instead.";
+	exit 1;
+fi
+
+# The package is one CPU's, and another's cannot start here, so nothing goes in. The any-CPU script chooses by the
+# same test, so only a script downloaded by hand comes here with the wrong one. A 32-bit userland on a 64-bit kernel,
+# as Raspberry Pi OS 32-bit has, says aarch64 too, yet runs no arm64 build.
+machineCpu=$(uname -m);
+if [ "$(getconf LONG_BIT 2>/dev/null)" = "32" ]; then
+	machineCpu="$machineCpu with a 32-bit userland";
+fi
+case "$machineCpu" in
+	x86_64) machineCpu="x64";;
+	aarch64) machineCpu="arm64";;
+	*)
+		echo "$productName cannot run on this machine: it needs x64 or arm64, and this one is $machineCpu.";
+		exit 1;;
+esac
+if [ "$machineCpu" != "$packageCpu" ]; then
+	echo "This installer is for $packageCpu, and this machine is $machineCpu, so nothing was installed.";
+	echo "Download the $machineCpu one: $releaseUrl/$assemblyName-linux-$machineCpu.sh";
+	echo "Or run this command, which picks it for you:";
+	echo "  sudo bash -c 'u=$releaseUrl/$assemblyName-linux.sh; bash <(wget -qO- \$u 2>/dev/null || curl -fsSL \$u) $*'";
 	exit 1;
 fi
 

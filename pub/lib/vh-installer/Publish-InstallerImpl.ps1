@@ -113,6 +113,7 @@ $installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName")
 $installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName");
 $installScript = $installScript.Replace('$(vpnHostNameParam)', "$vpnHostName");
 $installScript = $installScript.Replace('$(companyNameParam)', "$companyName");
+$installScript = $installScript.Replace('$(cpuParam)', "$cpu");
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
 # carried in the package too: the updater handed a package installs it by its own script, reading nothing from the

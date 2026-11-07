@@ -10,6 +10,7 @@
 * Fix: On Linux, the app no longer connects while /etc/resolv.conf goes around the VPN's DNS, where a DNS server on the local network saw the names you looked up; the installer and the updater link it, and the app's error says what to do #linux
 * Fix: On Linux, a Docker container no longer asks a DNS server on the local network while the VPN is connected, where that server saw the names it looked up: its DNS goes through the VPN #linux
 * Fix: On Linux, the installer stops on Alpine and other systems built on musl, where the app cannot run, instead of saying it is installed #linux
+* Fix: On Linux, the installer for the wrong CPU stops and says which one to download, instead of installing an app that cannot start #linux
 * Improve: On Linux, the installer adds systemd-resolved where the system has no way to set the VPN's DNS, and turns it on where it comes installed and off, as on Arch, as the app cannot connect without one, and keeps the machine's own DNS server; when the app cannot set its DNS, running the install command again fixes it, as its error now says #linux
 * Improve: On Linux, the install command works without wget, as on Arch and the base systems of Fedora and its family: it downloads with curl, and the installer adds wget #linux
 * Improve: On Linux, the installer adds the libraries the window needs on Fedora, openSUSE, Arch and the distributions built on them too, where it only named what was missing #linux

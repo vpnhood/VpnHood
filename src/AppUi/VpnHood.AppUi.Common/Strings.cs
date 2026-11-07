@@ -51,7 +51,9 @@ public sealed partial class Strings : INotifyPropertyChanged
     }
 
     // The words, out of the store the head hands in: English, which every other language falls
-    // back to, and the languages there are files for. Once, before the first view.
+    // back to, and the languages there are files for. Before the first view, and on Android before
+    // every activity's: a language already shown stays, since CultureName says it has been loaded and
+    // nothing would load it again.
     public static async Task InitAsync(IAssetProvider assets, CancellationToken cancellationToken)
     {
         _assets = assets;
@@ -62,7 +64,7 @@ public sealed partial class Strings : INotifyPropertyChanged
             _english = await JsonSerializer.DeserializeAsync(english, AssetJsonContext.Default.DictionaryStringString, cancellationToken).ConfigureAwait(false)
                        ?? throw new InvalidOperationException($"{FilePathOf(EnglishName)} holds no words.");
         _shippedCultures = await AssetIndex.ReadAsync(assets, IndexPath, cancellationToken).ConfigureAwait(false);
-        Current._texts = _english;
+        Current._texts ??= _english;
     }
 
     // The languages there are words for: the store's, by its index, and every source added -

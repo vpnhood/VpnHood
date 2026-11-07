@@ -22,6 +22,8 @@
 		<ProjectReference Include="..\..\src\AppUi\VpnHood.AppUi.Hosting.Desktop.Daemon\VpnHood.AppUi.Hosting.Desktop.Daemon.csproj" />
 		<ProjectReference Include="..\..\src\AppUi\VpnHood.AppUi.Hosting.Desktop.Linux\VpnHood.AppUi.Hosting.Desktop.Linux.csproj" />
 		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Client.VpnServices.Host.Linux\VpnHood.Core.Client.VpnServices.Host.Linux.csproj" />
+		<!-- the UI's words, read as a host reads them -->
+		<ProjectReference Include="..\..\src\AppUi\VpnHood.AppUi.Common\VpnHood.AppUi.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
 	</ItemGroup>
 

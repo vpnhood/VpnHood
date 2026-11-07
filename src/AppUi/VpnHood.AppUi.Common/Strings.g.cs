@@ -145,13 +145,13 @@ public sealed partial class Strings
     /// <summary>Do you really want to remove this server?</summary>
     public string ConfirmRemoveServer => Get("CONFIRM_REMOVE_SERVER");
 
-    /// <summary>Add server key</summary>
+    /// <summary>Add access key</summary>
     public string AddAccessKeyTitle => Get("ADD_ACCESS_KEY_TITLE");
 
-    /// <summary>Copy and paste a server key to add a server.</summary>
+    /// <summary>Copy and paste an access key to add a server.</summary>
     public string AddAccessKeySubtitle => Get("ADD_ACCESS_KEY_SUBTITLE");
 
-    /// <summary>The serverKey has invalid format.</summary>
+    /// <summary>The access key has an invalid format.</summary>
     public string InvalidAccessKeyFormat => Get("INVALID_ACCESS_KEY_FORMAT");
 
     /// <summary>Home</summary>
@@ -436,10 +436,10 @@ public sealed partial class Strings
     /// <summary>You haven’t added any servers yet. Please add a server with the "Add server" button.</summary>
     public string NoServerAvailable => Get("NO_SERVER_AVAILABLE");
 
-    /// <summary>&lt;h3 class="mb-3"&gt;Don’t have a Server Key?&lt;/h3&gt;&lt;p class="mb-2"&gt;You can acquire a server key through the following meth...</summary>
+    /// <summary>&lt;h3 class="mb-3"&gt;Don’t have an access key?&lt;/h3&gt;&lt;p class="mb-2"&gt;You can acquire an access key through the following me...</summary>
     public string GetServerKeyMethodsNoConnectDesc => Get("GET_SERVER_KEY_METHODS_NO_CONNECT_DESC");
 
-    /// <summary>&lt;h3 class="mb-3"&gt;Don’t have a Server Key?&lt;/h3&gt;&lt;p class="mb-2"&gt;If you need a free VPN for personal use, consider &lt;a hr...</summary>
+    /// <summary>&lt;h3 class="mb-3"&gt;Don’t have an access key?&lt;/h3&gt;&lt;p class="mb-2"&gt;If you need a free VPN for personal use, consider &lt;a h...</summary>
     public string GetServerKeyMethodsDesc(object connectAppUrl) => Get("GET_SERVER_KEY_METHODS_DESC", ("connectAppUrl", connectAppUrl));
 
     /// <summary>Check for update</summary>
@@ -1588,7 +1588,7 @@ public sealed partial class Strings
     /// <summary>Premium info</summary>
     public string PremiumInfo => Get("PREMIUM_INFO");
 
-    /// <summary>Server key info</summary>
+    /// <summary>Access key info</summary>
     public string ServerKeyInfo => Get("SERVER_KEY_INFO");
 
     /// <summary>Premium by</summary>
@@ -1684,7 +1684,7 @@ public sealed partial class Strings
     /// <summary>Yes switch now</summary>
     public string YesSwitchNow => Get("YES_SWITCH_NOW");
 
-    /// <summary>Your server key has expired.</summary>
+    /// <summary>Your access key has expired.</summary>
     public string ServerKeyExpired => Get("SERVER_KEY_EXPIRED");
 
     /// <summary>The premium code is not valid. If you believe this is an error, please contact support.</summary>

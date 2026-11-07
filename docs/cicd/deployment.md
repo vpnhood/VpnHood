@@ -217,7 +217,7 @@ verification commands, Apple failure lore) lives in
 The setup is built with **NSIS** (`pub/lib/vh-installer/win/install-client.nsi`) on a `windows-latest`
 runner, whose image carries `makensis` (else Chocolatey installs it); it needs no license or secret.
 
-- **`ACCESS_KEY_PREMIUM`** (Connect only) — the default server key baked into the setup. Windows has no
+- **`ACCESS_KEY_PREMIUM`** (Connect only) — the default access key baked into the setup. Windows has no
   ads, so it embeds the 'premium' key shared by every ad-free distribution. The build fails without it
   on a strict publish, so an installer can never ship with an empty server list.
 

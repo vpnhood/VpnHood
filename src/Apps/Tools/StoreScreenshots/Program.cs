@@ -93,6 +93,7 @@ internal static class Program
         AppBuilder.Configure<ClassicAvaloniaApp>()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .UseSkia()
+            .WithChineseFontFallback()
             .SetupWithLifetime(lifetime);
 
         // the UI made its window (VpnHoodAvaloniaAppBase), with no size: the device's is asked for

@@ -334,7 +334,8 @@ public static class AvaloniaDesktopHost
     {
 #pragma warning disable AVALONIA_X11_FORCE_CSD
         return AppBuilder.Configure<TUi>().UsePlatformDetect()
-            .With(new X11PlatformOptions { ForceDrawnDecorations = !IsWslg() });
+            .With(new X11PlatformOptions { ForceDrawnDecorations = !IsWslg() })
+            .WithChineseFontFallback();
 #pragma warning restore AVALONIA_X11_FORCE_CSD
     }
 

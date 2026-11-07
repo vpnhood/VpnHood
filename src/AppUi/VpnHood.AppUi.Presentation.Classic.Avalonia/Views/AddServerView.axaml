@@ -13,7 +13,7 @@
 
     <StackPanel MaxWidth="720" Spacing="14" VerticalAlignment="Top">
       <controls:ServerKeyPicture Margin="0,10,0,6" />
-      <TextBlock Classes="body-small disabled" Text="{Binding AddAccessKeySubtitle, Source={x:Static res:Strings.Current}}" />
+      <TextBlock Classes="body-small disabled" TextWrapping="Wrap" Text="{Binding AddAccessKeySubtitle, Source={x:Static res:Strings.Current}}" />
       <!-- a key runs to a few hundred characters with no space: it wraps, so all of it is seen to arrive -->
       <TextBox x:Name="KeyBox" AutomationProperties.Name="{Binding AddAccessKeyTitle, Source={x:Static res:Strings.Current}}" PlaceholderText="vh:" AcceptsReturn="False" FlowDirection="LeftToRight"
                TextWrapping="Wrap" Height="100" VerticalContentAlignment="Top"

@@ -1,14 +1,27 @@
-﻿namespace VpnHood.Net.VpnAdapters.WinTun.WinNative;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Logging;
 
+namespace VpnHood.Net.VpnAdapters.WinTun.WinNative;
+
+// WinTun says why it failed only here, such as the problem code of a device Windows did not start: the
+// error code it returns is bare
 internal static class WinTunLogger
 {
-    public static void SetLogger(WintunLoggerCallback logger)
+    // the DLL holds the pointer for the life of the process, so the delegate is never collected
+    private static readonly WintunLoggerCallback Callback = Log;
+
+    public static void Register()
     {
-        WinTunApi.WintunSetLogger(logger);
+        WinTunApi.WintunSetLogger(Callback);
     }
 
-    public static void ResetLogger()
+    private static void Log(WintunLoggerLevel level, ulong timestamp, string message)
     {
-        WinTunApi.WintunSetLogger(IntPtr.Zero);
+        var logLevel = level switch {
+            WintunLoggerLevel.Error => LogLevel.Error,
+            WintunLoggerLevel.Warn => LogLevel.Warning,
+            _ => LogLevel.Information
+        };
+        VhLogger.Instance.Log(logLevel, "WinTun: {Message}", message);
     }
 }

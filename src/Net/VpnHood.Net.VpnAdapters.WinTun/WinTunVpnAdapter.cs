@@ -118,14 +118,15 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
         // A live one is not ours to remove: WinTun removes an adapter only by the handle that created it.
         // Error 2 failed every create once, in the boot that first installed WinTun's driver (Windows 10,
-        // CR_INVALID_DEVNODE in setupapi.dev.log; older builds too); a reboot cleared it, not seen since
+        // CR_INVALID_DEVNODE in setupapi.dev.log; older builds too); a reboot cleared it, not seen since.
+        // No hint to run as an administrator: LoadWinTunDll lets no other process this far
         if (_tunAdapter == IntPtr.Zero)
             throw errorCode is ErrorAlreadyExists or ErrorAlreadyExistsHResult
                 ? new PInvokeException(
                     $"The WinTun adapter {AdapterName} already exists: another process holds it. ErrorCode: {errorCode}",
                     errorCode)
                 : new PInvokeException(
-                    $"Failed to create WinTun adapter. Make sure the app is running with admin privilege. ErrorCode: {errorCode}",
+                    $"Failed to create the WinTun adapter. {new Win32Exception(errorCode).Message} ErrorCode: {errorCode}",
                     errorCode);
 
         _adapterIndex = GetAdapterIndex(AdapterName);
@@ -525,6 +526,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                 DllImportSearchPath.System32 | DllImportSearchPath.UseDllDirectoryForDependencies);
             NativeLibrary.SetDllImportResolver(assembly,
                 (libraryName, _, _) => libraryName == "wintun.dll" ? winTunDll : IntPtr.Zero);
+            WinTunLogger.Register();
             _winTunDll = winTunDll;
         }
     }

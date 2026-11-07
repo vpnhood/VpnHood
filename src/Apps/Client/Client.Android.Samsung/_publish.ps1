@@ -5,5 +5,6 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-appFolder "VpnHoodClient" `
 	-distribution "samsung" `
 	-archs "android-arm64;android-arm" `
+	-noUpdate `
 	-apk;
 

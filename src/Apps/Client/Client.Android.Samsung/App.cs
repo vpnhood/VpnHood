@@ -3,8 +3,6 @@ using VpnHood.AppLib.App;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppUi.Hosting.Avalonia.Android;
 using VpnHood.AppLib.App.Android.Constants;
-using VpnHood.AppLib.App.Services.Updaters;
-using VpnHood.AppLib.Stores.GalaxyStore;
 
 namespace VpnHood.App.Client.Android.Samsung;
 
@@ -32,17 +30,12 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         };
     }
 
-    // The product's options, and Galaxy Store's lines on top. The licence agreement keeps its default,
-    // on (AppOptions): Galaxy Store's install takes no acceptance of ours, and its distribution guide
-    // (3.1.2) wants the privacy policy shown in the app.
+    // The product's options as they are. The licence agreement keeps its default, on (AppOptions):
+    // Galaxy Store's install takes no acceptance of ours, and its distribution guide (3.1.2) wants the
+    // privacy policy shown in the app. With no updater options there is no updater, so no feed is read,
+    // no notice shows and the drawer has no "Check for update": Galaxy Store updates the app itself.
     private static AppOptions CreateAppOptions(AppOptionsContext context)
     {
-        var appConfigs = ClientAppConfigs.Load();
-        var options = ClientAppOptions.Create(context, appConfigs);
-        options.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "android-samsung"),
-            UpdaterProvider = new GalaxyStoreAppUpdaterProvider()
-        };
-        return options;
+        return ClientAppOptions.Create(context, ClientAppConfigs.Load());
     }
 }

@@ -174,12 +174,14 @@ jobs:
         shell: pwsh
         run: |
           & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Samsung/_publish.ps1"
+      # It goes up to Galaxy Store by hand, from this artifact, and on no release: it keeps the repository's
+      # own retention, publish_app's clean-up leaves it, and so a re-run finds it and replaces it.
       - uses: actions/upload-artifact@v7
         if: matrix.id == 'google-aab' && inputs.app == 'client'
         with:
           name: ${{ inputs.app }}-android-samsung-apk
           if-no-files-found: error
-          retention-days: 1
+          overwrite: true
           path: ${{ env.MODULE_DIR }}/android-samsung/**
       # CLIENT's website APK with no updater, for IzzyOnDroid (issue 803), in the web arm64 leg: it is the
       # same head with the same key, this leg is the shortest, and only CLIENT has it, which a leg of its

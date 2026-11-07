@@ -8,8 +8,8 @@ param(
 	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
 	[switch]$connect,
 	[String]$archs = "",
-	# The app with no updater (the head's VhAppNoUpdate): no feed goes with its APK, as it reads none, and
-	# the publish fails if the APK still asks to install apps.
+	# An app with no updater (the Samsung head, or a head's VhAppNoUpdate): no feed goes with its APK, as it
+	# reads none, and the publish fails if the APK still asks to install apps.
 	[switch]$noUpdate,
 	[switch]$apk, [switch]$aab)
 
@@ -145,12 +145,11 @@ try {
 
 		if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 
-		# IzzyOnDroid stops the app's updates at this permission, so it must never reach a release
+		# IzzyOnDroid stops the app's updates at this permission, and Galaxy Store allows no download of
+		# other APKs, so it must never reach a release
 		if ($noUpdate) { Assert-ApkLacksPermission $signedPacakgeFile "android.permission.REQUEST_INSTALL_PACKAGES"; }
 
-		# publish info. The Galaxy Store's release goes up by hand and through its review, which takes days:
-		# its feed waits as Play's does, so the notice does not open a store page that has no update yet
-		$apkNotificationDelay = if ($distribution -eq 'samsung') { "7.00:00:00" } else { "$versionNotificationDelay" };
+		# publish info
 		$json = @{
 			Version = $versionParam;
 			UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
@@ -159,7 +158,7 @@ try {
 			InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
 			ReleaseDate = "$releaseDate";
 			DeprecatedVersion = "$deprecatedVersion";
-			NotificationDelay = $apkNotificationDelay;
+			NotificationDelay = "$versionNotificationDelay";
 		};
 
 		if (-not $noUpdate) { $json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII; }

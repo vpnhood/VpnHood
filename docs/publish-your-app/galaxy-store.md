@@ -2,7 +2,7 @@
 
 Samsung's Galaxy Store is the store preinstalled on Samsung phones and tablets. Everything on this
 page happens in a browser, by hand, in **your** Samsung account. The pipeline builds the Galaxy Store
-APK and attaches it to each GitHub release; uploading it to the store is yours.
+APK and keeps it with the publish run, not on your GitHub release; uploading it to the store is yours.
 
 The Galaxy Store build is its own head, `<Product>.Android.Samsung` (today CLIENT's,
 `src/Apps/Client/Client.Android.Samsung`). A Connect-shaped app copies it. Galaxy Store reaches
@@ -90,10 +90,10 @@ The publish script signs the Galaxy Store APK with the Google Play build's key.
 
 ## 3. Register the app
 
-Seller Portal → *Add New Application* → *Android*. Upload the APK from your GitHub release,
-`<title>-android-samsung.apk`. It holds arm64 and 32-bit arm, for old phones; it leaves out x64,
-since every Samsung phone and tablet is ARM. It targets a recent Android, well above Samsung's minimum
-(target API 33, and a 64-bit binary, in its latest notice).
+Seller Portal → *Add New Application* → *Android*. Upload the APK from a publish run
+([every release](#5-every-release)), `<title>-android-samsung.apk`. It holds arm64 and 32-bit arm, for
+old phones; it leaves out x64, since every Samsung phone and tablet is ARM. It targets a recent Android,
+well above Samsung's minimum (target API 33, and a 64-bit binary, in its latest notice).
 
 ---
 
@@ -115,13 +115,16 @@ is what the review checks. The rules a VPN app meets most often:
 
 ## 5. Every release
 
-The pipeline attaches two files to each GitHub release: `<title>-android-samsung.apk`, which you
-upload to Seller Portal as the app's new binary, and `<title>-android-samsung.json`, the update feed
-the app reads.
+The Galaxy Store APK goes to Galaxy Store alone, so your GitHub release does not carry it. The publish
+run keeps it: open the run on your app repository's **Actions** page, download the artifact
+`client-android-samsung-apk` from its *Artifacts* list, unzip it, and upload
+`<title>-android-samsung.apk` to Seller Portal as the app's new binary. Samsung reviews it, which takes
+days, and Galaxy Store then updates the app itself.
 
-Samsung's review takes days. The feed tells the app of the new version only **seven days** after the
-release, so the update notice does not open a store page that has no update yet: upload within those
-days.
+The run keeps that artifact only as long as your repository keeps artifacts (*Settings* → *Actions* →
+*General* → *Artifact and log retention*). Once it has gone, run the publish workflow again on the same
+commit, with *Only build the Android AAB* on and *Publish the built AAB to Google Play* off: that run
+builds it again and publishes nothing.
 
 ---
 
@@ -129,8 +132,8 @@ days.
 
 Galaxy Store allows no update from outside the store (1.1.8) and no download of other APKs (3.2.2):
 
-- It has **no in-app updater**. Its update notice's *Update* opens the app's Galaxy Store page, and
-  Galaxy Store installs the update itself.
+- It has **no updater**: no update notice and no *Check for update*. Galaxy Store updates the app
+  itself.
 - It has **no store review prompt**: Google Play's is Google's alone.
 - Its first run shows **the agreement screen**, as the website build's does: Galaxy Store's install
   takes no acceptance of your terms.

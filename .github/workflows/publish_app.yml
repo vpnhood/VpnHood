@@ -457,13 +457,6 @@ jobs:
         with:
           name: ${{ inputs.app }}-android-google-aab
           path: ${{ env.MODULE_DIR }}/android-google
-      # CLIENT's alone: Connect has no Samsung head.
-      - uses: actions/download-artifact@v8
-        if: inputs.app == 'client'
-        continue-on-error: true
-        with:
-          name: ${{ inputs.app }}-android-samsung-apk
-          path: ${{ env.MODULE_DIR }}/android-samsung
       - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
@@ -552,6 +545,7 @@ jobs:
             -dropChangelogTag "$env:DROP_TAG" `
             -targetCommitish "$env:RELEASE_TARGET" `
             -codeCommit "$env:CODE_COMMIT"
+      # All but the Galaxy Store APK, which goes up to the store by hand from this run.
       - name: Delete this run's artifacts
         if: always()
         env:
@@ -559,7 +553,7 @@ jobs:
         run: |
           ids=$(gh api --paginate \
             "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
-            --jq '.artifacts[].id')
+            --jq '.artifacts[] | select(.name | endswith("-android-samsung-apk") | not) | .id')
           if [ -z "$ids" ]; then echo "No artifacts to delete."; exit 0; fi
           for id in $ids; do
             echo "Deleting artifact id=$id"

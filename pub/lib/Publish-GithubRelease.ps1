@@ -140,13 +140,6 @@ else {
 		$assets += "$packageDir/android-web-arm64/$legacyArm64InfoFileName";
 	}
 
-	# CLIENT's Galaxy Store APK, which goes up to the store by hand from here, and its update feed, which
-	# the app reads (Client.Android.Samsung/App.cs). Only where it was built: Connect has no Samsung head.
-	if (Test-Path "$packageDir/android-samsung") {
-		$assets += "$packageDir/android-samsung/$packageFileTitle-android-samsung.apk";
-		$assets += "$packageDir/android-samsung/$packageFileTitle-android-samsung.json";
-	}
-
 	# CLIENT's website APK with no updater, which IzzyOnDroid takes from here (issue 803). It has no feed,
 	# as it reads none. Only where it was built: Connect has none.
 	if (Test-Path "$packageDir/android-webnoupdate-arm64") {

@@ -8,12 +8,12 @@ using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
+public class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
 {
-    private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
-    private readonly List<PingProxy> _pingProxies = [];
+    private readonly IPacketForwarderCallbacks? _packetForwarderCallbacks;
+    private readonly List<PingForwarder> _pingForwarders = [];
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
@@ -23,49 +23,49 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
 
-    public PingProxyPool(PingProxyPoolOptions options)
+    public PingForwarderPool(PingForwarderPoolOptions options)
     {
         _maxClientCount = options.MaxClientCount;
-        _packetProxyCallbacks = options.PacketProxyCallbacks;
+        _packetForwarderCallbacks = options.PacketForwarderCallbacks;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.IcmpTimeout);
         _maxWorkerEventReporter =
             new EventReporter("Session has reached to the maximum ping workers.", logScope: options.LogScope);
-        _cleanupJob = new Job(Cleanup, nameof(PingProxyPool));
+        _cleanupJob = new Job(Cleanup, nameof(PingForwarderPool));
     }
 
     public int ClientCount {
         get {
-            lock (_pingProxies)
-                return _pingProxies.Count;
+            lock (_pingForwarders)
+                return _pingForwarders.Count;
         }
     }
 
-    private PingProxy GetFreePingProxy(out bool isNew)
+    private PingForwarder GetFreePingForwarder(out bool isNew)
     {
-        lock (_pingProxies) {
+        lock (_pingForwarders) {
             isNew = false;
 
-            var pingProxy = _pingProxies.FirstOrDefault(x => !x.IsSending);
-            if (pingProxy != null)
-                return pingProxy;
+            var pingForwarder = _pingForwarders.FirstOrDefault(x => !x.IsSending);
+            if (pingForwarder != null)
+                return pingForwarder;
 
-            if (_pingProxies.Count < _maxClientCount) {
-                pingProxy = new PingProxy();
-                pingProxy.PacketReceived += PingProxy_PacketReceived;
-                _pingProxies.Add(pingProxy);
+            if (_pingForwarders.Count < _maxClientCount) {
+                pingForwarder = new PingForwarder();
+                pingForwarder.PacketReceived += PingForwarder_PacketReceived;
+                _pingForwarders.Add(pingForwarder);
                 isNew = true;
-                return pingProxy;
+                return pingForwarder;
             }
 
             _maxWorkerEventReporter.Raise();
 
-            pingProxy = _pingProxies.OrderBy(x => x.PacketStat.LastActivityTime).First();
-            pingProxy.Cancel();
-            return pingProxy;
+            pingForwarder = _pingForwarders.OrderBy(x => x.PacketStat.LastActivityTime).First();
+            pingForwarder.Cancel();
+            return pingForwarder;
         }
     }
 
-    private void PingProxy_PacketReceived(object? sender, IpPacket ipPacket)
+    private void PingForwarder_PacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }
@@ -87,34 +87,34 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            _packetProxyCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint.ToValue());
+            _packetForwarderCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint.ToValue());
 
-        // raise new endpoint event before the packet goes: once handed on, it is the proxy's, which may have sent and
+        // raise new endpoint event before the packet goes: once handed on, it is the forwarder's, which may have sent and
         // disposed it already
-        var pingProxy = GetFreePingProxy(out var isNewLocalEndPoint);
+        var pingForwarder = GetFreePingForwarder(out var isNewLocalEndPoint);
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetProxyCallbacks?.OnConnectionEstablished(ipPacket.Protocol,
+            _packetForwarderCallbacks?.OnConnectionEstablished(ipPacket.Protocol,
                 new IpEndPointValue(ipPacket.SourceAddress, 0), new IpEndPointValue(ipPacket.DestinationAddress, 0),
                 isNewLocalEndPoint, isNewRemoteEndPoint);
 
-        // send to a ping proxy
-        pingProxy.SendPacketQueued(ipPacket);
+        // send to a ping forwarder
+        pingForwarder.SendPacketQueued(ipPacket);
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
-        lock (_pingProxies)
-            TimeoutItemUtil.CleanupTimeoutList(_pingProxies, _workerTimeout);
+        lock (_pingForwarders)
+            TimeoutItemUtil.CleanupTimeoutList(_pingForwarders, _workerTimeout);
 
         return default;
     }
 
     protected override void DisposeManaged()
     {
-        lock (_pingProxies)
-            foreach (var proxy in _pingProxies) {
-                proxy.PacketReceived -= PingProxy_PacketReceived;
-                proxy.Dispose();
+        lock (_pingForwarders)
+            foreach (var forwarder in _pingForwarders) {
+                forwarder.PacketReceived -= PingForwarder_PacketReceived;
+                forwarder.Dispose();
             }
 
         _cleanupJob.Dispose();

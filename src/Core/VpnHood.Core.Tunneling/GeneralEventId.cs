@@ -7,7 +7,7 @@ public static class GeneralEventId
     public static EventId Session = new((int)EventCode.Session, nameof(Session));
     public static EventId Request = new((int)EventCode.Request, nameof(Request));
     public static EventId Essential = new((int)EventCode.Essential, nameof(Essential));
-    public static EventId ProxyChannel = new((int)EventCode.StreamChannel, nameof(ProxyChannel));
+    public static EventId StreamForwardingChannel = new((int)EventCode.StreamChannel, nameof(StreamForwardingChannel));
     public static EventId PacketChannel = new((int)EventCode.PacketChannel, nameof(EventCode.PacketChannel));
     public static EventId Stream = new((int)EventCode.Stream, nameof(Stream));
     public static EventId Test = new((int)EventCode.Test, nameof(Test));

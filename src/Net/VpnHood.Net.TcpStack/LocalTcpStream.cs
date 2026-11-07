@@ -29,7 +29,7 @@ public sealed class LocalTcpStream : AsyncStream
 
     /// <inheritdoc />
     /// <remarks>Reflects CONNECTION liveness, not just stream disposal, so consumer health checks
-    /// (e.g. ProxyChannel.CheckAlive via <c>Stream is { CanRead: true, CanWrite: true }</c>) observe a
+    /// (e.g. StreamForwardingChannel.CheckAlive via <c>Stream is { CanRead: true, CanWrite: true }</c>) observe a
     /// dead write path after a FIN/RST/idle-abort instead of pumping into a black hole.</remarks>
     public override bool CanWrite => !IsDisposed && !_connection.IsWriteClosed;
 
@@ -39,7 +39,7 @@ public sealed class LocalTcpStream : AsyncStream
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         // Link only when the caller's token is cancelable — saves a CTS allocation per read on the
-        // proxy copy loop's hot path. The linked CTS is disposed with the read so it does not stay rooted
+        // forwarding copy loop's hot path. The linked CTS is disposed with the read so it does not stay rooted
         // on the parent tokens' registration lists.
         try
         {

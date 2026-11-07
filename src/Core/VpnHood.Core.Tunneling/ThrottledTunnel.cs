@@ -8,7 +8,7 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.Core.Tunneling;
 
 // A tunnel with a send limit. The session's packets wait in its queue, one for all its channels, and leave it at
-// the limit: the session's bottleneck, sharing the limit with its proxy streams. The queue takes its turns at the
+// the limit: the session's bottleneck, sharing the limit with its forwarding streams. The queue takes its turns at the
 // limit as one more stream, so beside busy streams all its packets together get a stream's share. It holds about
 // a quarter second of the limit, at least a new connection's first burst, in lanes by flow that take turns, so a
 // flow that floods fills only its own lane
@@ -30,7 +30,7 @@ public class ThrottledTunnel : Tunnel
     // the packets waiting for their turn; the base queues none, as it passes each on
     public override int QueueLength => _throttleQueue.QueueLength;
 
-    // the session's meter, which it owns: the limit the packets are paced to, shared with its proxy streams
+    // the session's meter, which it owns: the limit the packets are paced to, shared with its forwarding streams
     public ThrottledTunnel(TunnelOptions options, TrafficMeter trafficMeter)
         : base(options)
     {

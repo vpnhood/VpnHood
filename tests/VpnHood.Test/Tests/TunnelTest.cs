@@ -11,7 +11,7 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.DatagramMessaging;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.WebSockets;
 using VpnHood.Test.Packets;
@@ -657,11 +657,11 @@ public class TunnelTest : TestBase
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
-    public async Task Proxy_channel_closes_its_connections_with_the_same_close(bool graceful)
+    public async Task Forwarding_channel_closes_its_connections_with_the_same_close(bool graceful)
     {
         var hostConnection = new CloseRecordingConnection();
         var tunnelConnection = new CloseRecordingConnection();
-        var channel = new ProxyChannel("test", hostConnection, tunnelConnection, new TransferBufferSize(4096, 4096));
+        var channel = new StreamForwardingChannel("test", hostConnection, tunnelConnection, new TransferBufferSize(4096, 4096));
 
         if (graceful) {
             await channel.DisposeAsync();
@@ -698,25 +698,25 @@ public class TunnelTest : TestBase
     }
 
     [TestMethod]
-    public void A_join_after_the_proxy_managers_end_closes_the_channels_connections_at_once()
+    public void A_join_after_the_forwarding_managers_end_closes_the_channels_connections_at_once()
     {
         var hostConnection = new CloseRecordingConnection();
         var tunnelConnection = new CloseRecordingConnection();
-        var channel = new ProxyChannel("test", hostConnection, tunnelConnection, new TransferBufferSize(4096, 4096));
-        var proxyManager = new ProxyManager(new BindingSocketFactory(new TestSocketFactory()), new ProxyManagerOptions {
+        var channel = new StreamForwardingChannel("test", hostConnection, tunnelConnection, new TransferBufferSize(4096, 4096));
+        var forwardingManager = new ForwardingManager(new BindingSocketFactory(new TestSocketFactory()), new ForwardingManagerOptions {
             IsPingSupported = false,
-            PacketProxyCallbacks = null,
+            PacketForwarderCallbacks = null,
             UdpTimeout = TransportDefaults.UdpTimeout,
             IcmpTimeout = TransportDefaults.IcmpTimeout,
             MaxUdpClientCount = TransportDefaults.MaxUdpClientCount,
             MaxPingClientCount = TransportDefaults.MaxPingClientCount,
-            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
+            PacketQueueCapacity = TransportDefaults.PacketForwardingQueueCapacity,
             UdpBufferSize = null,
             LogScope = null
         });
-        proxyManager.Dispose();
+        forwardingManager.Dispose();
 
-        Assert.ThrowsExactly<ObjectDisposedException>(() => proxyManager.AddChannel(channel, disposeOnFail: true));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => forwardingManager.AddChannel(channel, disposeOnFail: true));
         Assert.IsTrue(hostConnection.SyncClosed);
         Assert.IsTrue(tunnelConnection.SyncClosed);
         Assert.IsFalse(hostConnection.AsyncClosed.Task.IsCompleted);

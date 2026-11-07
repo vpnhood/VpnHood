@@ -578,7 +578,7 @@ public sealed class LocalTcpStackTest
     }
 
     /// <summary>
-    /// Regression test for the QUIC + TcpProxy download collapse (40 -> 3 Mbps).
+    /// Regression test for the QUIC + TcpForwarding download collapse (40 -> 3 Mbps).
     /// Encodes the Zero Window Probe forward-progress invariant in
     /// <c>LocalTcpConnection.SendZeroWindowProbe</c>: while the peer's receive window is stuck at zero,
     /// every probe must carry a NEW byte at the send frontier (advancing the sequence number) — never
@@ -638,7 +638,7 @@ public sealed class LocalTcpStackTest
         }
         catch (TimeoutException) {
             Assert.Fail("Write stalled under a zero peer window — Zero Window Probes are not making " +
-                        "forward progress (the QUIC+TcpProxy download-collapse regression).");
+                        "forward progress (the QUIC+TcpForwarding download-collapse regression).");
         }
 
         // Assert — the probes carried *distinct, advancing* sequence numbers covering the whole payload,
@@ -668,7 +668,7 @@ public sealed class LocalTcpStackTest
     /// <summary>
     /// At the MaxConnections cap, a new SYN evicts the most idle ("most unused") connection — provided
     /// its idle time meets EvictionMinIdle — instead of being rejected. The evicted connection's stream
-    /// reaches EOF (so its consumer's proxy pump unwinds), while a freshly-active connection is protected.
+    /// reaches EOF (so its consumer's forwarding pump unwinds), while a freshly-active connection is protected.
     /// </summary>
     [TestMethod]
     [Timeout(5000)]

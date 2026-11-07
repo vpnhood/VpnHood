@@ -12,9 +12,9 @@ using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-internal class UdpProxy : SinglePacketTransport, ITimeoutItem
+internal class UdpForwarder : SinglePacketTransport, ITimeoutItem
 {
     private readonly Socket _socket;
     // sized by worker class (small for DNS, max-datagram for general UDP). BuildUdp copies the payload,
@@ -31,7 +31,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
     public DateTime LastUsedTime { get; set; }
     public new bool IsDisposed => base.IsDisposed;
 
-    public UdpProxy(Socket socket, TimeSpan udpTimeout, int queueCapacity, int receiveBufferSize)
+    public UdpForwarder(Socket socket, TimeSpan udpTimeout, int queueCapacity, int receiveBufferSize)
         : base(new PacketTransportOptions {
             // a packet's payload goes out on the socket and the packet to no one, so each one sent is disposed
             AutoDisposePackets = true,
@@ -85,7 +85,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                     $"Couldn't send all udp bytes. Requested: {udpPacket.Payload.Length}, Sent: {sentBytes}");
         }
         catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
-            VhLogger.Instance.LogError(ex, "Invalid UDP state detected in UdpProxy. Disposing the proxy.");
+            VhLogger.Instance.LogError(ex, "Invalid UDP state detected in UdpForwarder. Disposing the forwarder.");
             Dispose();
             throw;
         }
@@ -141,7 +141,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                 break;
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Error in UdpProxy receive loop.");
+                VhLogger.Instance.LogError(ex, "Error in UdpForwarder receive loop.");
 
                 // a persistent synchronous error must not hot-spin the shared the receive loop
                 if (++consecutiveErrors >= 10)

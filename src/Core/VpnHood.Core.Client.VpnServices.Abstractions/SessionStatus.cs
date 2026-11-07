@@ -22,8 +22,8 @@ public class SessionStatus
     public required int? ActiveClientCount { get; init; }
     public required int UserReviewRecommended { get; init; }
     public required bool IsSecureDnsDetected { get; init; }
-    public required bool IsTcpProxy { get; init; }
-    public required bool CanChangeTcpProxy { get; init; }
+    public required bool IsTcpForwarding { get; init; }
+    public required bool CanChangeTcpForwarding { get; init; }
     public required bool IsDropQuic { get; set; }
     public required bool IsAdapterStarted { get; set; }
     public required ChannelProtocol ChannelProtocol { get; init; }

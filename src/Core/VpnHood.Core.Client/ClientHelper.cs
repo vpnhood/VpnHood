@@ -250,18 +250,18 @@ internal static class ClientHelper
         return includeIpRanges; //sort and unify
     }
 
-    // throws where the client and the server share no way for TCP; warns where the server overrides the proxy switch
+    // throws where the client and the server share no way for TCP; warns where the server overrides the TCP forwarding switch
     public static void ValidateTcpSupport(HelloResponse helloResponse, VpnHoodClientConfig config)
     {
-        if (helloResponse is { IsTcpPacketIpV4Supported: false, IsTcpProxySupported: false })
+        if (helloResponse is { IsTcpPacketIpV4Supported: false, IsTcpForwardingSupported: false })
             throw new NotSupportedException(
                 "The server does not support any protocol to support TCP. Please contact support.");
 
-        if (!helloResponse.IsTcpPacketIpV4Supported && !config.UseTcpProxy)
-            VhLogger.Instance.LogWarning("TCP Proxy enabled because the server does not support TCP packets.");
+        if (!helloResponse.IsTcpPacketIpV4Supported && !config.UseTcpForwarding)
+            VhLogger.Instance.LogWarning("TCP forwarding turned on because the server does not support TCP packets.");
 
-        if (!helloResponse.IsTcpProxySupported && config.UseTcpProxy)
-            VhLogger.Instance.LogWarning("TCP Proxy disabled because the server does not support it.");
+        if (!helloResponse.IsTcpForwardingSupported && config.UseTcpForwarding)
+            VhLogger.Instance.LogWarning("TCP forwarding turned off because the server does not support it.");
     }
 
     // The largest packet the tunnel carries both ways, which the adapter takes as its MTU. Never above what the server

@@ -24,7 +24,7 @@ using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
@@ -296,19 +296,19 @@ public class TestHelper : IDisposable
         return new TestDevice(this, _ => new TestNullVpnAdapter());
     }
 
-    public UdpProxyPoolOptions CreateUdpProxyPoolOptions(IPacketProxyCallbacks callbacks)
+    public UdpForwarderPoolOptions CreateUdpForwarderPoolOptions(IPacketForwarderCallbacks callbacks)
     {
-        var proxyPool = new UdpProxyPoolOptions {
-            PacketProxyCallbacks = callbacks,
+        var forwarderPool = new UdpForwarderPoolOptions {
+            PacketForwarderCallbacks = callbacks,
             SocketFactory = new BindingSocketFactory(new TestSocketFactory()),
             UdpTimeout = TransportDefaults.UdpTimeout,
             MaxClientCount = 10,
-            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
+            PacketQueueCapacity = TransportDefaults.PacketForwardingQueueCapacity,
             BufferSize = null,
             LogScope = null
         };
 
-        return proxyPool;
+        return forwarderPool;
     }
 
     public TunnelOptions CreateTunnelOptions(IPacketChannel? udpChannel = null)
@@ -325,7 +325,7 @@ public class TestHelper : IDisposable
     public ClientOptions CreateClientOptions(Token? token = null,
         ChannelProtocol channelProtocol = ChannelProtocol.Tcp,
         string? clientId = null,
-        bool useTcpProxy = true)
+        bool useTcpForwarding = true)
     {
         return new ClientOptions {
             AdapterName = "VpnHoodTester",
@@ -339,7 +339,7 @@ public class TestHelper : IDisposable
                 MaxPacketChannelCount = 1
             },
             ChannelProtocol = channelProtocol,
-            UseTcpProxy = useTcpProxy,
+            UseTcpForwarding = useTcpForwarding,
             AccessKey = token?.ToAccessKey() ?? "" // set it later
         };
     }

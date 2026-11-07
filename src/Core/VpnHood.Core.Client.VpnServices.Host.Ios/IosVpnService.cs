@@ -143,11 +143,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // Kick off heavy VpnHood init off the main thread.
         _ = Task.Run(() => {
             try {
-                // memoryScale feeds the QUIC receive-window sizing: when the TCP proxy is off, TCP rides
+                // memoryScale feeds the QUIC receive-window sizing: when TCP forwarding is off, TCP rides
                 // the packet channel (few QUIC streams), so the windows can be doubled under the same
                 // memory bound. Read lazily from the host so it reflects the status at each QUIC-client
                 // creation (session build), not the state at factory construction.
-                var sf = new IosSocketFactory(memoryScale: () => _vpnServiceHost?.IsTcpProxy == true ? 1 : 2);
+                var sf = new IosSocketFactory(memoryScale: () => _vpnServiceHost?.IsTcpForwarding == true ? 1 : 2);
                 // withLogger: true - the extension is a process of its own, so the host keeps its own log
                 // file, with the settings the app's LogServiceOptions carry
                 _vpnServiceHost = new VpnServiceHost(configFolder, dataFolder, this, sf,

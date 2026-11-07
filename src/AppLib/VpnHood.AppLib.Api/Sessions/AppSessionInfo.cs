@@ -24,7 +24,7 @@ public class AppSessionInfo
 
     public required DateTime CreatedTime { get; init; }
     public required IReadOnlyList<ChannelProtocol> ChannelProtocols { get; init; }
-    public required bool IsTcpProxySupported { get; init; }
+    public required bool IsTcpForwardingSupported { get; init; }
     public required bool IsTcpPacketSupported { get; init; }
     public required bool IsQuicPacketSupported { get; init; }
     public required bool IsUdpPacketSupported { get; init; }

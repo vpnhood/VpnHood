@@ -131,7 +131,7 @@ public class Http3TunnelLifetimeTest : TestBase
                 await Task.Delay(remaining < TimeSpan.FromSeconds(5) ? remaining : TimeSpan.FromSeconds(5), TestCt);
         }
 
-        // Traffic after the entire idle window proves the original stream still works. A new proxy
+        // Traffic after the entire idle window proves the original stream still works. A new forwarding
         // request then proves the same QUIC connection still accepts and authenticates new streams.
         await TestHelper.Test_UdpEcho(udpClient).WaitAsync(TestCt);
         Assert.AreEqual(initialStreams, sockets.StreamCount);

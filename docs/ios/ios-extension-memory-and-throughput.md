@@ -1,6 +1,6 @@
 # iOS Network Extension — Memory & Throughput (consolidated)
 
-**Status:** proxy mode working on iOS with good throughput + bounded memory (on .NET 11 preview).
+**Status:** TCP forwarding working on iOS with good throughput + bounded memory (on .NET 11 preview).
 **Investigation:** 2026-06-16 → 2026-06-19 • **Device:** iPhone 11 (A13, 16 KB pages, iOS 26.5),
 hardware UDID `00008030-001544500A38802E` • **Builds with:** `~/.dotnet11/dotnet`
 (the measurements below were taken on SDK 11.0.100-preview.5, iOS workload `26.5.11546-net11-p5`; the
@@ -16,8 +16,8 @@ so treat them as the preview.5 baseline).
 
 ## Goals
 1. Stop the **~52 MB jetsam kill** of the Network Extension. ✅ (.NET 11 / CoreCLR)
-2. Keep **`UseTcpProxy=true` viable on iOS** — split-domain tunneling *requires* it
-   (`AppFeatures.IsSplitDomainSupported = device.IsTcpProxySupported`). No packet-mode fallback. ✅
+2. Keep **`UseTcpForwarding=true` viable on iOS** — split-domain tunneling *requires* it
+   (`AppFeatures.IsSplitDomainSupported = device.IsTcpForwardingSupported`). No packet-mode fallback. ✅
 3. **Restore throughput** (upload + download). ✅ (dynamic-window re-open)
 4. Fix the **shared TCP stack** so Android/desktop also bound memory, not just iOS.
 
@@ -27,7 +27,7 @@ so treat them as the preview.5 baseline).
 - The old ~42 MB floor was the **Mono runtime**, not our code. **.NET 11 / CoreCLR halves it to ~23 MB and
   stays flat under load** → the jetsam crash is gone. (Required re-adding the `PacketTunnelProvider` subclass —
   CoreCLR's registrar otherwise can't find the principal class's assembly.)
-- Proxy mode had **two memory failure modes**, both fixed: (A) **connection pile-up** — full-tunnel browsing
+- TCP forwarding had **two memory failure modes**, both fixed: (A) **connection pile-up** — full-tunnel browsing
   opens ~190 concurrent flows × ~180 KB; (B) **upload-burst pipe balloon** — a fixed window never throttled the
   sender. Fixes: **dynamic receive window** (B + bounds pipe memory; a global budget sat beside it until 2026-10,
   when it went: it never bound), **connection cap (100, since 2026-07 40) + fast idle reaping (20 s)** (A).
@@ -65,10 +65,10 @@ so treat them as the preview.5 baseline).
 
 ---
 
-## Part 2 — Proxy mode (`UseTcpProxy=true`) memory
+## Part 2 — TCP forwarding (`UseTcpForwarding=true`) memory
 
-Each proxied TCP flow is **its own dedicated TLS connection to the server** (not multiplexed over the packet
-channel — so `PacketChannelBufferSize`/`MaxPacketChannelCount` are irrelevant in proxy mode), plus a
+Each forwarded TCP flow is **its own dedicated TLS connection to the server** (not multiplexed over the packet
+channel — so `PacketChannelBufferSize`/`MaxPacketChannelCount` are irrelevant with TCP forwarding), plus a
 `LocalTcpConnection` (16 KB retx) + a reassembly pipe. **~180 KB structural per flow.**
 
 - **Real concurrency is ~20× the intuition:** full-tunnel routes *every* app/OS connection, not just the page
@@ -88,7 +88,7 @@ channel — so `PacketChannelBufferSize`/`MaxPacketChannelCount` are irrelevant 
 **The ~2 Mbps upload was a real goodput limit** (the pre-fix "fast upload" was an illusion — data piled into the
 unbounded pipe = the memory bug; real delivery was always ~2 Mbps). **Two suspects were tested on-device and
 RULED OUT — neither changed it:** (1) the receive window (16 KB → 64 KB), (2) the copy buffer
-`StreamProxyBufferSize` (2 KB → 32 KB).
+`StreamForwardingBufferSize` (2 KB → 32 KB).
 
 **The real fix was the dynamic window's RE-OPEN logic.** TCP flow control has two halves:
 - **Shrink** — advertise a smaller window as the pipe fills; at full, advertise 0 → the device **stops**.
@@ -120,7 +120,7 @@ up to `QueueCapacity` ≈ 255 packets per cycle) and hands the whole list to `Se
 
 - **Old path:** the adapter overrode only the per-packet `WritePacket`, so the base `SendPacketsAsync` looped
   and issued **one native `WritePackets([1 packet])` per packet** → one marshaling crossing + autorelease churn
-  per packet. On a TCP-proxy download (many back-to-back MSS packets) that is the hot path.
+  per packet. On a TCP forwarding download (many back-to-back MSS packets) that is the hot path.
 - **New path (shipped):** the adapter overrides `SendPacketsAsync` directly and flushes the
   drained list to the native flow in **batches of up to 32** (`MaxWriteBatchSize`), using **reused,
   allocation-free arrays** wrapped in **one autorelease pool per drain**. Far fewer native crossings per burst.
@@ -132,7 +132,7 @@ up to `QueueCapacity` ≈ 255 packets per cycle) and hands the whole list to `Se
     write path, mirroring how `ReadPacket` throws in favor of the `ReadPackets` callback.
 
 > **Corrected verdict (was a "double problem"):** an earlier comment asserted that concurrent `WritePacket`
-> calls from TCP-proxy pump threads *raced* on the shared write arrays and that the `_writeLock` fixed a data
+> calls from TCP forwarding pump threads *raced* on the shared write arrays and that the `_writeLock` fixed a data
 > race causing `SIGABRT`. That diagnosis was **wrong**. Core's send channel is `SingleReader=true` and this
 > transport is non-passthrough, so `SendPacketsAsync`/`WritePacket` is only ever invoked from the **single**
 > consumer loop — pump threads merely *enqueue*. The real `SIGABRT` was a **garbled/null `NSData` handed to
@@ -183,7 +183,7 @@ so the iOS AppDelegates no longer rewrite it on launch. Installs that persisted 
 themselves — the stale `maxPacketChannelCount` in `settings.json` is simply ignored on load. The buffer
 sizes live in the same `LimitedMemory` preset in
 `src/Core/VpnHood.Core.Client.Abstractions/ClientTransportOptions.cs`: `PacketChannelBufferSize=16 KB`,
-`UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude
+`UdpForwardingBufferSize=16 KB`, `StreamForwardingBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude
 socket buffers), and `TcpPacketChannelKernelBufferSize=null` — the OS default — for the outer TCP packet
 channels.
 
@@ -224,7 +224,7 @@ HH:mm:ss.fff footprint=MB peak=MB gcLive=MB gcHeap=MB native=MB anon=MB comp=MB 
   conn=N est=N peakConn=N pipeBuf=MB win=KB maxC=N dn=MB up=MB \
   tracker=live=[IosQuicStream:X LocalTcpConnection:Y] events=[IosQuicStream.created:A IosQuicStream.disposed:B ...]
 ```
-`footprint ≈ anon + comp`. `conn/est/peakConn` = live/established/peak proxy connections. `pipeBuf` = total
+`footprint ≈ anon + comp`. `conn/est/peakConn` = live/established/peak forwarding connections. `pipeBuf` = total
 reassembly backlog (Mode-B signal). `up`/`dn` cumulative MB and `rate` is their sampled aggregate rate. `tracker.live` is the post-GC weak census (including proxy channels and rented buffer owners/arrays); `tracker.events` contains cumulative lifecycle totals. Persistent connections are expected, so idle is traffic-based: after the rate remains below 32 KB/s for 10 seconds, `BASELINE` and per-cycle `IDLE_CHECKPOINT` records use the minimum footprint observed during the next 30-second idle window. Each checkpoint also records managed bytes and process footprint immediately after a forced compacting collection. File/census writes are capped at 2 Hz near the memory limit while the 100 ms sampler still retains the true peak.
 
 ---

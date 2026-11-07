@@ -8,7 +8,7 @@ public class ClientReconfigureParams
 {
     public required bool DropQuic { get; set; }
     public required bool DropUdp { get; set; }
-    public required bool UseTcpProxy { get; set; }
+    public required bool UseTcpForwarding { get; set; }
     public required bool AllowAnonymousTracker { get; set; }
     public required ChannelProtocol ChannelProtocol { get; set; }
     public required SplitUnsupportedIpMode UnroutedIpMode { get; set; }

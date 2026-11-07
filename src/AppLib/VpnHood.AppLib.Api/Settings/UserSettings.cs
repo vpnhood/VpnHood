@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.Api.Settings;
 public class UserSettings
 {
     public bool IsLicenseAccepted { get; set; }
-    public bool IsTcpProxyPrompted { get; set; }
+    public bool IsTcpForwardingPrompted { get; set; }
     public bool IsQuickLaunchPrompted { get; set; }
     public string? CultureCode { get; set; }
     public string? CountryCode { get; set; }
@@ -25,7 +25,7 @@ public class UserSettings
     public SplitTunnelingSettings SplitTunneling { get; set; } = new();
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; }
-    public bool UseTcpProxy { get; set; }
+    public bool UseTcpForwarding { get; set; }
     public bool DropQuic { get; set; }
     // the engine's own default for this, stated rather than borrowed: the contract does not
     // reach into ClientOptions to find out what it should say

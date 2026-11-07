@@ -3,9 +3,9 @@ using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Common.Configuration;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class ProxyManagerOptions
+public class ForwardingManagerOptions
 {
     public required TimeSpan UdpTimeout { get; init; }
     public required TimeSpan IcmpTimeout { get; init; }
@@ -16,6 +16,6 @@ public class ProxyManagerOptions
     public required int PacketQueueCapacity { get; init; }
     public required TransferBufferSize? UdpBufferSize { get; init; }
     public required bool IsPingSupported { get; init; }
-    public required IPacketProxyCallbacks? PacketProxyCallbacks { get; init; }
+    public required IPacketForwarderCallbacks? PacketForwarderCallbacks { get; init; }
     public required LogScope? LogScope { get; init; }
 }

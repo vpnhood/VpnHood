@@ -14,7 +14,7 @@ namespace VpnHood.Net.Quic.Ios;
 /// multiplexed QUIC tunnel and exposes lightweight streams over it, matching the desktop MsQuic client.
 /// </summary>
 /// <param name="initialMaxStreamDataBidirectionalLocal">Per-stream QUIC receive window (bytes) for streams
-/// this client opens (the proxy's download streams). <c>null</c> keeps Network.framework's OS default.</param>
+/// this client opens (TCP forwarding's download streams). <c>null</c> keeps Network.framework's OS default.</param>
 /// <param name="initialMaxStreamDataBidirectionalRemote">Per-stream QUIC receive window (bytes) for
 /// peer-opened streams. <c>null</c> keeps the OS default.</param>
 /// <param name="initialMaxData">Connection-wide aggregate QUIC receive window (bytes) across all streams —

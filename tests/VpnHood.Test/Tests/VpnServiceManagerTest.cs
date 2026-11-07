@@ -111,7 +111,7 @@ public class VpnServiceManagerTest : TestBase
             await adapterAsked.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
 
             // no error with no session to take it. Dropping QUIC is the setting to watch: the test server
-            // carries TCP only by the proxy, which drops it
+            // carries TCP only by forwarding, which drops it
             var reconfiguredOptions = TestHelper.CreateClientOptions(token);
             reconfiguredOptions.DropQuic = dropQuic;
             await manager.Reconfigure(new VpnServiceOptions { ClientOptions = reconfiguredOptions }, TestCt);
@@ -164,7 +164,7 @@ public class VpnServiceManagerTest : TestBase
         try {
             await asked.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
 
-            // Dropping QUIC is the setting to watch: the test server carries TCP only by the proxy, which drops it
+            // Dropping QUIC is the setting to watch: the test server carries TCP only by forwarding, which drops it
             var reconfiguredOptions = TestHelper.CreateClientOptions(token);
             reconfiguredOptions.DropQuic = dropQuic;
             await manager.Reconfigure(new VpnServiceOptions { ClientOptions = reconfiguredOptions }, TestCt);

@@ -51,35 +51,35 @@ public partial class WebFrontTest
         Assert.AreEqual(SessionErrorCode.Ok, helloResponse.ErrorCode);
         Assert.AreEqual(enabled && httpVersion >= 15, helloResponse.StartPadding);
 
-        using var proxySocket = new TcpClient();
-        await using var proxyTls = await ConnectTls(proxySocket, token);
+        using var forwardingSocket = new TcpClient();
+        await using var forwardingTls = await ConnectTls(forwardingSocket, token);
         var upgrade = BuildAuthenticationHead(token.ServerToken.HostName, true, httpVersion, proof, 0);
         if (offerMasking)
             upgrade = upgrade[..^2] + "X-WebSocketMasking: true\r\n\r\n";
-        await proxyTls.WriteAsync(Encoding.ASCII.GetBytes(upgrade), TestCt);
-        using var upgradeResponse = await HttpUtils.ReadResponse(proxyTls, TestCt);
+        await forwardingTls.WriteAsync(Encoding.ASCII.GetBytes(upgrade), TestCt);
+        using var upgradeResponse = await HttpUtils.ReadResponse(forwardingTls, TestCt);
         Assert.AreEqual(HttpStatusCode.SwitchingProtocols, upgradeResponse.StatusCode);
         var standardMasking = httpVersion >= 15 && offerMasking;
         Assert.IsFalse(upgradeResponse.Headers.Contains("X-WebSocketMasking"));
 
         // Reading below the wrapper exposes text padding that WebSocketStream normally discards.
-        await using var writer = new WebSocketStream(proxyTls, "padding-proxy", false, false, standardMasking);
+        await using var writer = new WebSocketStream(forwardingTls, "padding-forwarding", false, false, standardMasking);
         for (var streamIndex = 0; streamIndex < 2; streamIndex++)
-            await AssertProxyStreamPadding(writer, proxyTls, helloResponse, enabled && standardMasking,
+            await AssertForwardingStreamPadding(writer, forwardingTls, helloResponse, enabled && standardMasking,
                 streamIndex, TestCt);
     }
 
-    private async Task AssertProxyStreamPadding(WebSocketStream writer, Stream transport, HelloResponse helloResponse,
+    private async Task AssertForwardingStreamPadding(WebSocketStream writer, Stream transport, HelloResponse helloResponse,
         bool expectedPadding, int streamIndex, CancellationToken cancellationToken)
     {
-        var proxy = new StreamProxyChannelRequest {
+        var forwarding = new TcpForwardingChannelRequest {
             RequestId = UniqueIdFactory.Create(), SessionId = helloResponse.SessionId,
             SessionKey = helloResponse.SessionKey, DestinationEndPoint = MockEps.TcpUploadEndPoint1
         };
-        var proxyBody = StreamUtils.ObjectToJsonBuffer(proxy);
+        var forwardingBody = StreamUtils.ObjectToJsonBuffer(forwarding);
         // A zero-byte upload makes the destination return a checksum, even when no text padding is sent.
-        byte[] proxyPayload = [1, proxy.RequestCode, .. proxyBody.Span, 0, 0, 0, 0];
-        await writer.WriteAsync(proxyPayload, cancellationToken);
+        byte[] forwardingPayload = [1, forwarding.RequestCode, .. forwardingBody.Span, 0, 0, 0, 0];
+        await writer.WriteAsync(forwardingPayload, cancellationToken);
         var responseHeader = await WebSocketUtils.ReadWebSocketHeader(transport, new byte[14], cancellationToken);
         Assert.IsTrue(responseHeader.IsBinary);
         var responseBody = new byte[(int)responseHeader.PayloadLength];
@@ -110,7 +110,7 @@ public partial class WebFrontTest
             }
 
             if (checksum.Length == 4 && !sentTerminator) {
-                // End only after the destination's reply: closing earlier would end its proxy pump.
+                // End only after the destination's reply: closing earlier would end its forwarding pump.
                 await transport.WriteAsync(new byte[] { 0x82, 0x80, 0, 0, 0, 0 }, cancellationToken);
                 sentTerminator = true;
             }

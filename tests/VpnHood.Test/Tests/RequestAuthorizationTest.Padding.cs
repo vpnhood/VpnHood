@@ -39,8 +39,8 @@ public partial class RequestAuthorizationTest
 
         ClientRequest request = packet
             ? new TcpPacketChannelRequest { RequestId = "packet", SessionId = 1, SessionKey = new byte[16] }
-            : new StreamProxyChannelRequest {
-                RequestId = "proxy", SessionId = 1, SessionKey = new byte[16],
+            : new TcpForwardingChannelRequest {
+                RequestId = "forwarding", SessionId = 1, SessionKey = new byte[16],
                 DestinationEndPoint = new IPEndPoint(IPAddress.Loopback, 443)
             };
         var pending = sender.SendRequest<SessionResponse>(request, TestCt);

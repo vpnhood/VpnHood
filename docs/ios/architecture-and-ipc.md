@@ -17,7 +17,7 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
 | `IosVpnService` | `src/Core/VpnHood.Core.Client.VpnServices.Host.Ios/IosVpnService.cs` | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
 | `IosMessageClient` / `IosMessageListener` | the device's project / the VPN service's | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
 | `IosVpnAdapter` | `src/Net/VpnHood.Net.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
-| `LocalTcpStack` (proxy mode) | `src/Net/VpnHood.Net.TcpStack/` | user-space TCP stack used when `UseTcpProxy=true` |
+| `LocalTcpStack` (TCP forwarding) | `src/Net/VpnHood.Net.TcpStack/` | user-space TCP stack used when `UseTcpForwarding=true` |
 
 **The app projects contain only thin glue:**
 - `src/Apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs` — `[Register("PacketTunnelProvider")]` subclass of core `IosVpnService`,

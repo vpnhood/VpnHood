@@ -6,7 +6,7 @@ namespace VpnHood.Core.Tunneling;
 /// <summary>
 /// Tracks tunnel traffic as two independent directions, and holds the session's speed limit: one bucket per
 /// direction, which every path of the session charges, so the limit covers all of its traffic. A sender
-/// waits on it once per turn (the tunnel's queue for its packets, each proxy stream for its reads), so its
+/// waits on it once per turn (the tunnel's queue for its packets, each forwarding stream for its reads), so its
 /// senders share it equally; a receiver only enforces it, slowing a stream or dropping a datagram the peer
 /// sent past the limit.
 /// For session-facing limits, server download maps to send and server upload maps to receive.

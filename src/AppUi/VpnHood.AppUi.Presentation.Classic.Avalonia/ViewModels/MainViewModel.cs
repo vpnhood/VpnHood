@@ -65,7 +65,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string SplitCountriesTitle => Strings.Current.SplitCountries.ToUpperInvariant();
     public string SplitAppsTitle => Strings.Current.SplitApps.ToUpperInvariant();
     public string ProtocolTitle => Strings.Current.ProtocolTitle.ToUpperInvariant();
-    public string CloakChipText => Strings.Current.Cloak.ToUpperInvariant();
+    public string TcpForwardingChipText => Strings.Current.Cloak.ToUpperInvariant();
 
     // Connect ships one server and lets the person pick a location in it; the client keeps a list of
     // servers, each with locations of its own. That one difference names the home row, fills it,
@@ -156,7 +156,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool HasSplitCountryFlags { get; private set => Set(ref field, value); }
     public string SplitAppsText { get; private set => Set(ref field, value); } = "";
     public string ProtocolText { get; private set => Set(ref field, value); } = "";
-    public bool IsCloakOn { get; private set => Set(ref field, value); }
+    public bool IsTcpForwardingSwitchOn { get; private set => Set(ref field, value); }
     public string LanguageText { get; private set => Set(ref field, value); } = "";
     public string AccountText { get; private set => Set(ref field, value); } = "";
 
@@ -431,7 +431,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         SplitAppsText = AppText.SplitAppsStatusText();
         ProtocolText = AppText.ProtocolTitle(VhApp.ActiveProtocol(state));
-        IsCloakOn = VhApp.UserSettings.UseTcpProxy;
+        IsTcpForwardingSwitchOn = VhApp.IsTcpForwardingSwitchOn(state);
         LanguageText = state.CurrentUiCultureInfo.NativeName;
         AccountText = VhApp.Account?.Email ?? Strings.Current.SignIn;
     }

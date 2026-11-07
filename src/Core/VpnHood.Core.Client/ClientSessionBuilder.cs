@@ -173,7 +173,7 @@ internal class ClientSessionBuilder(
                 $"QuicPort: {helloResponse.QuicPort}, " +
                 $"IsTcpPacketIpV4Supported: {helloResponse.IsTcpPacketIpV4Supported}, " +
                 $"IsTcpPacketIpV6Supported: {helloResponse.IsTcpPacketIpV6Supported}, " +
-                $"IsTcpProxySupported: {helloResponse.IsTcpProxySupported}, " +
+                $"IsTcpForwardingSupported: {helloResponse.IsTcpForwardingSupported}, " +
                 $"IsQuicPacketSupported: {helloResponse.IsQuicPacketSupported}, " +
                 $"IsUdpPacketSupported: {helloResponse.IsUdpPacketSupported}, " +
                 $"IsLocalNetworkAllowed: {serverAllowedLocalNetworks.Any()}, " +
@@ -272,7 +272,7 @@ internal class ClientSessionBuilder(
                 CreatedTime = FastDateTime.UtcNow,
                 IsTcpPacketIpV4Supported = helloResponse.IsTcpPacketIpV4Supported,
                 IsTcpPacketIpV6Supported = helloResponse.IsTcpPacketIpV6Supported,
-                IsTcpProxySupported = helloResponse.IsTcpProxySupported,
+                IsTcpForwardingSupported = helloResponse.IsTcpForwardingSupported,
                 IsQuicPacketSupported = helloResponse.IsQuicPacketSupported,
                 IsUdpPacketSupported = helloResponse.IsUdpPacketSupported,
                 IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.IsQuicSupported,
@@ -347,7 +347,7 @@ internal class ClientSessionBuilder(
                     SplitDnsMode = config.SplitDnsMode,
                     DropQuic = config.DropQuic,
                     DropUdp = config.DropUdp,
-                    UseTcpProxy = config.UseTcpProxy
+                    UseTcpForwarding = config.UseTcpForwarding
                 },
                 config: new ClientSessionConfig {
                     AdapterOptions = adapterOptions,

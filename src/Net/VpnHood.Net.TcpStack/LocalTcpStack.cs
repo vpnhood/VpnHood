@@ -552,7 +552,7 @@ public sealed class LocalTcpStack : ITcpStack
     /// At the <see cref="LocalTcpStackOptions.MaxConnections"/> cap, closes the single most idle
     /// ("most unused") connection to free a slot for a new one — but only if its idle time meets
     /// <see cref="LocalTcpStackOptions.EvictionMinIdle"/>, so actively-transferring flows are never
-    /// killed. Closing the victim propagates EOF to its consumer (the proxy's QUIC stream / TCP
+    /// killed. Closing the victim propagates EOF to its consumer (TCP forwarding's QUIC stream / TCP
     /// channel), tearing down the whole upstream flow immediately. Returns true if a slot was freed.
     /// </summary>
     private bool TryEvictForAdmission()

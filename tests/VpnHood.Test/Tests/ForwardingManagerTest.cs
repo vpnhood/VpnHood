@@ -6,7 +6,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Test.Providers;
 using VpnHood.Core.Common.Configuration;
@@ -16,7 +16,7 @@ namespace VpnHood.Test.Tests;
 // deliberately not TestBase: these tests need no client/server harness, and TestBase's
 // mock web server binds test IPs that are unavailable on non-Windows dev machines
 [TestClass]
-public class ProxyManagerTest
+public class ForwardingManagerTest
 {
     private static async Task WaitFor(Func<bool> condition, string message, int timeoutMs = 5000)
     {
@@ -28,16 +28,16 @@ public class ProxyManagerTest
         }
     }
 
-    private static ProxyManager CreateProxyManager(bool isPingSupported = false)
+    private static ForwardingManager CreateForwardingManager(bool isPingSupported = false)
     {
-        return new ProxyManager(new BindingSocketFactory(new TestSocketFactory()), new ProxyManagerOptions {
+        return new ForwardingManager(new BindingSocketFactory(new TestSocketFactory()), new ForwardingManagerOptions {
             IsPingSupported = isPingSupported,
-            PacketProxyCallbacks = null,
+            PacketForwarderCallbacks = null,
             UdpTimeout = TransportDefaults.UdpTimeout,
             IcmpTimeout = TransportDefaults.IcmpTimeout,
             MaxUdpClientCount = TransportDefaults.MaxUdpClientCount,
             MaxPingClientCount = TransportDefaults.MaxPingClientCount,
-            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
+            PacketQueueCapacity = TransportDefaults.PacketForwardingQueueCapacity,
             UdpBufferSize = null,
             LogScope = null
         });
@@ -51,27 +51,27 @@ public class ProxyManagerTest
     }
 
     [TestMethod]
-    public async Task Udp_proxy_disposes_each_packet_it_sent()
+    public async Task Udp_forwarder_disposes_each_packet_it_sent()
     {
-        using var proxyManager = CreateProxyManager();
+        using var forwardingManager = CreateForwardingManager();
         using var peer = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
 
-        // the payload goes out on the proxy's socket, and the packet to no one
+        // the payload goes out on the forwarder's socket, and the packet to no one
         var memory = CopyToTestMemory(PacketBuilder.BuildUdp(IPEndPoint.Parse("10.0.0.2:2000"),
             peer.Client.GetLocalEndPoint(), new byte[16]));
         var ipPacket = PacketBuilder.Attach(memory);
-        proxyManager.SendPacketQueued(ipPacket);
+        forwardingManager.SendPacketQueued(ipPacket);
         await peer.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
-        await WaitFor(() => memory.IsDisposed, "The UDP proxy should dispose the packet it sent.");
+        await WaitFor(() => memory.IsDisposed, "The UDP forwarder should dispose the packet it sent.");
         GC.KeepAlive(ipPacket);
     }
 
     [TestMethod]
-    public async Task Ping_proxy_disposes_each_request_it_sent()
+    public async Task Ping_forwarder_disposes_each_request_it_sent()
     {
-        using var proxyManager = CreateProxyManager(isPingSupported: true);
+        using var forwardingManager = CreateForwardingManager(isPingSupported: true);
         var replied = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        proxyManager.PacketReceived += (_, reply) => {
+        forwardingManager.PacketReceived += (_, reply) => {
             reply.Dispose();
             replied.TrySetResult();
         };
@@ -81,64 +81,64 @@ public class ProxyManagerTest
         var memory = CopyToTestMemory(PacketBuilder.BuildIcmpV4EchoRequest(IPAddress.Parse("10.0.0.2"),
             IPAddress.Loopback, []));
         var request = PacketBuilder.Attach(memory);
-        proxyManager.SendPacketQueued(request);
+        forwardingManager.SendPacketQueued(request);
         await replied.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await WaitFor(() => memory.IsDisposed, "The ping proxy should dispose the request it sent.");
+        await WaitFor(() => memory.IsDisposed, "The ping forwarder should dispose the request it sent.");
         GC.KeepAlive(request);
     }
 
     [TestMethod]
     public async Task Disposed_channels_must_be_swept_from_tracking_list()
     {
-        using var proxyManager = CreateProxyManager();
+        using var forwardingManager = CreateForwardingManager();
 
         // A channel over two in-memory streams: the empty side hits EOF immediately, so the
         // channel pumps finish and the channel disposes ITSELF — exactly like a real bypassed
         // flow whose peer closed. It must not stay in the manager's tracking list afterward.
-        var channel = new ProxyChannel("test-channel",
+        var channel = new StreamForwardingChannel("test-channel",
             new TestStreamConnection(new MemoryStream(new byte[1000])), // host: 1000 bytes then EOF
             new TestStreamConnection(new MemoryStream()), // tunnel: EOF immediately
             new TransferBufferSize(4096, 4096));
 
-        proxyManager.AddChannel(channel, disposeOnFail: true);
-        Assert.AreEqual(1, proxyManager.TcpConnectionCount);
+        forwardingManager.AddChannel(channel, disposeOnFail: true);
+        Assert.AreEqual(1, forwardingManager.TcpConnectionCount);
 
         // the channel disposes itself when its pumps finish
         await WaitFor(() => channel.State == PacketChannelState.Disposed,
             "the channel over EOF streams must dispose itself");
 
         // traffic recorded so far must survive the sweep (monotonic counters)
-        var trafficBefore = proxyManager.Traffic;
+        var trafficBefore = forwardingManager.Traffic;
 
-        proxyManager.CleanupChannels();
-        Assert.AreEqual(0, proxyManager.TcpConnectionCount,
+        forwardingManager.CleanupChannels();
+        Assert.AreEqual(0, forwardingManager.TcpConnectionCount,
             "a disposed channel must be removed from the tracking list");
-        Assert.AreEqual(trafficBefore.Sent, proxyManager.Traffic.Sent);
-        Assert.AreEqual(trafficBefore.Received, proxyManager.Traffic.Received);
+        Assert.AreEqual(trafficBefore.Sent, forwardingManager.Traffic.Sent);
+        Assert.AreEqual(trafficBefore.Received, forwardingManager.Traffic.Received);
     }
 
     [TestMethod]
     public async Task Live_channels_must_not_be_swept()
     {
-        using var proxyManager = CreateProxyManager();
+        using var forwardingManager = CreateForwardingManager();
 
         // Never-completing pipe-backed streams keep the channel alive (Connected).
         var hostToTunnel = new System.IO.Pipelines.Pipe();
         var tunnelToHost = new System.IO.Pipelines.Pipe();
-        var channel = new ProxyChannel("live-channel",
+        var channel = new StreamForwardingChannel("live-channel",
             new TestStreamConnection(new DuplexStream(hostToTunnel.Reader.AsStream(), tunnelToHost.Writer.AsStream())),
             new TestStreamConnection(new DuplexStream(tunnelToHost.Reader.AsStream(), hostToTunnel.Writer.AsStream())),
             new TransferBufferSize(4096, 4096));
 
-        proxyManager.AddChannel(channel, disposeOnFail: true);
+        forwardingManager.AddChannel(channel, disposeOnFail: true);
         await Task.Delay(100); // let the pumps start
 
-        proxyManager.CleanupChannels();
-        Assert.AreEqual(1, proxyManager.TcpConnectionCount, "a live channel must stay in the tracking list");
+        forwardingManager.CleanupChannels();
+        Assert.AreEqual(1, forwardingManager.TcpConnectionCount, "a live channel must stay in the tracking list");
 
         channel.Dispose();
-        proxyManager.CleanupChannels();
-        Assert.AreEqual(0, proxyManager.TcpConnectionCount);
+        forwardingManager.CleanupChannels();
+        Assert.AreEqual(0, forwardingManager.TcpConnectionCount);
     }
 
     [TestMethod]
@@ -153,7 +153,7 @@ public class ProxyManagerTest
         var hostOut = new System.IO.Pipelines.Pipe();
         var tunnelIn = new System.IO.Pipelines.Pipe();
         var tunnelOut = new System.IO.Pipelines.Pipe();
-        await using var channel = new ProxyChannel("throttled-channel",
+        await using var channel = new StreamForwardingChannel("throttled-channel",
             new TestStreamConnection(new DuplexStream(hostIn.Reader.AsStream(), hostOut.Writer.AsStream())),
             new TestStreamConnection(new DuplexStream(tunnelIn.Reader.AsStream(), tunnelOut.Writer.AsStream())),
             new TransferBufferSize(4096, 4096), trafficMeter);

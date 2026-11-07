@@ -15,7 +15,7 @@ internal sealed class Http3TunnelRunner(Http3ConnectionBudget budget,
         var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         tunnel.Disposed += (_, _) => closed.TrySetResult();
         await processNewConnection(tunnel, cancellationToken).Vhc();
-        // A proxy or reuse pool can inherit the stream after admission; its owner ends this request.
+        // A forwarding channel or reuse pool can inherit the stream after admission; its owner ends this request.
         await closed.Task.WaitAsync(cancellationToken).Vhc();
     }
 }

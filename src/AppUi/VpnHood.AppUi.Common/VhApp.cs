@@ -241,6 +241,18 @@ public static class VhApp
         return IsConnected(state) ? state.ChannelProtocol : UserSettings.ChannelProtocol;
     }
 
+    // The TCP forwarding switch as the user sees it: the setting, or what the server or Split Domains force; never the
+    // session's status, which a save does not wait for: read back at once, the switch would jump to the old value
+    // and stay there
+    public static bool IsTcpForwardingSwitchOn(AppState state)
+    {
+        return state.TcpForwardingLockReason switch {
+            TcpForwardingLockReason.ServerRequiredOn or TcpForwardingLockReason.SplitDomainRequiredOn => true,
+            TcpForwardingLockReason.ServerRequiredOff => false,
+            _ => UserSettings.UseTcpForwarding
+        };
+    }
+
     public static bool IsProtocolEnabled(AppState state, ChannelProtocol protocol)
     {
         return state.SessionInfo != null

@@ -22,5 +22,5 @@ internal class ClientSessionOptions
     public required SplitDnsMode SplitDnsMode { get; init; }
     public required bool DropUdp { get; init; }
     public required bool DropQuic { get; init; }
-    public required bool UseTcpProxy { get; init; }
+    public required bool UseTcpForwarding { get; init; }
 }

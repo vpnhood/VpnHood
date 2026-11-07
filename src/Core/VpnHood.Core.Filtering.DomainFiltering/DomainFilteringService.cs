@@ -14,7 +14,7 @@ namespace VpnHood.Core.Filtering.DomainFiltering;
 
 /// Note: TCP extraction by packet is useless service, because TCP SNI is come after TCP handshake, and it will be too late to exclude connection
 /// evan if we establish our own handshake, we can not simulate the rest
-/// Use TcpStreamSniFilteringService instead as proxy
+/// Use TcpStreamSniFilteringService instead, with TCP forwarding
 public class DomainFilteringService : IDisposable
 {
     private static readonly TimeSpan UdpFlowTimeout = TimeSpan.FromMinutes(2);
@@ -42,7 +42,7 @@ public class DomainFilteringService : IDisposable
         DomainObserver = new DomainObserver(sniEventId);
     }
 
-    // a session's TCP proxy, which a domain rule needs for a TCP connection's name, follows this (ClientSession)
+    // a session's TCP forwarding, which a domain rule needs for a TCP connection's name, follows this (ClientSession)
     public event EventHandler? IsEnabledChanged;
 
     public bool IsEnabled {

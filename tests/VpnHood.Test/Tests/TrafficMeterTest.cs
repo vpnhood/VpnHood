@@ -195,7 +195,7 @@ public class TrafficMeterTest : TestBase
         var packetChannel = new TestPacketChannel();
         tunnel.AddChannel(packetChannel, disposeIfFailed: true);
 
-        // four proxy streams on the tunnel's meter, each always with bytes to send
+        // four forwarding streams on the tunnel's meter, each always with bytes to send
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         var cancellationToken = cancellationTokenSource.Token;
         var disposables = new List<IDisposable>();
@@ -204,12 +204,12 @@ public class TrafficMeterTest : TestBase
             for (var i = 0; i < 4; i++) {
                 var (hostWriter, hostEnd) = await ConnectLoopbackAsync();
                 var (tunnelEnd, tunnelReader) = await ConnectLoopbackAsync();
-                var proxyChannel = new ProxyChannel($"stream{i}",
+                var streamForwardingChannel = new StreamForwardingChannel($"stream{i}",
                     new TcpStreamConnection(hostEnd, connectionName: "host", isServer: true),
                     new TcpStreamConnection(tunnelEnd, connectionName: "tunnel", isServer: true),
-                    ServerTransportDefaults.StreamProxyBufferSize, trafficMeter);
-                disposables.AddRange([proxyChannel, hostWriter, hostEnd, tunnelEnd, tunnelReader]);
-                proxyChannel.Start();
+                    ServerTransportDefaults.StreamForwardingBufferSize, trafficMeter);
+                disposables.AddRange([streamForwardingChannel, hostWriter, hostEnd, tunnelEnd, tunnelReader]);
+                streamForwardingChannel.Start();
                 _ = FloodAsync(hostWriter.GetStream(), cancellationToken);
                 _ = DrainAsync(tunnelReader.GetStream(), bytes => Interlocked.Add(ref streamBytes, bytes),
                     cancellationToken);
@@ -346,7 +346,7 @@ public class TrafficMeterTest : TestBase
 
 
     [TestMethod]
-    public async Task ProxyChannel_max_upload()
+    public async Task StreamForwardingChannel_max_upload()
     {
         // Note: in tests the IsProxyMode is always true
 
@@ -370,7 +370,7 @@ public class TrafficMeterTest : TestBase
     }
 
     [TestMethod]
-    public async Task ProxyChannel_max_download()
+    public async Task StreamForwardingChannel_max_download()
     {
         // Note: in tests the IsProxyMode is always true
 

@@ -91,3 +91,9 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
 22. A Debug build's name must stand out.
 23. An updater runs apart from what it updates, as a standalone script: an app that fails to run
     must still get the release that fixes it.
+24. The app UI, AppLib and Core need no compatibility between them while nobody else uses them: they
+    are published and changed together. A renamed member just changes, with its JSON: the app's API,
+    `status --json`, and the files and calls between the app and its VPN service. Two things must
+    keep working across versions. A settings file must still load: a renamed setting is migrated as
+    its file loads, through the `Storage`, since tvOS keeps the app's files in its defaults. And the
+    client and the server must still understand each other; for the access manager, see rule 19.

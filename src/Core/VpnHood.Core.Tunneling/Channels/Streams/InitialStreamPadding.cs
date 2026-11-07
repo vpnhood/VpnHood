@@ -4,7 +4,7 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
-// Only a negotiated TCP proxy stream owns this state. No buffer is kept for its lifetime, and a new logical
+// Only a negotiated TCP forwarding stream owns this state. No buffer is kept for its lifetime, and a new logical
 // stream gets a fresh budget even when its underlying TLS connection is reused.
 internal sealed class InitialStreamPadding
 {

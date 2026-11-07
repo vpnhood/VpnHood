@@ -24,8 +24,8 @@ public class ClientTransportOptions
     // Per-platform transport buffer sizes. Low-memory clients (e.g. the iOS Network Extension
     // under the ~50 MB jetsam limit) lower these. The three below are the client's alone, so they
     // carry their own default rather than deferring to a shared constant.
-    public TransferBufferSize StreamProxyBufferSize { get; set; } = new(0xFFFF / 8, 0xFFFF / 8); // 8KB/8KB
-    public TransferBufferSize UdpProxyBufferSize { get; set; } = new(1024 * 1024, 1024 * 1024);
+    public TransferBufferSize StreamForwardingBufferSize { get; set; } = new(0xFFFF / 8, 0xFFFF / 8); // 8KB/8KB
+    public TransferBufferSize UdpForwardingBufferSize { get; set; } = new(1024 * 1024, 1024 * 1024);
 
     // Kernel buffer of the UDP socket carrying the udp channel to the server.
     public TransferBufferSize UdpChannelBufferSize { get; set; } = new(1024 * 1024, 1024 * 1024);
@@ -51,11 +51,11 @@ public class ClientTransportOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? TcpPacketChannelKernelBufferSize { get; set; }
 
-    // Per-platform UDP proxy scaling. Low-memory clients cap the direct-UDP socket fleet and the
-    // per-proxy packet queue so a post-kill reconnect flow-storm stays bounded.
+    // Per-platform UDP forwarder scaling. Low-memory clients cap the direct-UDP socket fleet and the
+    // per-forwarder packet queue so a post-kill reconnect flow-storm stays bounded.
     public int MaxUdpClientCount { get; set; } = TransportDefaults.MaxUdpClientCount;
     public int MaxUdpDnsClientCount { get; set; } = TransportDefaults.MaxUdpDnsClientCount;
-    public int UdpProxyQueueCapacity { get; set; } = TransportDefaults.ProxyPacketQueueCapacity;
+    public int UdpForwardingQueueCapacity { get; set; } = TransportDefaults.PacketForwardingQueueCapacity;
 
     /// <summary>
     /// The ordinary transport: every knob left null so each core component applies its own default.
@@ -77,16 +77,16 @@ public class ClientTransportOptions
         // extension via vpn.config. Desktop keeps the 256 KB default. 64 KB holds ~45 MTU packets
         // with negligible throughput impact below ~200 Mbps.
         PacketChannelBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
-        UdpProxyBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
+        UdpForwardingBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
         // A post-kill reconnect opens one direct UdpClient per excluded UDP flow (exclude-country
         // sends carrier DNS + in-country UDP outside the tunnel): the 2026-07-17 capture died in
-        // ~20 s at 222 proxies × 200-packet queues, all managed memory. The desktop-scale defaults
-        // (100 × 200) never engage before jetsam; bound the fleet and the per-proxy queue instead.
+        // ~20 s at 222 forwarders × 200-packet queues, all managed memory. The desktop-scale defaults
+        // (100 × 200) never engage before jetsam; bound the fleet and the per-forwarder queue instead.
         MaxUdpClientCount = 50,
         // DNS workers are segregated, tiny (4 KB) and recycle every UdpDnsTimeout (10 s), so this
         // bounds a DNS storm without letting it starve the general pool above.
         MaxUdpDnsClientCount = 100,
-        UdpProxyQueueCapacity = 16,
+        UdpForwardingQueueCapacity = 16,
         // Two, not the normal maximum: each channel is a TLS connection held for the session's life,
         // and the extension pays for all of them inside the ~52 MB cap. Two is where the measured
         // curve flattens — download rides a single channel regardless (the server picks by source
@@ -94,10 +94,10 @@ public class ClientTransportOptions
         // and the 2026-08-30 device runs reached the link ceiling on upload with the tunnel sockets
         // left to autotune. Judge any increase against ext-mem.log, not throughput alone.
         MaxPacketChannelCount = 2,
-        // UPLOAD/DOWNLOAD SPEED: the proxy copy pump is a serial read→write→flush loop, so per-flow
-        // throughput ≈ StreamProxyBufferSize / RTT. 2 KB capped it at ~2 Mbps. 32 KB lifts that ~16×.
+        // UPLOAD/DOWNLOAD SPEED: the forwarding copy pump is a serial read→write→flush loop, so per-flow
+        // throughput ≈ StreamForwardingBufferSize / RTT. 2 KB capped it at ~2 Mbps. 32 KB lifts that ~16×.
         // (Memory is per-ACTIVE-flow: 2 buffers × 32 KB; the many-idle-flows case is bounded separately.)
-        StreamProxyBufferSize = new TransferBufferSize(32 * 1024, 32 * 1024),
+        StreamForwardingBufferSize = new TransferBufferSize(32 * 1024, 32 * 1024),
         // Kernel buffer for EVERY managed TCP socket the client opens — the transport connections
         // to the server AND the per-flow direct sockets of split/exclude ("passthru") flows. The
         // passthru sockets are the sizing constraint: unlike tunneled flows (QUIC streams bounded

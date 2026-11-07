@@ -31,7 +31,7 @@ public class WebSocketPaddingIntegrationTest : TestBase
     [DoNotParallelize] // Observe exact reuse counts without unrelated traffic through the test VPN.
     [DataRow(false)]
     [DataRow(true)]
-    public async Task Proxy_transfers_and_reuse_work_with_padding_off_and_on(bool enabled)
+    public async Task Forwarding_transfers_and_reuse_work_with_padding_off_and_on(bool enabled)
     {
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.SessionOptions.StartPadding = enabled;
@@ -60,7 +60,7 @@ public class WebSocketPaddingIntegrationTest : TestBase
     [DoNotParallelize] // Unrelated VPN traffic could take the connection whose reuse this test observes.
     [DataRow(false)]
     [DataRow(true)]
-    public async Task Real_client_hello_controls_proxy_masking_and_emitted_padding(bool enabled)
+    public async Task Real_client_hello_controls_forwarding_masking_and_emitted_padding(bool enabled)
     {
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.SessionOptions.StartPadding = enabled;
@@ -73,7 +73,7 @@ public class WebSocketPaddingIntegrationTest : TestBase
 
         // The real hello must configure the sender; enabling its padding here would hide a broken hand-off.
         for (var i = 0; i < 3; i++) {
-            await AssertProxyMaskingAndPadding(session, enabled, i, TestCt);
+            await AssertForwardingMaskingAndPadding(session, enabled, i, TestCt);
 
             await AssertEqualsWait(i == 0 ? 1 : 0,
                 () => client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
@@ -97,10 +97,10 @@ public class WebSocketPaddingIntegrationTest : TestBase
         await TestHelper.Test_Https();
     }
 
-    private async Task AssertProxyMaskingAndPadding(ClientSession session, bool enabled, int streamIndex,
+    private async Task AssertForwardingMaskingAndPadding(ClientSession session, bool enabled, int streamIndex,
         CancellationToken cancellationToken)
     {
-        var request = new StreamProxyChannelRequest {
+        var request = new TcpForwardingChannelRequest {
             RequestId = UniqueIdFactory.Create(),
             SessionId = session.Config.SessionId,
             SessionKey = session.Config.SessionKey,
@@ -108,10 +108,10 @@ public class WebSocketPaddingIntegrationTest : TestBase
         };
         await using var result = await session.SendRequest<SessionResponse>(request, cancellationToken);
         var stream = result.StreamConnection.Stream as WebSocketStream ??
-                     throw new InvalidOperationException("Expected a WebSocket proxy stream.");
+                     throw new InvalidOperationException("Expected a WebSocket forwarding stream.");
         Assert.AreEqual(streamIndex == 1 ? 1 : 0, stream.ReusedCount);
-        Assert.AreEqual(enabled, stream.UsesStandardMasking, $"Masking offer on proxy stream {streamIndex}.");
-        Assert.AreEqual(enabled, stream.HasWrittenInitialPadding, $"Client padding on proxy stream {streamIndex}.");
+        Assert.AreEqual(enabled, stream.UsesStandardMasking, $"Masking offer on forwarding stream {streamIndex}.");
+        Assert.AreEqual(enabled, stream.HasWrittenInitialPadding, $"Client padding on forwarding stream {streamIndex}.");
 
         // A zero-byte upload produces a checksum without relying on a cover timer.
         await stream.WriteAsync(new byte[4], cancellationToken);

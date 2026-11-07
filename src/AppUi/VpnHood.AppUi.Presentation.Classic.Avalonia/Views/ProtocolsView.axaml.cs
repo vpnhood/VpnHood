@@ -21,8 +21,8 @@ public partial class ProtocolsView : UserControl, IPage
         InitializeComponent();
         var s = Strings.Current;
 
-        CloakItem.Title = s.CloakMode;
-        CloakItem.Description = s.CloakModeShortDesc;
+        TcpForwardingItem.Title = s.CloakMode;
+        TcpForwardingItem.Description = s.CloakModeShortDesc;
         DropQuicItem.Title = s.ProtocolBlockQuic;
         DropQuicItem.Description = s.ProtocolBlockQuicDesc;
         DropUdpItem.Title = s.ProtocolBlockUdp;
@@ -51,21 +51,15 @@ public partial class ProtocolsView : UserControl, IPage
     {
         var state = VhApp.State;
         var settings = VhApp.UserSettings;
-        var reason = state.TcpProxyUsageReason;
+        var reason = state.TcpForwardingLockReason;
 
-        // the setting, or what the server or Split Domains force; never the session's status, which a save does not
-        // wait for: read back at once, the switch would jump to the old value and stay there
-        CloakItem.IsOn = reason switch {
-            TcpProxyUsageReason.ServerRequiredOn or TcpProxyUsageReason.SplitDomainRequiredOn => true,
-            TcpProxyUsageReason.ServerRequiredOff => false,
-            _ => settings.UseTcpProxy
-        };
-        CloakItem.IsDisabled = reason != TcpProxyUsageReason.None;
-        ServerEnforcedAlert.IsVisible = reason is TcpProxyUsageReason.ServerRequiredOff or TcpProxyUsageReason.ServerRequiredOn;
-        DomainEnforcedAlert.IsVisible = reason == TcpProxyUsageReason.SplitDomainRequiredOn;
-        QuicPanel.IsVisible = CloakItem.IsOn;
+        TcpForwardingItem.IsOn = VhApp.IsTcpForwardingSwitchOn(state);
+        TcpForwardingItem.IsDisabled = reason != TcpForwardingLockReason.None;
+        ServerEnforcedAlert.IsVisible = reason is TcpForwardingLockReason.ServerRequiredOff or TcpForwardingLockReason.ServerRequiredOn;
+        DomainEnforcedAlert.IsVisible = reason == TcpForwardingLockReason.SplitDomainRequiredOn;
+        QuicPanel.IsVisible = TcpForwardingItem.IsOn;
 
-        // a server that does not carry UDP or QUIC enforces its block; else the setting, as for the cloak
+        // a server that does not carry UDP or QUIC enforces its block; else the setting, as for TCP forwarding
         var isUdpPacketSupported = state.SessionInfo?.IsUdpPacketSupported ?? true;
         var isUdpBlocked = !isUdpPacketSupported || settings.DropUdp;
         DropUdpItem.IsOn = isUdpBlocked;
@@ -94,8 +88,8 @@ public partial class ProtocolsView : UserControl, IPage
 
     public void FocusDefault()
     {
-        if (!CloakItem.IsDisabled) {
-            CloakItem.FindFirstButton()?.LandFocus();
+        if (!TcpForwardingItem.IsDisabled) {
+            TcpForwardingItem.FindFirstButton()?.LandFocus();
             return;
         }
 
@@ -118,15 +112,15 @@ public partial class ProtocolsView : UserControl, IPage
         }
     }
 
-    // the first time the cloak is turned on, its page explains it
-    private async void OnCloakToggled(object? sender, EventArgs e)
+    // the first time TCP forwarding is turned on, its page explains it
+    private async void OnTcpForwardingToggled(object? sender, EventArgs e)
     {
         try {
             var settings = VhApp.UserSettings;
-            if (!settings.IsTcpProxyPrompted)
+            if (!settings.IsTcpForwardingPrompted)
                 _host.Navigate(FeaturePages.CloakMode(_host, isPrompt: true));
 
-            settings.UseTcpProxy = CloakItem.IsOn;
+            settings.UseTcpForwarding = TcpForwardingItem.IsOn;
             await VhApp.SaveUserSettings(settings, CancellationToken.None);
             Show();
             _host.ViewModel.Refresh();

@@ -7,7 +7,7 @@ using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Exceptions;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 
 namespace VpnHood.Core.Client;
 
@@ -16,7 +16,7 @@ internal class ClientPacketHandler(
     IClientTcpHost clientTcpHost,
     DomainFilteringService domainFilteringService,
     NetFilter netFilter,
-    ProxyManager proxyManager,
+    ForwardingManager forwardingManager,
     IReadOnlyList<IPAddress> dnsServers,
     bool isIpV6SupportedByServer,
     SplitDnsMode splitDnsMode,
@@ -25,8 +25,8 @@ internal class ClientPacketHandler(
     public bool IsSecureDnsDetected { get; private set; }
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }
-    public bool UseTcpProxyIpV4 { get; set; }
-    public bool UseTcpProxyIpV6 { get; set; }
+    public bool UseTcpForwardingIpV4 { get; set; }
+    public bool UseTcpForwardingIpV6 { get; set; }
     public bool IsIpV6SupportedByClient { get; set; }
     public bool IsIpV6SupportedByServer => isIpV6SupportedByServer;
 
@@ -90,7 +90,7 @@ internal class ClientPacketHandler(
         if (ShouldForceDnsToTunnel(destinationEndPoint))
             filterAction = FilterAction.Include;
 
-        // force by ICMP echo request. The local proxy can not handle ICMP, so echo requests are forced
+        // force by ICMP echo request. The forwarding manager can not handle ICMP, so echo requests are forced
         // through the tunnel even when a gate excluded them.
         if (ipPacket.IsIcmpEcho())
             filterAction = FilterAction.Include;
@@ -107,13 +107,13 @@ internal class ClientPacketHandler(
 
     private void ProcessOutgoingPacketInclude(IpPacket ipPacket)
     {
-        // Tcp, by the version's own proxy choice; a branch per version, so no packet pays a check more
+        // Tcp, by the version's own forwarding choice; a branch per version, so no packet pays a check more
         if (ipPacket.IsV6()) {
             if (!IsIpV6SupportedByServer)
                 throw new PacketDropException("A protected IPv6 packet is dropped because server can not handle it.");
 
             if (ipPacket.Protocol == IpProtocol.Tcp) {
-                if (UseTcpProxyIpV6)
+                if (UseTcpForwardingIpV6)
                     clientTcpHost.ProcessOutgoingPacket(ipPacket);
                 else
                     tunnel.SendPacketQueued(ipPacket);
@@ -122,7 +122,7 @@ internal class ClientPacketHandler(
             }
         }
         else if (ipPacket.Protocol == IpProtocol.Tcp) {
-            if (UseTcpProxyIpV4)
+            if (UseTcpForwardingIpV4)
                 clientTcpHost.ProcessOutgoingPacket(ipPacket);
             else
                 tunnel.SendPacketQueued(ipPacket);
@@ -168,13 +168,13 @@ internal class ClientPacketHandler(
 
         // Udp
         if (ipPacket.Protocol == IpProtocol.Udp) {
-            proxyManager.SendPacketQueued(ipPacket);
+            forwardingManager.SendPacketQueued(ipPacket);
             return;
         }
 
-        // Icmp is not supported by the local proxy for split tunneling
+        // Icmp is not supported by the forwarding manager for split tunneling
         if (ipPacket.IsIcmpEcho())
-            throw new PacketDropException("An ICMP echo request packet is dropped because it can not be handled by the local proxy.");
+            throw new PacketDropException("An ICMP echo request packet is dropped because it can not be handled by the forwarding manager.");
 
         throw new PacketDropException("Packet has been dropped because no one handle it.");
     }

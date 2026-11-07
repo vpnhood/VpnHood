@@ -458,7 +458,7 @@ public class VpnServiceManager : IDisposable
         var reconfigureParams = new ClientReconfigureParams {
             DropQuic = clientOptions.DropQuic,
             DropUdp = clientOptions.DropUdp,
-            UseTcpProxy = clientOptions.UseTcpProxy,
+            UseTcpForwarding = clientOptions.UseTcpForwarding,
             AllowAnonymousTracker = clientOptions.AllowAnonymousTracker,
             ChannelProtocol = clientOptions.ChannelProtocol,
             UnroutedIpMode = clientOptions.UnroutedIpMode,

@@ -278,7 +278,7 @@ internal sealed class LocalTcpConnection(
 
         // A direct Dispose from the stack (its Dispose, or a connection it could not add or start) does not go through
         // Close, so it unblocks the app side itself: the pipe completed above, the not-yet-accepted client disposed, and a
-        // SendAppDataAsync waiting on the window signal released. Without this the proxy copy loop hangs and the connection
+        // SendAppDataAsync waiting on the window signal released. Without this the forwarding copy loop hangs and the connection
         // and its pipe leak.
         abandoned?.Dispose();
         _appToNetCompleted = true;
@@ -701,7 +701,7 @@ internal sealed class LocalTcpConnection(
 
     /// <summary>True once the app→net direction can no longer accept writes (FIN sent, closed, or
     /// disposed). Surfaces connection liveness to <see cref="LocalTcpStream.CanWrite"/> so consumers'
-    /// health checks (e.g. ProxyChannel.CheckAlive) see a dead write path.</summary>
+    /// health checks (e.g. StreamForwardingChannel.CheckAlive) see a dead write path.</summary>
     internal bool IsWriteClosed => _appToNetCompleted || IsClosed;
 
     /// <summary>Lock-free hint for the stack's maintenance sweep (dirty read is fine; the next sweep

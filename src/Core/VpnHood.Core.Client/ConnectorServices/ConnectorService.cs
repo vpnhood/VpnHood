@@ -338,7 +338,7 @@ internal class ConnectorService : IAsyncDisposable
                     ConnectGate.CurrentCount, streamId);
 
             // before the connection is made, so one a network change overtakes is retired with the old ones. Packet
-            // channels have transport-specific socket sizing and must never return to the generic proxy/control pool;
+            // channels have transport-specific socket sizing and must never return to the generic forwarding/control pool;
             // this also keeps a finite channel lifespan meaningful
             var reuseCallback = AllowChannelReuse && !isTcpPacketChannel ? CreateReuseCallback() : null;
 

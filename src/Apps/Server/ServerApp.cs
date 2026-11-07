@@ -450,7 +450,7 @@ public class ServerApp : IDisposable
         }
     }
 
-    // Proxy only where there is no adapter to have: neither Linux nor Windows, a Linux without a TUN
+    // Forwarding only where there is no adapter to have: neither Linux nor Windows, a Linux without a TUN
     // device, or a failure, such as a host without IPv6, whose probe the constructor runs, or a Windows
     // without WinNAT. A stop is passed on, not taken for a failure.
     private static async Task<IVpnAdapter?> CreateTunProvider(IpNetwork virtualIpNetworkV4,
@@ -482,7 +482,7 @@ public class ServerApp : IDisposable
             throw;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Failed to create the VpnAdapter. Using proxy only.");
+            VhLogger.Instance.LogError(ex, "Failed to create the VpnAdapter. Apps will use TCP forwarding.");
             return null;
         }
     }
@@ -492,10 +492,10 @@ public class ServerApp : IDisposable
     private static IVpnAdapter? CreateVpnAdapter()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-            // A container has no TUN device unless it is given one, so the Docker server is a proxy:
+            // A container has no TUN device unless it is given one, so the Docker server forwards everything itself:
             // said once, as what it is, rather than as the adapter's failure to find an interface.
             if (!File.Exists(LinuxTunDevicePath)) {
-                VhLogger.Instance.LogWarning("There is no TUN device ({TunDevicePath}), so the server runs as a proxy only.",
+                VhLogger.Instance.LogWarning("There is no TUN device ({TunDevicePath}), so apps will use TCP forwarding.",
                     LinuxTunDevicePath);
                 return null;
             }

@@ -15,7 +15,7 @@ public class SessionInfo
     public required bool IsQuicChannelSupported { get; init; }
     public required bool IsTcpPacketIpV4Supported { get; init; }
     public required bool IsTcpPacketIpV6Supported { get; init; }
-    public required bool IsTcpProxySupported { get; init; }
+    public required bool IsTcpForwardingSupported { get; init; }
 
     // The users' QUIC and UDP, which the client drops when the server does not carry them, whatever the user's own
     // drops say; DNS passes either way. The channels above are the server's own.

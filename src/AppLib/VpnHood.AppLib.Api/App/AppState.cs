@@ -46,7 +46,7 @@ public class AppState
     public required ChannelProtocol ChannelProtocol { get; init; }
     public required bool IsProxyEndPointActive { get; init; }
     public required bool PromotionExists { get; init; }
-    public required TcpProxyUsageReason TcpProxyUsageReason { get; init; }
+    public required TcpForwardingLockReason TcpForwardingLockReason { get; init; }
     public required SplitTunnelingState SplitTunnelingState { get; init; }
 
     // null where the app does not keep always on itself (AppDescriptor.AlwaysOnSupport)

@@ -5,7 +5,7 @@ public enum RequestCode : byte
 {
     Hello = 1,
     TcpPacketChannel = 2,
-    ProxyChannel = 3,
+    TcpForwardingChannel = 3,
     SessionStatus = 4,
     UdpPacket = 5,
     RewardedAd = 10,

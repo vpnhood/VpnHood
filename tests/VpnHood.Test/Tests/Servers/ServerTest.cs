@@ -48,7 +48,7 @@ public class ServerTest : TestBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.SessionOptions.AllowTcpPacket = false;
-        accessManager.ServerConfig.SessionOptions.AllowTcpProxy = false;
+        accessManager.ServerConfig.SessionOptions.AllowTcpForwarding = false;
 
         // autoStart: false, as the server never becomes ready
         await using var server = await TestHelper.CreateServer(accessManager, autoStart: false);
@@ -417,8 +417,8 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.Timeout = TimeSpan.FromSeconds(2073);
         serverConfig.SessionOptions.MaxPacketChannelCount = 2074;
         serverConfig.SessionOptions.SyncCacheSize = 2075;
-        serverConfig.SessionOptions.StreamProxyBufferSize = new TransferBufferSize(2076, 2077);
-        serverConfig.SessionOptions.UdpProxyBufferSize = new TransferBufferSize(4001, 4002);
+        serverConfig.SessionOptions.StreamForwardingBufferSize = new TransferBufferSize(2076, 2077);
+        serverConfig.SessionOptions.UdpForwardingBufferSize = new TransferBufferSize(4001, 4002);
         serverConfig.SessionOptions.UdpChannelBufferSize = new TransferBufferSize(5001, 5002);
         serverConfig.ServerSecret = VhUtils.GenerateKey();
 
@@ -447,10 +447,10 @@ public class ServerTest : TestBase
         Assert.AreEqual(serverConfig.SessionOptions.MaxPacketChannelCount,
             server.SessionManager.SessionOptions.MaxPacketChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
-        Assert.AreEqual(serverConfig.SessionOptions.StreamProxyBufferSize,
-            server.SessionManager.SessionOptions.StreamProxyBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpProxyBufferSize,
-            server.SessionManager.SessionOptions.UdpProxyBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.StreamForwardingBufferSize,
+            server.SessionManager.SessionOptions.StreamForwardingBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpForwardingBufferSize,
+            server.SessionManager.SessionOptions.UdpForwardingBufferSize);
         Assert.AreEqual(serverConfig.SessionOptions.UdpChannelBufferSize,
             server.SessionManager.SessionOptions.UdpChannelBufferSize);
         Assert.IsFalse(accessManager.LastServerInfo?.IsRestarted);
@@ -771,7 +771,7 @@ public class ServerTest : TestBase
                 NetScanTimeout = TimeSpan.FromMinutes(51),
                 SyncCacheSize = 19,
                 SyncInterval = TimeSpan.FromMinutes(52),
-                StreamProxyBufferSize = new TransferBufferSize(9000, 90001),
+                StreamForwardingBufferSize = new TransferBufferSize(9000, 90001),
                 TcpConnectTimeout = TimeSpan.FromMinutes(53),
                 TcpTimeout = TimeSpan.FromMinutes(54),
                 Timeout = TimeSpan.FromMinutes(55),

@@ -21,7 +21,7 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Core.Common.Configuration;
@@ -35,7 +35,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly Tunnel _tunnel;
     private readonly TrafficMeter _trafficMeter;
     private readonly ClientUsageTracker? _clientUsageTracker;
-    private readonly ProxyManager _proxyManager;
+    private readonly ForwardingManager _forwardingManager;
     private readonly ClientPacketHandler _packetHandler;
     private readonly IClientTcpHost _clientTcpHost;
     private readonly RequestSender _requestSender;
@@ -56,7 +56,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private bool _disposed;
     private ChannelProtocol _channelProtocol;
     private ChannelProtocol _oldChannelProtocol;
-    private bool _useTcpProxy;
+    private bool _useTcpForwarding;
     private bool _dropQuic;
     private bool _dropUdp;
     private DateTime? _lastConnectionErrorTime;
@@ -87,7 +87,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _requestSender = options.RequestSender;
         _channelProtocol = options.ChannelProtocol;
         _oldChannelProtocol = options.ChannelProtocol;
-        _useTcpProxy = options.UseTcpProxy;
+        _useTcpForwarding = options.UseTcpForwarding;
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
         _domainFilteringService = options.DomainFilteringService;
@@ -129,19 +129,19 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // delegator
-        _proxyManager = new ProxyManager(options.SocketFactory, new ProxyManagerOptions {
+        _forwardingManager = new ForwardingManager(options.SocketFactory, new ForwardingManagerOptions {
             IsPingSupported = false,
-            PacketProxyCallbacks = null,
+            PacketForwarderCallbacks = null,
             UdpTimeout = TransportDefaults.UdpTimeout,
             MaxUdpClientCount = Config.Transport.MaxUdpClientCount,
             MaxUdpDnsClientCount = Config.Transport.MaxUdpDnsClientCount,
             MaxPingClientCount = TransportDefaults.MaxPingClientCount,
-            PacketQueueCapacity = Config.Transport.UdpProxyQueueCapacity,
+            PacketQueueCapacity = Config.Transport.UdpForwardingQueueCapacity,
             IcmpTimeout = TransportDefaults.IcmpTimeout,
-            UdpBufferSize = Config.Transport.UdpProxyBufferSize,
+            UdpBufferSize = Config.Transport.UdpForwardingBufferSize,
             LogScope = null
         });
-        _proxyManager.PacketReceived += Proxy_PacketReceived;
+        _forwardingManager.PacketReceived += Forwarder_PacketReceived;
 
         // Stream handler
         var streamHandler = new ClientStreamHandler(
@@ -153,12 +153,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             tunnel: _tunnel,
             trafficMeter: _trafficMeter,
             tcpConnectTimeout: Config.Transport.TcpConnectTimeout,
-            proxyManager: _proxyManager,
+            forwardingManager: _forwardingManager,
             netFilter: _netFilter,
-            streamProxyBufferSize: Config.Transport.StreamProxyBufferSize,
+            streamForwardingBufferSize: Config.Transport.StreamForwardingBufferSize,
             passthroughState: PassthroughState);
 
-        // proxy host
+        // ends the device's TCP connections, for TCP forwarding and for traffic excluded from the VPN
         _clientTcpHost = new ClientTcpHost(streamHandler);
         _clientTcpHost.PacketReceived += ClientTcpHostPacketReceived;
 
@@ -168,7 +168,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             clientTcpHost: _clientTcpHost,
             domainFilteringService: options.DomainFilteringService,
             netFilter: _netFilter,
-            proxyManager: _proxyManager,
+            forwardingManager: _forwardingManager,
             dnsServers: Config.DnsConfig.DnsServers,
             isIpV6SupportedByServer: Config.IsIpV6SupportedByServer,
             splitDnsMode: options.SplitDnsMode,
@@ -180,7 +180,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             trafficMeter: _trafficMeter,
             domainFilteringService: options.DomainFilteringService,
             requestSender: _requestSender,
-            proxyManager: _proxyManager,
+            forwardingManager: _forwardingManager,
             streamHandler: streamHandler,
             packetHandler: _packetHandler,
             accessUsage: options.AccessUsage);
@@ -313,11 +313,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         }
     }
 
-    public bool UseTcpProxy {
-        get => _useTcpProxy;
+    public bool UseTcpForwarding {
+        get => _useTcpForwarding;
         set {
-            if (_useTcpProxy == value) return;
-            _useTcpProxy = value;
+            if (_useTcpForwarding == value) return;
+            _useTcpForwarding = value;
             UpdateConfig();
         }
     }
@@ -331,38 +331,38 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         }
     }
 
-    private bool CalcUseTcpProxy(bool isTcpPacketSupported)
+    private bool CalcUseTcpForwarding(bool isTcpPacketSupported)
     {
-        // server does not support tcp proxy
+        // server does not support TCP forwarding
         // ReSharper disable once ConvertIfStatementToReturnStatement
-        if (Info is { IsTcpProxySupported: false })
+        if (Info is { IsTcpForwardingSupported: false })
             return false;
 
-        // server does not support tcp packets so only tcp proxy can work
+        // server does not support tcp packets so only TCP forwarding can work
         if (!isTcpPacketSupported)
             return true;
 
-        // DomainFilter needs TcpProxy
+        // DomainFilter needs TcpForwarding
         if (_domainFilteringService.IsEnabled)
             return true;
 
         // follow config
-        return _useTcpProxy;
+        return _useTcpForwarding;
     }
 
     private void UpdateConfig()
     {
-        // UseTcp, by IP version: a server may carry IPv6 TCP only by the proxy
-        var useTcpProxyIpV4 = CalcUseTcpProxy(Info.IsTcpPacketIpV4Supported);
-        var useTcpProxyIpV6 = CalcUseTcpProxy(Info.IsTcpPacketIpV6Supported);
+        // UseTcp, by IP version: a server may carry IPv6 TCP only by forwarding
+        var useTcpForwardingIpV4 = CalcUseTcpForwarding(Info.IsTcpPacketIpV4Supported);
+        var useTcpForwardingIpV6 = CalcUseTcpForwarding(Info.IsTcpPacketIpV6Supported);
 
-        // DropQuic is useful only if we use tcp proxy; a server that does not carry QUIC turns it on whatever the
+        // DropQuic is useful only if we use TCP forwarding; a server that does not carry QUIC turns it on whatever the
         // user's setting
-        var dropQuic = (_dropQuic || !Info.IsQuicPacketSupported) && useTcpProxyIpV4;
+        var dropQuic = (_dropQuic || !Info.IsQuicPacketSupported) && useTcpForwardingIpV4;
 
-        // DropUdp is useful only if we use tcp proxy; a server that does not carry UDP turns it on whatever the
+        // DropUdp is useful only if we use TCP forwarding; a server that does not carry UDP turns it on whatever the
         // user's setting
-        var dropUdp = (_dropUdp || !Info.IsUdpPacketSupported) && useTcpProxyIpV4;
+        var dropUdp = (_dropUdp || !Info.IsUdpPacketSupported) && useTcpForwardingIpV4;
 
         // ChannelProtocol: UDP takes every packet at once, and a turn to TCP stops it before its first TCP channel
         _channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, Info);
@@ -377,18 +377,18 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             Task.Run(() => ManagePacketChannels(waitForLock: false, _cancellationTokenSource.Token));
         }
 
-        if (useTcpProxyIpV4 != _useTcpProxy)
-            VhLogger.Instance.LogWarning("UseTcpProxy is changed to {UseTcpProxy} because of config or capability change.", useTcpProxyIpV4);
+        if (useTcpForwardingIpV4 != _useTcpForwarding)
+            VhLogger.Instance.LogWarning("UseTcpForwarding is changed to {UseTcpForwarding} because of config or capability change.", useTcpForwardingIpV4);
 
         if (_dropQuic && !dropQuic)
-            VhLogger.Instance.LogWarning("DropQuic is changed to {DropQuic} because client can not use TcpProxy.", dropQuic);
+            VhLogger.Instance.LogWarning("DropQuic is changed to {DropQuic} because client can not use TcpForwarding.", dropQuic);
 
         if (_dropUdp && !dropUdp)
-            VhLogger.Instance.LogWarning("DropUdp is changed to {DropUdp} because client can not use TcpProxy.", dropUdp);
+            VhLogger.Instance.LogWarning("DropUdp is changed to {DropUdp} because client can not use TcpForwarding.", dropUdp);
 
         // update handlers
-        _packetHandler.UseTcpProxyIpV4 = useTcpProxyIpV4;
-        _packetHandler.UseTcpProxyIpV6 = useTcpProxyIpV6;
+        _packetHandler.UseTcpForwardingIpV4 = useTcpForwardingIpV4;
+        _packetHandler.UseTcpForwardingIpV6 = useTcpForwardingIpV6;
         _packetHandler.DropQuic = dropQuic;
         _packetHandler.DropUdp = dropUdp;
         _dropQuic = dropQuic;
@@ -397,7 +397,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // update ipv6 support
         var isIpV6Supported = _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6);
         _packetHandler.IsIpV6SupportedByClient = isIpV6Supported;
-        _proxyManager.IsIpV6Supported = isIpV6Supported;
+        _forwardingManager.IsIpV6Supported = isIpV6Supported;
     }
 
     private void VpnAdapter_PrimaryAdapterIpChanged(object? sender, EventArgs e)
@@ -412,7 +412,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     // The host moved to other networks: the tunnel's connections from the old ones are dead, yet an OS may keep
     // them open until the channel idle timeout (Linux does), so they go now and new ones open from the new
-    // network; the apps' proxied TCP connections go with theirs
+    // network; the apps' forwarded TCP connections go with theirs
     private void VpnAdapter_PrimaryNetworkChanged(object? sender, EventArgs e)
     {
         if (IsClosing)
@@ -470,7 +470,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private void ClientTcpHostPacketReceived(object? sender, IpPacket ipPacket) =>
         ProcessIncomingPacket(ipPacket, true);
 
-    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket) =>
+    private void Forwarder_PacketReceived(object? sender, IpPacket ipPacket) =>
         ProcessIncomingPacket(ipPacket, true);
 
     private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket) =>
@@ -666,7 +666,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public void DropCurrentConnections()
     {
         _clientTcpHost.DropCurrentConnections();
-        _tunnel.RemoveChannels<IProxyChannel>();
+        _tunnel.RemoveChannels<IStreamForwardingChannel>();
     }
 
     public async Task UpdateStatus(CancellationToken cancellationToken)
@@ -789,7 +789,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _vpnAdapter.Failed -= VpnAdapter_Failed;
         _tunnel.PacketReceived -= Tunnel_PacketReceived;
         _clientTcpHost.PacketReceived -= ClientTcpHostPacketReceived;
-        _proxyManager.PacketReceived -= Proxy_PacketReceived;
+        _forwardingManager.PacketReceived -= Forwarder_PacketReceived;
         _domainFilteringService.IsEnabledChanged -= DomainFilteringService_IsEnabledChanged;
 
         PassthroughState.PassthroughForAd = false;
@@ -805,8 +805,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _tunnel.Dispose();
         _trafficMeter.Dispose();
 
-        VhLogger.Instance.LogDebug("Disposing ProxyManager...");
-        _proxyManager.Dispose();
+        VhLogger.Instance.LogDebug("Disposing ForwardingManager...");
+        _forwardingManager.Dispose();
 
         _cleanupJob.Dispose();
         _clientUsageTracker?.Dispose();

@@ -11,13 +11,13 @@ namespace VpnHood.Core.Common.Configuration;
 /// </summary>
 public static class ServerTransportDefaults
 {
-    public static TransferBufferSize StreamProxyBufferSize { get; } =
+    public static TransferBufferSize StreamForwardingBufferSize { get; } =
         new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive
 
     public static TransferBufferSize StreamPacketBufferSize { get; } =
         new(0xFFFF / 4, 0xFFFF / 4); // 16KB send, 16KB receive
 
-    public static TransferBufferSize? UdpProxyBufferSize { get; set; }
+    public static TransferBufferSize? UdpForwardingBufferSize { get; set; }
     public static TransferBufferSize? UdpChannelBufferSize { get; set; }
     public static TransferBufferSize? TcpKernelBufferSize { get; set; }
 

@@ -52,14 +52,14 @@ internal sealed class NetProtector(NetProtectorOptions options) : IDisposable
     // false for a packet over its limit
     public bool VerifyPacket(IpPacket ipPacket, IpProtocol protocol, IpEndPointValue destinationEndPoint)
     {
-        // a TCP connection's first packet, SYN without ACK, as the TUN takes it; a request to the TCP proxy is checked
+        // a TCP connection's first packet, SYN without ACK, as the TUN takes it; a request for TCP forwarding is checked
         // where the session takes it. The header is the one the destination was read from
         if (protocol == IpProtocol.Tcp) {
             var tcpPacket = ipPacket.PayloadPacket as TcpPacket ?? ipPacket.ExtractTcp();
             return (tcpPacket.Flags & (TcpSynFlag | TcpAckFlag)) != TcpSynFlag || VerifyTcpConnect(destinationEndPoint);
         }
 
-        // DNS over UDP, whatever sends it, the adapter or the proxy: a flood of it gets the server's address reported
+        // DNS over UDP, whatever sends it, the adapter or the forwarders: a flood of it gets the server's address reported
         if (protocol == IpProtocol.Udp && DnsPorts.IsDnsPort(destinationEndPoint.Port))
             return TryAcquire(_udpDnsLimiter, _udpDnsLimitReporter);
 

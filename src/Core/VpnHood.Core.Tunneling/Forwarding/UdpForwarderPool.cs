@@ -16,22 +16,22 @@ using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Common.Configuration;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
+public class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
 {
-    private readonly IPacketProxyCallbacks? _packetProxyCallbacks;
+    private readonly IPacketForwarderCallbacks? _packetForwarderCallbacks;
     private readonly ISocketFactory _socketFactory;
     private readonly TransferBufferSize? _bufferSize;
-    // the wrapper is what TimeoutDictionary disposes on removal; the proxy is shared across
-    // connections and must only be disposed via _udpProxies
-    private readonly TimeoutDictionary<ConnectionKey, TimeoutItem<(UdpProxy Proxy, TimeoutItem<IPEndPoint> Mapping)>>
+    // the wrapper is what TimeoutDictionary disposes on removal; the forwarder is shared across
+    // connections and must only be disposed via _udpForwarders
+    private readonly TimeoutDictionary<ConnectionKey, TimeoutItem<(UdpForwarder Forwarder, TimeoutItem<IPEndPoint> Mapping)>>
         _connectionMap;
-    private readonly List<UdpProxy> _udpProxies = [];
+    private readonly List<UdpForwarder> _udpForwarders = [];
     // DNS workers are segregated from general UDP workers: DNS is one round trip, so its workers use a
     // small receive buffer and a short mapping life — neither must ever serve (or block) general flows.
-    // Both lists are guarded by lock (_udpProxies)
-    private readonly List<UdpProxy> _dnsProxies = [];
+    // Both lists are guarded by lock (_udpForwarders)
+    private readonly List<UdpForwarder> _dnsForwarders = [];
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly TimeSpan _udpTimeout;
@@ -45,13 +45,13 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
     public int ClientCount {
         get {
-            lock (_udpProxies) return _udpProxies.Count + _dnsProxies.Count;
+            lock (_udpForwarders) return _udpForwarders.Count + _dnsForwarders.Count;
         }
     }
 
-    public UdpProxyPool(UdpProxyPoolOptions options)
+    public UdpForwarderPool(UdpForwarderPoolOptions options)
     {
-        _packetProxyCallbacks = options.PacketProxyCallbacks;
+        _packetForwarderCallbacks = options.PacketForwarderCallbacks;
         _socketFactory = options.SocketFactory;
         _packetQueueCapacity = options.PacketQueueCapacity;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.UdpTimeout);
@@ -61,16 +61,16 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         _maxWorkerEventReporter = new EventReporter("Session has reached to Maximum local UDP ports.",
             GeneralEventId.NetProtect, logScope: options.LogScope);
 
-        _connectionMap = new TimeoutDictionary<ConnectionKey, TimeoutItem<(UdpProxy, TimeoutItem<IPEndPoint>)>>(options.UdpTimeout);
+        _connectionMap = new TimeoutDictionary<ConnectionKey, TimeoutItem<(UdpForwarder, TimeoutItem<IPEndPoint>)>>(options.UdpTimeout);
         _udpTimeout = options.UdpTimeout;
         // short-lived DNS workers must not linger until the general timeout fires
         var cleanupInterval = _dnsTimeout < _udpTimeout ? _dnsTimeout : _udpTimeout;
-        _cleanupUdpWorkersJob = new Job(CleanupUdpWorkers, cleanupInterval, nameof(UdpProxyPool));
+        _cleanupUdpWorkersJob = new Job(CleanupUdpWorkers, cleanupInterval, nameof(UdpForwarderPool));
     }
 
     protected override void SendPacket(IpPacket ipPacket)
     {
-        // send packet via proxy. The key is packed from the packet spans, so the hot path allocates
+        // send packet via forwarder. The key is packed from the packet spans, so the hot path allocates
         // no string, IPAddress or IPEndPoint; endpoints are materialized only for new connections
         var udpPacket = ipPacket.ExtractUdp();
         var connectionKey = ConnectionKey.FromPacket(ipPacket, udpPacket);
@@ -81,24 +81,24 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         // B => D1
         // C => D3
 
-        lock (_udpProxies) {
-            // find the proxy for the connection (source-destination)
-            if (!TryGetConnection(connectionKey, ipPacket, udpPacket, out var udpProxy))
-                udpProxy = CreateConnection(connectionKey, ipPacket, udpPacket);
+        lock (_udpForwarders) {
+            // find the forwarder for the connection (source-destination)
+            if (!TryGetConnection(connectionKey, ipPacket, udpPacket, out var udpForwarder))
+                udpForwarder = CreateConnection(connectionKey, ipPacket, udpPacket);
 
-            udpProxy.SendPacketQueued(ipPacket);
+            udpForwarder.SendPacketQueued(ipPacket);
         }
     }
 
     private bool TryGetConnection(ConnectionKey connectionKey, IpPacket ipPacket, UdpPacket udpPacket,
-        [MaybeNullWhen(false)] out UdpProxy udpProxy)
+        [MaybeNullWhen(false)] out UdpForwarder udpForwarder)
     {
-        udpProxy = null;
+        udpForwarder = null;
         if (!_connectionMap.TryGetValue(connectionKey, out var connection))
             return false;
 
-        var (proxy, mapping) = connection.Value;
-        if (proxy.IsDisposed)
+        var (forwarder, mapping) = connection.Value;
+        if (forwarder.IsDisposed)
             return false;
 
         // keep the reply mapping alive while the connection keeps sending; inbound packets are the only
@@ -110,17 +110,17 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         else {
             var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
             mapping = new TimeoutItem<IPEndPoint>(new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
-            if (!proxy.DestinationEndPointMap.TryAdd(destinationEndPoint, mapping))
+            if (!forwarder.DestinationEndPointMap.TryAdd(destinationEndPoint, mapping))
                 return false; // the destination has been remapped to another source; rebuild the connection
 
-            connection.Value = (proxy, mapping);
+            connection.Value = (forwarder, mapping);
         }
 
-        udpProxy = proxy;
+        udpForwarder = forwarder;
         return true;
     }
 
-    private UdpProxy CreateConnection(ConnectionKey connectionKey, IpPacket ipPacket, UdpPacket udpPacket)
+    private UdpForwarder CreateConnection(ConnectionKey connectionKey, IpPacket ipPacket, UdpPacket udpPacket)
     {
         // per-connection path: endpoints are materialized here only
         var sourceEndPoint = new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort);
@@ -135,77 +135,77 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            _packetProxyCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint.ToValue());
+            _packetForwarderCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint.ToValue());
 
         // DNS workers live in their own list with their own quota, so a DNS burst can neither occupy
         // general workers nor be starved by them, and a general flow can never land on a small-buffer
         // short-lived DNS worker
         var isDns = udpPacket.DestinationPort == 53;
-        var proxies = isDns ? _dnsProxies : _udpProxies;
-        var proxyTimeout = isDns ? _dnsTimeout : _udpTimeout;
+        var forwarders = isDns ? _dnsForwarders : _udpForwarders;
+        var forwarderTimeout = isDns ? _dnsTimeout : _udpTimeout;
 
         // cleanup old workers
-        TimeoutItemUtil.CleanupTimeoutList(proxies, proxyTimeout);
+        TimeoutItemUtil.CleanupTimeoutList(forwarders, forwarderTimeout);
 
         // find a worker that does not map the destinationEndPoint yet
-        UdpProxy? udpProxy = null;
-        foreach (var proxy in proxies) {
-            if (!proxy.IsDisposed && proxy.AddressFamily == addressFamily &&
-                !proxy.DestinationEndPointMap.TryGetValue(destinationEndPoint, out _)) {
-                udpProxy = proxy;
+        UdpForwarder? udpForwarder = null;
+        foreach (var forwarder in forwarders) {
+            if (!forwarder.IsDisposed && forwarder.AddressFamily == addressFamily &&
+                !forwarder.DestinationEndPointMap.TryGetValue(destinationEndPoint, out _)) {
+                udpForwarder = forwarder;
                 break;
             }
         }
 
         // create a new worker if not found
-        if (udpProxy == null) {
+        if (udpForwarder == null) {
             // check WorkerMaxCount; DNS and general workers have independent quotas
             // (MaxDnsClientCount / MaxClientCount), so neither class can starve the other
             var maxCount = isDns ? _maxDnsClientCount : _maxClientCount;
-            if (proxies.Count >= maxCount) {
+            if (forwarders.Count >= maxCount) {
                 _maxWorkerEventReporter.Raise();
-                throw new UdpClientQuotaException(proxies.Count);
+                throw new UdpClientQuotaException(forwarders.Count);
             }
 
             // create a new worker
-            udpProxy = new UdpProxy(CreateUdpSocket(addressFamily), proxyTimeout, _packetQueueCapacity,
+            udpForwarder = new UdpForwarder(CreateUdpSocket(addressFamily), forwarderTimeout, _packetQueueCapacity,
                 isDns ? TransportDefaults.UdpDnsBufferSize : TransportDefaults.MaxUdpDatagramSize);
-            udpProxy.PacketReceived += UdpProxy_OnPacketReceived;
-            proxies.Add(udpProxy);
+            udpForwarder.PacketReceived += UdpForwarder_OnPacketReceived;
+            forwarders.Add(udpForwarder);
             isNewLocalEndPoint = true;
 
             // this line must reach Console.app during live diagnostics
             if (VhLogger.MinLogLevel <= LogLevel.Debug)
                 VhLogger.Instance.LogDebug(
-                    "[VH-UDP] Created UdpProxy. pool={Pool}, workers={WorkerCount}/{MaxWorkers}, footprint={Footprint:F1}MB, " +
+                    "[VH-UDP] Created UdpForwarder. pool={Pool}, workers={WorkerCount}/{MaxWorkers}, footprint={Footprint:F1}MB, " +
                     "dstPort={DstPort}, {SourceEp} => {DestinationEp}",
-                    isDns ? "dns" : "udp", proxies.Count, isDns ? _maxDnsClientCount : _maxClientCount,
+                    isDns ? "dns" : "udp", forwarders.Count, isDns ? _maxDnsClientCount : _maxClientCount,
                     VhMemory.Instance.GetInfo().ProcessFootprintMb ?? -1,
                     destinationEndPoint.Port, VhLogger.Format(sourceEndPoint), VhLogger.Format(destinationEndPoint));
         }
 
-        // Add destinationEndPoint; a UdpProxy can not map a destinationEndPoint to more than one source endpoint.
+        // Add destinationEndPoint; a UdpForwarder can not map a destinationEndPoint to more than one source endpoint.
         // Do not dispose the worker on failure; it is shared with other connections
         var mapping = new TimeoutItem<IPEndPoint>(sourceEndPoint);
-        if (!udpProxy.DestinationEndPointMap.TryAdd(destinationEndPoint, mapping))
+        if (!udpForwarder.DestinationEndPointMap.TryAdd(destinationEndPoint, mapping))
             throw new Exception($"Could not add {destinationEndPoint}.");
 
         // it is just for speed.
         _connectionMap.AddOrUpdate(connectionKey,
-            new TimeoutItem<(UdpProxy, TimeoutItem<IPEndPoint>)>((udpProxy, mapping)));
+            new TimeoutItem<(UdpForwarder, TimeoutItem<IPEndPoint>)>((udpForwarder, mapping)));
 
         // Raise new endpoint
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetProxyCallbacks?.OnConnectionEstablished(IpProtocol.Udp,
-                localEndPoint: udpProxy.LocalEndPoint.ToValue(),
+            _packetForwarderCallbacks?.OnConnectionEstablished(IpProtocol.Udp,
+                localEndPoint: udpForwarder.LocalEndPoint.ToValue(),
                 remoteEndPoint: destinationEndPoint.ToValue(),
                 isNewLocalEndPoint: isNewLocalEndPoint,
                 isNewRemoteEndPoint: isNewRemoteEndPoint);
 
-        return udpProxy;
+        return udpForwarder;
     }
 
-    private void UdpProxy_OnPacketReceived(object? sender, IpPacket ipPacket)
+    private void UdpForwarder_OnPacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }
@@ -221,9 +221,9 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
     private ValueTask CleanupUdpWorkers(CancellationToken cancellationToken)
     {
         // remove useless workers
-        lock (_udpProxies) {
-            TimeoutItemUtil.CleanupTimeoutList(_udpProxies, _udpTimeout);
-            TimeoutItemUtil.CleanupTimeoutList(_dnsProxies, _dnsTimeout);
+        lock (_udpForwarders) {
+            TimeoutItemUtil.CleanupTimeoutList(_udpForwarders, _udpTimeout);
+            TimeoutItemUtil.CleanupTimeoutList(_dnsForwarders, _dnsTimeout);
         }
 
         return default;
@@ -231,9 +231,9 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
     protected override void DisposeManaged()
     {
-        lock (_udpProxies) {
-            VhUtils.DisposeAll(_udpProxies);
-            VhUtils.DisposeAll(_dnsProxies);
+        lock (_udpForwarders) {
+            VhUtils.DisposeAll(_udpForwarders);
+            VhUtils.DisposeAll(_dnsForwarders);
         }
 
         _cleanupUdpWorkersJob.Dispose();

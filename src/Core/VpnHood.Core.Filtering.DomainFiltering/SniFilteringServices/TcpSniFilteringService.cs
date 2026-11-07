@@ -12,7 +12,7 @@ namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 /// SNI extraction service for TCP (TLS on port 443) traffic. It is just useful for blocking
 /// Note: TCP extraction by packet is useless service, because TCP SNI is come after TCP handshake, and it will be too late to exclude connection
 /// evan if we establish our own handshake, we can not simulate the rest
-/// Use TcpStreamSniFilteringService instead as proxy
+/// Use TcpStreamSniFilteringService instead, with TCP forwarding
 /// </summary>
 public class TcpSniFilteringService(
     IDomainFilter domainFilter,

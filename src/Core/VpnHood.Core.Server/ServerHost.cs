@@ -434,8 +434,8 @@ public class ServerHost : IAsyncDisposable
                 await ProcessTcpPacketChannel(streamConnection, cancellationToken).Vhc();
                 break;
 
-            case RequestCode.ProxyChannel:
-                await ProcessStreamProxyChannel(streamConnection, cancellationToken).Vhc();
+            case RequestCode.TcpForwardingChannel:
+                await ProcessTcpForwardingChannel(streamConnection, cancellationToken).Vhc();
                 break;
 
             case RequestCode.UdpPacket:
@@ -570,7 +570,7 @@ public class ServerHost : IAsyncDisposable
         var quicPort = FindMatchingPort(_quicListenerHost.EndPoints, streamConnection, "QUIC");
 
         // A TCP packet has no way out but the adapter's NAT, so each IP version is offered them on its own:
-        // a Windows server's WinNAT translates no IPv6, and there a client sends IPv6 TCP by its TCP proxy.
+        // a Windows server's WinNAT translates no IPv6, and there a client sends IPv6 TCP by TCP forwarding.
         var isTcpPacketIpV4Supported = session.AllowTcpPacket && _sessionManager.IsVpnAdapterSupported(IpVersion.IPv4);
         var isTcpPacketIpV6Supported = session.AllowTcpPacket && _sessionManager.IsVpnAdapterSupported(IpVersion.IPv6);
 
@@ -618,7 +618,7 @@ public class ServerHost : IAsyncDisposable
 #pragma warning disable CS0618
             IsTcpPacketSupported = isTcpPacketIpV4Supported,
 #pragma warning restore CS0618
-            IsTcpProxySupported = session.AllowTcpProxy,
+            IsTcpForwardingSupported = session.AllowTcpForwarding,
             StartPadding = ServerInitialStreamPadding.ShouldAdvertise(session, streamConnection),
             // no UDP means no QUIC either, so a client reads only one of them for each
             IsQuicPacketSupported = session is { AllowQuicPacket: true, AllowUdpPacket: true },
@@ -717,16 +717,16 @@ public class ServerHost : IAsyncDisposable
         await session.ProcessTcpPacketChannelRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
-    private async Task ProcessStreamProxyChannel(IStreamConnection streamConnection, CancellationToken cancellationToken)
+    private async Task ProcessTcpForwardingChannel(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Reading the StreamProxyChannelRequest...");
-        var request = await ReadRequest<StreamProxyChannelRequest>(streamConnection, cancellationToken).Vhc();
+        VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel, "Reading the TcpForwardingChannelRequest...");
+        var request = await ReadRequest<TcpForwardingChannelRequest>(streamConnection, cancellationToken).Vhc();
         using var scope = CreateLogScope(streamConnection, request);
 
         // find session
         var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
-        ServerInitialStreamPadding.StartProxy(session, streamConnection.Stream);
-        await session.ProcessTcpProxyRequest(request, streamConnection, cancellationToken).Vhc();
+        ServerInitialStreamPadding.StartForwarding(session, streamConnection.Stream);
+        await session.ProcessTcpForwardingChannelRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
     private ValueTask CleanupConnections(CancellationToken cancellationToken)

@@ -192,7 +192,7 @@ checks and the end-user documentation to publish alongside the enforcing server 
 Each side keeps padding eligibility in one place; connection owners make no padding calls.
 A background write failure stops further writes and prevents reuse.
 
-`SessionOptions.StartPadding` enables initial padding for WebSocket TCP proxy streams. It defaults off;
+`SessionOptions.StartPadding` enables initial padding for WebSocket TCP forwarding streams. It defaults off;
 an explicit `false` also overrides an inherited `true`. Hello advertises `StartPadding` to HTTP-15 clients.
 The client records the successful hello's flag and offers `X-WebSocketMasking: true` on subsequent
 WebSocket upgrades only for that session, excluding connections opened for TCP packet channels.
@@ -203,7 +203,7 @@ Control requests receive no padding.
 Masking is fixed by the upgrade request: the client masks if it offered; the server unmasks if the
 request offered at HTTP 15. The 101 carries no masking echo, so a proxy dropping unknown response
 headers cannot change framing. Mask keys come from `Random.Shared`. The server pads an authenticated
-proxy stream only when its session enables padding and its WebSocket stream carries this masking
+forwarding stream only when its session enables padding and its WebSocket stream carries this masking
 agreement. Reuse retains the agreement and starts a fresh padding budget in both directions, without
 depending on the initial HTTP connection wrapper.
 
@@ -213,7 +213,7 @@ unmasked unless the request offered masking. The session's flag never changes an
 connection's masking.
 
 The first eligible real write and a printable ASCII text frame are encoded into one source write,
-in each direction. This includes the client's proxy request and embedded inner hello and the server's
+in each direction. This includes the client's TCP forwarding request and embedded inner hello and the server's
 initial session response. The temporary pooled buffer is at most 16 KiB; no large padding buffer is
 retained on an idle stream. Ordinary writes copy into writer-owned storage; preserved-buffer writes
 may overwrite both header space and payload, including on failure. Neither path restores masked bytes.

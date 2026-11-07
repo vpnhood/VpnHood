@@ -205,7 +205,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                 }
 
                 // Control frames may interrupt a fragmented message. Only the text message's continuations
-                // are discarded: a binary continuation still carries proxy bytes, even after an intervening ping.
+                // are discarded: a binary continuation still carries forwarding bytes, even after an intervening ping.
                 bool isBinary;
                 if (webSocketHeader.IsContinuation) {
                     isBinary = _fragmentedBinary ?? throw new InvalidDataException("Unexpected WebSocket continuation.");

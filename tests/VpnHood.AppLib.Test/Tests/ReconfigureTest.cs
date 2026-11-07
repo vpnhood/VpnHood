@@ -39,7 +39,7 @@ public class ReconfigureTest : TestAppBase
             await checkAsked.Task.WaitAsync(TimeSpan.FromSeconds(30), TestCt);
 
             // the start then writes the settings it read over this one. Dropping QUIC is the setting to watch:
-            // the test server carries TCP only by the proxy, which drops it
+            // the test server carries TCP only by forwarding, which drops it
             app.UserSettings.DropQuic = dropQuic;
             await app.ReconfigureVpnService(TestCt);
             checkRelease.TrySetResult();

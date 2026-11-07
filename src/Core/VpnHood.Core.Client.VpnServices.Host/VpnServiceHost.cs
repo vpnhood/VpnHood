@@ -44,14 +44,14 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         Client ?? throw new InvalidOperationException("Client is not initialized.");
 
     /// <summary>
-    /// The current TCP-proxy status. Prefers the live session value (it reflects server capability and
+    /// The current TCP forwarding status. Prefers the live session value (it reflects server capability and
     /// domain-filtering overrides), falls back to the client's configured value before the session is
     /// established, and to false when there is no client yet.
     /// </summary>
-    public bool IsTcpProxy {
+    public bool IsTcpForwarding {
         get {
             var client = Client;
-            return client?.Session?.Status.IsTcpProxy ?? client?.UseTcpProxy ?? false;
+            return client?.Session?.Status.IsTcpForwarding ?? client?.UseTcpForwarding ?? false;
         }
     }
 

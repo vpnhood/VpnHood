@@ -1,10 +1,10 @@
 ﻿using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class PingProxyPoolOptions
+public class PingForwarderPoolOptions
 {
-    public required IPacketProxyCallbacks? PacketProxyCallbacks { get; init; }
+    public required IPacketForwarderCallbacks? PacketForwarderCallbacks { get; init; }
     public required TimeSpan IcmpTimeout { get; init; }
     public required int MaxClientCount { get; init; }
     public required LogScope? LogScope { get; init; }

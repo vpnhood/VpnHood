@@ -3,7 +3,7 @@
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.ProtocolsView">
-  <!-- The cloak switch with its reasons and, while cloaked, the blocks
+  <!-- The TCP forwarding switch with its reasons and, while it is on, the blocks
        on other apps' QUIC and UDP under it; then the tunnel's transports as radios under a heading of
        their own, as the QUIC there is not the QUIC blocked above, the one the server cannot carry marked. -->
   <DockPanel Classes="page">
@@ -12,7 +12,7 @@
       <StackPanel MaxWidth="720" Spacing="16">
         <Border Classes="config-card" Padding="0,4,0,12">
           <StackPanel>
-            <controls:SettingsToggleItem x:Name="CloakItem" Margin="0" Toggled="OnCloakToggled" />
+            <controls:SettingsToggleItem x:Name="TcpForwardingItem" Margin="0" Toggled="OnTcpForwardingToggled" />
             <StackPanel Margin="16,0,16,0" Spacing="8">
               <Border x:Name="ServerEnforcedAlert" Classes="alert-warning" IsVisible="False">
                 <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByServer, Source={x:Static res:Strings.Current}}" />

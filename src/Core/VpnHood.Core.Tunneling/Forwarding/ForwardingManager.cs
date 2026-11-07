@@ -9,35 +9,35 @@ using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Exceptions;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class ProxyManager : PassthroughPacketTransport
+public class ForwardingManager : PassthroughPacketTransport
 {
-    private readonly List<ProxyChannel> _streamProxyChannels = [];
-    private readonly IPacketProxyPool? _pingProxyPool;
-    private readonly IPacketProxyPool _udpProxyPool;
+    private readonly List<StreamForwardingChannel> _streamForwardingChannels = [];
+    private readonly IPacketForwarderPool? _pingForwarderPool;
+    private readonly IPacketForwarderPool _udpForwarderPool;
     private readonly Job _cleanupJob;
     private Traffic _removedChannelsTraffic = new();
 
     public bool IsIpV6Supported { get; set; } = true;
-    public int PingClientCount => _pingProxyPool?.ClientCount ?? 0;
-    public int UdpClientCount => _udpProxyPool.ClientCount;
+    public int PingClientCount => _pingForwarderPool?.ClientCount ?? 0;
+    public int UdpClientCount => _udpForwarderPool.ClientCount;
 
     public int TcpConnectionCount {
         get {
-            lock (_streamProxyChannels)
-                return _streamProxyChannels.Count;
+            lock (_streamForwardingChannels)
+                return _streamForwardingChannels.Count;
         }
     }
 
     public Traffic Traffic {
         get {
-            lock (_streamProxyChannels) {
+            lock (_streamForwardingChannels) {
                 var traffic = new Traffic(PacketStat.SentBytes, PacketStat.ReceivedBytes) + _removedChannelsTraffic;
                 // ReSharper disable once ForCanBeConvertedToForeach
                 // ReSharper disable once LoopCanBeConvertedToQuery
-                for (var i = 0; i < _streamProxyChannels.Count; i++)
-                    traffic += _streamProxyChannels[i].Traffic;
+                for (var i = 0; i < _streamForwardingChannels.Count; i++)
+                    traffic += _streamForwardingChannels[i].Traffic;
 
                 return traffic;
             }
@@ -45,10 +45,10 @@ public class ProxyManager : PassthroughPacketTransport
     }
 
 
-    public ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
+    public ForwardingManager(ISocketFactory socketFactory, ForwardingManagerOptions options)
     {
-        var udpProxyPoolOptions = new UdpProxyPoolOptions {
-            PacketProxyCallbacks = options.PacketProxyCallbacks,
+        var udpForwarderPoolOptions = new UdpForwarderPoolOptions {
+            PacketForwarderCallbacks = options.PacketForwarderCallbacks,
             SocketFactory = socketFactory,
             UdpTimeout = options.UdpTimeout,
             MaxClientCount = options.MaxUdpClientCount,
@@ -58,29 +58,29 @@ public class ProxyManager : PassthroughPacketTransport
             BufferSize = options.UdpBufferSize
         };
 
-        // create UDP proxy pool
-        _udpProxyPool = new UdpProxyPool(udpProxyPoolOptions);
-        _udpProxyPool.PacketReceived += Proxy_PacketReceived;
+        // create UDP forwarder pool
+        _udpForwarderPool = new UdpForwarderPool(udpForwarderPoolOptions);
+        _udpForwarderPool.PacketReceived += Forwarder_PacketReceived;
 
-        // Sweep dead stream channels out of the tracking list. A ProxyChannel disposes ITSELF when either
-        // side dies (its CheckAlive job), but stayed in _streamProxyChannels until the manager was disposed,
+        // Sweep dead stream channels out of the tracking list. A StreamForwardingChannel disposes ITSELF when either
+        // side dies (its CheckAlive job), but stayed in _streamForwardingChannels until the manager was disposed,
         // pinning the whole per-flow object graph (local TCP connection buffers + host socket). Long
         // sessions with many bypassed flows (split-country) leaked this into the iOS jetsam limit.
-        _cleanupJob = new Job(Cleanup, nameof(ProxyManager));
+        _cleanupJob = new Job(Cleanup, nameof(ForwardingManager));
 
-        // create Ping proxy pools
+        // create Ping forwarder pools
         if (options.IsPingSupported) {
-            _pingProxyPool = new PingProxyPool(new PingProxyPoolOptions {
-                PacketProxyCallbacks = options.PacketProxyCallbacks,
+            _pingForwarderPool = new PingForwarderPool(new PingForwarderPoolOptions {
+                PacketForwarderCallbacks = options.PacketForwarderCallbacks,
                 IcmpTimeout = options.IcmpTimeout,
                 MaxClientCount = options.MaxPingClientCount,
                 LogScope = options.LogScope
             });
-            _pingProxyPool.PacketReceived += Proxy_PacketReceived;
+            _pingForwarderPool.PacketReceived += Forwarder_PacketReceived;
         }
     }
 
-    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket)
+    private void Forwarder_PacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }
@@ -92,14 +92,14 @@ public class ProxyManager : PassthroughPacketTransport
 
         switch (ipPacket.Protocol) {
             case IpProtocol.Udp:
-                _udpProxyPool.SendPacketQueued(ipPacket);
+                _udpForwarderPool.SendPacketQueued(ipPacket);
                 break;
 
             case IpProtocol.IcmpV4:
             case IpProtocol.IcmpV6:
-                if (_pingProxyPool == null)
-                    throw new NotSupportedException("Ping is not supported by this proxy.");
-                _pingProxyPool.SendPacketQueued(ipPacket);
+                if (_pingForwarderPool == null)
+                    throw new NotSupportedException("Ping is not supported by this forwarder.");
+                _pingForwarderPool.SendPacketQueued(ipPacket);
                 break;
 
             default:
@@ -115,28 +115,28 @@ public class ProxyManager : PassthroughPacketTransport
 
     public void CleanupChannels()
     {
-        lock (_streamProxyChannels) {
+        lock (_streamForwardingChannels) {
             // Only Disposed channels are swept: a dead-but-undisposed channel disposes itself via its own
             // CheckAlive job, and skipping NotStarted avoids racing AddChannel's post-add Start().
-            for (var i = _streamProxyChannels.Count - 1; i >= 0; i--) {
-                var channel = _streamProxyChannels[i];
+            for (var i = _streamForwardingChannels.Count - 1; i >= 0; i--) {
+                var channel = _streamForwardingChannels[i];
                 if (channel.State != PacketChannelState.Disposed)
                     continue;
 
                 // keep Traffic monotonic after the channel is dropped from the sum
                 _removedChannelsTraffic += channel.Traffic;
-                _streamProxyChannels.RemoveAt(i);
+                _streamForwardingChannels.RemoveAt(i);
             }
         }
     }
 
-    public void AddChannel(ProxyChannel channel, bool disposeOnFail)
+    public void AddChannel(StreamForwardingChannel channel, bool disposeOnFail)
     {
         try {
             // under the lock of the close's sweep: the channel joins before the sweep, which closes it, or is refused
-            lock (_streamProxyChannels) {
+            lock (_streamForwardingChannels) {
                 ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
-                _streamProxyChannels.Add(channel);
+                _streamForwardingChannels.Add(channel);
             }
 
             channel.Start();
@@ -153,19 +153,19 @@ public class ProxyManager : PassthroughPacketTransport
     {
         _cleanupJob.Dispose();
 
-        // dispose udp proxy pool
-        _udpProxyPool.PacketReceived -= Proxy_PacketReceived;
-        _udpProxyPool.Dispose();
+        // dispose udp forwarder pool
+        _udpForwarderPool.PacketReceived -= Forwarder_PacketReceived;
+        _udpForwarderPool.Dispose();
 
-        // dispose ping proxy pool
-        if (_pingProxyPool != null) {
-            _pingProxyPool.PacketReceived -= Proxy_PacketReceived;
-            _pingProxyPool.Dispose();
+        // dispose ping forwarder pool
+        if (_pingForwarderPool != null) {
+            _pingForwarderPool.PacketReceived -= Forwarder_PacketReceived;
+            _pingForwarderPool.Dispose();
         }
 
         // dispose channels
-        lock (_streamProxyChannels)
-            VhUtils.DisposeAll(_streamProxyChannels);
+        lock (_streamForwardingChannels)
+            VhUtils.DisposeAll(_streamForwardingChannels);
 
         base.DisposeManaged();
     }

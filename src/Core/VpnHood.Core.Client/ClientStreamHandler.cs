@@ -13,7 +13,7 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Client;
@@ -26,10 +26,10 @@ internal class ClientStreamHandler(
     DomainFilteringService domainFilterService,
     Tunnel tunnel,
     TrafficMeter trafficMeter,
-    ProxyManager proxyManager,
+    ForwardingManager forwardingManager,
     TimeSpan tcpConnectTimeout,
     NetFilter netFilter,
-    TransferBufferSize streamProxyBufferSize,
+    TransferBufferSize streamForwardingBufferSize,
     PassthroughState passthroughState)
 {
     private int _processingCount;
@@ -46,8 +46,8 @@ internal class ClientStreamHandler(
             cancellationToken.ThrowIfCancellationRequested();
 
             // create a scope for the logger
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
-                "New TcpProxy Request. LocalPort: {LocalPort}, HostEp: {RemoteEp}",
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
+                "New TCP connection. LocalPort: {LocalPort}, HostEp: {RemoteEp}",
                 streamConnection.RemoteEndPoint.Port, hostEndPoint);
 
             var filterAction = FilterAction.Default;
@@ -70,14 +70,14 @@ internal class ClientStreamHandler(
 
                 case FilterAction.Exclude:
                     // Create and add to exclude channel
-                    VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Exclude a Host from VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
+                    VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel, "Exclude a Host from VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
                     await AddPassthruChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
                     _stat.TcpPassthruCount++;
                     break;
 
                 default: // include or default — tunnel unless a gate vetoed (fail-closed)
                     // Create and add to tunnel channel
-                    VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
+                    VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
                     await AddTunnelChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
                     _stat.TcpTunnelledCount++;
                     break;
@@ -99,7 +99,7 @@ internal class ClientStreamHandler(
             throw new Exception("IPv6 is not supported by client.");
 
         //log
-        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
+        VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
             "Adding a new stream channel to bypass. HostEp: {HostEp}, ConnectionId: {ConnectionId}",
             VhLogger.Format(hostEndPoint), streamConnection.ConnectionId);
 
@@ -115,8 +115,8 @@ internal class ClientStreamHandler(
 
             try {
                 // create and add the channel
-                var channel = new ProxyChannel(hostConnection.ToString(), streamConnection, hostConnection, streamProxyBufferSize);
-                proxyManager.AddChannel(channel, disposeOnFail: true);
+                var channel = new StreamForwardingChannel(hostConnection.ToString(), streamConnection, hostConnection, streamForwardingBufferSize);
+                forwardingManager.AddChannel(channel, disposeOnFail: true);
             }
             catch {
                 await hostConnection.DisposeAsync().Vhc();
@@ -137,13 +137,13 @@ internal class ClientStreamHandler(
             throw new Exception("IPv6 is not supported by server.");
 
         //log
-        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
+        VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
             "Adding a new stream channel to tunnel. HostEp: {HostEp}, ConnectionId: {ConnectionId}",
             VhLogger.Format(hostEndPoint), streamConnection.ConnectionId);
 
 
         // Create the Request
-        var request = new StreamProxyChannelRequest {
+        var request = new TcpForwardingChannelRequest {
             RequestId = streamConnection.ConnectionId,
             SessionId = sessionId,
             SessionKey = sessionKey,
@@ -155,7 +155,7 @@ internal class ClientStreamHandler(
         // before sending the TLS hello, so there is no initial data to prefetch
         var initContents = await ReadInitContents(streamConnection.Stream, TimeSpan.FromMilliseconds(100), cancellationToken).Vhc();
 
-        // they leave with the request, outside the proxy channel, so the speed limit is paid for them here
+        // they leave with the request, outside the forwarding channel, so the speed limit is paid for them here
         if (initContents.Length > 0)
             await trafficMeter.ThrottleSendAsync(initContents.Length, cancellationToken).Vhc();
 
@@ -163,14 +163,14 @@ internal class ClientStreamHandler(
         var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
         var requestResult = await session.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
         try {
-            var proxyConnection = requestResult.StreamConnection;
+            var forwardingConnection = requestResult.StreamConnection;
 
-            // account for prefetched init contents that bypassed the proxy channel
+            // account for prefetched init contents that bypassed the forwarding channel
             if (initContents.Length > 0)
                 trafficMeter.OnSent(initContents.Length);
 
-            // add stream proxy
-            var channel = new ProxyChannel(proxyConnection.ToString()!, streamConnection, proxyConnection, streamProxyBufferSize, trafficMeter);
+            // add the stream forwarding channel
+            var channel = new StreamForwardingChannel(forwardingConnection.ToString()!, streamConnection, forwardingConnection, streamForwardingBufferSize, trafficMeter);
             tunnel.AddChannel(channel, disposeIfFailed: true);
         }
         catch {

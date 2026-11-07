@@ -36,7 +36,7 @@ internal sealed class IosQuicConnection(
 
     // Circuit breaker for outbound stream opens. nw_connection_group_extract_connection returns NULL when
     // the tunnel cannot create another stream — typically QUIC stream-credit starvation (the cumulative
-    // MAX_STREAMS budget is spent and the server has not granted more). Every new proxied flow retries the
+    // MAX_STREAMS budget is spent and the server has not granted more). Every new forwarded flow retries the
     // open immediately, so without a backoff a starved tunnel gets hammered with native extract calls and
     // connector churn that deepen the stall (observed on-device 2026-07-11: repeated "Failed to open a new
     // QUIC stream" bursts during a 37 s tunnel-wide stall). While in backoff, opens fail fast without

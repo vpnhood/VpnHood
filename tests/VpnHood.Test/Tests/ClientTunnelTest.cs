@@ -74,7 +74,7 @@ public class ClientTunnelTest : TestBase
             cancellationToken: TestCt);
 
         Assert.AreEqual(ChannelProtocol.Tcp, clientServerDom.Client.ChannelProtocol);
-        Assert.IsTrue(clientServerDom.Client.RequiredSession.Status.IsTcpProxy);
+        Assert.IsTrue(clientServerDom.Client.RequiredSession.Status.IsTcpForwarding);
 
         // switch back to udp
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Switch back to UdpChannel.");
@@ -89,7 +89,7 @@ public class ClientTunnelTest : TestBase
             cancellationToken: TestCt);
 
         Assert.AreEqual(ChannelProtocol.Udp, clientServerDom.Client.ChannelProtocol);
-        Assert.IsTrue(clientServerDom.Client.RequiredSession.Status.IsTcpProxy);
+        Assert.IsTrue(clientServerDom.Client.RequiredSession.Status.IsTcpForwarding);
     }
 
     [TestMethod]
@@ -130,7 +130,7 @@ public class ClientTunnelTest : TestBase
             () => clientServerDom.Client.RequiredSession.Status.ActivePacketChannelCount > 0,
             cancellationToken: TestCt);
 
-        // both kinds of traffic again, on connections made after the change: TCP by the proxy channels
+        // both kinds of traffic again, on connections made after the change: TCP by the forwarding channels
         await AssertValidUdp(clientServerDom);
         await AssertValidTcp(clientServerDom);
         if (channelProtocol == ChannelProtocol.Tcp)

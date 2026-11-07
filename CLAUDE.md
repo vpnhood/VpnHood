@@ -32,6 +32,21 @@ The design and code rules agreed while building are in
   `$(SolutionDir)/../VpnHood.wiki`). It holds end-user documentation, not development/internal docs. Update
   it only when I request; keep developer docs inside this repo.
 
+## Naming
+
+- "Proxy" is only someone else's real proxy: a SOCKS or HTTP proxy a user adds, or a reverse proxy. What the engine
+  does itself is forwarding: TCP forwarding, `StreamForwardingChannel`, `UdpForwarder`. A relay is a service, which
+  forwards; "relay" stays free for one.
+- A name says what its thing handles. The channel joins any two streams, so it is `StreamForwardingChannel`; the
+  request asks the server for a channel that forwards TCP, the only thing it opens, so it is
+  `TcpForwardingChannelRequest`, beside `TcpPacketChannelRequest`.
+- Stream forwarding and packet forwarding stay apart: `StreamForwardingBufferSize` sizes the channels' pumps, and
+  `PacketForwardingQueueCapacity` is the queue before each UDP forwarder. A "Tcp" there would sit beside
+  `UdpForwardingBufferSize` and read as packets.
+- "Cloak" lives in the translations and on the page that explains Cloak Mode. All other code says TCP forwarding, and
+  keeps three things apart: the user's wish (`UseTcpForwarding`), what the switch shows
+  (`VhApp.IsTcpForwardingSwitchOn`) and what really runs, per IP version (`UseTcpForwardingIpV4`, `UseTcpForwardingIpV6`).
+
 ## CI/CD & publishing
 
 - All app **builds** (`.ipa`/AAB/MSI/Linux) and **Fastlane publishing** (Google Play, TestFlight/App Store,

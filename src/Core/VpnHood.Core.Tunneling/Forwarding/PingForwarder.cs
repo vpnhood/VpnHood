@@ -8,9 +8,9 @@ using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Core.Common.Configuration;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class PingProxy()
+public class PingForwarder()
     : SinglePacketTransport(new PacketTransportOptions {
             // a request's payload goes out as a ping and the request to no one, so each one sent is disposed
             AutoDisposePackets = true,

@@ -44,7 +44,7 @@ throughput. See the shared record in the app repo's
   options. (See the `[DllImport]` in `IosQuicConnection`.)
 - **Inbound streams:** the group's new-connection handler (wired **before** `Start()` so none are
   missed) writes them to an unbounded channel; `AcceptInboundStreamAsync` drains it.
-- In proxy mode there is **one QUIC stream per proxied flow** — this is why stream lifecycle and the
+- With TCP forwarding there is **one QUIC stream per forwarded flow** — this is why stream lifecycle and the
   per-stream window dominate memory (see below).
 
 ## Flow control & native-memory cap (the load-bearing numbers)
@@ -54,12 +54,12 @@ Set in `IosQuicClient.ConnectAsync` on the QUIC options block:
 | Parameter | Value | Why |
 |---|---|---|
 | `InitialMaxData` | **256 KB** | Connection-wide aggregate receive window across all streams — the real ceiling on native inbound buffering. Tuned down from 1 MB after measured sub-second native transient spikes near the jetsam limit; prioritizes extension stability over peak iOS download speed. |
-| `InitialMaxStreamDataBidirectionalLocal` | **32 KB** | Per-stream window for streams we open (the proxy's download streams). |
+| `InitialMaxStreamDataBidirectionalLocal` | **32 KB** | Per-stream window for streams we open (TCP forwarding's download streams). |
 | `InitialMaxStreamDataBidirectionalRemote` | **32 KB** | Per-stream window for peer-opened streams. |
 | `IosQuicStream.MaxReceiveLength` | **16 KB** | Caps a single armed native receive so even a huge caller buffer pulls native data in bounded chunks. The QUIC window above is the real ceiling; this just bounds one receive. |
 
 Without an explicit window, Network.framework advertises a large default and a download burst floods
-native receive buffers faster than the proxy drains them — measured **+16 MB in ~1 s at ~25
+native receive buffers faster than forwarding drains them — measured **+16 MB in ~1 s at ~25
 streams** → jetsam kill. These windows are real QUIC flow control: the server may not send past the
 window until we consume and the stack emits window updates.
 
@@ -67,8 +67,8 @@ window until we consume and the stack emits window updates.
 
 QUIC's **tight** windows make this transport *less* forgiving than kernel TCP, which means it
 **exposes send-side stalls in the shared TCP stack that big OS socket buffers otherwise hide.** The
-QUIC+TcpProxy download collapse (40→3 Mbps) was exactly this: a `LocalTcpConnection` Zero Window
-Probe that failed to make forward progress stalled the proxy pump; kernel TCP masked it, QUIC did
+QUIC+TcpForwarding download collapse (40→3 Mbps) was exactly this: a `LocalTcpConnection` Zero Window
+Probe that failed to make forward progress stalled the forwarding pump; kernel TCP masked it, QUIC did
 not. That bug and its forward-progress invariant live in
 `../VpnHood.Net.TcpStack/LocalTcpConnection.cs` (`SendZeroWindowProbe`) with a regression test in
 `tests/VpnHood.Net.TcpStack.Test`. **If you shrink these windows, re-verify the TcpStack send path

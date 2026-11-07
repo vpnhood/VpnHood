@@ -30,7 +30,7 @@ public class ClientOptions
     public required string AccessKey { get; set; }
     public required string ClientId { get; set; }
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
-    public bool UseTcpProxy { get; set; }
+    public bool UseTcpForwarding { get; set; }
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }
     public bool AutoDisposeVpnAdapter { get; set; } = true;

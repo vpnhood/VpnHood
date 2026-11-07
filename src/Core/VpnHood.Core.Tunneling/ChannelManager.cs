@@ -13,7 +13,7 @@ internal class ChannelManager : IDisposable
 {
     private readonly Lock _channelListLock = new();
     private readonly HashSet<IChannel> _disposingChannels = [];
-    private readonly HashSet<IProxyChannel> _proxyChannels = [];
+    private readonly HashSet<IStreamForwardingChannel> _streamForwardingChannels = [];
     private readonly List<IStreamPacketChannel> _packetChannels = [];
     private readonly EventHandler<IpPacket> _channelPacketReceived;
     private bool _disposed;
@@ -42,10 +42,10 @@ internal class ChannelManager : IDisposable
         }
     }
 
-    public int ProxyChannelCount {
+    public int StreamForwardingChannelCount {
         get {
             lock (_channelListLock)
-                return _proxyChannels.Count;
+                return _streamForwardingChannels.Count;
         }
     }
 
@@ -70,7 +70,7 @@ internal class ChannelManager : IDisposable
         lock (_channelListLock) {
             return channel switch {
                 IStreamPacketChannel packetChannel => _packetChannels.Contains(packetChannel),
-                IProxyChannel proxyChannel => _proxyChannels.Contains(proxyChannel),
+                IStreamForwardingChannel streamForwardingChannel => _streamForwardingChannels.Contains(streamForwardingChannel),
                 _ => throw new ArgumentOutOfRangeException(nameof(channel))
             };
         }
@@ -86,8 +86,8 @@ internal class ChannelManager : IDisposable
                     AddPacketChannel(packetChannel);
                     break;
 
-                case IProxyChannel proxyChannel:
-                    AddProxyChannel(proxyChannel);
+                case IStreamForwardingChannel streamForwardingChannel:
+                    AddStreamForwardingChannel(streamForwardingChannel);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(channel));
@@ -127,7 +127,7 @@ internal class ChannelManager : IDisposable
         RemoveExcessPacketChannels();
     }
 
-    private void AddProxyChannel(IProxyChannel channel)
+    private void AddStreamForwardingChannel(IStreamForwardingChannel channel)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(Tunnel));
@@ -139,12 +139,12 @@ internal class ChannelManager : IDisposable
 
         // should not be called in lock; its behaviour is unexpected
         lock (_channelListLock) {
-            _proxyChannels.Add(channel);
+            _streamForwardingChannels.Add(channel);
 
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
                 "A channel has been added. Channel: {Channel}, ChannelId: {ChannelId}, " +
                 "ChannelCount: {ChannelCount}, State: {State}",
-                VhLogger.FormatType(channel), channel.ChannelId, _proxyChannels.Count, channel.State);
+                VhLogger.FormatType(channel), channel.ChannelId, _streamForwardingChannels.Count, channel.State);
         }
     }
 
@@ -163,8 +163,8 @@ internal class ChannelManager : IDisposable
                 RemoveChannel(_packetChannels, packetChannel, GeneralEventId.PacketChannel, dispose);
                 break;
 
-            case IProxyChannel proxyChannel:
-                RemoveChannel(_proxyChannels, proxyChannel, GeneralEventId.ProxyChannel, dispose);
+            case IStreamForwardingChannel streamForwardingChannel:
+                RemoveChannel(_streamForwardingChannels, streamForwardingChannel, GeneralEventId.StreamForwardingChannel, dispose);
                 break;
 
             default:
@@ -200,7 +200,7 @@ internal class ChannelManager : IDisposable
 
     public void CleanupChannels()
     {
-        CleanupChannels(_proxyChannels);
+        CleanupChannels(_streamForwardingChannels);
         CleanupChannels(_packetChannels);
 
         // remove the disposed channels
@@ -276,10 +276,10 @@ internal class ChannelManager : IDisposable
 
     public void RemoveChannels<T>(bool dispose = true) where T : IChannel
     {
-        // both lists: a proxy channel is never in the packet channels
+        // both lists: a stream forwarding channel is never in the packet channels
         IChannel[] channels;
         lock (_channelListLock)
-            channels = _packetChannels.Concat<IChannel>(_proxyChannels).Where(x => x is T).ToArray();
+            channels = _packetChannels.Concat<IChannel>(_streamForwardingChannels).Where(x => x is T).ToArray();
 
         foreach (var channel in channels)
             RemoveChannel(channel, dispose);
@@ -295,7 +295,7 @@ internal class ChannelManager : IDisposable
         // remove all channels and dispose them
         lock (_channelListLock) {
             // their quick closes: the tunnel ends with them
-            foreach (var channel in _proxyChannels.ToArray()) {
+            foreach (var channel in _streamForwardingChannels.ToArray()) {
                 RemoveChannelInternal(channel, dispose: false);
                 channel.Dispose();
             }

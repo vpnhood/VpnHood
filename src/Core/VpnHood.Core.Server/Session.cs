@@ -23,7 +23,7 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Core.Common.Configuration;
@@ -37,12 +37,12 @@ public class Session : IDisposable
     private readonly IVpnAdapter? _vpnAdapter;
     private readonly ISocketFactory _socketFactory;
     private readonly NetFilter _netFilter;
-    private readonly ProxyManager _proxyManager;
+    private readonly ForwardingManager _forwardingManager;
     private readonly Lock _verifyRequestLock = new();
     private readonly Lock _udpSwitchLock = new(); // the newest datagram turns UDP on, a TCP request off, one at a time
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
-    private readonly TransferBufferSize _streamProxyBufferSize;
+    private readonly TransferBufferSize _streamForwardingBufferSize;
     private readonly TransferBufferSize? _tcpKernelBufferSize;
     private readonly TrackingOptions _trackingOptions;
 
@@ -79,15 +79,15 @@ public class Session : IDisposable
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int NetScanErrorCount => _netProtector.NetScanErrorCount;
-    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + Tunnel.PacketChannelCount;
+    public int TcpChannelCount => Tunnel.StreamForwardingChannelCount + Tunnel.PacketChannelCount;
 
 
-    public int UdpConnectionCount => _proxyManager.UdpClientCount;
+    public int UdpConnectionCount => _forwardingManager.UdpClientCount;
     public DateTime LastActivityTime => TrafficMeter.LastActivityTime;
     public DateTime LastReportTime { get; private set; } = FastDateTime.UtcNow; // its bytes last taken for a report
     public VirtualIpBundle VirtualIps { get; }
     public bool AllowTcpPacket { get; }
-    public bool AllowTcpProxy { get; }
+    public bool AllowTcpForwarding { get; }
     public bool StartPadding { get; }
     public bool AllowQuicPacket { get; }
     public bool AllowUdpPacket { get; }
@@ -109,22 +109,22 @@ public class Session : IDisposable
         _accessManager = accessManager;
         _vpnAdapter = vpnAdapter;
         _socketFactory = socketFactory;
-        _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
+        _forwardingManager = new ForwardingManager(socketFactory, new ForwardingManagerOptions {
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
             MaxPingClientCount = options.MaxIcmpClientCountValue,
-            UdpBufferSize = options.UdpProxyBufferSizeValue ?? ServerTransportDefaults.UdpProxyBufferSize,
+            UdpBufferSize = options.UdpForwardingBufferSizeValue ?? ServerTransportDefaults.UdpForwardingBufferSize,
             LogScope = logScope,
             IsPingSupported = true,
-            PacketProxyCallbacks = new PacketProxyCallbacks(this),
-            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity
+            PacketForwarderCallbacks = new PacketForwarderCallbacks(this),
+            PacketQueueCapacity = TransportDefaults.PacketForwardingQueueCapacity
         });
-        _proxyManager.PacketReceived += Proxy_PacketsReceived;
+        _forwardingManager.PacketReceived += Forwarder_PacketsReceived;
         _trackingOptions = trackingOptions;
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
-        _streamProxyBufferSize = options.StreamProxyBufferSize ?? ServerTransportDefaults.StreamProxyBufferSize;
+        _streamForwardingBufferSize = options.StreamForwardingBufferSize ?? ServerTransportDefaults.StreamForwardingBufferSize;
         _tcpKernelBufferSize = options.TcpKernelBufferSize;
         _netFilter = netFilter;
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -138,7 +138,7 @@ public class Session : IDisposable
             LogScope = logScope
         });
         AllowTcpPacket = options.AllowTcpPacketValue;
-        AllowTcpProxy = options.AllowTcpProxyValue;
+        AllowTcpForwarding = options.AllowTcpForwardingValue;
         StartPadding = options.StartPaddingValue;
         AllowQuicPacket = AllowTcpPacket || options.AllowQuicPacketValue;
         AllowUdpPacket = AllowTcpPacket || options.AllowUdpPacketValue;
@@ -262,18 +262,18 @@ public class Session : IDisposable
         return ipVersion == IpVersion.IPv4 ? VirtualIps.IpV4 : VirtualIps.IpV6;
     }
 
-    private void Proxy_PacketsReceived(object? sender, IpPacket ipPacket)
+    private void Forwarder_PacketsReceived(object? sender, IpPacket ipPacket)
     {
-        Proxy_PacketReceived(ipPacket);
+        Forwarder_PacketReceived(ipPacket);
     }
 
     public void Adapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         _ = sender;
-        Proxy_PacketReceived(ipPacket);
+        Forwarder_PacketReceived(ipPacket);
     }
 
-    private void Proxy_PacketReceived(IpPacket ipPacket)
+    private void Forwarder_PacketReceived(IpPacket ipPacket)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
@@ -343,20 +343,20 @@ public class Session : IDisposable
             destinationEndPoint = newEndPoint;
         }
 
-        // the session's own limits, on where the packet goes, as the TCP proxy's are; a packet over its limit goes
+        // the session's own limits, on where the packet goes, as TCP forwarding's are; a packet over its limit goes
         // without an exception, as a flood would throw one for each packet
         if (!_netProtector.VerifyPacket(ipPacket, protocol, destinationEndPoint)) {
             ipPacket.Dispose();
             return;
         }
 
-        // send by the adapter where its NAT translates the version, else by the proxy. A session recovered by a
-        // server restarted without its adapter keeps its hello's TCP-packet offer, and the proxy refuses those
+        // send by the adapter where its NAT translates the version, else by the forwarders. A session recovered by a
+        // server restarted without its adapter keeps its hello's TCP-packet offer, and the forwarders refuse those
         // packets: rare, left so
         if (_vpnAdapter != null && _vpnAdapter.IsNatSupported(ipVersion) && _vpnAdapter.IsIpVersionSupported(ipVersion))
             _vpnAdapter.SendPacketQueued(ipPacket);
         else
-            _proxyManager.SendPacketQueued(ipPacket);
+            _forwardingManager.SendPacketQueued(ipPacket);
     }
 
     // DNS always passes, as on the client
@@ -412,7 +412,7 @@ public class Session : IDisposable
             "{Proto,-4}\tSessionId {SessionId}\t{Mode,-2}\tTcpCount {TcpCount,4}\tUdpCount {UdpCount,4}\tTcpWait {TcpConnectWaitCount,3}\tNetScan {NetScan,3}\t" +
             "SrcPort {SrcPort,-5}\tDstIp {DstIp,-15}\tDstPort {DstPort,-5}\t{Success,-10}",
             protocol, SessionId, mode,
-            TcpChannelCount, _proxyManager.UdpClientCount, _tcpConnectWaitCount, netScanCount,
+            TcpChannelCount, _forwardingManager.UdpClientCount, _tcpConnectWaitCount, netScanCount,
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
@@ -562,11 +562,11 @@ public class Session : IDisposable
         await streamConnection.DisposeAsync(Response, cancellationToken).Vhc();
     }
 
-    internal async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IStreamConnection streamConnection,
+    internal async Task ProcessTcpForwardingChannelRequest(TcpForwardingChannelRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
-        if (!AllowTcpProxy)
-            throw new SessionException(SessionErrorCode.GeneralError, "TcpProxy is not allowed in this session.");
+        if (!AllowTcpForwarding)
+            throw new SessionException(SessionErrorCode.GeneralError, "TcpForwarding is not allowed in this session.");
 
         TcpClient? tcpClientHost = null;
         IStreamConnection? tcpConnectionHost = null;
@@ -585,12 +585,12 @@ public class Session : IDisposable
             }
 
             // log with new destination
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
                 "Connecting to the requested endpoint. RequestedEP: {Format}",
                 VhLogger.Format(request.DestinationEndPoint));
 
             // Apply limitation before create connection to host. It reserves a channel slot on success
-            VerifyTcpChannelRequest(streamConnection, request);
+            VerifyTcpForwardingChannelRequest(streamConnection, request);
             slotReserved = true;
 
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
@@ -624,14 +624,14 @@ public class Session : IDisposable
             await streamConnection.WriteResponseAsync(Response, cancellationToken).Vhc();
 
             // add the connection
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
-            var proxyChannel = new ProxyChannel(streamConnection.ToString()!, tcpConnectionHost, streamConnection,
-                _streamProxyBufferSize, TrafficMeter);
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel, "Adding a StreamForwardingChannel.");
+            var streamForwardingChannel = new StreamForwardingChannel(streamConnection.ToString()!, tcpConnectionHost, streamConnection,
+                _streamForwardingBufferSize, TrafficMeter);
 
             // swap the reserved slot with the channel atomically, so a concurrent request can
             // neither count this request twice nor slip in through a gap and overshoot the limit
             lock (_verifyRequestLock) {
-                Tunnel.AddChannel(proxyChannel, disposeIfFailed: true);
+                Tunnel.AddChannel(streamForwardingChannel, disposeIfFailed: true);
                 Interlocked.Decrement(ref _tcpConnectWaitCount);
                 slotReserved = false;
             }
@@ -648,7 +648,7 @@ public class Session : IDisposable
         }
     }
 
-    private void VerifyTcpChannelRequest(IStreamConnection streamConnection, StreamProxyChannelRequest request)
+    private void VerifyTcpForwardingChannelRequest(IStreamConnection streamConnection, TcpForwardingChannelRequest request)
     {
         lock (_verifyRequestLock) {
             // connection rate, which the TUN's connections count toward too; before NetScan, as it is the cheaper
@@ -706,8 +706,8 @@ public class Session : IDisposable
         // its own guard: a cleanup's close and the manager's may come at once; IsDisposed is set only at the end
         if (Interlocked.Exchange(ref _disposing, true)) return;
 
-        _proxyManager.PacketReceived -= Proxy_PacketsReceived;
-        _proxyManager.Dispose();
+        _forwardingManager.PacketReceived -= Forwarder_PacketsReceived;
+        _forwardingManager.Dispose();
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
         Tunnel.Dispose();
         TrafficMeter.Dispose();
@@ -732,7 +732,7 @@ public class Session : IDisposable
         DisposedTime = DateTime.UtcNow;
     }
 
-    private class PacketProxyCallbacks(Session session) : IPacketProxyCallbacks
+    private class PacketForwarderCallbacks(Session session) : IPacketForwarderCallbacks
     {
         public void OnConnectionRequested(IpProtocol protocolType, IpEndPointValue remoteEndPoint)
         {

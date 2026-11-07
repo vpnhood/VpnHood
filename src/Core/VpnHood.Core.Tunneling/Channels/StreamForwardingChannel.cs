@@ -13,7 +13,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class ProxyChannel : IProxyChannel
+public class StreamForwardingChannel : IStreamForwardingChannel
 {
     private bool _disposed;
     private readonly IStreamConnection _hostStreamConnection;
@@ -40,7 +40,7 @@ public class ProxyChannel : IProxyChannel
     public string ChannelId { get; }
     private readonly TrafficMeter? _trafficMeter;
 
-    public ProxyChannel(string channelId, IStreamConnection orgStreamConnection, IStreamConnection tunnelStreamConnection,
+    public StreamForwardingChannel(string channelId, IStreamConnection orgStreamConnection, IStreamConnection tunnelStreamConnection,
         TransferBufferSize tunnelBufferSize, TrafficMeter? trafficMeter = null)
     {
         _hostStreamConnection = orgStreamConnection;
@@ -52,11 +52,11 @@ public class ProxyChannel : IProxyChannel
 
         if (_tunnelBufferSize.Receive is < BufferSizeMin or > BufferSizeMax)
             throw new ArgumentOutOfRangeException(
-                $"Proxy receive buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Receive}");
+                $"Forwarding receive buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Receive}");
 
         if (_tunnelBufferSize.Send is < BufferSizeMin or > BufferSizeMax)
             throw new ArgumentOutOfRangeException(
-                $"Proxy send buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Send}");
+                $"Forwarding send buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Send}");
 
         ChannelId = channelId;
 
@@ -64,7 +64,7 @@ public class ProxyChannel : IProxyChannel
         // whose socket fails themselves; a check racing them cancels the graceful close the connection's reuse needs
         _checkAliveJob = new Job(CheckAlive, new JobOptions {
             Interval = TransportDefaults.TcpCheckInterval,
-            Name = nameof(ProxyChannel)
+            Name = nameof(StreamForwardingChannel)
         });
     }
 
@@ -91,27 +91,27 @@ public class ProxyChannel : IProxyChannel
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (_started)
-            throw new InvalidOperationException("ProxyChannel is already started.");
+            throw new InvalidOperationException("StreamForwardingChannel is already started.");
 
         var startTask = StartInternal(_cancellationTokenSource.Token);
-        VhTypeTracker.Track(startTask, "ProxyChannel.StartTask");
+        VhTypeTracker.Track(startTask, "StreamForwardingChannel.StartTask");
     }
 
     private async Task StartInternal(CancellationToken cancellationToken)
     {
-        VhTypeTracker.Record("ProxyChannel.StartInternal.started");
+        VhTypeTracker.Record("StreamForwardingChannel.StartInternal.started");
         try {
             _started = true;
 
             var tunnelReadTask = CopyFromTunnelAsync(
                 _tunnelStreamConnection.Stream, _hostStreamConnection.Stream, _tunnelBufferSize.Receive,
                 cancellationToken, cancellationToken); // tunnel => host
-            VhTypeTracker.Track(tunnelReadTask, "ProxyChannel.ReadPumpTask");
+            VhTypeTracker.Track(tunnelReadTask, "StreamForwardingChannel.ReadPumpTask");
 
             var tunnelWriteTask = CopyToTunnelAsync(
                 _hostStreamConnection.Stream, _tunnelStreamConnection.Stream, _tunnelBufferSize.Send,
                 cancellationToken, cancellationToken); // host => tunnel
-            VhTypeTracker.Track(tunnelWriteTask, "ProxyChannel.WritePumpTask");
+            VhTypeTracker.Track(tunnelWriteTask, "StreamForwardingChannel.WritePumpTask");
 
             // Either pump's end ends the channel, both streams with it: a host that half-closes (shuts its send side
             // and waits for the reply) loses the rest of the reply.
@@ -143,13 +143,13 @@ public class ProxyChannel : IProxyChannel
             // this is normal shutdown for host stream, no need to log it
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, ex,
-                "Error while using a ProxyChannel. ChannelId: {ChannelId}, IsDisposed: {IsDisposed}",
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel, ex,
+                "Error while using a StreamForwardingChannel. ChannelId: {ChannelId}, IsDisposed: {IsDisposed}",
                 ChannelId, IsDisposed);
         }
         finally {
             // its end: the graceful close, not waited for
-            VhTypeTracker.Record("ProxyChannel.StartInternal.completed");
+            VhTypeTracker.Record("StreamForwardingChannel.StartInternal.completed");
             _ = this.TryDisposeAsync();
         }
     }
@@ -157,11 +157,11 @@ public class ProxyChannel : IProxyChannel
     private async Task CopyFromTunnelAsync(Stream source, Stream destination, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
     {
-        VhTypeTracker.Record("ProxyChannel.ReadPump.started");
+        VhTypeTracker.Record("StreamForwardingChannel.ReadPump.started");
         try {
             var copyTask = CopyToInternalAsync(source, destination, false, bufferSize,
                 sourceCancellationToken, destinationCancellationToken);
-            VhTypeTracker.Track(copyTask, "ProxyChannel.ReadCopyTask");
+            VhTypeTracker.Track(copyTask, "StreamForwardingChannel.ReadCopyTask");
             await copyTask.Vhc();
         }
         catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
@@ -173,23 +173,23 @@ public class ProxyChannel : IProxyChannel
                 return;
 
             VhLogger.Instance.LogDebug(ex,
-                "ProxyChannel: Error while copying from tunnel. ChannelId: {ChannelId}, IsDisposed: {IsDisposed}"
+                "StreamForwardingChannel: Error while copying from tunnel. ChannelId: {ChannelId}, IsDisposed: {IsDisposed}"
                 , ChannelId, IsDisposed);
             throw;
         }
         finally {
-            VhTypeTracker.Record("ProxyChannel.ReadPump.completed");
+            VhTypeTracker.Record("StreamForwardingChannel.ReadPump.completed");
         }
     }
 
     private async Task CopyToTunnelAsync(Stream source, Stream destination, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
     {
-        VhTypeTracker.Record("ProxyChannel.WritePump.started");
+        VhTypeTracker.Record("StreamForwardingChannel.WritePump.started");
         try {
             var copyTask = CopyToInternalAsync(source, destination, true, bufferSize,
                 sourceCancellationToken, destinationCancellationToken);
-            VhTypeTracker.Track(copyTask, "ProxyChannel.WriteCopyTask");
+            VhTypeTracker.Track(copyTask, "StreamForwardingChannel.WriteCopyTask");
             await copyTask.Vhc();
         }
         catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
@@ -202,11 +202,11 @@ public class ProxyChannel : IProxyChannel
                 return;
 
             VhLogger.Instance.LogDebug(ex,
-                "ProxyChannel: Error while copying to tunnel. ChannelId: {ChannelId}", ChannelId);
+                "StreamForwardingChannel: Error while copying to tunnel. ChannelId: {ChannelId}", ChannelId);
             throw;
         }
         finally {
-            VhTypeTracker.Record("ProxyChannel.WritePump.completed");
+            VhTypeTracker.Record("StreamForwardingChannel.WritePump.completed");
         }
     }
 
@@ -322,8 +322,8 @@ public class ProxyChannel : IProxyChannel
         if (_hostStreamConnection.Connected && _tunnelStreamConnection.Connected)
             return default;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel,
-            "Disposing a ProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
+        VhLogger.Instance.LogInformation(GeneralEventId.StreamForwardingChannel,
+            "Disposing a StreamForwardingChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
 
         _ = this.TryDisposeAsync();
         return default;
@@ -346,7 +346,7 @@ public class ProxyChannel : IProxyChannel
         _throttleCancellationTokenSource.Dispose();
         _checkAliveJob.Dispose();
         _started = false;
-        VhTypeTracker.Record("ProxyChannel.disposed");
+        VhTypeTracker.Record("StreamForwardingChannel.disposed");
         return true;
     }
 

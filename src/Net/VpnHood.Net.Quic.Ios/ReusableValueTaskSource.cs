@@ -16,7 +16,7 @@ public sealed class ReusableValueTaskSource : IValueTaskSource
 {
     // RunContinuationsAsynchronously = true is REQUIRED: completion is signalled from a Network.framework
     // callback running on the QUIC stream's serial dispatch queue. With the default (false) the awaiting
-    // continuation (the whole proxy read->write pump) would run INLINE on that queue, blocking the stream's
+    // continuation (the whole forwarding read->write pump) would run INLINE on that queue, blocking the stream's
     // own subsequent receive/state/Cancel callbacks -> stalls and connection instability under load. True
     // hands the continuation to the thread pool, freeing the callback thread immediately.
     private ManualResetValueTaskSourceCore<bool> _core = new() { RunContinuationsAsynchronously = true };

@@ -92,26 +92,26 @@ internal static class StateHelper
                 string.Join(", ", dropped));
     }
 
-    public static TcpProxyUsageReason GetTcpProxyUsageReason(
+    public static TcpForwardingLockReason GetTcpForwardingLockReason(
         UserSettings userSettings,
         SessionInfo? sessionInfo,
         IPremiumFeatureChecker premiumFeatureChecker)
     {
-        // server requires TcpProxy because it cannot deliver raw TCP packets (IPv4's: the switch acts on it,
-        // while IPv6 may go by the proxy anyway)
+        // server requires TcpForwarding because it cannot deliver raw TCP packets (IPv4's: the switch acts on it,
+        // while IPv6 may go by forwarding anyway)
         if (sessionInfo is { IsTcpPacketIpV4Supported: false })
-            return TcpProxyUsageReason.ServerRequiredOn;
+            return TcpForwardingLockReason.ServerRequiredOn;
 
-        // server does not support TcpProxy
-        if (sessionInfo is { IsTcpProxySupported: false })
-            return TcpProxyUsageReason.ServerRequiredOff;
+        // server does not support TcpForwarding
+        if (sessionInfo is { IsTcpForwardingSupported: false })
+            return TcpForwardingLockReason.ServerRequiredOff;
 
-        // split-by-domain requires TcpProxy for SNI stream interception (effective: a split the
-        // toggle silenced or the plan withheld is never applied, so it must not force the proxy path)
+        // split-by-domain requires TcpForwarding for SNI stream interception (effective: a split the
+        // toggle silenced or the plan withheld is never applied, so it must not force forwarding)
         if (userSettings.SplitTunneling.ToEffective(premiumFeatureChecker).UseDomain)
-            return TcpProxyUsageReason.SplitDomainRequiredOn;
+            return TcpForwardingLockReason.SplitDomainRequiredOn;
 
-        return TcpProxyUsageReason.None;
+        return TcpForwardingLockReason.None;
     }
 
     // The EFFECTIVE split picture: every flag answers "is this split actually open in the CURRENT

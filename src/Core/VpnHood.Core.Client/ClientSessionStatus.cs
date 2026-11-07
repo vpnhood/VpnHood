@@ -3,7 +3,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 
 namespace VpnHood.Core.Client;
 
@@ -13,7 +13,7 @@ internal class ClientSessionStatus(
     TrafficMeter trafficMeter,
     RequestSender requestSender,
     DomainFilteringService domainFilteringService,
-    ProxyManager proxyManager,
+    ForwardingManager forwardingManager,
     ClientStreamHandler streamHandler,
     ClientPacketHandler packetHandler,
     AccessUsage accessUsage)
@@ -25,7 +25,7 @@ internal class ClientSessionStatus(
     public ConnectorStat ConnectorStatus => requestSender.ConnectorService.Stat;
     public Traffic Speed => trafficMeter.Speed;
     public Traffic SessionTraffic => trafficMeter.Traffic;
-    public Traffic SessionSplitTraffic => proxyManager.Traffic;
+    public Traffic SessionSplitTraffic => forwardingManager.Traffic;
 
     public Traffic CycleTraffic {
         get => field + trafficMeter.Traffic;
@@ -43,9 +43,9 @@ internal class ClientSessionStatus(
     // UDP counts as one while it carries the packets, as it did when it was a channel
     public int ActivePacketChannelCount => tunnel.PacketChannelCount + (session.IsUdpOpen ? 1 : 0);
     public bool IsDropQuic => packetHandler.DropQuic; // This is current, don't use session property
-    public bool IsTcpProxy => packetHandler.UseTcpProxyIpV4; // This is current, don't use session property
-    public bool CanChangeTcpProxy => // the switch acts on IPv4: IPv6 may go by the proxy anyway
-        session.Info is { IsTcpProxySupported: true, IsTcpPacketIpV4Supported: true } && !domainFilteringService.IsEnabled;
+    public bool IsTcpForwarding => packetHandler.UseTcpForwardingIpV4; // This is current, don't use session property
+    public bool CanChangeTcpForwarding => // the switch acts on IPv4: IPv6 may go by forwarding anyway
+        session.Info is { IsTcpForwardingSupported: true, IsTcpPacketIpV4Supported: true } && !domainFilteringService.IsEnabled;
     public ChannelProtocol ChannelProtocol => session.ChannelProtocol;
     public int UnstableCount { get; set; }
     public int WaitingCount { get; set; }

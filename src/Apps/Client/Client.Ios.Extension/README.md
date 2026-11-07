@@ -7,7 +7,7 @@ guard, the user-space TCP stack — lives in `src/Core` and `src/Net`, mainly:
 
 - `src/Core/VpnHood.Core.Client.VpnServices.Host.Ios` (IosVpnService, the memory guard, the app's channel)
 - `src/Net/VpnHood.Net.VpnAdapters.IosTun` (IosVpnAdapter)
-- `src/Net/VpnHood.Net.TcpStack` (proxy-mode TCP stack)
+- `src/Net/VpnHood.Net.TcpStack` (the TCP stack of TCP forwarding)
 
 The Apple TV target (`net11.0-tvos`) differs only in its csproj: tvOS has Network
 Extension from 17, its floor; the split filters' SQLite package ships no tvOS build of the library, so the

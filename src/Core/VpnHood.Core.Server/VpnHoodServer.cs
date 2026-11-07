@@ -474,7 +474,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             return configValue.Value;
 
         if (totalMemory == null)
-            return ServerTransportDefaults.StreamProxyBufferSize;
+            return ServerTransportDefaults.StreamForwardingBufferSize;
 
         var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
         bufferSize = Math.Max(bufferSize, 8192);
@@ -485,8 +485,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
         var serverConfig = await ReadConfigImpl(serverInfo, cancellationToken).Vhc();
-        serverConfig.SessionOptions.StreamProxyBufferSize =
-            GetBestStreamBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.StreamProxyBufferSize);
+        serverConfig.SessionOptions.StreamForwardingBufferSize =
+            GetBestStreamBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.StreamForwardingBufferSize);
         serverConfig.ApplyDefaults();
         VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
 
@@ -498,10 +498,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         }
 
         // refused rather than applied: every session would connect, then find no way for its TCP
-        if (serverConfig.SessionOptions is { AllowTcpPacketValue: false, AllowTcpProxyValue: false })
+        if (serverConfig.SessionOptions is { AllowTcpPacketValue: false, AllowTcpForwardingValue: false })
             throw new NotSupportedException(
                 $"The configuration turns off both {nameof(SessionOptions.AllowTcpPacket)} and " +
-                $"{nameof(SessionOptions.AllowTcpProxy)}, which leaves TCP no way through.");
+                $"{nameof(SessionOptions.AllowTcpForwarding)}, which leaves TCP no way through.");
 
         // override defaults
         return serverConfig;

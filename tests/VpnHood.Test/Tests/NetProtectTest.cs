@@ -52,7 +52,7 @@ public class NetProtectTest : TestBase
         var token = await TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.ChannelProtocol = ChannelProtocol.Udp;
-        clientOptions.UseTcpProxy = true;
+        clientOptions.UseTcpForwarding = true;
         await using var client = await TestHelper.CreateClient(clientOptions);
 
         await TestHelper.Test_Https();
@@ -60,7 +60,7 @@ public class NetProtectTest : TestBase
     }
 
     [TestMethod]
-    public async Task MaxUdpDnsPacketsPerSecond_by_proxy()
+    public async Task MaxUdpDnsPacketsPerSecond_by_forwarding()
     {
         await Test_MaxUdpDnsPacketsPerSecond(vpnAdapter: null);
     }
@@ -108,9 +108,9 @@ public class NetProtectTest : TestBase
     }
 
     [TestMethod]
-    public void MaxTcpConnectsPerSecond_shared_by_vpn_adapter_and_proxy()
+    public void MaxTcpConnectsPerSecond_shared_by_vpn_adapter_and_forwarding()
     {
-        // the proxy's connection takes the second's whole budget, so the TUN's SYN after it is refused; a pair that
+        // TCP forwarding's connection takes the second's whole budget, so the TUN's SYN after it is refused; a pair that
         // spans a second's turn has two budgets, so it is tried again
         while (true) {
             using var netProtector = new NetProtector(CreateNetProtectorOptions(maxTcpConnectsPerSecond: 1));
@@ -184,7 +184,7 @@ public class NetProtectTest : TestBase
     }
 
     [TestMethod]
-    public async Task MaxTcpConnectsPerSecond_by_proxy()
+    public async Task MaxTcpConnectsPerSecond_by_forwarding()
     {
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
@@ -193,7 +193,7 @@ public class NetProtectTest : TestBase
 
         // create client
         var token = await TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: true));
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpForwarding: true));
 
         // connections at once: a second's worth goes, the rest of that second is refused
         var results = await Task.WhenAll(Enumerable.Range(0, 8)

@@ -1,8 +1,8 @@
 ﻿using VpnHood.Net.Toolkit.Net;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-public interface IPacketProxyCallbacks
+public interface IPacketForwarderCallbacks
 {
     public void OnConnectionRequested(IpProtocol protocolType, IpEndPointValue remoteEndPoint);
 

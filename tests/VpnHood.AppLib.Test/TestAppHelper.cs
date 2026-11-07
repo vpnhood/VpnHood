@@ -134,7 +134,7 @@ public class TestAppHelper(CancellationToken testCt) : TestHelper(testCt)
         clientApp.Diagnoser.NsTimeout = TimeSpan.FromSeconds(2);
         clientApp.UserSettings.SplitTunneling.UseIpViaDevice = true;
         clientApp.UserSettings.SplitTunneling.UseIpViaApp = true;
-        clientApp.UserSettings.UseTcpProxy = true;
+        clientApp.UserSettings.UseTcpForwarding = true;
         clientApp.SettingsService.SplitIpViaDeviceSettings.Includes = TestIps.AllRemoteTestIps.ToOrderedIpRanges().ToText();
         clientApp.UserSettings.LogAnonymous = false;
 

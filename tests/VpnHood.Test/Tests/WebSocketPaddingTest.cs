@@ -140,7 +140,7 @@ public class WebSocketPaddingTest
         await using var source = new RecordingStream([0x82, 0]);
         var writer = new WebSocketStream(source, "padding", false, isServer, useStandardMasking: true);
         writer.EnableInitialPadding();
-        var data = Encoding.ASCII.GetBytes("the inner TLS hello and the proxy request");
+        var data = Encoding.ASCII.GetBytes("the inner TLS hello and the forwarding request");
         if (preserved) {
             var buffer = new byte[writer.PreserveWriteBufferLength + data.Length];
             data.CopyTo(buffer, writer.PreserveWriteBufferLength);

@@ -26,11 +26,11 @@ public static class TransportDefaults
 
     // Covers any response a real-world resolver exchanges over UDP (post-DNS-Flag-Day defaults are
     // ~1232 bytes; 4096 is the common EDNS ceiling, though the protocol permits more). A rare larger
-    // reply is detected via MSG_TRUNC and dropped like packet loss — see UdpProxy.
+    // reply is detected via MSG_TRUNC and dropped like packet loss — see UdpForwarder.
     public const int UdpDnsBufferSize = 4 * 1024;
     public const int MaxPacketChannelCount = 8;
     public const int StreamSmallReadCacheSize = 512;
-    public const int ProxyPacketQueueCapacity = 200;
+    public const int PacketForwardingQueueCapacity = 200;
     public const int MaxUdpClientCount = 100;
     // DNS workers are small (4 KB) and recycle every UdpDnsTimeout, so a session needs far fewer
     // of them than general UDP workers

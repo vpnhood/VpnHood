@@ -481,7 +481,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     }
 
     // the one way a session is stopped. Its virtual IPs go back first, so its recovery can take them as soon as it is
-    // seen disposed; its last bytes go to the reporter, along with the close if the server made one. A proxy copy
+    // seen disposed; its last bytes go to the reporter, along with the close if the server made one. A forwarding copy
     // still under way may deliver a last chunk it can no longer count: that chunk goes unbilled
     internal void DisposeSession(Session session, SessionErrorCode closeCode = SessionErrorCode.Ok)
     {

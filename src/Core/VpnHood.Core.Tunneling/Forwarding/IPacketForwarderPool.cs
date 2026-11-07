@@ -1,8 +1,8 @@
 ﻿using VpnHood.Net.PacketTransports;
 
-namespace VpnHood.Core.Tunneling.Proxies;
+namespace VpnHood.Core.Tunneling.Forwarding;
 
-public interface IPacketProxyPool : IPacketTransport
+public interface IPacketForwarderPool : IPacketTransport
 {
     public int ClientCount { get; }
     public int RemoteEndPointCount { get; }

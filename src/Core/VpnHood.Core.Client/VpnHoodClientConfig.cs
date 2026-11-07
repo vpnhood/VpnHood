@@ -39,7 +39,7 @@ public class VpnHoodClientConfig
     public required bool AllowStreamReuse { get; init; }
     public required UserReview? UserReview { get; init; }
     public required bool UseWebSocket { get; init; }
-    public required bool UseTcpProxy { get; init; }
+    public required bool UseTcpForwarding { get; init; }
     public required bool DropUdp { get; init; }
     public required bool DropQuic { get; init; }
 }

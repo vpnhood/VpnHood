@@ -13,8 +13,8 @@ internal sealed class ClientInitialStreamPadding
 
     public void Start(Stream stream, RequestCode requestCode)
     {
-        // Reuse retains the transport's agreement, while each logical proxy stream gets a fresh budget.
-        if (_enabled && requestCode == RequestCode.ProxyChannel &&
+        // Reuse retains the transport's agreement, while each logical forwarding stream gets a fresh budget.
+        if (_enabled && requestCode == RequestCode.TcpForwardingChannel &&
             stream is WebSocketStream { UsesStandardMasking: true } webSocketStream)
             webSocketStream.EnableInitialPadding();
     }

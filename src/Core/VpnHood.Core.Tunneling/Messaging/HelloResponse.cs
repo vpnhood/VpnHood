@@ -39,8 +39,18 @@ public class HelloResponse : SessionResponse
     public string? ServerLocation { get; set; }
     public string[] ServerTags { get; set; } = [];
     public AccessInfo? AccessInfo { get; set; }
-    public bool IsTcpProxySupported { get; set; } = true;
-    // An older server omits this, leaving initial WebSocket proxy padding disabled.
+    public bool IsTcpForwardingSupported { get; set; } = true;
+
+    // Compatibility (2026-11): the name older clients read, and the only one older servers send. It is true when
+    // missing, so a client without it would try what the server refuses. Drop once MinClientProtocolVersion is above
+    // 15 and the servers from before it are gone
+    [Obsolete("Use IsTcpForwardingSupported.")]
+    public bool IsTcpProxySupported {
+        get => IsTcpForwardingSupported;
+        set => IsTcpForwardingSupported = value;
+    }
+
+    // An older server omits this, leaving initial WebSocket forwarding padding disabled.
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool StartPadding { get; set; }
     public bool IsTcpPacketIpV4Supported { get; set; }

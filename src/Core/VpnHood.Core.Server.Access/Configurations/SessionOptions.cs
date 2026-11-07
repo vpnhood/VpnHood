@@ -27,8 +27,10 @@ public class SessionOptions
     public int? MaxUdpDnsPacketsPerSecond { get; set; }
     public int? MaxIcmpClientCount { get; set; }
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
-    public TransferBufferSize? StreamProxyBufferSize { get; set; }
-    public TransferBufferSize? UdpProxyBufferSize { get; set; }
+    public TransferBufferSize? StreamForwardingBufferSize { get; set; }
+
+    // the sockets of the UDP forwarders; UdpChannelBufferSize is the tunnel's own UDP channel
+    public TransferBufferSize? UdpForwardingBufferSize { get; set; }
     public TransferBufferSize? UdpChannelBufferSize { get; set; }
     public TimeSpan? TcpConnectTimeout { get; set; }
     public TimeSpan? ChannelIdleTimeout { get; set; }
@@ -37,10 +39,35 @@ public class SessionOptions
     public int? MaxTcpConnectsPerSecond { get; set; }
     public int? NetScanLimit { get; set; }
     public TimeSpan? NetScanTimeout { get; set; }
-    public bool? AllowTcpProxy { get; set; }
+
+    // The two ways TCP can go. Forwarding: the client ends each TCP connection on the
+    // device and the server opens a new one, passing the bytes between them. Packet: raw IP packets in the tunnel, with
+    // TCP running end to end. Turning one off leaves TCP going by the other; both off leave it no way through
+    public bool? AllowTcpForwarding { get; set; }
     public bool? AllowTcpPacket { get; set; }
 
-    // Optional cover traffic at the start of WebSocket proxy streams; never applies to packet channels.
+    // Compatibility (2026-11): the names that server profiles, config files and older servers hold. Both are written,
+    // and a value under the new name wins. Drop once the access manager serves no server from before them and its
+    // stored profiles have moved
+    [Obsolete("Use AllowTcpForwarding.")]
+    public bool? AllowTcpProxy {
+        get => AllowTcpForwarding;
+        set => AllowTcpForwarding ??= value;
+    }
+
+    [Obsolete("Use StreamForwardingBufferSize.")]
+    public TransferBufferSize? StreamProxyBufferSize {
+        get => StreamForwardingBufferSize;
+        set => StreamForwardingBufferSize ??= value;
+    }
+
+    [Obsolete("Use UdpForwardingBufferSize.")]
+    public TransferBufferSize? UdpProxyBufferSize {
+        get => UdpForwardingBufferSize;
+        set => UdpForwardingBufferSize ??= value;
+    }
+
+    // Optional cover traffic at the start of WebSocket forwarding streams; never applies to packet channels.
     // Null inherits a layered configuration; explicit false overrides true. The effective default is off.
     public bool? StartPadding { get; set; }
 
@@ -66,7 +93,7 @@ public class SessionOptions
     public TransferBufferSize? UdpChannelBufferSizeValue => UdpChannelBufferSize ?? null;
 
     [JsonIgnore]
-    public TransferBufferSize? UdpProxyBufferSizeValue => UdpProxyBufferSize ?? null;
+    public TransferBufferSize? UdpForwardingBufferSizeValue => UdpForwardingBufferSize ?? null;
 
     [JsonIgnore]
     public TimeSpan TcpTimeoutValue => TcpTimeout ?? TimeSpan.FromMinutes(15);
@@ -115,7 +142,7 @@ public class SessionOptions
     public int MaxUnauthenticatedConnectionCountValue => MaxUnauthenticatedConnectionCount ?? 1000;
 
     [JsonIgnore]
-    public bool AllowTcpProxyValue => AllowTcpProxy ?? true;
+    public bool AllowTcpForwardingValue => AllowTcpForwarding ?? true;
 
     [JsonIgnore]
     public bool StartPaddingValue => StartPadding ?? false;
@@ -141,9 +168,9 @@ public class SessionOptions
         if (obj.MaxUdpClientCount != null) MaxUdpClientCount = obj.MaxUdpClientCount;
         if (obj.MaxUdpDnsPacketsPerSecond != null) MaxUdpDnsPacketsPerSecond = obj.MaxUdpDnsPacketsPerSecond;
         if (obj.MaxIcmpClientCount != null) MaxIcmpClientCount = obj.MaxIcmpClientCount;
-        if (obj.StreamProxyBufferSize != null) StreamProxyBufferSize = obj.StreamProxyBufferSize;
+        if (obj.StreamForwardingBufferSize != null) StreamForwardingBufferSize = obj.StreamForwardingBufferSize;
         if (obj.TcpKernelBufferSize != null) TcpKernelBufferSize = obj.TcpKernelBufferSize;
-        if (obj.UdpProxyBufferSize != null) UdpProxyBufferSize = obj.UdpProxyBufferSize;
+        if (obj.UdpForwardingBufferSize != null) UdpForwardingBufferSize = obj.UdpForwardingBufferSize;
         if (obj.UdpChannelBufferSize != null) UdpChannelBufferSize = obj.UdpChannelBufferSize;
         if (obj.TcpConnectTimeout != null) TcpConnectTimeout = obj.TcpConnectTimeout;
         if (obj.ChannelIdleTimeout != null) ChannelIdleTimeout = obj.ChannelIdleTimeout;
@@ -152,7 +179,7 @@ public class SessionOptions
         if (obj.MaxTcpConnectsPerSecond != null) MaxTcpConnectsPerSecond = obj.MaxTcpConnectsPerSecond;
         if (obj.NetScanLimit != null) NetScanLimit = obj.NetScanLimit;
         if (obj.NetScanTimeout != null) NetScanTimeout = obj.NetScanTimeout;
-        if (obj.AllowTcpProxy != null) AllowTcpProxy = obj.AllowTcpProxy;
+        if (obj.AllowTcpForwarding != null) AllowTcpForwarding = obj.AllowTcpForwarding;
         if (obj.AllowTcpPacket != null) AllowTcpPacket = obj.AllowTcpPacket;
         if (obj.StartPadding != null) StartPadding = obj.StartPadding;
         if (obj.AllowQuicPacket != null) AllowQuicPacket = obj.AllowQuicPacket;
@@ -174,9 +201,9 @@ public class SessionOptions
         MaxUdpClientCount = MaxUdpClientCountValue;
         MaxUdpDnsPacketsPerSecond = MaxUdpDnsPacketsPerSecondValue;
         MaxIcmpClientCount = MaxIcmpClientCountValue;
-        StreamProxyBufferSize = StreamProxyBufferSize; //no default
+        StreamForwardingBufferSize = StreamForwardingBufferSize; //no default
         TcpKernelBufferSize = TcpKernelBufferSize; //no default
-        UdpProxyBufferSize = UdpProxyBufferSizeValue;
+        UdpForwardingBufferSize = UdpForwardingBufferSizeValue;
         UdpChannelBufferSize = UdpChannelBufferSizeValue;
         TcpConnectTimeout = TcpConnectTimeoutValue;
         ChannelIdleTimeout = ChannelIdleTimeoutValue;
@@ -185,7 +212,7 @@ public class SessionOptions
         MaxTcpConnectsPerSecond = MaxTcpConnectsPerSecondValue;
         NetScanLimit = NetScanLimit;
         NetScanTimeout = NetScanTimeout;
-        AllowTcpProxy = AllowTcpProxyValue;
+        AllowTcpForwarding = AllowTcpForwardingValue;
         AllowTcpPacket = AllowTcpPacketValue;
         AllowQuicPacket = AllowQuicPacketValue;
         AllowUdpPacket = AllowUdpPacketValue;

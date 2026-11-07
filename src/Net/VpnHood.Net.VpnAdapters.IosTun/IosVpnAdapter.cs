@@ -33,7 +33,7 @@ public class IosVpnAdapter(
     // is uncontended on the normal path. It is kept only as defensive serialization of the shared
     // _writeBuffer / batch arrays in case a direct or passthrough write path is ever added, and is
     // taken once per drain (not per packet), so the cost is negligible.
-    // NOTE (history): an earlier comment claimed concurrent WritePacket calls from TCP-proxy pump
+    // NOTE (history): an earlier comment claimed concurrent WritePacket calls from TCP forwarding pump
     // threads raced here. That diagnosis was wrong — pump threads only enqueue to the channel; the
     // native write has always been serialized by the single consumer. The real crash was a
     // garbled/null NSData handed to WritePackets, not a data race.

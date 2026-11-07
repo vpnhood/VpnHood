@@ -120,7 +120,7 @@ public sealed class LocalTcpStackOptions
     /// When <see cref="MaxConnections"/> is reached, the minimum idle time a connection must have had
     /// (no send/receive activity) before it may be force-evicted to admit a NEW connection. The most
     /// idle ("most unused") eligible connection is closed immediately, which propagates EOF to its
-    /// consumer (e.g. the proxy's QUIC stream or TCP channel) so the whole upstream flow tears down.
+    /// consumer (e.g. TCP forwarding's QUIC stream or TCP channel) so the whole upstream flow tears down.
     /// If no connection has been idle this long, the new SYN is rejected with an RST. Actively-transferring
     /// flows (idle ≈ 0) are therefore never evicted.
     /// <para><see cref="TimeSpan.MaxValue"/> (default) disables eviction: a full stack rejects the new SYN with

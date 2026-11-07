@@ -8,17 +8,17 @@ using VpnHood.Net.PacketTransports;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Test.Providers;
 
-public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProxyCallbacks
+public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketForwarderCallbacks
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly UdpProxyPool _proxyPool;
+    private readonly UdpForwarderPool _forwarderPool;
     public IPAddress? VirtualIp { get; set; }
 
     public TestUdpServerVpnAdapter()
@@ -27,16 +27,16 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
             AutoDisposePackets = true
         })
     {
-        _proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
+        _forwarderPool = new UdpForwarderPool(new UdpForwarderPoolOptions {
             SocketFactory = new BindingSocketFactory(new SystemSocketFactory()),
-            PacketProxyCallbacks = this,
+            PacketForwarderCallbacks = this,
             UdpTimeout = TransportDefaults.UdpTimeout,
             MaxClientCount = TransportDefaults.MaxUdpClientCount,
-            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
+            PacketQueueCapacity = TransportDefaults.PacketForwardingQueueCapacity,
             BufferSize = null,
             LogScope = null
         });
-        _proxyPool.PacketReceived += Proxy_PacketReceived;
+        _forwarderPool.PacketReceived += Forwarder_PacketReceived;
     }
 
     public event EventHandler? Disposed;
@@ -80,7 +80,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
         }
 
         ipPacket = ipPacket.Clone(); // caller will dispose the packet
-        _proxyPool.SendPacketQueued(ipPacket);
+        _forwarderPool.SendPacketQueued(ipPacket);
     }
 
     public IPAddress GetPrimaryAdapterAddress(IpVersion ipVersion)
@@ -90,7 +90,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
 
     public bool IsIpVersionSupported(IpVersion ipVersion) => true;
 
-    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket)
+    private void Forwarder_PacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }
@@ -108,7 +108,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
     protected override void DisposeManaged()
     {
         _cancellationTokenSource.Dispose();
-        _proxyPool.Dispose();
+        _forwarderPool.Dispose();
         Disposed?.Invoke(this, EventArgs.Empty);
 
         base.DisposeManaged();

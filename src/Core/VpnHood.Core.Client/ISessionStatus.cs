@@ -20,8 +20,8 @@ public interface ISessionStatus
     int ActivePacketChannelCount { get; }
     ChannelProtocol ChannelProtocol { get; }
     bool IsDropQuic { get; }
-    bool IsTcpProxy { get; }
-    bool CanChangeTcpProxy { get; }
+    bool IsTcpForwarding { get; }
+    bool CanChangeTcpForwarding { get; }
     bool CanExtendByRewardedAd { get; }
     int UserReviewRecommended { get; }
     long SessionMaxTraffic { get; }

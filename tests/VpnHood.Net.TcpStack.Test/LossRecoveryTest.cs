@@ -1135,7 +1135,7 @@ public sealed class LossRecoveryTest
     }
 
     /// <summary>
-    /// The proxy disposed the stream (its tunnel side ended) but the local app keeps uploading. Nobody can read
+    /// The forwarding disposed the stream (its tunnel side ended) but the local app keeps uploading. Nobody can read
     /// those bytes, so they must be answered with a RST and the connection reclaimed at once - not buffered into
     /// a dead pipe whose zero-window probes keep the connection "active" forever.
     /// </summary>

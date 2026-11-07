@@ -91,7 +91,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
 
             // the server ends a connection after its reply, but for a channel request's, which carries the channel:
             // ending the logical stream would only wait for the server's close
-            if (request.RequestCode is not ((byte)RequestCode.ProxyChannel or (byte)RequestCode.TcpPacketChannel))
+            if (request.RequestCode is not ((byte)RequestCode.TcpForwardingChannel or (byte)RequestCode.TcpPacketChannel))
                 ret.StreamConnection.PreventReuse();
 
             // log the response
@@ -148,7 +148,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
         where T : SessionResponse
     {
         // A packet channel must be created with its packet-channel kernel buffer before the TCP
-        // handshake. Never promote a pooled proxy/control connection whose window was negotiated with
+        // handshake. Never promote a pooled forwarding/control connection whose window was negotiated with
         // the general socket setting.
         var isTcpPacketChannel = requestCode == RequestCode.TcpPacketChannel;
         var reusableConnection = isTcpPacketChannel ? null : ConnectorService.GetFreeConnection();
@@ -325,7 +325,7 @@ internal class RequestSender(ConnectorService connectorService, ClientRequestSig
             RequestCode.Hello => GeneralEventId.Session,
             RequestCode.Bye => GeneralEventId.Session,
             RequestCode.TcpPacketChannel => GeneralEventId.PacketChannel,
-            RequestCode.ProxyChannel => GeneralEventId.ProxyChannel,
+            RequestCode.TcpForwardingChannel => GeneralEventId.StreamForwardingChannel,
             _ => GeneralEventId.Request
         };
     }

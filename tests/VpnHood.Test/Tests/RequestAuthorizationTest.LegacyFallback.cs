@@ -14,7 +14,7 @@ namespace VpnHood.Test.Tests;
 public partial class RequestAuthorizationTest
 {
     [TestMethod]
-    [DoNotParallelize] // The proxy stream observed must be this test's own.
+    [DoNotParallelize] // The forwarding stream observed must be this test's own.
     public async Task A_new_app_speaks_the_legacy_protocol_to_a_server_before_15_and_pads_nothing()
     {
         var options = TestHelper.CreateFileAccessManagerOptions();
@@ -29,7 +29,7 @@ public partial class RequestAuthorizationTest
         await TestHelper.Test_Https();
 
         // Padding rides on HTTP 15's masking: none, though the server's options ask for it.
-        var request = new StreamProxyChannelRequest {
+        var request = new TcpForwardingChannelRequest {
             RequestId = UniqueIdFactory.Create(),
             SessionId = session.Config.SessionId,
             SessionKey = session.Config.SessionKey,
@@ -37,7 +37,7 @@ public partial class RequestAuthorizationTest
         };
         await using var result = await session.SendRequest<SessionResponse>(request, TestCt);
         var stream = result.StreamConnection.Stream as WebSocketStream ??
-                     throw new InvalidOperationException("Expected a WebSocket proxy stream.");
+                     throw new InvalidOperationException("Expected a WebSocket forwarding stream.");
         Assert.IsFalse(stream.UsesStandardMasking);
         Assert.IsFalse(stream.HasWrittenInitialPadding);
         await stream.WriteAsync(new byte[4], TestCt);

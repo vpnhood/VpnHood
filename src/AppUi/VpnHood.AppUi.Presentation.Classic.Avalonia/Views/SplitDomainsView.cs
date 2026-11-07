@@ -31,9 +31,9 @@ public sealed class SplitDomainsView : SplitListView
         set => Settings.SplitTunneling.UseDomain = value;
     }
 
-    // the server that runs no cloak undoes a domain filter; the switch says so under itself
+    // a server without TCP forwarding undoes a domain filter; the switch says so under itself
     protected override string? SwitchWarning =>
-        VhApp.State.TcpProxyUsageReason == TcpProxyUsageReason.ServerRequiredOff ? Strings.Current.DomainFilterServerNoCloak : null;
+        VhApp.State.TcpForwardingLockReason == TcpForwardingLockReason.ServerRequiredOff ? Strings.Current.DomainFilterServerNoCloak : null;
 
     protected override async Task<(string Excludes, string Includes, string Blocks)> Load(CancellationToken cancellationToken)
     {

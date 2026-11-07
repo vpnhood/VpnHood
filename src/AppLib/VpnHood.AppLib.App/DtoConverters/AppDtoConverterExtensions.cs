@@ -52,8 +52,8 @@ public static class AppDtoConverterExtensions
             ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress,
             CreatedTime = sessionInfo.CreatedTime,
             ChannelProtocols = sessionInfo.ChannelProtocols.Select(x => x.ToAppDto()).ToArray(),
-            IsTcpProxySupported = sessionInfo.IsTcpProxySupported,
-            IsTcpPacketSupported = sessionInfo.IsTcpPacketIpV4Supported, // the TCP proxy switch's, as in StateHelper
+            IsTcpForwardingSupported = sessionInfo.IsTcpForwardingSupported,
+            IsTcpPacketSupported = sessionInfo.IsTcpPacketIpV4Supported, // the TCP forwarding switch's, as in StateHelper
             IsQuicPacketSupported = sessionInfo.IsQuicPacketSupported,
             IsUdpPacketSupported = sessionInfo.IsUdpPacketSupported
         };
@@ -78,8 +78,8 @@ public static class AppDtoConverterExtensions
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             ActiveClientCount = sessionStatus.ActiveClientCount,
             ChannelProtocol = sessionStatus.ChannelProtocol.ToAppDto(),
-            IsTcpProxy = sessionStatus.IsTcpProxy,
-            CanChangeTcpProxy = sessionStatus.CanChangeTcpProxy,
+            IsTcpForwarding = sessionStatus.IsTcpForwarding,
+            CanChangeTcpForwarding = sessionStatus.CanChangeTcpForwarding,
             IsDropQuic = sessionStatus.IsDropQuic
         };
     }

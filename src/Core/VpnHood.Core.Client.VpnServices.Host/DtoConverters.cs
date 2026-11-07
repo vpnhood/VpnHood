@@ -26,8 +26,8 @@ internal static class DtoConverters
             UserReviewRecommended = sessionStatus.UserReviewRecommended,
             IsSecureDnsDetected = sessionStatus.IsSecureDnsDetected,
             ChannelProtocol = sessionStatus.ChannelProtocol,
-            IsTcpProxy = sessionStatus.IsTcpProxy,
-            CanChangeTcpProxy = sessionStatus.CanChangeTcpProxy,
+            IsTcpForwarding = sessionStatus.IsTcpForwarding,
+            CanChangeTcpForwarding = sessionStatus.CanChangeTcpForwarding,
             IsDropQuic = sessionStatus.IsDropQuic,
             IsAdapterStarted = sessionStatus.IsAdapterStarted,
             Error = sessionStatus.Error

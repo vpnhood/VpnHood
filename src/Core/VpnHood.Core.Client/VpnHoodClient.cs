@@ -50,7 +50,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     internal ServerIpFilter ServerIpFilter => _serverIpFilter;
 
     public DateTime StateChangedTime { get; private set; } = DateTime.UtcNow;
-    public bool UseTcpProxy { get; set { field = value; _session?.UseTcpProxy = value; } }
+    public bool UseTcpForwarding { get; set { field = value; _session?.UseTcpForwarding = value; } }
     public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }
     public bool DropQuic { get; set { field = value; _session?.DropQuic = value; } }
     public ChannelProtocol ChannelProtocol { get; set { field = value; _session?.ChannelProtocol = value; } }
@@ -111,7 +111,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             SplitDnsMode = options.SplitDnsMode,
             UnroutedIpMode = options.UnroutedIpMode,
             UnsupportedIpV6Mode = options.UnsupportedIpV6Mode,
-            UseTcpProxy = options.UseTcpProxy,
+            UseTcpForwarding = options.UseTcpForwarding,
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,
             UserReview = options.UserReview,

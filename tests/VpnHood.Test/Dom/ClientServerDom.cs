@@ -179,7 +179,7 @@ internal class ClientServerDom : IAsyncDisposable
         await AssertServerTransfer(minTunnelSendData: minTunnelReceivedData, minTunnelReceivedData: minTunnelSendData);
     }
 
-    // A proxied stream counts its bytes once its write returns, which can be after the other end has them and
+    // A forwarded stream counts its bytes once its write returns, which can be after the other end has them and
     // the test's request is done: a count gets a moment to arrive before it is asserted
     private async Task WaitForCount(Func<long> count, long exceeded)
     {

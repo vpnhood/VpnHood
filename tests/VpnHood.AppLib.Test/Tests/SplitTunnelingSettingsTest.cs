@@ -64,7 +64,7 @@ public class SplitTunnelingSettingsTest
     public void A_plan_that_withholds_a_split_resolves_it_away()
     {
         // the plan gate lives in ToEffective, so every consumer — connect mapping, split db
-        // services, state, the tcp-proxy reason — reads a split the plan withholds as simply off
+        // services, state, the TCP forwarding lock reason — reads a split the plan withholds as simply off
         var settings = CreateFullySplitSettings(enabled: true);
         var effective = settings.ToEffective(PremiumFeatureChecker.RefuseAll);
 
@@ -146,7 +146,7 @@ public class SplitTunnelingSettingsTest
             IsQuicChannelSupported = false,
             IsTcpPacketIpV4Supported = true,
             IsTcpPacketIpV6Supported = true,
-            IsTcpProxySupported = true,
+            IsTcpForwardingSupported = true,
             IsQuicPacketSupported = true,
             IsUdpPacketSupported = true,
             IsLocalNetworkAllowed = false,

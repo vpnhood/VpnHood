@@ -189,8 +189,8 @@ public static class FeaturePages
     public static FeaturePageView CloakMode(MainView host, bool isPrompt)
     {
         var settings = VhApp.UserSettings;
-        if (!settings.IsTcpProxyPrompted) {
-            settings.IsTcpProxyPrompted = true;
+        if (!settings.IsTcpForwardingPrompted) {
+            settings.IsTcpForwardingPrompted = true;
             VhApp.SaveUserSettings(settings, CancellationToken.None).Forget("Could not save that cloak mode was offered.");
         }
 

@@ -15,7 +15,7 @@ public class Tunnel : PacketTransportBase
     private volatile bool _useUdp;
 
     public int PacketChannelCount => _channelManager.PacketChannelCount;
-    public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;
+    public int StreamForwardingChannelCount => _channelManager.StreamForwardingChannelCount;
     public void RemoveChannels<T>(bool dispose = true) where T : IChannel => _channelManager.RemoveChannels<T>(dispose);
     // a copy, as channels are added and cleaned up under the reader
     public IReadOnlyList<IStreamPacketChannel> GetPacketChannels() => _channelManager.GetPacketChannels();

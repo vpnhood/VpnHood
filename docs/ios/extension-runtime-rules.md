@@ -1,6 +1,6 @@
 # Network Extension — Runtime Rules & Gotchas
 
-Hard-won constraints for the iOS Network Extension at runtime. (Memory, throughput, and `UseTcpProxy` are in
+Hard-won constraints for the iOS Network Extension at runtime. (Memory, throughput, and `UseTcpForwarding` are in
 [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md).)
 
 ## `SetTunnelNetworkSettings` — timing & completion handler

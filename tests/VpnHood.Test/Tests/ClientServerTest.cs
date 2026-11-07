@@ -818,7 +818,7 @@ public class ClientServerTest : TestBase
 
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.ChannelProtocol = ChannelProtocol.Udp;
-        clientOptions.UseTcpProxy = true;
+        clientOptions.UseTcpForwarding = true;
         await using var client = await TestHelper.CreateClient(clientOptions);
 
         using var tcpClient1 = new TcpClient();
@@ -1012,16 +1012,16 @@ public class ClientServerTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
 
-        // the client sends IPv4 TCP as packets, and IPv6 TCP by its proxy
+        // the client sends IPv4 TCP as packets, and IPv6 TCP by forwarding
         var token = await TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: false));
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpForwarding: false));
         Assert.IsTrue(client.RequiredSession.Info.IsTcpPacketIpV4Supported);
         Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV6Supported);
-        Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);
+        Assert.IsFalse(client.RequiredSession.Status.IsTcpForwarding);
     }
 
     [TestMethod]
-    public async Task Server_cloak_mode_sends_the_client_tcp_by_the_proxy()
+    public async Task Server_without_tcp_packets_turns_tcp_forwarding_on()
     {
         // a server whose adapter could take TCP packets, but whose options refuse them
         using var vpnAdapter = new TestUdpServerVpnAdapter();
@@ -1029,14 +1029,14 @@ public class ClientServerTest : TestBase
         fileAccessManagerOptions.SessionOptions.AllowTcpPacket = false;
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
 
-        // a client with Cloak Mode off turns its TCP proxy on by itself
+        // a client with the setting off turns TCP forwarding on by itself
         var token = await TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpProxy: false));
+        await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token, useTcpForwarding: false));
         Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV4Supported);
         Assert.IsFalse(client.RequiredSession.Info.IsTcpPacketIpV6Supported);
-        Assert.IsTrue(client.RequiredSession.Status.IsTcpProxy);
+        Assert.IsTrue(client.RequiredSession.Status.IsTcpForwarding);
 
-        // and its TCP goes by the proxy
+        // and its TCP goes by forwarding
         var streamTunnelledCount = client.RequiredSession.Status.StreamTunnelledCount;
         await TestHelper.Test_Https();
         Assert.IsTrue(client.RequiredSession.Status.StreamTunnelledCount > streamTunnelledCount);
@@ -1059,7 +1059,7 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Domain_rule_added_while_connected_applies_to_the_next_tcp_connection()
     {
-        // a server that takes TCP packets, and a client with no TCP proxy of its own: only a domain rule asks for one,
+        // a server that takes TCP packets, and a client with TCP forwarding off: only a domain rule asks for it,
         // which reads a TCP connection's name
         using var vpnAdapter = new TestUdpServerVpnAdapter();
         await using var server = await TestHelper.CreateServer(TestHelper.CreateFileAccessManagerOptions(),
@@ -1072,20 +1072,20 @@ public class ClientServerTest : TestBase
         };
 
         await using var client = await TestHelper.CreateClient(
-            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server), useTcpProxy: false),
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server), useTcpForwarding: false),
             netFilter: netFilter);
         await client.WaitForState(ClientState.Connected, TestCt);
-        Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);
+        Assert.IsFalse(client.RequiredSession.Status.IsTcpForwarding);
 
-        // a rule while connected: the next TCP connections go by the proxy, and the blocked name's is dropped
+        // a rule while connected: the next TCP connections go by forwarding, and the blocked name's is dropped
         domainFilter.Blocks = [TestHelper.WebServer.MockEps.HttpsUrl1.Host];
-        Assert.IsTrue(client.RequiredSession.Status.IsTcpProxy);
+        Assert.IsTrue(client.RequiredSession.Status.IsTcpForwarding);
         Assert.IsTrue(await TestHelper.Test_Https(TestHelper.WebServer.MockEps.HttpsUrl2, throwError: false));
         Assert.IsFalse(await TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(5), throwError: false));
 
-        // and no proxy once no rule is left
+        // and no forwarding once no rule is left
         domainFilter.Blocks = [];
-        Assert.IsFalse(client.RequiredSession.Status.IsTcpProxy);
+        Assert.IsFalse(client.RequiredSession.Status.IsTcpForwarding);
     }
 
     // a null adapter that tells when its start is under way

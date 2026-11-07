@@ -225,15 +225,15 @@
           </Grid>
         </Button>
 
-        <!-- the protocol, with the cloak chip while cloak mode is on -->
+        <!-- the protocol, with the chip while the TCP forwarding switch is on -->
         <Button x:Name="ProtocolButton" Classes="config-item" Click="OnProtocolClick">
           <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
             <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.TransitConnectionVariant}" />
             <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding ProtocolTitle}" />
             <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
             <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding ProtocolText}" />
-            <Border Grid.Column="4" Classes="chip chip-auto" Margin="8,0,0,0" IsVisible="{Binding IsCloakOn}">
-              <TextBlock Text="{Binding CloakChipText}" />
+            <Border Grid.Column="4" Classes="chip chip-auto" Margin="8,0,0,0" IsVisible="{Binding IsTcpForwardingSwitchOn}">
+              <TextBlock Text="{Binding TcpForwardingChipText}" />
             </Border>
           </Grid>
         </Button>

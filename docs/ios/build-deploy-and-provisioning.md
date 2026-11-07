@@ -3,7 +3,7 @@
 How to build the App + Network Extension, install/run on device, stream logs, and fix signing/provisioning.
 
 > **Framework note:** the target is **`net11.0-ios` / CoreCLR** — this is what fixed the jetsam crash and
-> proxy-mode throughput. Build with **`~/.dotnet11/dotnet`** (the system `dotnet` can't target `net11.0-ios`).
+> TCP forwarding throughput. Build with **`~/.dotnet11/dotnet`** (the system `dotnet` can't target `net11.0-ios`).
 > .NET 11 is still a **preview SDK** (11.0.100-rc.3) — a shippable/App-Store build needs .NET 11 GA. See
 > [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md) for the runtime/memory rationale.
 

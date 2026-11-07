@@ -58,7 +58,7 @@ internal class ClientReconfigurer(VpnServiceHost vpnServiceHost)
     private static async Task ReconfigureClient(VpnHoodClient client, ClientReconfigureParams reconfigureParams,
         CancellationToken cancellationToken)
     {
-        client.UseTcpProxy = reconfigureParams.UseTcpProxy;
+        client.UseTcpForwarding = reconfigureParams.UseTcpForwarding;
         client.DropUdp = reconfigureParams.DropUdp;
         client.DropQuic = reconfigureParams.DropQuic;
         client.ChannelProtocol = reconfigureParams.ChannelProtocol;

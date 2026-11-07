@@ -7,16 +7,16 @@ using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
-using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Forwarding;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class UdpProxyTest : TestBase
+public class UdpForwarderTest : TestBase
 {
-    private class MyPacketProxyCallbacks : IPacketProxyCallbacks
+    private class MyPacketForwarderCallbacks : IPacketForwarderCallbacks
     {
-        // keep all packets, not just the last one; proxy workers report their echoes in any
+        // keep all packets, not just the last one; forwarders report their echoes in any
         // order, and a single "last packet" slot loses the awaited echo when another packet
         // arrives after it
         private readonly ConcurrentQueue<IpPacket> _receivedPackets = new();
@@ -74,28 +74,28 @@ public class UdpProxyTest : TestBase
     [TestMethod]
     public async Task Multiple_EndPointEx()
     {
-        var myPacketProxyCallbacks = new MyPacketProxyCallbacks();
-        var proxyPoolOptions = TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks);
-        var proxyPool = new UdpProxyPool(proxyPoolOptions);
-        proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
+        var myPacketForwarderCallbacks = new MyPacketForwarderCallbacks();
+        var forwarderPoolOptions = TestHelper.CreateUdpForwarderPoolOptions(myPacketForwarderCallbacks);
+        var forwarderPool = new UdpForwarderPool(forwarderPoolOptions);
+        forwarderPool.PacketReceived += myPacketForwarderCallbacks.PacketReceived;
         var udpEndPoint = TestHelper.WebServer.LocalEps.UdpEchoEndPoint1;
         var ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
 
         // Test
-        proxyPool.SendPacketQueued(ipPacket.Clone());
-        proxyPool.SendPacketQueued(ipPacket.Clone());
-        await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
-        Assert.AreEqual(1, proxyPool.ClientCount);
+        forwarderPool.SendPacketQueued(ipPacket.Clone());
+        forwarderPool.SendPacketQueued(ipPacket.Clone());
+        await myPacketForwarderCallbacks.WaitForUdpPacket(ipPacket);
+        Assert.AreEqual(1, forwarderPool.ClientCount);
 
         // -------------
         // Test
         // -------------
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
-        proxyPool.SendPacketQueued(ipPacket.Clone());
-        await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
-        Assert.AreEqual(2, proxyPool.ClientCount,
+        forwarderPool.SendPacketQueued(ipPacket.Clone());
+        await myPacketForwarderCallbacks.WaitForUdpPacket(ipPacket);
+        Assert.AreEqual(2, forwarderPool.ClientCount,
             "New source with a same destination should create a new worker.");
 
         // -------------
@@ -104,9 +104,9 @@ public class UdpProxyTest : TestBase
         udpEndPoint = TestHelper.WebServer.LocalEps.UdpEchoEndPoint2;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.30:2000"),
             udpEndPoint, Guid.NewGuid().ToByteArray());
-        proxyPool.SendPacketQueued(ipPacket.Clone());
-        await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
-        Assert.AreEqual(2, proxyPool.ClientCount,
+        forwarderPool.SendPacketQueued(ipPacket.Clone());
+        await myPacketForwarderCallbacks.WaitForUdpPacket(ipPacket);
+        Assert.AreEqual(2, forwarderPool.ClientCount,
             "New source with a new destination should not create a new worker.");
 
         // -------------
@@ -115,39 +115,39 @@ public class UdpProxyTest : TestBase
         var udpEndPoint2 = TestHelper.WebServer.LocalEps.UdpEchoEndPoint1;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint2,
             Guid.NewGuid().ToByteArray());
-        proxyPool.SendPacketQueued(ipPacket.Clone());
-        await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
-        Assert.AreEqual(2, proxyPool.ClientCount,
+        forwarderPool.SendPacketQueued(ipPacket.Clone());
+        await myPacketForwarderCallbacks.WaitForUdpPacket(ipPacket);
+        Assert.AreEqual(2, forwarderPool.ClientCount,
             "new destination should not create a worker.");
 
         // -------------
         // Test: timeout
         // -------------
-        proxyPoolOptions = TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks);
-        proxyPoolOptions.UdpTimeout = TimeSpan.FromSeconds(1);
-        proxyPool = new UdpProxyPool(proxyPoolOptions);
+        forwarderPoolOptions = TestHelper.CreateUdpForwarderPoolOptions(myPacketForwarderCallbacks);
+        forwarderPoolOptions.UdpTimeout = TimeSpan.FromSeconds(1);
+        forwarderPool = new UdpForwarderPool(forwarderPoolOptions);
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
-        proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
-        proxyPool.SendPacketQueued(ipPacket.Clone());
-        await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
-        Assert.AreEqual(1, proxyPool.ClientCount);
-        await VhTestUtil.AssertEqualsWait(0, () => proxyPool.ClientCount);
+        forwarderPool.PacketReceived += myPacketForwarderCallbacks.PacketReceived;
+        forwarderPool.SendPacketQueued(ipPacket.Clone());
+        await myPacketForwarderCallbacks.WaitForUdpPacket(ipPacket);
+        Assert.AreEqual(1, forwarderPool.ClientCount);
+        await VhTestUtil.AssertEqualsWait(0, () => forwarderPool.ClientCount);
 
         // test ip6
         udpEndPoint = TestHelper.WebServer.LocalEps.UdpEchoEndPoint1V6;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[::1]:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
-        proxyPool.SendPacketQueued(ipPacket.Clone());
-        await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
+        forwarderPool.SendPacketQueued(ipPacket.Clone());
+        await myPacketForwarderCallbacks.WaitForUdpPacket(ipPacket);
     }
 
     [TestMethod]
     public async Task Stray_packet_should_not_kill_worker_receive_loop()
     {
-        var myPacketProxyCallbacks = new MyPacketProxyCallbacks();
-        var proxyPool = new UdpProxyPool(TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks));
-        proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
+        var myPacketForwarderCallbacks = new MyPacketForwarderCallbacks();
+        var forwarderPool = new UdpForwarderPool(TestHelper.CreateUdpForwarderPoolOptions(myPacketForwarderCallbacks));
+        forwarderPool.PacketReceived += myPacketForwarderCallbacks.PacketReceived;
 
         // the test owns the remote peer, so it can see the worker's endpoint and reply on demand
         using var peer = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
@@ -155,11 +155,11 @@ public class UdpProxyTest : TestBase
         var sourceEndPoint = IPEndPoint.Parse("127.0.0.2:2000");
 
         // establish the flow and prove the reply path works
-        proxyPool.SendPacketQueued(PacketBuilder.BuildUdp(sourceEndPoint, peerEndPoint,
+        forwarderPool.SendPacketQueued(PacketBuilder.BuildUdp(sourceEndPoint, peerEndPoint,
             Guid.NewGuid().ToByteArray()));
         var request = await peer.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
         await peer.SendAsync(request.Buffer, request.RemoteEndPoint);
-        await myPacketProxyCallbacks.WaitForUdpPacket(p =>
+        await myPacketForwarderCallbacks.WaitForUdpPacket(p =>
             p.ExtractUdp().Payload.Span.SequenceEqual(request.Buffer));
 
         // blast a stray datagram at the worker from a foreign socket; the worker must drop it
@@ -169,15 +169,15 @@ public class UdpProxyTest : TestBase
         await Task.Delay(500); // let the worker process the stray packet
 
         // the same flow must still receive replies
-        proxyPool.SendPacketQueued(PacketBuilder.BuildUdp(sourceEndPoint, peerEndPoint,
+        forwarderPool.SendPacketQueued(PacketBuilder.BuildUdp(sourceEndPoint, peerEndPoint,
             Guid.NewGuid().ToByteArray()));
         var request2 = await peer.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
         var reply = Guid.NewGuid().ToByteArray();
         await peer.SendAsync(reply, request2.RemoteEndPoint);
-        await myPacketProxyCallbacks.WaitForUdpPacket(p =>
+        await myPacketForwarderCallbacks.WaitForUdpPacket(p =>
             p.ExtractUdp().Payload.Span.SequenceEqual(reply));
 
-        proxyPool.Dispose();
+        forwarderPool.Dispose();
     }
 
     [TestMethod]
@@ -186,11 +186,11 @@ public class UdpProxyTest : TestBase
         // a flow that keeps sending but receives nothing must keep its reply mapping alive;
         // the mapping used to be refreshed only by inbound packets, so it expired after
         // UdpTimeout and every later reply was dropped
-        var myPacketProxyCallbacks = new MyPacketProxyCallbacks();
-        var proxyPoolOptions = TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks);
-        proxyPoolOptions.UdpTimeout = TimeSpan.FromSeconds(2);
-        var proxyPool = new UdpProxyPool(proxyPoolOptions);
-        proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
+        var myPacketForwarderCallbacks = new MyPacketForwarderCallbacks();
+        var forwarderPoolOptions = TestHelper.CreateUdpForwarderPoolOptions(myPacketForwarderCallbacks);
+        forwarderPoolOptions.UdpTimeout = TimeSpan.FromSeconds(2);
+        var forwarderPool = new UdpForwarderPool(forwarderPoolOptions);
+        forwarderPool.PacketReceived += myPacketForwarderCallbacks.PacketReceived;
 
         using var peer = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var peerEndPoint = (IPEndPoint)peer.Client.LocalEndPoint!;
@@ -198,7 +198,7 @@ public class UdpProxyTest : TestBase
 
         // send outbound-only traffic for longer than UdpTimeout
         for (var i = 0; i < 16; i++) {
-            proxyPool.SendPacketQueued(PacketBuilder.BuildUdp(sourceEndPoint, peerEndPoint,
+            forwarderPool.SendPacketQueued(PacketBuilder.BuildUdp(sourceEndPoint, peerEndPoint,
                 Guid.NewGuid().ToByteArray()));
             await Task.Delay(200);
         }
@@ -207,12 +207,12 @@ public class UdpProxyTest : TestBase
         var request = await peer.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
         var reply = Guid.NewGuid().ToByteArray();
         await peer.SendAsync(reply, request.RemoteEndPoint);
-        await myPacketProxyCallbacks.WaitForUdpPacket(p =>
+        await myPacketForwarderCallbacks.WaitForUdpPacket(p =>
             p.DestinationAddress.Equals(sourceEndPoint.Address) &&
             p.ExtractUdp().DestinationPort == sourceEndPoint.Port &&
             p.ExtractUdp().Payload.Span.SequenceEqual(reply));
 
-        proxyPool.Dispose();
+        forwarderPool.Dispose();
     }
 
     [TestMethod]
@@ -220,9 +220,9 @@ public class UdpProxyTest : TestBase
     {
         // the DF flag maps to a per-socket setsockopt that used to be dead code; exercise both
         // transitions through a shared worker to prove activating it does not break this platform
-        var myPacketProxyCallbacks = new MyPacketProxyCallbacks();
-        var proxyPool = new UdpProxyPool(TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks));
-        proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
+        var myPacketForwarderCallbacks = new MyPacketForwarderCallbacks();
+        var forwarderPool = new UdpForwarderPool(TestHelper.CreateUdpForwarderPoolOptions(myPacketForwarderCallbacks));
+        forwarderPool.PacketReceived += myPacketForwarderCallbacks.PacketReceived;
 
         using var peer = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var peerEndPoint = (IPEndPoint)peer.Client.LocalEndPoint!;
@@ -231,16 +231,16 @@ public class UdpProxyTest : TestBase
         foreach (var dontFragment in new[] { true, false, true }) {
             var ipPacket = PacketBuilder.BuildUdp(sourceEndPoint, peerEndPoint, Guid.NewGuid().ToByteArray());
             ((IpV4Packet)ipPacket).DontFragment = dontFragment;
-            proxyPool.SendPacketQueued(ipPacket);
+            forwarderPool.SendPacketQueued(ipPacket);
 
             var request = await peer.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
             var reply = Guid.NewGuid().ToByteArray();
             await peer.SendAsync(reply, request.RemoteEndPoint);
-            await myPacketProxyCallbacks.WaitForUdpPacket(p =>
+            await myPacketForwarderCallbacks.WaitForUdpPacket(p =>
                 p.ExtractUdp().Payload.Span.SequenceEqual(reply));
         }
 
-        proxyPool.Dispose();
+        forwarderPool.Dispose();
     }
 
     [TestMethod]

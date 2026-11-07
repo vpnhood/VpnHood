@@ -27,7 +27,7 @@ public interface IVpnAdapter : IPacketTransport
     event EventHandler<VpnAdapterOptions>? Started;
     bool IsStarted { get; }
     /// <summary>
-    /// Whether the adapter's NAT translates this IP version; a server sends one it does not by its proxy.
+    /// Whether the adapter's NAT translates this IP version; a server sends one it does not by its forwarders.
     /// </summary>
     bool IsNatSupported(IpVersion ipVersion);
     bool CanProtectSocket { get; }

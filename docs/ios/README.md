@@ -11,7 +11,7 @@ ids and name come from its product's identity (`src/Apps/Connect/Directory.Build
 ## Topics — read the relevant one before working in that area
 - **Build / deploy / provisioning** → [build-deploy-and-provisioning.md](build-deploy-and-provisioning.md)
 - **Architecture & App↔Extension IPC** → [architecture-and-ipc.md](architecture-and-ipc.md)
-- **Memory & throughput** (52 MB jetsam, proxy mode, .NET 11/CoreCLR) → [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md)
+- **Memory & throughput** (52 MB jetsam, TCP forwarding, .NET 11/CoreCLR) → [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md)
   — **read before changing anything memory-/throughput-/TCP-stack-related.**
 - **Extension runtime rules & gotchas** → [extension-runtime-rules.md](extension-runtime-rules.md)
 

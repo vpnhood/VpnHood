@@ -28,7 +28,12 @@
       <Setter Property="Opacity" Value="1" />
     </Style>
   </UserControl.Styles>
-  <Grid RowDefinitions="*,50" MaxWidth="560">
+  <!-- a finger's swipe slides it as the arrow on the side it drags from; the background takes
+       the touch where no slide content is, and a vertical drag stays the page's scroll -->
+  <Grid RowDefinitions="*,50" MaxWidth="560" Background="Transparent" SwipeGesture="OnSwipe">
+    <Grid.GestureRecognizers>
+      <SwipeGestureRecognizer CanHorizontallySwipe="True" CanVerticallySwipe="False" />
+    </Grid.GestureRecognizers>
     <!-- the two slides move together, 0.3s on the standard curve,
          across the carousel's whole width - the arrows lie over them -->
     <TransitioningContentControl x:Name="SlideHost" ClipToBounds="True">

@@ -13,6 +13,7 @@ public partial class PremiumFeaturesCarousel : UserControl
 {
     private readonly IReadOnlyList<(string? Image, string Title, string Description)> _slides;
     private int _index;
+    private int _swipeId;
 
     public PremiumFeaturesCarousel()
     {
@@ -77,6 +78,18 @@ public partial class PremiumFeaturesCarousel : UserControl
 
         for (var i = 0; i < Dots.Children.Count; i++)
             Dots.Children[i].Classes.Set("active", i == _index);
+    }
+
+    // A swipe raises an event per move; it slides once, on its first. The finger dragging left
+    // brings in the slide from the right, as that side's arrow does.
+    private void OnSwipe(object? sender, SwipeGestureEventArgs e)
+    {
+        if (e.Id == _swipeId || e.SwipeDirection is not (SwipeDirection.Left or SwipeDirection.Right))
+            return;
+
+        _swipeId = e.Id;
+        e.Handled = true;
+        SlideToward(e.SwipeDirection == SwipeDirection.Left ? NavigationDirection.Right : NavigationDirection.Left);
     }
 
     private void OnPrevClick(object? sender, RoutedEventArgs e)

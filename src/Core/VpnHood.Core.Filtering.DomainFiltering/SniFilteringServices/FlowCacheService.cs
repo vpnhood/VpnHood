@@ -51,8 +51,8 @@ internal class FlowCacheService : IDisposable
             if (nowTicks - kvp.Value.LastSeenTicks <= flowTimeoutTicks)
                 continue;
 
-            // only the packet thread touches a flow's packets: one still in flight may add to them, or take them out
-            // to send. Those of a removed flow are left to the GC, undisposed
+            // a removed flow's packets go to the GC undisposed, here or on the packet thread: a packet in flight may
+            // add to them or take them out to send, even on an old reader that outlived an adapter restart
             _flowCache.TryRemove(kvp.Key, out _);
         }
 

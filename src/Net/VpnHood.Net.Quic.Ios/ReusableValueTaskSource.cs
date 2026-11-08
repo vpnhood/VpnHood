@@ -12,7 +12,7 @@ namespace VpnHood.Net.Quic.Ios;
 /// completion idempotent, which is what protects against two completion paths racing (e.g. the operation's
 /// own callback vs. a cancellation/dispose).
 /// </remarks>
-public sealed class ReusableValueTaskSource : IValueTaskSource
+internal sealed class ReusableValueTaskSource : IValueTaskSource
 {
     // RunContinuationsAsynchronously = true is REQUIRED: completion is signalled from a Network.framework
     // callback running on the QUIC stream's serial dispatch queue. With the default (false) the awaiting

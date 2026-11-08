@@ -7,7 +7,7 @@ namespace VpnHood.Net.Quic.Ios;
 /// <see cref="ValueTask{TResult}"/> carrying a result. See <see cref="ReusableValueTaskSource"/> for the
 /// no-result variant and the shared usage/threading notes.
 /// </summary>
-public sealed class ReusableValueTaskSource<T> : IValueTaskSource<T>
+internal sealed class ReusableValueTaskSource<T> : IValueTaskSource<T>
 {
     // See ReusableValueTaskSource for why RunContinuationsAsynchronously must be true: completion is raised
     // from a Network.framework callback on the QUIC stream's serial dispatch queue, and running the

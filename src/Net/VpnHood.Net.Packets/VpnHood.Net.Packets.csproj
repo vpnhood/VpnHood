@@ -2,6 +2,8 @@
 	<PropertyGroup>
 		<Description>A very fast and memory-efficient internet packet parser that supports IPv4, IPv6, ICMPv4, ICMPv6, TCP, and UDP.</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<!-- the whole public API is documented: a missing or broken doc comment fails the build -->
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

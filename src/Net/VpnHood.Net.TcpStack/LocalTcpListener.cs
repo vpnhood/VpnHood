@@ -6,9 +6,12 @@ using VpnHood.Net.Toolkit.Net;
 namespace VpnHood.Net.TcpStack;
 
 /// <summary>
-/// TCP listener that accepts incoming connections on a local endpoint.
-/// Similar to <see cref="System.Net.Sockets.TcpListener"/> but for the local TCP stack.
+/// Provides a listener of a <see cref="LocalTcpStack"/>: it queues the connections that complete their handshake until
+/// they are accepted, the way <see cref="System.Net.Sockets.TcpListener"/> does for sockets.
 /// </summary>
+/// <remarks>
+/// A full queue (<see cref="LocalTcpStackOptions.AcceptQueueCapacity"/>) closes a new connection instead.
+/// </remarks>
 public sealed class LocalTcpListener : ITcpListener
 {
     private readonly Channel<LocalTcpClient> _acceptQueue;
@@ -17,12 +20,13 @@ public sealed class LocalTcpListener : ITcpListener
     private bool _stopped;
 
     /// <summary>
-    /// The local endpoint this listener is bound to. Null = wildcard listener (any IPv4/IPv6).
+    /// Gets the endpoint this listener takes connections to, or <see langword="null"/> for the listener of
+    /// <see cref="LocalTcpStack.ListenAny"/>, which takes the connections no endpoint listener takes.
     /// </summary>
     public IpEndPointValue? LocalEndPoint { get; }
 
     /// <summary>
-    /// True when this listener accepts connections on any endpoint.
+    /// Gets a value indicating whether this is the listener of <see cref="LocalTcpStack.ListenAny"/>.
     /// </summary>
     public bool IsAny => LocalEndPoint is null;
 
@@ -56,9 +60,7 @@ public sealed class LocalTcpListener : ITcpListener
         return _acceptQueue.Writer.TryWrite(client);
     }
 
-    /// <summary>
-    /// Asynchronously accepts all incoming connections.
-    /// </summary>
+    /// <inheritdoc cref="ITcpListener.AcceptAllAsync"/>
     public IAsyncEnumerable<LocalTcpClient> AcceptAllAsync(CancellationToken cancellationToken)
     {
         return _acceptQueue.Reader.ReadAllAsync(cancellationToken);
@@ -71,8 +73,12 @@ public sealed class LocalTcpListener : ITcpListener
     }
 
     /// <summary>
-    /// Asynchronously accepts a single incoming connection.
+    /// Accepts the next connection that completes its handshake.
     /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the accepted connection, which the caller owns and disposes.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="ChannelClosedException">The listener is stopped.</exception>
     public ValueTask<LocalTcpClient> AcceptAsync(CancellationToken cancellationToken)
     {
         return _acceptQueue.Reader.ReadAsync(cancellationToken);
@@ -84,7 +90,9 @@ public sealed class LocalTcpListener : ITcpListener
     }
 
     /// <summary>
-    /// Stops the listener and completes the accept queue. Disposes any unaccepted streams.
+    /// Stops the listener: ends its accepts, closes the connections in its queue, and leaves the stack, so a new listener
+    /// can take its endpoint. A handshake under way for it is closed when it completes; connections already accepted stay
+    /// open. Calling it again does nothing.
     /// </summary>
     public void Stop()
     {
@@ -99,6 +107,8 @@ public sealed class LocalTcpListener : ITcpListener
             client.Dispose();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Stops the listener, as <see cref="Stop"/> does.
+    /// </summary>
     public void Dispose() => Stop();
 }

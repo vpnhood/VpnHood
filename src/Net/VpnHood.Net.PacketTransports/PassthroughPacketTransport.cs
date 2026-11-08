@@ -2,12 +2,25 @@
 
 namespace VpnHood.Net.PacketTransports;
 
+/// <summary>
+/// Provides a packet transport with no queue: each packet is handed on at once, on the sender's thread, through
+/// <see cref="SendPacket"/>.
+/// </summary>
+/// <remarks>
+/// It never disposes a packet it hands on; one <see cref="SendPacket"/> fails on is disposed.
+/// </remarks>
 public abstract class PassthroughPacketTransport()
     : PacketTransportBase(new PacketTransportOptions {
         AutoDisposePackets = false,
         Blocking = false
     }, passthrough: true, singleMode: true)
 {
+    /// <summary>
+    /// Hands the batch's one packet to <see cref="SendPacket"/>, and disposes it when that throws.
+    /// </summary>
+    /// <param name="ipPackets">The batch: empty, or one packet.</param>
+    /// <returns>A completed task.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">The batch holds more than one packet.</exception>
     protected sealed override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         switch (ipPackets.Count) {
@@ -31,6 +44,9 @@ public abstract class PassthroughPacketTransport()
         }
     }
 
-    // Hands the packet on, or throws before it does: once handed on, it is no longer this transport's
+    /// <summary>
+    /// Hands one packet on, at once. Once handed on, the packet is no longer this transport's; throw only before.
+    /// </summary>
+    /// <param name="ipPacket">The packet.</param>
     protected abstract void SendPacket(IpPacket ipPacket);
 }

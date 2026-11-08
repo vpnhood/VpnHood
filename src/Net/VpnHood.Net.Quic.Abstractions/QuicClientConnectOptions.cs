@@ -10,8 +10,13 @@ namespace VpnHood.Net.Quic.Abstractions;
 /// </summary>
 public sealed class QuicClientConnectOptions
 {
+    /// <summary>Gets the server's address and port.</summary>
     public required IPEndPoint RemoteEndPoint { get; init; }
+
+    /// <summary>Gets the server's name, sent as the TLS server name (SNI).</summary>
     public required string TargetHost { get; init; }
+
+    /// <summary>Gets the callback that accepts or rejects the server's certificate.</summary>
     public required RemoteCertificateValidationCallback CertificateValidationCallback { get; init; }
 
     /// <summary>

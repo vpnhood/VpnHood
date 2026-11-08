@@ -22,6 +22,7 @@ public abstract class VhMemory
     /// <summary>Returns the current memory snapshot. Implementations must not throw (report unavailable
     /// figures as <c>null</c> instead), because consumers read this on hot paths. Read a specific figure via
     /// the returned struct, e.g. <c>VhMemory.Instance.GetInfo().ProcessFootprintMb</c>.</summary>
+    /// <returns>The snapshot, with <see langword="null"/> for each figure the platform cannot report.</returns>
     public abstract VhMemoryInfo GetInfo();
 
     /// <summary>Default null-object: reports no memory figures. Used until a host installs a real one.</summary>

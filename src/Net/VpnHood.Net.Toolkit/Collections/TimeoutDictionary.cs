@@ -9,15 +9,23 @@ namespace VpnHood.Net.Toolkit.Collections;
 /// <summary>
 /// A concurrent dictionary whose values expire after <see cref="Timeout"/> of no use and are disposed
 /// by the dictionary when evicted, replaced or drained. Ordinary operations take no dictionary-wide
-/// application lock (the gated cleanup sweep is the only locked path), so it is safe for hot packet paths.
+/// application lock (the gated cleanup sweep is the only locked path). Expiry is checked on access and by the sweeps
+/// the operations try, with no timer of its own, against a cached clock of about one second's precision.
 /// Ownership contract:
-/// a value handed to the dictionary (or created by a factory) is owned and disposed by the dictionary,
-/// except TryAdd returning false, which leaves the caller's value untouched. A factory may run more than
+/// a value the dictionary adds (or a factory creates) is owned and disposed by the dictionary. One TryAdd returns false
+/// for stays the caller's, though its last-used time may be set; one AddOrUpdate rejects because the dictionary is
+/// already disposed stays the caller's. A factory may run more than
 /// once under contention and must return a fresh instance each time; losing instances are disposed.
 /// A returned value may be disposed by a concurrent eviction right after retrieval, so callers must
-/// tolerate IsDisposed values and value Dispose must be idempotent. Exceptions thrown by a value
-/// Dispose are caught and logged, so a throwing value can not strand entries mid-drain.
+/// tolerate IsDisposed values and value Dispose must be idempotent. A value's Dispose must not throw: the
+/// dictionary does not catch it, and a throw would end a drain part-way.
 /// </summary>
+/// <typeparam name="TKey">The type of the keys.</typeparam>
+/// <typeparam name="TValue">The type of the values.</typeparam>
+/// <param name="timeout">
+/// How long a value may go unused before it expires, or <see langword="null"/> for no expiry by disuse; a disposed value
+/// still counts as expired on access.
+/// </param>
 public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : IDisposable
     where TValue : class, ITimeoutItem where TKey : notnull
 {
@@ -28,9 +36,22 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     private long _lastCleanupTickCount = long.MinValue / 2; // far past, so the first unforced sweep runs
     private int _disposed;
 
+    /// <summary>
+    /// Gets a value indicating whether an add or a lookup first tries a sweep of the expired values, which runs at most
+    /// once per a third of <see cref="Timeout"/>; removals and disposal do not. The default is <see langword="true"/>.
+    /// </summary>
     public bool AutoCleanup { get; init; } = true;
+
+    /// <summary>
+    /// Gets how long a value may go unused before it expires, or <see langword="null"/> for no expiry by disuse; a
+    /// disposed value still counts as expired on access.
+    /// </summary>
     public TimeSpan? Timeout { get; init; } = timeout;
 
+    /// <summary>
+    /// Gets the number of values, expired ones not swept out yet included; with <see cref="AutoCleanup"/>, it tries a
+    /// sweep first.
+    /// </summary>
     public int Count {
         get {
             AutoCleanupInternal();
@@ -38,6 +59,19 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         }
     }
 
+    /// <summary>
+    /// Gets a key's live value, refreshing its last-used time, or adds the value a factory creates, in place of an
+    /// expired one, which is disposed.
+    /// </summary>
+    /// <remarks>
+    /// Under contention the factory may run more than once; it must return a new instance each time, and the instances
+    /// that lose are disposed.
+    /// </remarks>
+    /// <param name="key">The key.</param>
+    /// <param name="valueFactory">Creates the value to add.</param>
+    /// <returns>The key's value, which the dictionary owns.</returns>
+    /// <exception cref="ObjectDisposedException">The dictionary is disposed.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
@@ -79,6 +113,13 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         }
     }
 
+    /// <summary>
+    /// Gets a key's live value, refreshing its last-used time. An expired value is removed and disposed.
+    /// </summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">The value, when found; it stays the dictionary's.</param>
+    /// <returns><see langword="true"/> if the key has a live value; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
     {
         AutoCleanupInternal();
@@ -104,6 +145,15 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         return false;
     }
 
+    /// <summary>Adds a value, or replaces a key's value and disposes the replaced one.</summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">
+    /// The value, which the dictionary owns once added; when the dictionary is already disposed, it throws and the caller
+    /// keeps the value, and a disposal during the add disposes it.
+    /// </param>
+    /// <returns>The value.</returns>
+    /// <exception cref="ObjectDisposedException">The dictionary is disposed.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     public TValue AddOrUpdate(TKey key, TValue value)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
@@ -125,6 +175,16 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         }
     }
 
+    /// <summary>
+    /// Adds a value unless the key has a live one; an expired one is replaced and disposed.
+    /// </summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">The value, which the dictionary owns when it is added; its last-used time may be set either way.</param>
+    /// <returns>
+    /// <see langword="true"/> if the value was added; <see langword="false"/> if the key has a live value or the
+    /// dictionary is disposed, and the caller keeps the value.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     public bool TryAdd(TKey key, TValue value)
     {
         // Try* semantics: returning false leaves the caller's value untouched and caller-owned
@@ -158,6 +218,11 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         }
     }
 
+    /// <summary>Removes a key's value and disposes it.</summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">The removed value, already disposed, when found.</param>
+    /// <returns><see langword="true"/> if a value was removed; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     public bool TryRemove(TKey key, out TValue? value)
     {
         if (!_items.TryRemove(key, out var entry)) {
@@ -211,6 +276,14 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
             Cleanup();
     }
 
+    /// <summary>
+    /// Removes and disposes the expired values. It does nothing without a <see cref="Timeout"/>, or when the dictionary
+    /// is disposed.
+    /// </summary>
+    /// <param name="force">
+    /// <see langword="true"/> to sweep now; <see langword="false"/> to skip the sweep when the last one was within a
+    /// third of <see cref="Timeout"/>.
+    /// </param>
     public void Cleanup(bool force = false)
     {
         // do nothing if there is no timeout
@@ -240,6 +313,9 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         }
     }
 
+    /// <summary>
+    /// Removes and disposes every value; later adds throw or fail. Calling it again does nothing.
+    /// </summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -248,6 +324,9 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         RemoveAll();
     }
 
+    /// <summary>
+    /// Removes and disposes the values, in one pass; a value added or replaced during the pass may stay.
+    /// </summary>
     public void RemoveAll()
     {
         // drain with conditional removes; a Values snapshot followed by Clear would drop values

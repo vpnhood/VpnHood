@@ -9,10 +9,20 @@ using VpnHood.Net.Toolkit.Streams;
 
 namespace VpnHood.Net.IpLocations.Providers.SqliteProvider;
 
+/// <summary>
+/// Provides the means to build the SQLite database <see cref="IpLocationSqliteProvider"/> reads, from the zip of
+/// country IP ranges <see cref="Offlines.Ip2LocationDbParser.BuildLocalIpRangeLocationDb"/> builds.
+/// </summary>
 public static class IpLocationSqliteBuilder
 {
-    // use LocalIpLocationProvider Deserialize to rebuild and compact db if changed
-    // the zip's stamp (ZipStamp) is used to detect changes
+    /// <summary>
+    /// Builds the database in a file, unless the file already holds the zip's build, which the zip's stamp tells.
+    /// </summary>
+    /// <param name="zip">The zip of country IP ranges.</param>
+    /// <param name="dbPath">The database file; its folder is made when missing.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="zip"/> is <see langword="null"/>.</exception>
     public static async Task Build(IAsset zip, string dbPath, CancellationToken cancellationToken)
     {
         // ensure target folder exists
@@ -28,6 +38,17 @@ public static class IpLocationSqliteBuilder
         await Build(zip, connection, cancellationToken).Vhc();
     }
 
+    /// <summary>
+    /// Builds the database on a connection, which it opens when it is closed, unless the database already holds the
+    /// zip's build, which the zip's stamp tells. A rebuild drops the IpLocations and Metadata tables first.
+    /// </summary>
+    /// <param name="zip">The zip of country IP ranges.</param>
+    /// <param name="connection">The connection; the caller keeps owning it.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="zip"/> or <paramref name="connection"/> is <see langword="null"/>.
+    /// </exception>
     // The zip is opened twice: for its stamp, 25 bytes, and again only to build. A stream that can
     // seek is read where it lies, as ZipArchive seeks for itself; one that cannot is copied into
     // memory first - what follows its stamp is no zip on its own, since the zip's offsets count it.
@@ -131,6 +152,11 @@ public static class IpLocationSqliteBuilder
         return (string?)await cmd.ExecuteScalarAsync(cancellationToken).Vhc();
     }
 
+    /// <summary>
+    /// Converts an IP address to the database's key form: its 16 IPv6 bytes, an IPv4 address mapped to IPv6 first.
+    /// </summary>
+    /// <param name="ipAddress">The IP address.</param>
+    /// <returns>The 16 bytes.</returns>
     public static byte[] ToBytes(IPAddress ipAddress)
     {
         return IpLocationSqliteProvider.ToBytes(ipAddress);

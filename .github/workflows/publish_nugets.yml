@@ -79,6 +79,11 @@ jobs:
       - name: Test that every API call finds its JSON types
         shell: pwsh
         run: dotnet test tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj -c Release --filter "FullyQualifiedName~AppApiJsonTypesTest" -- RunConfiguration.TreatNoTestsAsError=true
+      # A README's or a doc comment's example must match the test region it is copied from, or a package
+      # would ship an example that no longer compiles.
+      - name: Check that every example matches its test
+        shell: pwsh
+        run: ./pub/lib/Update-Snippets.ps1 -Root . -Check
       # nuget.org Trusted Publishing: the job's OIDC token buys a key valid for one hour, so it is
       # requested right before the publish. The policy (created by trudyhood, package owner vpnhood)
       # names this repo and this file's NAME - renaming the file breaks publishing until it is updated.

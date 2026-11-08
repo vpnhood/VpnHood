@@ -6,8 +6,16 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.Toolkit;
 
+/// <summary>
+/// Provides the means to ask the trimmer of a trimmed or AOT-compiled app to keep the types VpnHood's JSON reaches by
+/// reflection: the network types and their converters.
+/// </summary>
 public static class AotPreserveHelper
 {
+    /// <summary>
+    /// Keeps the types wherever a call to it is kept: the trimmer reads the method's attributes, and the call itself
+    /// does nothing.
+    /// </summary>
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPEndPoint))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPAddress))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Version))]

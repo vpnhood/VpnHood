@@ -5,6 +5,21 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Net.Http3;
 
+/// <summary>
+/// Serves one QUIC connection as an HTTP/3 server, handing the request streams a filter claims to a runner, so another
+/// protocol can share the QUIC port with HTTP/3.
+/// </summary>
+/// <remarks>
+/// It answers the requests no filter claimed with header-only responses from the responder, or with status 431 those
+/// whose header fields are over the limits when the response is chosen.
+/// </remarks>
+/// <param name="connection">The QUIC connection, which <see cref="Run"/> disposes when it ends.</param>
+/// <param name="options">The limits and timeouts.</param>
+/// <param name="filter">Decides which request streams are another protocol's.</param>
+/// <param name="runner">Runs the streams the filter claims.</param>
+/// <param name="responder">Answers the HTTP/3 requests.</param>
+/// <exception cref="ArgumentOutOfRangeException">An option is out of its range.</exception>
+/// <exception cref="ArgumentNullException"><see cref="Http3ServerOptions.ResponseHeaders"/> is <see langword="null"/>.</exception>
 public sealed class Http3ServerConnection(IQuicServerConnection connection, Http3ServerOptions options,
     IHttp3StreamFilter filter, IHttp3StreamRunner runner, IHttp3Responder responder) : IHttp3GracefulCloseCallbacks
 {
@@ -23,6 +38,16 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
     private bool _gracefulCloseRequested;
     private bool _controlInputPending;
 
+    /// <summary>
+    /// Serves the connection until it closes, stays idle for <see cref="Http3ServerOptions.KeepAliveTimeout"/>, fails, or
+    /// <paramref name="cancellationToken"/> is canceled; then closes it, waits for its streams, and disposes it.
+    /// </summary>
+    /// <remarks>
+    /// The connection's own failures are logged, not thrown. The wait for the streams has no time limit: a runner or a
+    /// responder that does not end holds it.
+    /// </remarks>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes when the connection is closed and disposed.</returns>
     public async Task Run(CancellationToken cancellationToken)
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _abort.Token, _idle.Token);
@@ -183,6 +208,11 @@ public sealed class Http3ServerConnection(IQuicServerConnection connection, Http
         }
     }
 
+    /// <summary>
+    /// Starts closing the connection with an HTTP/3 error code, such as <see cref="Http3ErrorCode.ExcessiveLoad"/>, sent
+    /// to the peer; <see cref="Run"/> then ends once its streams do. Calling it again does nothing.
+    /// </summary>
+    /// <param name="errorCode">The error code.</param>
     // Native close starts synchronously; Run owns and joins all asynchronous cleanup.
     public void Close(long errorCode)
     {

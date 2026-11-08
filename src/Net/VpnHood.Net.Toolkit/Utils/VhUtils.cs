@@ -12,14 +12,33 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
+/// <summary>
+/// Provides assorted helpers: sizes and their text, sockets and free ports, tasks with a timeout, keys and hashes, files,
+/// and countries.
+/// </summary>
 public static class VhUtils
 {
-    public const long Megabytes = 1L << 20; // 1 MB
-    public const long Gigabytes = 1L << 30; // 1 GB
-    public const long Terabytes = 1L << 40; // 1 TB
-    public const long Petabytes = 1L << 50; // 1 PB
+    /// <summary>The bytes in a megabyte, 2^20.</summary>
+    public const long Megabytes = 1L << 20;
+
+    /// <summary>The bytes in a gigabyte, 2^30.</summary>
+    public const long Gigabytes = 1L << 30;
+
+    /// <summary>The bytes in a terabyte, 2^40.</summary>
+    public const long Terabytes = 1L << 40;
+
+    /// <summary>The bytes in a petabyte, 2^50.</summary>
+    public const long Petabytes = 1L << 50;
+
+    /// <summary>
+    /// Gets or sets the timeout <see cref="VhUtilsExtensions.WhenNoDebugger"/> gives while a debugger is attached, or
+    /// <see langword="null"/> to keep the timeouts as they are. The default is a day.
+    /// </summary>
     public static TimeSpan? DebuggerTimeout { get; set; } = TimeSpan.FromDays(1);
 
+    /// <summary>Determines whether an exception, or its inner exception, is a refused connection.</summary>
+    /// <param name="ex">The exception.</param>
+    /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>.</returns>
     public static bool IsConnectionRefusedException(Exception ex)
     {
         return
@@ -27,11 +46,25 @@ public static class VhUtils
             ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionRefused };
     }
 
+    /// <summary>
+    /// Determines whether an exception is of the kinds a closed socket throws: <see cref="ObjectDisposedException"/>,
+    /// <see cref="IOException"/> or <see cref="SocketException"/>, whatever its cause.
+    /// </summary>
+    /// <param name="ex">The exception.</param>
+    /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>.</returns>
     public static bool IsSocketClosedException(Exception ex)
     {
         return ex is ObjectDisposedException or IOException or SocketException;
     }
 
+    /// <summary>
+    /// Finds a TCP port free on an address now: the given one when it is, else one the system picks. Another process may
+    /// take it before the caller binds it.
+    /// </summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <param name="defaultPort">The port to try first, or 0 for any.</param>
+    /// <returns>The endpoint.</returns>
+    /// <exception cref="SocketException">No port can be bound on the address.</exception>
     public static IPEndPoint GetFreeTcpEndPoint(IPAddress ipAddress, int defaultPort = 0)
     {
         try {
@@ -47,6 +80,15 @@ public static class VhUtils
         }
     }
 
+    /// <summary>
+    /// Finds a UDP port free on an address now: the given one when it is, else one the system picks. Another process may
+    /// take it before the caller binds it.
+    /// </summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <param name="defaultPort">The port to try first, or 0 for any.</param>
+    /// <returns>The endpoint.</returns>
+    /// <exception cref="SocketException">No port can be bound on the address.</exception>
+    /// <exception cref="InvalidOperationException">The socket has no local endpoint.</exception>
     public static IPEndPoint GetFreeUdpEndPoint(IPAddress ipAddress, int defaultPort = 0)
     {
         try {
@@ -61,6 +103,8 @@ public static class VhUtils
         }
     }
 
+    /// <summary>Creates a completed task source that runs continuations asynchronously.</summary>
+    /// <returns>The task source.</returns>
     public static TaskCompletionSource CreateCompletedTcs()
     {
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -77,6 +121,10 @@ public static class VhUtils
         return base64;
     }
 
+    /// <summary>Decodes Base64, adding the padding that is missing.</summary>
+    /// <param name="base64">The Base64 text.</param>
+    /// <returns>The bytes.</returns>
+    /// <exception cref="FormatException">The text is not Base64.</exception>
     public static byte[] ConvertFromBase64AndFixPadding(string base64)
     {
         try {
@@ -87,6 +135,13 @@ public static class VhUtils
         }
     }
 
+    /// <summary>Copies a folder's files to another folder, which is made when missing; an existing file is not overwritten.</summary>
+    /// <param name="sourcePath">The folder to copy.</param>
+    /// <param name="destinationPath">The folder to copy into.</param>
+    /// <param name="recursive"><see langword="true"/> to copy the subfolders too.</param>
+    /// <exception cref="DirectoryNotFoundException">The source folder does not exist.</exception>
+    /// <exception cref="IOException">A file exists already, or cannot be copied.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not read or write a file or folder.</exception>
     public static void DirectoryCopy(string sourcePath, string destinationPath, bool recursive)
     {
         // Get the subdirectories for the specified directory.
@@ -117,17 +172,39 @@ public static class VhUtils
             }
     }
 
+    /// <summary>Copies a collection into an array under a lock.</summary>
+    /// <typeparam name="T">The type of the items.</typeparam>
+    /// <param name="lockObject">The lock.</param>
+    /// <param name="collection">The collection.</param>
+    /// <returns>The array.</returns>
     public static T[] SafeToArray<T>(object lockObject, IEnumerable<T> collection)
     {
         lock (lockObject)
             return [.. collection];
     }
 
+    /// <summary>Waits for a task until a token is canceled; the task itself is not canceled.</summary>
+    /// <typeparam name="T">The type of the result.</typeparam>
+    /// <param name="task">The task.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the task's.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="Exception">The task's own exception.</exception>
     public static Task<T> RunTask<T>(Task<T> task, CancellationToken cancellationToken)
     {
         return RunTask(task, TimeSpan.Zero, cancellationToken);
     }
 
+    /// <summary>Waits for a task at most a timeout; the task itself is not canceled.</summary>
+    /// <typeparam name="T">The type of the result.</typeparam>
+    /// <param name="task">The task.</param>
+    /// <param name="timeout">How long to wait; zero for no limit.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the task's.</returns>
+    /// <exception cref="TimeoutException">The timeout passed first.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="Exception">The task's own exception.</exception>
     public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
@@ -135,11 +212,26 @@ public static class VhUtils
         return await task.Vhc();
     }
 
+    /// <summary>Waits for a task until a token is canceled; the task itself is not canceled.</summary>
+    /// <param name="task">The task.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the task.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="Exception">The task's own exception.</exception>
     public static Task RunTask(Task task, CancellationToken cancellationToken)
     {
         return RunTask(task, TimeSpan.Zero, cancellationToken);
     }
 
+    /// <summary>Waits for a task at most a timeout; the task itself is not canceled.</summary>
+    /// <param name="task">The task.</param>
+    /// <param name="timeout">How long to wait; zero for no limit.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes with the task.</returns>
+    /// <exception cref="TimeoutException">The timeout passed first.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="Exception">The task's own exception.</exception>
     public static async Task RunTask(Task task, TimeSpan timeout, CancellationToken cancellationToken)
     {
         if (timeout == TimeSpan.Zero)
@@ -158,16 +250,29 @@ public static class VhUtils
         await task.Vhc();
     }
 
+    /// <summary>Determines whether a sequence is null or has no item.</summary>
+    /// <typeparam name="T">The type of the items.</typeparam>
+    /// <param name="array">The sequence, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if it is null or empty; otherwise, <see langword="false"/>.</returns>
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] IEnumerable<T>? array)
     {
         return array == null || !array.Any();
     }
 
+    /// <summary>Determines whether an array is null or empty.</summary>
+    /// <typeparam name="T">The type of the items.</typeparam>
+    /// <param name="array">The array, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if it is null or empty; otherwise, <see langword="false"/>.</returns>
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] T[]? array)
     {
         return array == null || array.Length == 0;
     }
 
+    /// <summary>Determines whether two sequences have the same items in order, a null one counting as empty.</summary>
+    /// <typeparam name="T">The type of the items.</typeparam>
+    /// <param name="first">The first sequence, or <see langword="null"/>.</param>
+    /// <param name="second">The second sequence, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if they are the same; otherwise, <see langword="false"/>.</returns>
     public static bool SequenceEquals<T>(IEnumerable<T>? first, IEnumerable<T>? second)
     {
         first ??= [];
@@ -175,6 +280,9 @@ public static class VhUtils
         return first.SequenceEqual(second);
     }
 
+    /// <summary>Splits a command line into arguments at white space, keeping a double-quoted part together.</summary>
+    /// <param name="commandLine">The command line.</param>
+    /// <returns>The arguments, without their quotes.</returns>
     public static IEnumerable<string> ParseArguments(string commandLine)
     {
         if (string.IsNullOrWhiteSpace(commandLine))
@@ -205,12 +313,18 @@ public static class VhUtils
             yield return sb.ToString();
     }
 
+    /// <summary>Generates a random 128-bit AES key.</summary>
+    /// <returns>The key.</returns>
     public static byte[] GenerateKey()
     {
         // ReSharper disable once IntroduceOptionalParameters.Global
         return GenerateKey(128);
     }
 
+    /// <summary>Generates a random AES key of a size.</summary>
+    /// <param name="keySizeInBit">The key's size in bits: 128, 192 or 256.</param>
+    /// <returns>The key.</returns>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">The size is not an AES key's.</exception>
     public static byte[] GenerateKey(int keySizeInBit)
     {
         using var aes = Aes.Create();
@@ -219,6 +333,16 @@ public static class VhUtils
         return aes.Key;
     }
 
+    /// <summary>
+    /// Encrypts a client ID with a shared key, as the server checks it: AES-CBC with a zero IV and no padding, over the
+    /// ID's GUID bytes, or its UTF-8 bytes when it is no GUID.
+    /// </summary>
+    /// <param name="clientId">The client ID.</param>
+    /// <param name="key">The AES key; only a 128-bit one works now, as the IV is made as long as the key.</param>
+    /// <returns>The encrypted bytes.</returns>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">
+    /// The key is not 128 bits, or the ID's bytes are not a whole number of blocks.
+    /// </exception>
     public static byte[] EncryptClientId(string clientId, byte[] key)
     {
         // Validate request by shared secret
@@ -237,6 +361,9 @@ public static class VhUtils
         return cryptor.TransformFinalBlock(buffer, 0, buffer.Length);
     }
 
+    /// <summary>Computes the MD5 hash of bytes, for change detection, not security.</summary>
+    /// <param name="value">The bytes.</param>
+    /// <returns>The hash, in upper-case hex.</returns>
     public static string GetBufferMd5(byte[] value)
     {
         using var md5 = MD5.Create();
@@ -244,6 +371,9 @@ public static class VhUtils
         return BitConverter.ToString(hash).Replace("-", "");
     }
 
+    /// <summary>Computes the MD5 hash of a text's UTF-8 bytes, for change detection, not security.</summary>
+    /// <param name="value">The text.</param>
+    /// <returns>The hash, in upper-case hex.</returns>
     public static string GetStringMd5(string value)
     {
         using var md5 = MD5.Create();
@@ -253,6 +383,14 @@ public static class VhUtils
 
     // Stable content id (change detection, not security), as lowercase hex, optionally truncated —
     // e.g. 16 chars (64 bits) already keep accidental collisions out of reach for file-name ids.
+    /// <summary>
+    /// Computes a stable ID of a text's content, for change detection, not security: its SHA-256 in lower-case hex,
+    /// optionally cut.
+    /// </summary>
+    /// <param name="value">The text.</param>
+    /// <param name="length">The number of hex characters to keep, or <see langword="null"/> for all 64.</param>
+    /// <returns>The hex text.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="length"/> is negative or over 64.</exception>
     public static string GetHexStringSha256(string value, int? length = null)
     {
         var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
@@ -272,6 +410,11 @@ public static class VhUtils
     // - Format value with existing Round() helper and original numeric formats
     // - Prefix sign and append unit
     // - Preserve original behavior for zero (return "0")
+    /// <summary>Formats a size in bytes for reading, such as <c>1.5 GB</c>, in the current culture.</summary>
+    /// <param name="size">The size in bytes; a negative one keeps its sign.</param>
+    /// <param name="use1024"><see langword="true"/> for units of 1024; <see langword="false"/> for units of 1000.</param>
+    /// <param name="round"><see langword="true"/> to round to a whole number of the unit.</param>
+    /// <returns>The text, or <c>0</c> for zero.</returns>
     public static string FormatBytes(long size, bool use1024 = true, bool round = false)
     {
         var kb = use1024 ? 1024d : 1000d;
@@ -303,11 +446,19 @@ public static class VhUtils
     }
 
     // megabytes to bytes, 1 MB being 1024 * 1024 bytes
+    /// <summary>Converts megabytes to bytes, a megabyte being 1024 × 1024 bytes.</summary>
+    /// <param name="megabytes">The megabytes.</param>
+    /// <returns>The bytes.</returns>
     public static long FromMB(long megabytes)
     {
         return megabytes * 1024 * 1024;
     }
 
+    /// <summary>Formats a size in megabytes for reading, such as <c>2 GB</c>, in the current culture.</summary>
+    /// <param name="sizeMb">The size in megabytes; a negative one keeps its sign.</param>
+    /// <param name="use1024"><see langword="true"/> for units of 1024; <see langword="false"/>, the default, for units of 1000.</param>
+    /// <param name="round"><see langword="true"/> to round to a whole number of the unit.</param>
+    /// <returns>The text, or <c>0</c> for zero.</returns>
     public static string FormatMegaBytes(long sizeMb, bool use1024 = false, bool round = false)
     {
         var divisor = use1024 ? 1024L : 1000L;
@@ -338,6 +489,9 @@ public static class VhUtils
         double GetVal(double val) => round ? Math.Round(val) : val;
     }
 
+    /// <summary>Formats a rate in bytes per second as bits per second, such as <c>8 Mbps</c>, in units of 1024.</summary>
+    /// <param name="bytes">The bytes per second.</param>
+    /// <returns>The text.</returns>
     public static string FormatBits(long bytes)
     {
         bytes *= 8; //convertTo bit
@@ -361,6 +515,9 @@ public static class VhUtils
         return bytes.ToString("0");
     }
 
+    /// <summary>Determines whether a time span means no limit: <see cref="TimeSpan.MaxValue"/> or <see cref="Timeout.InfiniteTimeSpan"/>.</summary>
+    /// <param name="timeSpan">The time span.</param>
+    /// <returns><see langword="true"/> if it does; otherwise, <see langword="false"/>.</returns>
     public static bool IsInfinite(TimeSpan timeSpan)
     {
         return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
@@ -368,6 +525,17 @@ public static class VhUtils
 
     private static bool _hasKeepAliveError;
 
+    /// <summary>
+    /// Configures a TCP client: Nagle's delay, buffer sizes above zero, address reuse and keep-alive, each when given. A
+    /// failure to set keep-alive is logged as a warning, and keep-alive is skipped from then on, process-wide.
+    /// </summary>
+    /// <param name="tcpClient">The TCP client.</param>
+    /// <param name="sendBufferSize">The send buffer's size, or <see langword="null"/> to keep it.</param>
+    /// <param name="receiveBufferSize">The receive buffer's size, or <see langword="null"/> to keep it.</param>
+    /// <param name="reuseAddress">Whether the address may be reused, or <see langword="null"/> to keep it.</param>
+    /// <param name="keepAlive">Whether to send keep-alives, or <see langword="null"/> to keep it.</param>
+    /// <param name="noDelay"><see langword="true"/>, the default, to send without Nagle's delay.</param>
+    /// <exception cref="SocketException">An option other than keep-alive cannot be set.</exception>
     public static void ConfigTcpClient(TcpClient tcpClient,
         int? sendBufferSize = null,
         int? receiveBufferSize = null,
@@ -394,6 +562,9 @@ public static class VhUtils
         }
     }
 
+    /// <summary>Determines whether a TCP client is connected and its socket reports no error.</summary>
+    /// <param name="tcpClient">The TCP client.</param>
+    /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>, also when the check fails.</returns>
     public static bool IsTcpClientHealthy(TcpClient tcpClient)
     {
         try {
@@ -413,17 +584,30 @@ public static class VhUtils
         }
     }
 
+    /// <summary>Returns an object that must have been set.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="obj">The object, or <see langword="null"/>.</param>
+    /// <returns>The object.</returns>
+    /// <exception cref="InvalidOperationException">The object is <see langword="null"/>.</exception>
     public static T GetRequiredInstance<T>(T? obj)
     {
         return obj ?? throw new InvalidOperationException($"{typeof(T)} has not been initialized yet.");
     }
 
+    /// <summary>Cuts a time to whole seconds, keeping its kind.</summary>
+    /// <param name="dateTime">The time.</param>
+    /// <returns>The time without its fraction of a second.</returns>
     public static DateTime RemoveMilliseconds(DateTime dateTime)
     {
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute,
             dateTime.Second, dateTime.Kind);
     }
 
+    /// <summary>Reads an assembly's metadata value by key.</summary>
+    /// <param name="assembly">The assembly.</param>
+    /// <param name="key">The key.</param>
+    /// <param name="defaultValue">The value when the key is missing or empty.</param>
+    /// <returns>The value.</returns>
     public static string GetAssemblyMetadata(Assembly assembly, string key, string defaultValue)
     {
         var metadataAttribute = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
@@ -432,6 +616,9 @@ public static class VhUtils
         return string.IsNullOrEmpty(metadataAttribute?.Value) ? defaultValue : metadataAttribute.Value;
     }
 
+    /// <summary>Deletes a file when it exists, and gives back a failure instead of throwing it.</summary>
+    /// <param name="filePath">The file's path.</param>
+    /// <returns>The failure, or <see langword="null"/>.</returns>
     public static Exception? TryDeleteFile(string filePath)
     {
         try {
@@ -445,6 +632,9 @@ public static class VhUtils
         }
     }
 
+    /// <summary>Shuffles an array in place (Fisher-Yates), with a non-cryptographic random.</summary>
+    /// <typeparam name="T">The type of the items.</typeparam>
+    /// <param name="array">The array.</param>
     public static void Shuffle<T>(T[] array)
     {
         var rng = new Random();
@@ -455,6 +645,9 @@ public static class VhUtils
         }
     }
 
+    /// <summary>Gets a country's English name from its code.</summary>
+    /// <param name="countryCode">The country's two-letter code, or <see langword="null"/>.</param>
+    /// <returns>The name, or <see langword="null"/> for an empty or unknown code.</returns>
     public static string? TryGetCountryName(string? countryCode)
     {
         if (string.IsNullOrEmpty(countryCode))
@@ -468,6 +661,9 @@ public static class VhUtils
         }
     }
 
+    /// <summary>Gets a currency's symbol from its ISO code, from the first culture whose region uses it.</summary>
+    /// <param name="currencyCode">The currency's ISO code, such as <c>USD</c>.</param>
+    /// <returns>The symbol, or the code itself when no culture uses it.</returns>
     public static string GetCurrencySymbol(string currencyCode)
     {
         var culture = CultureInfo
@@ -490,9 +686,10 @@ public static class VhUtils
     }
 
     /// <summary>
-    /// Disposes every item; ours never throw from Dispose. Callers keep their own locks around the
-    /// enumeration.
+    /// Disposes every item; a throw stops the rest. Callers keep their own locks around the enumeration.
     /// </summary>
+    /// <typeparam name="T">The type of the items.</typeparam>
+    /// <param name="items">The items, or <see langword="null"/>.</param>
     public static void DisposeAll<T>(IEnumerable<T>? items) where T : IDisposable
     {
         if (items == null)
@@ -502,6 +699,11 @@ public static class VhUtils
             item.Dispose();
     }
 
+    /// <summary>Parses a URL.</summary>
+    /// <param name="stringUrl">The URL's text, or <see langword="null"/>.</param>
+    /// <param name="uriKind">The kind of URL expected. The default is absolute.</param>
+    /// <returns>The URL, or <see langword="null"/> when the text is not one.</returns>
+    /// <exception cref="ArgumentException"><paramref name="uriKind"/> is not a valid kind.</exception>
     public static Uri? TryParseUrl(string? stringUrl, UriKind uriKind = UriKind.Absolute)
     {
         return Uri.TryCreate(stringUrl, uriKind, out var result) ? result : null;

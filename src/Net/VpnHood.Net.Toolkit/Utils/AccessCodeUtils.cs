@@ -3,8 +3,14 @@ using System.Text.RegularExpressions;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
+/// <summary>
+/// Provides access codes: 20 characters, the version digit 1, a check digit, and 18 random characters.
+/// </summary>
 public static class AccessCodeUtils
 {
+    /// <summary>Builds an access code from its random part, which it neither checks nor makes.</summary>
+    /// <param name="random">The random part, 18 ASCII letters or digits for a valid code.</param>
+    /// <returns>The access code: <c>1</c>, the check digit, then the random part.</returns>
     public static string Build(string random)
     {
         var checksum = CalculateChecksum(random);
@@ -13,6 +19,9 @@ public static class AccessCodeUtils
         return accessCode;
     }
 
+    /// <summary>Checks an access code, as <see cref="Validate"/> does, without throwing.</summary>
+    /// <param name="accessCode">The access code, as typed.</param>
+    /// <returns>The code without its separators, or <see langword="null"/> when it is not valid.</returns>
     public static string? TryValidate(string accessCode)
     {
         try {
@@ -23,6 +32,13 @@ public static class AccessCodeUtils
         }
     }
 
+    /// <summary>
+    /// Checks an access code: what is not an ASCII letter or digit, such as a dash, is dropped, and the rest must be version 1's
+    /// 20 characters with a matching check digit.
+    /// </summary>
+    /// <param name="accessCode">The access code, as typed.</param>
+    /// <returns>The code without its separators.</returns>
+    /// <exception cref="ArgumentException">The code is empty, of another version or length, or its check digit does not match.</exception>
     public static string Validate(string accessCode)
     {
         accessCode = Regex.Replace(accessCode, "[^a-zA-Z0-9]", "").Trim();
@@ -64,6 +80,9 @@ public static class AccessCodeUtils
         return asciiSum;
     }
 
+    /// <summary>Formats a code for reading, with a dash after every four characters.</summary>
+    /// <param name="value">The code, or <see langword="null"/>.</param>
+    /// <returns>The formatted code, or empty.</returns>
     public static string Format(string? value)
     {
         if (string.IsNullOrEmpty(value))
@@ -80,6 +99,9 @@ public static class AccessCodeUtils
         return formattedValue.ToString();
     }
 
+    /// <summary>Hides a valid access code but its last four characters, for a log or a screen.</summary>
+    /// <param name="accessCode">The access code, or <see langword="null"/>.</param>
+    /// <returns>The code with all but its last four characters as <c>*</c>, or <see langword="null"/> when it is not valid.</returns>
     public static string? Redact(string? accessCode)
     {
         accessCode = TryValidate(accessCode ?? "");

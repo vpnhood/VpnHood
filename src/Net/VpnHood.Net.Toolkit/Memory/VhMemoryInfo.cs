@@ -21,8 +21,13 @@ public readonly struct VhMemoryInfo
     /// <summary>System memory currently in use in bytes. <c>null</c> when unavailable.</summary>
     public long? UsedBytes { get; init; }
 
+    /// <summary>Gets <see cref="ProcessFootprintBytes"/> in mebibytes, or <see langword="null"/>.</summary>
     public double? ProcessFootprintMb => ToMb(ProcessFootprintBytes);
+
+    /// <summary>Gets <see cref="TotalBytes"/> in mebibytes, or <see langword="null"/>.</summary>
     public double? TotalMb => ToMb(TotalBytes);
+
+    /// <summary>Gets <see cref="UsedBytes"/> in mebibytes, or <see langword="null"/>.</summary>
     public double? UsedMb => ToMb(UsedBytes);
 
     private static double? ToMb(long? bytes) => bytes / Mib;

@@ -15,14 +15,21 @@ using VpnHood.Net.Toolkit.Net;
 namespace VpnHood.Net.TcpStack;
 
 /// <summary>
-/// A lightweight, localhost-only TCP stack implementation designed for VpnHood's TunVpnAdapter.
-/// This stack is optimized for local loopback connections where packet loss is not expected.
+/// Provides a lightweight TCP stack: it terminates the TCP connections carried in the IP packets it is fed, such as
+/// those a VPN adapter reads from its interface, and gives each as a <see cref="LocalTcpClient"/>.
 /// </summary>
 /// <remarks>
-/// IMPORTANT: <see cref="OnPacketSend"/> hands ownership of the produced <see cref="IpPacket"/>
-/// to the consumer. The consumer is responsible for disposing it (the WinDivert adapter does
-/// this automatically when AutoDisposePackets = true). When no consumer is registered, the
-/// stack disposes the packet itself to release pooled memory.
+/// <para>
+/// It is intended for local packet paths, such as a virtual adapter on the same machine, where packets arrive in order
+/// and are rarely lost. It retransmits what is lost, with backoff, but has no congestion control, reassembles no
+/// out-of-order segment, and advertises no window scaling.
+/// </para>
+/// <para>
+/// <see cref="OnPacketSend"/> owns each packet it is given and disposes it once sent, as an adapter made with
+/// AutoDisposePackets does; when the callback throws, or with no callback, the stack disposes the packet itself. The
+/// callback runs inline on whichever thread drives the stack: <see cref="ProcessIncoming"/>, a stream's read or
+/// write, or the stack's timers, so calls may overlap.
+/// </para>
 /// </remarks>
 public sealed class LocalTcpStack : ITcpStack
 {
@@ -31,7 +38,7 @@ public sealed class LocalTcpStack : ITcpStack
     // Built once from _options and shared (immutably) by every connection's reassembly pipe.
     private readonly PipeOptions _pipeOptions;
 
-    /// <summary>Gets the diagnostic metrics for this stack instance.</summary>
+    /// <summary>Gets the stack's counters and its logging switch.</summary>
     public TcpStackDiagnostics Diagnostics { get; }
 
     /// <summary>The unread bytes in every connection's reassembly pipe, summed on read: nothing is counted per packet.</summary>
@@ -44,16 +51,21 @@ public sealed class LocalTcpStack : ITcpStack
         }
     }
 
-    /// <summary>Exposes the active stack's diagnostics globally for external processes (such as the iOS memory probe).</summary>
+    /// <summary>
+    /// Gets the diagnostics of the stack made last in the process, or <see langword="null"/> before any, for a monitor
+    /// with no reference to the stack, such as the iOS memory monitor.
+    /// </summary>
+    /// <remarks>It turns <see langword="null"/> when that stack is disposed, even while an older stack is still alive.</remarks>
     public static TcpStackDiagnostics? ActiveDiagnostics { get; private set; }
 
     /// <summary>
-    /// Creates a TCP stack. When <paramref name="options"/> is null the footprint is chosen
-    /// automatically for the current platform via <see cref="LocalTcpStackOptions.ForCurrentPlatform"/>
-    /// (small on iOS/tvOS Network Extensions, full-size everywhere else) — so callers such as
-    /// ClientTcpHost don't need to know the platform and Android throughput is unaffected.
-    /// Pass an explicit <see cref="LocalTcpStackOptions"/> to override.
+    /// Initializes a new instance of the <see cref="LocalTcpStack"/> class.
     /// </summary>
+    /// <param name="options">
+    /// The stack's options, or <see langword="null"/> for those of the current platform
+    /// (<see cref="LocalTcpStackOptions.ForCurrentPlatform"/>): small on iOS and tvOS, full-size everywhere else.
+    /// </param>
+    /// <exception cref="ArgumentException">An option is out of its range, or two options conflict.</exception>
     public LocalTcpStack(LocalTcpStackOptions? options = null)
     {
         Diagnostics = new TcpStackDiagnostics(this);
@@ -75,9 +87,8 @@ public sealed class LocalTcpStack : ITcpStack
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether verbose diagnostic information should be logged via VhLogger.
-    /// This is useful for debugging TCP connection issues (e.g., retransmissions, zero-window probes).
-    /// Backed by <see cref="TcpStackDiagnostics.VerboseLogging"/> so the diagnoser owns all trace gating.
+    /// Gets or sets a value indicating whether the stack logs verbose diagnostics, such as retransmissions and
+    /// zero-window probes. It is the same switch as <see cref="TcpStackDiagnostics.VerboseLogging"/>.
     /// </summary>
     public bool VerboseLogging {
         get => Diagnostics.VerboseLogging;
@@ -99,14 +110,16 @@ public sealed class LocalTcpStack : ITcpStack
     private readonly Timer _idleTimer;
     private int _idleSweeping;
 
-    /// <summary>
-    /// Callback invoked when a TCP packet needs to be sent out. The callback takes ownership of the packet.
-    /// </summary>
+    /// <inheritdoc/>
     public Action<IpPacket>? OnPacketSend { get; set; }
 
     /// <summary>
-    /// Creates a TCP listener on the specified local endpoint.
+    /// Gets the listener that accepts the connections to an endpoint: that address and that port exactly. A connection no
+    /// endpoint listener takes goes to the listener of <see cref="ListenAny"/>, or else is answered with a reset.
     /// </summary>
+    /// <param name="localEndPoint">The endpoint the connections are made to.</param>
+    /// <returns>The listener; each call for the same endpoint returns the same one until it is stopped.</returns>
+    /// <exception cref="ObjectDisposedException">The stack is disposed.</exception>
     public LocalTcpListener Listen(IpEndPointValue localEndPoint)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -122,8 +135,11 @@ public sealed class LocalTcpStack : ITcpStack
     }
 
     /// <summary>
-    /// Creates a TCP listener that accepts connections on any endpoint (IPv4 and IPv6).
+    /// Gets the listener that accepts the connections no endpoint listener takes, to any address and port of either IP
+    /// version, as a transparent proxy needs.
     /// </summary>
+    /// <returns>The listener; each call returns the same one until it is stopped.</returns>
+    /// <exception cref="ObjectDisposedException">The stack is disposed.</exception>
     public LocalTcpListener ListenAny()
     {
         lock (_anyListenerLock) {
@@ -138,8 +154,12 @@ public sealed class LocalTcpStack : ITcpStack
     ITcpListener ITcpStack.Listen(IPEndPoint localEndPoint) => Listen(localEndPoint.ToValue());
 
     /// <summary>
-    /// Stops listening on the specified endpoint and removes the listener.
+    /// Stops the listener of an endpoint and removes it from the stack.
     /// </summary>
+    /// <param name="localEndPoint">The listener's endpoint.</param>
+    /// <returns>
+    /// <see langword="true"/> if a listener was stopped; <see langword="false"/> if the endpoint had none.
+    /// </returns>
     public bool StopListening(IpEndPointValue localEndPoint)
     {
         if (!_listeners.TryRemove(localEndPoint, out var listener))
@@ -166,10 +186,12 @@ public sealed class LocalTcpStack : ITcpStack
         }
     }
 
-    /// <summary>
-    /// Processes an already-parsed incoming IP packet without taking ownership.
-    /// The caller remains responsible for disposing <paramref name="ipPacket"/>.
-    /// </summary>
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The stack copies what it keeps: the caller still owns the packet and disposes it. A packet that is not TCP is
+    /// ignored, and so is every packet once the stack is disposed. A packet whose processing fails is logged and
+    /// dropped; nothing is thrown.
+    /// </remarks>
     public void ProcessIncoming(IpPacket ipPacket)
     {
         if (_disposed)
@@ -598,9 +620,7 @@ public sealed class LocalTcpStack : ITcpStack
         return best;
     }
 
-    /// <summary>
-    /// Closes all currently active connections. New connections can still be accepted afterward.
-    /// </summary>
+    /// <inheritdoc/>
     public void DropAllConnections()
     {
         // Abort, not Dispose: the local app gets a RST instead of a black-holed socket, the stream's reader
@@ -687,6 +707,11 @@ public sealed class LocalTcpStack : ITcpStack
         return null;
     }
 
+    /// <summary>
+    /// Stops the stack: stops its timers, then its listeners, which close the connections in their queues as
+    /// <see cref="LocalTcpClient.Dispose"/> does, and then closes every other connection without telling its peer. An
+    /// accepted stream can still read what it has buffered. Calling it again does nothing.
+    /// </summary>
     public void Dispose()
     {
         // the flag first, the listeners' drain after the timers: Listen's re-check after its add rests on this order

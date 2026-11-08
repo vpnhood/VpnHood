@@ -3,167 +3,191 @@ using System.IO.Pipelines;
 namespace VpnHood.Net.TcpStack;
 
 /// <summary>
-/// Tunable knobs for <see cref="LocalTcpStack"/>. Every value that affects memory footprint
-/// is exposed here so the stack can be sized per-platform (small on memory-constrained hosts
-/// such as an iOS Network Extension, full-size on desktop/Android).
+/// Provides the options of a <see cref="LocalTcpStack"/>: its windows, buffers, timeouts and connection limits, so its
+/// memory can be sized per platform.
 /// </summary>
 /// <remarks>
-/// The class is immutable (init-only) and validated once via <see cref="Validated"/> when a
-/// stack is constructed. The buffer and window defaults are the full-size values Android throughput was
-/// tuned against: change them only with a throughput measurement. The timing defaults
-/// (<see cref="RetransmitTimeout"/>, <see cref="RetransmitMaxTimeout"/>, <see cref="DelayedAckTimeout"/>)
-/// follow RFC 6298 and the peers' minimum RTO.
+/// The stack checks the options when it is made and throws <see cref="ArgumentException"/> for one out of its range.
+/// The buffer and window defaults are the full-size values Android throughput was tuned against: change them only with
+/// a throughput measurement. The retransmission timeout backs off as RFC 6298 has it, and the delayed-ACK default stays
+/// under the 200 millisecond minimum RTO of Linux and Android peers.
 /// </remarks>
 public sealed class LocalTcpStackOptions
 {
     // ---- Receive / Upload buffering (tun -> stack -> app stream) ----
 
     /// <summary>
-    /// Advertised TCP receive window, in bytes. Also sizes the network→app reassembly pipe
-    /// (its <see cref="PipeOptions.PauseWriterThreshold"/>). This is the dominant per-connection
-    /// receive-side memory cost.
-    /// <para>Range: 1..65535. The advertised value lives in the 16-bit TCP window field, and we
-    /// do NOT advertise a window-scale shift (shift = 0), so values above 65535 are rejected.</para>
-    /// Default: 65535, the iOS preset's value too.
+    /// Gets the receive window each connection advertises, in bytes: how much data the peer may send that the app has
+    /// not read yet. It is the main receive-side memory of a connection.
     /// </summary>
+    /// <remarks>
+    /// It must be from 1 to 65535: the stack advertises no window scaling. The default, which the <see cref="Ios"/>
+    /// preset keeps too, is 65535.
+    /// </remarks>
     public int ReceiveWindowSize { get; init; } = 0xFFFF;
 
     // ---- Send / Download buffering (app stream -> stack -> tun) ----
 
     /// <summary>
-    /// Per-connection retransmission ring-buffer size, in bytes. This also caps the amount of
-    /// in-flight unacknowledged data we will send before waiting for ACKs, so it is the dominant
-    /// per-connection send-side memory cost.
-    /// <para>Must be ≥ <see cref="MaxMss"/> (a single max-size segment has to fit).</para>
-    /// Default: 64 KB; the iOS preset: 16 KB.
+    /// Gets the size of each connection's send buffer, in bytes, which holds what is sent until the peer acknowledges
+    /// it: no more than this is in flight. It is the main send-side memory of a connection.
     /// </summary>
+    /// <remarks>
+    /// It must be at least <see cref="MaxMss"/>. The default is 64 KB; the <see cref="Ios"/> preset's is 16 KB.
+    /// </remarks>
     public int RetransmitBufferSize { get; init; } = 64 * 1024;
 
     // ---- Segmentation ----
 
     /// <summary>
-    /// Maximum segment size, in bytes. Used both as the upper clamp for the peer's advertised MSS
-    /// and as the MSS we advertise in our SYN-ACK. Default: 1460 (standard Ethernet payload).
+    /// Gets the largest segment the stack sends, in bytes, which it also advertises in its SYN-ACK; a larger MSS from
+    /// the peer is lowered to it.
     /// </summary>
+    /// <remarks>It must be at least <see cref="DefaultMss"/>. The default is 1460, an Ethernet frame's.</remarks>
     public ushort MaxMss { get; init; } = 1460;
 
     /// <summary>
-    /// Fallback MSS used when the peer's SYN does not advertise one. Default: 536 (RFC 879 floor).
+    /// Gets the segment size the stack sends with when the peer's SYN advertises none, in bytes.
     /// </summary>
+    /// <remarks>
+    /// It must be from <see cref="MinMss"/> to <see cref="MaxMss"/>. The default is 536, RFC 879's.
+    /// </remarks>
     public ushort DefaultMss { get; init; } = 536;
 
     /// <summary>
-    /// Lower clamp applied to a peer-advertised MSS to reject pathological values. Default: 64.
+    /// Gets the smallest segment size the stack takes from the peer, in bytes; a smaller advertised MSS is raised to it.
     /// </summary>
+    /// <remarks>It must be from 1 to <see cref="DefaultMss"/>. The default is 64.</remarks>
     public ushort MinMss { get; init; } = 64;
 
     // ---- Timeouts ----
 
     /// <summary>
-    /// Idle timeout after which a connection with no activity is closed. Default: 15 minutes.
-    /// Lowering it on constrained platforms frees connection memory sooner.
+    /// Gets how long a connection may go without sending or receiving before the stack closes it. The default is
+    /// 15 minutes.
     /// </summary>
+    /// <remarks>
+    /// It must be longer than <see cref="IdleCheckInterval"/>, the interval it is checked at, so a connection nominally
+    /// stays up to one interval longer. Once the app has closed its stream, idle means no progress in the sequence
+    /// numbers, which each check samples, so the connection may stay almost two intervals longer; acknowledgments that
+    /// move nothing do not count. A lower value frees memory sooner.
+    /// </remarks>
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromMinutes(15);
 
     /// <summary>
-    /// How often the stack's idle sweep checks every connection against <see cref="IdleTimeout"/>.
-    /// A larger interval means fewer timer wake-ups (less power). Default: 1 minute.
-    /// Must be smaller than <see cref="IdleTimeout"/>.
+    /// Gets how often the stack checks its connections against <see cref="IdleTimeout"/>. A longer interval wakes the
+    /// device less often. The default is 1 minute.
     /// </summary>
+    /// <remarks>It must be from 1 millisecond to 49 days, and shorter than <see cref="IdleTimeout"/>.</remarks>
     public TimeSpan IdleCheckInterval { get; init; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
-    /// How long the sender waits on a zero peer-window before emitting a Zero Window Probe.
-    /// Default: 200 ms.
+    /// Gets how long the stack waits while the peer's window is zero before it sends a zero-window probe. The default
+    /// is 200 milliseconds.
     /// </summary>
+    /// <remarks>It must be more than zero.</remarks>
     public TimeSpan ZeroWindowProbeInterval { get; init; } = TimeSpan.FromMilliseconds(200);
 
     // ---- Loss recovery ----
 
     /// <summary>
-    /// Initial retransmission timeout (RTO). If cumulative ACKs make no progress for this long while
-    /// something is outstanding (an unacknowledged SYN-ACK, data, or FIN), the stack's maintenance
-    /// sweep retransmits the oldest outstanding segment and doubles the timeout up to
-    /// <see cref="RetransmitMaxTimeout"/>. This is the ONLY recovery for tail loss: fast retransmit
-    /// needs later segments to arrive to generate duplicate ACKs, and the last segment of a burst has
-    /// none. Loopback/TUN RTT is microseconds, but the peer may legally delay its ACK up to ~200 ms
-    /// (delayed ACK), so this must stay comfortably above that. Default: 500 ms.
+    /// Gets the first retransmission timeout (RTO): when the peer acknowledges nothing new for this long while a SYN-ACK,
+    /// data or a FIN is unacknowledged, the stack sends the oldest unacknowledged segment again and doubles the timeout,
+    /// up to <see cref="RetransmitMaxTimeout"/>. The default is 500 milliseconds.
     /// </summary>
+    /// <remarks>
+    /// It is the only recovery when the last segment of a burst is lost, as fast retransmit needs later segments to draw
+    /// duplicate ACKs. Keep it well above the peer's delayed ACK, which commonly holds an acknowledgment for up to
+    /// 200 milliseconds. The stack checks it every 100 milliseconds, so a retransmission nominally comes up to that much later, and
+    /// later still when the stack is busy. It
+    /// must be at least 1 millisecond.
+    /// </remarks>
     public TimeSpan RetransmitTimeout { get; init; } = TimeSpan.FromMilliseconds(500);
 
-    /// <summary>Upper bound for the exponentially backed-off RTO. Once a handshake's SYN-ACK backoff has reached it,
-    /// the next expiry gives the connection up with a RST instead of another SYN-ACK; equal to
-    /// <see cref="RetransmitTimeout"/>, it leaves a handshake no retransmission at all. Default: 4 seconds.</summary>
+    /// <summary>
+    /// Gets the longest the doubled retransmission timeout grows. A handshake whose SYN-ACK backoff has reached it is
+    /// given up with a reset at the next expiry; equal to <see cref="RetransmitTimeout"/>, it leaves a handshake no
+    /// retransmission at all. The default is 4 seconds.
+    /// </summary>
+    /// <remarks>It must be at least <see cref="RetransmitTimeout"/>.</remarks>
     public TimeSpan RetransmitMaxTimeout { get; init; } = TimeSpan.FromSeconds(4);
 
     /// <summary>
-    /// Maximum time a thinned (delayed) ACK may stay pending before the maintenance sweep flushes it.
-    /// Keeps an odd trailing full-size non-PSH segment acknowledged within RFC 1122's 500 ms delayed-ACK
-    /// bound. Default: 50 ms, so with the 100 ms maintenance tick the flush lands at 50-150 ms: under a
-    /// Linux or Android peer's 200 ms minimum RTO, which a later flush would trip into a spurious
-    /// retransmission.
+    /// Gets how long a delayed ACK waits before the stack sends it, at its next check: the stack checks every
+    /// 100 milliseconds. The default is 50 milliseconds, so the ACK nominally goes out 50 to 150 milliseconds after the
+    /// segment, later when the stack is busy, or sooner when another segment draws it: under the 200 millisecond minimum
+    /// RTO of a Linux or Android peer, which a later ACK would trip into a needless retransmission.
     /// </summary>
+    /// <remarks>
+    /// It must be more than zero and at most 500 milliseconds, RFC 1122's delayed-ACK bound, which the check interval
+    /// and a busy stack may exceed.
+    /// </remarks>
     public TimeSpan DelayedAckTimeout { get; init; } = TimeSpan.FromMilliseconds(50);
 
     // ---- Aggregate bounds ----
 
     /// <summary>
-    /// Maximum number of simultaneous connections. New SYNs beyond this are answered with an RST.
-    /// <para><c>0</c> (default) means unbounded and short-circuits the check entirely (zero
-    /// overhead on the SYN path).</para>
-    /// On iOS this caps the worst-case aggregate buffer memory:
-    /// roughly (<see cref="ReceiveWindowSize"/> + <see cref="RetransmitBufferSize"/>) × MaxConnections.
+    /// Gets the most connections the stack holds at once, handshakes included, or 0, the default, for no limit.
     /// </summary>
+    /// <remarks>
+    /// When the stack is full, a new connection's SYN takes the place of an idle connection the stack closes for it
+    /// (<see cref="EvictionMinIdle"/>), or else is answered with a reset. While memory is short
+    /// (<see cref="AdmissionMemoryLimitMb"/>), SYNs are dropped before this check. A limit bounds the live connections'
+    /// buffers to about (<see cref="ReceiveWindowSize"/> + <see cref="RetransmitBufferSize"/>) × this value, besides
+    /// allocator overhead and what closed connections' streams still hold. It must be 0 or more.
+    /// </remarks>
     public int MaxConnections { get; init; }
 
     /// <summary>
-    /// When <see cref="MaxConnections"/> is reached, the minimum idle time a connection must have had
-    /// (no send/receive activity) before it may be force-evicted to admit a NEW connection. The most
-    /// idle ("most unused") eligible connection is closed immediately, which propagates EOF to its
-    /// consumer (e.g. TCP forwarding's QUIC stream or TCP channel) so the whole upstream flow tears down.
-    /// If no connection has been idle this long, the new SYN is rejected with an RST. Actively-transferring
-    /// flows (idle ≈ 0) are therefore never evicted.
-    /// <para><see cref="TimeSpan.MaxValue"/> (default) disables eviction: a full stack rejects the new SYN with
-    /// an RST. Only consulted when <see cref="MaxConnections"/> &gt; 0,
-    /// so desktop/Android (unbounded by default) are unaffected.</para>
+    /// Gets how long a connection must have been idle, neither sending nor receiving, before the stack may close it to
+    /// admit a new one when <see cref="MaxConnections"/> is reached. The default, <see cref="TimeSpan.MaxValue"/>, closes
+    /// none: a full stack answers a new SYN with a reset.
     /// </summary>
+    /// <remarks>
+    /// The stack closes the connection idle the longest, if it has been idle this long; its stream reads as ended, so
+    /// what forwards it ends too. Once the app has closed a connection's stream, idle means no progress in the sequence
+    /// numbers. With no such connection, the new SYN is answered with a reset. A connection that turns
+    /// active while it is chosen may still be closed, and with zero, any connection may be. It is used only with
+    /// <see cref="MaxConnections"/> above 0, and must be zero or more.
+    /// </remarks>
     public TimeSpan EvictionMinIdle { get; init; } = TimeSpan.MaxValue;
 
     /// <summary>
-    /// Capacity of a listener's pending-accept queue. When full, additional accepted connections
-    /// are rejected (and disposed) rather than buffered.
-    /// <para><c>0</c> or less (default) means an unbounded queue.</para>
+    /// Gets how many connections that completed their handshake a listener holds until they are accepted, or 0 or less,
+    /// the default, for no limit. A listener whose queue is full closes a new connection instead.
     /// </summary>
     public int AcceptQueueCapacity { get; init; }
 
     /// <summary>
-    /// Memory admission gate: while the process footprint (read from <c>VhMemory.Instance</c>, the number
-    /// the host memory limit is enforced against — e.g. iOS jetsam phys_footprint) is at or above this
-    /// many MB, new SYNs are DROPPED SILENTLY — no connection, no RST. Every admitted flow triggers
-    /// establishment work whose memory cost is outside this stack's budgets (a QUIC stream open or a
-    /// fallback TLS connection to the server: native handshake state + pinned kernel socket buffers), so
-    /// under memory pressure admitting-by-evicting only churns. A silent drop turns the peer's own
-    /// SYN-retransmit (~1 s backoff) into the pacing mechanism: existing flows keep working and the SYN
-    /// retry lands when the footprint has receded.
-    /// <para><c>null</c> (default) disables the gate (zero overhead on the SYN path). No memory reader
-    /// installed (footprint reads null) also disables it.</para>
+    /// Gets the process footprint, in megabytes, at or above which the stack drops new SYNs silently, with no reset, or
+    /// <see langword="null"/>, the default, for no such limit.
     /// </summary>
+    /// <remarks>
+    /// The footprint is read from <c>VhMemory.Instance</c>, the figure a host's memory limit is enforced against, such as
+    /// iOS's phys_footprint; with no memory reader installed, there is no limit. Each admitted connection costs memory
+    /// outside the stack's own buffers, such as a QUIC stream or a TLS connection to the server, so under memory pressure
+    /// closing one connection for another only churns. The peer sends a dropped SYN again, about a second later, when the
+    /// footprint may have receded; existing connections keep working.
+    /// </remarks>
     public double? AdmissionMemoryLimitMb { get; init; }
 
     // ---- Presets ----
 
     /// <summary>
-    /// Full-size defaults for desktop and Android, where throughput matters and memory is plentiful.
+    /// Gets new full-size options, for desktops and Android, where throughput matters and memory is plentiful.
     /// </summary>
     public static LocalTcpStackOptions Default => new();
 
     /// <summary>
-    /// Small footprint tuned for an iOS Network Extension's tight memory budget. The numbers are
-    /// sensible starting points — tune against real traffic.
-    /// <para>Footprint math: receive side 64 KB window × 40 connections = 2.5 MB unread at most, held in the
-    /// pipes' 4 KB segments (two MSS writes fit in one) ≈ 3.6 MB; send side 16 KB retx × 40 connections = 0.6 MB.
-    /// Worst case ≈ 4.2 MB for TCP buffers.</para>
+    /// Gets new small-footprint options for an iOS Network Extension's tight memory: starting points, to tune against
+    /// real traffic.
     /// </summary>
+    /// <remarks>
+    /// An estimate for live connections: on the receive side, 40 connections × 64 KB window = 2.5 MB unread at most,
+    /// about 3.6 MB in the pipes' 4 KB segments; on the send side, 40 × 16 KB = 0.6 MB; about 4.2 MB in all. It leaves
+    /// out allocator overhead, what closed connections' streams still hold, and memory outside the stack, such as QUIC
+    /// streams.
+    /// </remarks>
     public static LocalTcpStackOptions Ios => new() {
         // The 16-bit max window (no scaling) so a few active flows get full upload/download speed
         // (throughput ≈ window / RTT); MaxConnections bounds the aggregate: 40 × 64 KB = 2.5 MB unread at
@@ -192,15 +216,15 @@ public sealed class LocalTcpStackOptions
     };
 
     /// <summary>
-    /// Picks the preset that fits the current platform. Apple mobile platforms (iOS / tvOS) run
-    /// network code inside memory-capped Network Extensions, so they get the small
-    /// <see cref="Ios"/> footprint; every other platform (Android, Windows, Linux, desktop macOS,
-    /// Mac Catalyst) gets <see cref="Default"/> full-size behavior so throughput is unaffected.
-    /// <para>This is what <c>new LocalTcpStack()</c> uses when no options are supplied, so callers
-    /// don't have to know the platform. Detection is by OS family (not a runtime memory probe):
-    /// an iOS extension's real limit is enforced by jetsam and is not visible via
-    /// <see cref="GC.GetGCMemoryInfo()"/>, which reports total device RAM.</para>
+    /// Returns the options for the current platform: <see cref="Ios"/> on iOS and tvOS, whose network extensions are
+    /// memory-capped, and <see cref="Default"/> everywhere else, Mac Catalyst included. A stack made without options uses
+    /// them.
     /// </summary>
+    /// <remarks>
+    /// The choice goes by OS family, not by a memory probe: jetsam enforces an iOS extension's limit, and
+    /// <see cref="GC.GetGCMemoryInfo()"/> reports the device's whole memory.
+    /// </remarks>
+    /// <returns>New options for the current platform.</returns>
     public static LocalTcpStackOptions ForCurrentPlatform()
     {
         // Note: IsIOS() can also report true under Mac Catalyst; exclude it (Catalyst is desktop-class).

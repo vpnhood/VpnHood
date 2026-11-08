@@ -3,17 +3,17 @@ using System.Net;
 namespace VpnHood.Net.TcpStack.Abstractions;
 
 /// <summary>
-/// Represents an accepted TCP connection returned by an <see cref="ITcpListener"/>.
-/// Analogous to <see cref="System.Net.Sockets.TcpClient"/> but for custom TCP stacks.
+/// Represents a connection an <see cref="ITcpListener"/> accepted, the way <see cref="System.Net.Sockets.TcpClient"/>
+/// does for a socket. Disposing it closes the connection.
 /// </summary>
 public interface ITcpClient : IAsyncDisposable, IDisposable
 {
-    /// <summary>The local endpoint of this TCP connection.</summary>
+    /// <summary>Gets the connection's local endpoint: the address and port the peer connected to.</summary>
     IPEndPoint LocalEndPoint { get; }
 
-    /// <summary>The remote endpoint of this TCP connection.</summary>
+    /// <summary>Gets the connection's remote endpoint: the peer's address and port.</summary>
     IPEndPoint RemoteEndPoint { get; }
 
-    /// <summary>Gets the underlying <see cref="Stream"/> for reading and writing.</summary>
+    /// <summary>Gets the stream that reads and writes the connection's data.</summary>
     Stream Stream { get; }
 }

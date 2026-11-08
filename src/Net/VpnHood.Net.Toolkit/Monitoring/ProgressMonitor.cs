@@ -2,6 +2,15 @@
 
 namespace VpnHood.Net.Toolkit.Monitoring;
 
+/// <summary>
+/// Provides the progress of a run of tasks as a percentage that also moves with time, so it does not stall while a
+/// batch of slow tasks runs: the larger of the share of tasks completed and the share of the time the batches may
+/// take.
+/// </summary>
+/// <remarks>In a release build, the percentage stays within 0 to 100, given at least one task, a positive task timeout and a positive parallelism.</remarks>
+/// <param name="totalTaskCount">The number of tasks.</param>
+/// <param name="taskTimeout">How long one task may take; a batch may take as long.</param>
+/// <param name="maxDegreeOfParallelism">How many tasks run at once, as a batch. The default is 1.</param>
 public class ProgressMonitor(
     int totalTaskCount,
     TimeSpan taskTimeout,
@@ -15,12 +24,14 @@ public class ProgressMonitor(
     private TimeSpan MaxDuration => TimeSpan.FromMilliseconds(taskTimeout.TotalMilliseconds * TotalBatches);
     private int CurrentBatchIndex => _completedTaskCount / maxDegreeOfParallelism;
 
+    /// <summary>Gets the progress now.</summary>
     public ProgressStatus Progress => new(
         Completed: _completedTaskCount,
         Total: totalTaskCount,
         StartedTime: _startTime,
         Percentage: ProgressPercentage);
 
+    /// <summary>Counts a completed task.</summary>
     public void IncrementCompleted()
     {
         lock (_incrementLock) {
@@ -30,7 +41,7 @@ public class ProgressMonitor(
         }
     }
 
-    // Mark as fully completed
+    /// <summary>Counts every task as completed.</summary>
     public void Finish()
     {
         lock (_incrementLock)

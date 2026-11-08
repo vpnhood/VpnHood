@@ -80,18 +80,31 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
 18. A LINQ query ends in its own `.ToArray()` or `.ToList()`, never in a collection expression: no
     `[.. query]`. ReSharper's `UseCollectionExpression`, which asks for just that, is off in
     `VpnHood.sln.DotSettings`. A spread takes what is a collection already.
+19. A public type or member carries an XML doc comment written the way Microsoft's own libraries are
+    (dotnet/runtime, ASP.NET Core): a `<summary>` for the caller that starts with a verb ("Gets or sets
+    …", "Initializes a new instance of the … class.", "Occurs when …"); a `<param>` for every parameter
+    and a `<returns>` for every result ("`<see langword="true"/>` if …; otherwise, `<see langword="false"/>`.",
+    "A task that represents the asynchronous operation."); an `<exception>` for each exception thrown on
+    purpose, saying when; and what the name does not say: units, the default, what null or zero means,
+    thread safety, who disposes, which platform or rights it needs, in `<remarks>` when it takes more
+    than a sentence. Overrides and interface implementations take `<inheritdoc/>`, plus a line of their
+    own where they differ. No history and no implementation story: a comment on why code exists stays
+    a `//` comment, for maintainers. A library whose public API is fully documented sets
+    `VhApiDocsComplete` in its project, and from then on a missing or broken doc comment fails its
+    build. An example in a doc comment or a README is a `#region Snippet:<Name>` of a test, copied by
+    `pub/lib/Update-Snippets.ps1`; edit the region, then run the script.
 
 ## Design
 
-19. The access-manager protocol needs to be compatible one way only: the access manager is updated
+20. The access-manager protocol needs to be compatible one way only: the access manager is updated
     first, so a new server may count on it, but the access manager keeps supporting old servers.
-20. The access manager is under heavy load: rather a cost on the server than more requests to it.
+21. The access manager is under heavy load: rather a cost on the server than more requests to it.
     After an outage, the waiting requests are merged, never queued up to bombard it.
-21. The service opens no UI and no links; the UI does, as on iOS.
-22. A Debug build's name must stand out.
-23. An updater runs apart from what it updates, as a standalone script: an app that fails to run
+22. The service opens no UI and no links; the UI does, as on iOS.
+23. A Debug build's name must stand out.
+24. An updater runs apart from what it updates, as a standalone script: an app that fails to run
     must still get the release that fixes it.
-24. The app UI, AppLib and Core need no compatibility between them while nobody else uses them: they
+25. The app UI, AppLib and Core need no compatibility between them while nobody else uses them: they
     are published and changed together. A renamed member just changes, with its JSON: the app's API,
     `status --json`, and the files and calls between the app and its VPN service. Two things must
     keep working across versions. A settings file must still load: a renamed setting is migrated as

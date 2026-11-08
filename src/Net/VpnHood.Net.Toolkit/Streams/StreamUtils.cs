@@ -6,10 +6,26 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Streams;
 
+/// <summary>
+/// Provides the framing of JSON messages on a stream: a 4-byte little-endian length, then that many bytes of UTF-8 JSON.
+/// The readers limit the payload; the writers do not.
+/// </summary>
 public static class StreamUtils
 {
-    public const int MaxMessageLength = 1024 * 512; // 512 KB
+    /// <summary>
+    /// The readers' default largest payload, in bytes, after the 4-byte length: 512 KB; a payload of exactly it is accepted.
+    /// </summary>
+    public const int MaxMessageLength = 1024 * 512;
 
+    /// <summary>Reads a framed JSON message as an object, synchronously.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="stream">The stream.</param>
+    /// <param name="maxLength">The largest message accepted, in bytes.</param>
+    /// <returns>The object.</returns>
+    /// <exception cref="FormatException">The length is over <paramref name="maxLength"/>.</exception>
+    /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends early.</exception>
+    /// <exception cref="JsonException">The JSON is not of the type.</exception>
     public static T ReadObject<T>(Stream stream, int maxLength = MaxMessageLength)
     {
         // read length
@@ -34,11 +50,34 @@ public static class StreamUtils
         return ret;
     }
 
+    /// <summary>Reads a framed JSON message as an object, of at most <see cref="MaxMessageLength"/>.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="stream">The stream.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object.</returns>
+    /// <exception cref="FormatException">The length is over the largest.</exception>
+    /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends early.</exception>
+    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<T> ReadObjectAsync<T>(Stream stream, CancellationToken cancellationToken)
     {
         return ReadObjectAsync<T>(stream, MaxMessageLength, cancellationToken);
     }
 
+    /// <summary>Reads a framed JSON message as an object.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="stream">The stream.</param>
+    /// <param name="maxLength">The largest message accepted, in bytes.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object.</returns>
+    /// <exception cref="FormatException">The length is over <paramref name="maxLength"/>.</exception>
+    /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends early.</exception>
+    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<T> ReadObjectAsync<T>(Stream stream, int maxLength, CancellationToken cancellationToken)
     {
         var message = await ReadMessageAsync(stream, maxLength, cancellationToken).Vhc();
@@ -46,12 +85,37 @@ public static class StreamUtils
         return ret;
     }
 
+    /// <summary>Reads a framed JSON message as an object with its metadata, of at most <see cref="MaxMessageLength"/>.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="stream">The stream.</param>
+    /// <param name="jsonTypeInfo">The type's metadata.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object.</returns>
+    /// <exception cref="FormatException">The length is over the largest.</exception>
+    /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends early.</exception>
+    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<T> ReadObjectAsync<T>(Stream stream, JsonTypeInfo<T> jsonTypeInfo,
         CancellationToken cancellationToken)
     {
         return ReadObjectAsync(stream, jsonTypeInfo, MaxMessageLength, cancellationToken);
     }
 
+    /// <summary>Reads a framed JSON message as an object with its metadata.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="stream">The stream.</param>
+    /// <param name="jsonTypeInfo">The type's metadata.</param>
+    /// <param name="maxLength">The largest message accepted, in bytes.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object.</returns>
+    /// <exception cref="FormatException">The length is over <paramref name="maxLength"/>.</exception>
+    /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends early.</exception>
+    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<T> ReadObjectAsync<T>(Stream stream, JsonTypeInfo<T> jsonTypeInfo, int maxLength,
         CancellationToken cancellationToken)
     {
@@ -60,11 +124,32 @@ public static class StreamUtils
         return ret;
     }
 
+    /// <summary>Reads a framed message's text, of at most <see cref="MaxMessageLength"/>.</summary>
+    /// <param name="stream">The stream.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the text.</returns>
+    /// <exception cref="FormatException">The length is over the largest.</exception>
+    /// <exception cref="Exception">The length is zero.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends early.</exception>
+    /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<string> ReadMessageAsync(Stream stream, CancellationToken cancellationToken)
     {
         return ReadMessageAsync(stream, MaxMessageLength, cancellationToken);
     }
 
+    /// <summary>
+    /// Reads a framed message's text; it rejects a frame whose next four bytes are <c>HTTP</c>.
+    /// </summary>
+    /// <param name="stream">The stream.</param>
+    /// <param name="maxLength">The largest message accepted, in bytes.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the text.</returns>
+    /// <exception cref="FormatException">The length is over <paramref name="maxLength"/>.</exception>
+    /// <exception cref="Exception">The length is zero.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends early.</exception>
+    /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<string> ReadMessageAsync(Stream stream, int maxLength, CancellationToken cancellationToken)
     {
         // read length
@@ -93,6 +178,9 @@ public static class StreamUtils
         return message;
     }
 
+    /// <summary>Frames an object as a JSON message, by its runtime type.</summary>
+    /// <param name="obj">The object.</param>
+    /// <returns>The frame: the length, then the JSON.</returns>
     public static Memory<byte> ObjectToJsonBuffer(object obj)
     {
         var jsonBuffer = JsonSerializer.SerializeToUtf8Bytes(obj);
@@ -102,6 +190,11 @@ public static class StreamUtils
         return buffer;
     }
 
+    /// <summary>Frames an object as a JSON message, with its metadata.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="obj">The object.</param>
+    /// <param name="jsonTypeInfo">The type's metadata.</param>
+    /// <returns>The frame: the length, then the JSON.</returns>
     public static Memory<byte> ObjectToJsonBuffer<T>(T obj, JsonTypeInfo<T> jsonTypeInfo)
     {
         var jsonBuffer = JsonSerializer.SerializeToUtf8Bytes(obj, jsonTypeInfo);
@@ -111,6 +204,10 @@ public static class StreamUtils
         return buffer;
     }
 
+    /// <summary>Frames an object as a JSON message, with its type's metadata.</summary>
+    /// <param name="obj">The object.</param>
+    /// <param name="jsonTypeInfo">The type's metadata.</param>
+    /// <returns>The frame: the length, then the JSON.</returns>
     public static Memory<byte> ObjectToJsonBuffer(object obj, JsonTypeInfo jsonTypeInfo)
     {
         var jsonBuffer = JsonSerializer.SerializeToUtf8Bytes(obj, jsonTypeInfo);
@@ -120,22 +217,46 @@ public static class StreamUtils
         return buffer;
     }
 
+    /// <summary>Writes an object as a framed JSON message, synchronously.</summary>
+    /// <param name="stream">The stream.</param>
+    /// <param name="obj">The object.</param>
     public static void WriteObject(Stream stream, object obj)
     {
         stream.Write(ObjectToJsonBuffer(obj).Span);
     }
 
+    /// <summary>Writes an object as a framed JSON message, by its runtime type.</summary>
+    /// <param name="stream">The stream.</param>
+    /// <param name="obj">The object.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static ValueTask WriteObjectAsync(Stream stream, object obj, CancellationToken cancellationToken)
     {
         return stream.WriteAsync(ObjectToJsonBuffer(obj), cancellationToken);
     }
 
+    /// <summary>Writes an object as a framed JSON message, with its metadata.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="stream">The stream.</param>
+    /// <param name="obj">The object.</param>
+    /// <param name="jsonTypeInfo">The type's metadata.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static ValueTask WriteObjectAsync<T>(Stream stream, T obj, JsonTypeInfo<T> jsonTypeInfo,
         CancellationToken cancellationToken)
     {
         return stream.WriteAsync(ObjectToJsonBuffer(obj, jsonTypeInfo), cancellationToken);
     }
 
+    /// <summary>Writes an object as a framed JSON message, with its type's metadata.</summary>
+    /// <param name="stream">The stream.</param>
+    /// <param name="obj">The object.</param>
+    /// <param name="jsonTypeInfo">The type's metadata.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static ValueTask WriteObjectAsync(Stream stream, object obj, JsonTypeInfo jsonTypeInfo,
         CancellationToken cancellationToken)
     {

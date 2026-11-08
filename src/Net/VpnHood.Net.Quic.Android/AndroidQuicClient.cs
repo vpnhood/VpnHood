@@ -10,16 +10,28 @@ using static Microsoft.Quic.MsQuic;
 namespace VpnHood.Net.Quic.Android;
 
 /// <summary>
-/// Client-side QUIC connector for Android, backed by MsQuic (libmsquic.so) through our own P/Invoke
-/// bindings. Unlike the desktop/Linux path it does NOT use System.Net.Quic, whose managed TLS
-/// certificate validation is incompatible with Android's crypto backend; instead msquic performs the
-/// TLS handshake (its own statically-linked OpenSSL) and we validate the peer certificate ourselves
-/// against VpnHood's pinned hash. Matches the desktop MsQuic client: ALPN "h3", TLS 1.3.
+/// Provides the QUIC client for Android, on MsQuic (libmsquic.so) through VpnHood's own bindings rather than
+/// System.Net.Quic, whose certificate validation does not work with Android's crypto backend. Like the desktop MsQuic
+/// client, it uses TLS 1.3 and the ALPN token "h3".
 /// </summary>
+/// <remarks>
+/// MsQuic does the TLS handshake with its own OpenSSL and leaves the server's certificate to
+/// <see cref="QuicClientConnectOptions.CertificateValidationCallback"/>, whose answer decides. The callback gets the
+/// certificate, the chain built with the intermediates the server sent, and the errors found: a chain that does not
+/// build, or a name that does not match <see cref="QuicClientConnectOptions.TargetHost"/>. The client pins nothing
+/// itself. It does not apply <see cref="QuicClientConnectOptions.MaxInboundBidirectionalStreams"/>.
+/// </remarks>
 public sealed class AndroidQuicClient : IQuicClient
 {
+    /// <summary>
+    /// Gets a value indicating whether QUIC is supported: on Android, when MsQuic's native library loads and registers.
+    /// </summary>
     public static bool IsSupported => OperatingSystem.IsAndroid() && MsQuicApi.IsSupported;
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">QUIC is not supported on this device (<see cref="IsSupported"/>).</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="IOException">The connection failed, or the server closed it during the handshake.</exception>
     public async ValueTask<IQuicConnection> ConnectAsync(
         QuicClientConnectOptions options, CancellationToken cancellationToken)
     {

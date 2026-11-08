@@ -3,10 +3,23 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Streams;
 
+/// <summary>
+/// Provides stream helpers: reading text, and copying a stream into memory.
+/// </summary>
 public static class StreamExtensions
 {
+    /// <summary>Provides stream reading helpers.</summary>
+    /// <param name="stream">The stream.</param>
     extension(Stream stream)
     {
+        /// <summary>Reads text of at most a number of bytes, up to the end of the stream.</summary>
+        /// <param name="maxByteCount">The most bytes to read; zero or less reads nothing.</param>
+        /// <param name="encoding">The text's encoding.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>A task whose result is the text.</returns>
+        /// <exception cref="ArgumentNullException">The stream is <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">The stream cannot read.</exception>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
         public async Task<string> ReadStringAtMostAsync(int maxByteCount,
             Encoding encoding, CancellationToken cancellationToken)
         {
@@ -26,9 +39,13 @@ public static class StreamExtensions
             return encoding.GetString(buffer, 0, totalRead);
         }
 
-        // The whole stream in memory, ready to read from its start. It says what it costs, because
-        // the cost is the whole thing in memory and the buffer grows by doubling. The stream handed
-        // in is left open; the caller disposes both.
+        /// <summary>
+        /// Copies the rest of the stream into memory, ready to read from its start: the whole of it in memory, in a buffer
+        /// that grows by doubling. The stream is left open; the caller disposes both.
+        /// </summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>A task whose result is the copy.</returns>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
         public async Task<MemoryStream> ToMemoryStreamAsync(CancellationToken cancellationToken)
         {
             var memoryStream = new MemoryStream();
@@ -37,15 +54,19 @@ public static class StreamExtensions
             return memoryStream;
         }
 
-        // A stream that can seek: this one when it already does, its bytes in memory when it cannot
-        // - an Android asset, an HTTP body. For a reader that needs more than one pass over what it
-        // is given: an archive reads its directory from the end, a picture decoder reads a header
-        // and then a body.
-        //
-        // Only the platforms that cannot seek pay, and they pay the whole thing in memory, so where
-        // the source can simply be opened twice, open it twice instead. What comes back is the one
-        // thing to dispose: this stream when it is handed straight back, the copy when one was made
-        // - the source is closed here in that case.
+        /// <summary>
+        /// Returns a stream that can seek: this one when it does, else a copy of its bytes in memory, for a reader that
+        /// needs more than one pass, as an archive that reads its directory from the end.
+        /// </summary>
+        /// <remarks>
+        /// Only a stream that cannot seek, such as an Android asset or an HTTP body, pays, with the whole of it in memory;
+        /// where the source can be opened twice, open it twice instead. A stream that can seek comes back as it is, at its
+        /// position. Otherwise the rest of it, from its position, is copied into a stream that starts at 0, and it is
+        /// disposed here, also when the copy fails or is canceled. The returned stream is the one thing to dispose.
+        /// </remarks>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>A task whose result is the stream to read.</returns>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
         public async Task<Stream> ToMemoryStreamIfNotSeekableAsync(CancellationToken cancellationToken)
         {
             if (stream.CanSeek)

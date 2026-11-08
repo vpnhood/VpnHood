@@ -6,25 +6,32 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.Toolkit.Assets;
 
-// The entries of a zip, as assets: extracted once into <extractFolderPath>/<version>/ and read from
-// there as files. The version is the zip's stamp (ZipStamp), read from the bytes in front of it, so a
-// start reads no more of the zip than that and the whole zip only to extract it. Hashing the zip is
-// a pass over it before the first read - on a phone, inflated from the APK, 60 ms of every start -
-// which only a zip without a stamp pays. Nor named from outside the bytes: a phone's install time
-// unpacks it again at every update, changed or not, and a file's time and size are not reliable.
-//
-// The folder is this provider's, and no other zip may be given it: everything in it but the version
-// in hand is deleted.
-//
-// One instance extracts once. A second cannot break the first: each copy is written to a folder of
-// its own and moved into place, a version already there is taken as it stands, and the marker file
-// is written before the move, so a folder carrying it is a folder that was finished.
+/// <summary>
+/// Provides the entries of a zip as assets: extracted once into a folder named after the zip's stamp
+/// (<see cref="ZipStamp"/>), and read from there as files.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A start reads only the stamp in front of the zip, and the whole zip only to extract it; a zip without a stamp is
+/// hashed whole instead, a pass over it before the first read. A name from outside the bytes would not do: a phone's
+/// update unpacks the app again, changed or not, and a file's time and size are not reliable.
+/// </para>
+/// <para>
+/// The folder is the provider's: it tries to delete the other folders in it, so no other zip may be given it. Two instances, or
+/// two processes, each write their copy to a folder of their own and move it into place, and a version already there is
+/// taken as it stands; a race between them is not fully guarded.
+/// </para>
+/// </remarks>
+/// <param name="zip">The zip.</param>
+/// <param name="extractFolderPath">The folder the zip is extracted into, the provider's alone.</param>
 public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProvider
 {
     private const string MarkerFileName = ".version";
     private readonly SemaphoreSlim _extractLock = new(1, 1);
     private FolderAssetProvider? _folder;
 
+    /// <inheritdoc/>
+    /// <remarks>The first call extracts the zip, unless its version is there already.</remarks>
     public async Task<Stream> OpenReadAsync(string assetPath, CancellationToken cancellationToken)
     {
         var folder = _folder ?? await Extract(cancellationToken).Vhc();

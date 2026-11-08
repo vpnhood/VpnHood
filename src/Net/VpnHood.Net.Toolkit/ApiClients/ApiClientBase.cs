@@ -14,31 +14,67 @@ using VpnHood.Net.Toolkit.Extensions;
 // ReSharper disable UnusedMember.Global
 namespace VpnHood.Net.Toolkit.ApiClients;
 
+/// <summary>
+/// Provides the base of a hand-written API client: it sends JSON requests through an <see cref="System.Net.Http.HttpClient"/>,
+/// reads JSON responses, and turns an error response into an exception.
+/// </summary>
+/// <remarks>
+/// A status outside 2xx throws: for an RFC 9457 problem or an <see cref="ApiError"/> body, the exception
+/// <see cref="ToException"/> makes, which is none by default; otherwise, an <see cref="ApiException"/>. Each call sent is
+/// logged.
+/// </remarks>
 public class ApiClientBase : ApiClientCommon
 {
     private class HttpNoResult;
 
+    /// <summary>Represents a response read as an object.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
     protected readonly struct HttpResult<T>
     {
+        /// <summary>
+        /// Gets the response, already disposed by the time the send returns: its status and headers can be read, not its
+        /// content.
+        /// </summary>
         public required HttpResponseMessage ResponseMessage { get; init; }
+
+        /// <summary>Gets the object read from the response.</summary>
         public required T Object { get; init; }
+
+        /// <summary>Gets the response's text, when it was read as text; otherwise, empty.</summary>
         public required string Text { get; init; }
     }
 
+    /// <summary>Gets the JSON settings the requests and responses use, made once by <see cref="CreateSerializerSettings"/>.</summary>
     protected JsonSerializerOptions JsonSerializerSettings => field ??= PrepareSerializerSettings();
+
+    /// <summary>The HTTP client the requests go through, or <see langword="null"/> until a derived class sets it.</summary>
     protected HttpClient? HttpClient;
+
+    /// <summary>Gets or sets the logger of the calls. The default logs nothing.</summary>
     public ILogger Logger { get; set; } = NullLogger.Instance;
+
+    /// <summary>Gets or sets the event ID the log lines carry.</summary>
     public EventId LoggerEventId { get; set; } = new();
 
+    /// <summary>Initializes a new instance of the <see cref="ApiClientBase"/> class.</summary>
+    /// <param name="httpClient">The HTTP client the requests go through; the caller keeps owning it.</param>
     public ApiClientBase(HttpClient httpClient)
     {
         HttpClient = httpClient;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiClientBase"/> class whose derived class sets
+    /// <see cref="HttpClient"/>.
+    /// </summary>
     protected ApiClientBase()
     {
     }
 
+    /// <summary>
+    /// Creates the JSON settings, once. Without a resolver of its own, the settings read by reflection where it is on.
+    /// </summary>
+    /// <returns>The settings. The default is .NET's defaults.</returns>
     protected virtual JsonSerializerOptions CreateSerializerSettings()
     {
         var settings = new JsonSerializerOptions();
@@ -61,8 +97,23 @@ public class ApiClientBase : ApiClientCommon
         return (JsonTypeInfo<T>)JsonSerializerSettings.GetTypeInfo(typeof(T));
     }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a JSON response is read as text first, so the text shows in an error;
+    /// otherwise, it is read as a stream.
+    /// </summary>
     public bool ReadResponseAsString { get; set; }
 
+    /// <summary>
+    /// Reads a success response as an object: as JSON, or a response that is not JSON as text into a <see cref="string"/>
+    /// or as bytes into a <see cref="byte"/> array.
+    /// </summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="response">The response.</param>
+    /// <param name="headers">The response's headers, for an error.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object with the response.</returns>
+    /// <exception cref="ApiException">The JSON cannot be read as the type.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected virtual async Task<HttpResult<T?>> ReadObjectResponseAsync<T>(HttpResponseMessage response,
         IReadOnlyDictionary<string, IEnumerable<string>> headers, CancellationToken cancellationToken)
     {
@@ -106,6 +157,14 @@ public class ApiClientBase : ApiClientCommon
         }
     }
 
+    /// <summary>
+    /// Writes a query parameter's value as text: an enum by its <see cref="System.Runtime.Serialization.EnumMemberAttribute"/>
+    /// value where reflection is on, else its number, and a combination of flags as .NET writes it; a <see cref="bool"/>
+    /// in lower case; bytes in Base64; an array's items separated by commas.
+    /// </summary>
+    /// <param name="value">The value, or <see langword="null"/> for an empty text.</param>
+    /// <param name="cultureInfo">The culture the value is written in.</param>
+    /// <returns>The text.</returns>
     protected string ConvertToString(object? value, CultureInfo cultureInfo)
     {
         if (value == null) {
@@ -145,6 +204,18 @@ public class ApiClientBase : ApiClientCommon
         return result ?? "";
     }
 
+    /// <summary>Sends a request; the body of a success is not read.</summary>
+    /// <param name="httpMethod">The method.</param>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is empty.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected async Task<string> HttpSendAsync(HttpMethod httpMethod, string urlPart,
         Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
@@ -153,6 +224,19 @@ public class ApiClientBase : ApiClientCommon
         return res.Text;
     }
 
+    /// <summary>Sends a request and reads its response as an object.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="httpMethod">The method.</param>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object; the default for status 204.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected async Task<T> HttpSendAsync<T>(HttpMethod httpMethod, string urlPart,
         Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
@@ -161,6 +245,19 @@ public class ApiClientBase : ApiClientCommon
         return res.Object;
     }
 
+    /// <summary>Sends a request and reads its response as an object, with the response.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="httpMethod">The method.</param>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object with the response.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected async Task<HttpResult<T>> HttpSendExAsync<T>(HttpMethod httpMethod, string urlPart,
         Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
@@ -180,6 +277,17 @@ public class ApiClientBase : ApiClientCommon
         return await HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).Vhc();
     }
 
+    /// <summary>Sends a request the caller made; the body of a success is not read.</summary>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="request">The request, which the caller keeps owning.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is empty.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected async Task<string> HttpSendAsync(string urlPart, Dictionary<string, object?>? parameters,
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -187,6 +295,18 @@ public class ApiClientBase : ApiClientCommon
         return res.Text;
     }
 
+    /// <summary>Sends a request the caller made, and reads its response as an object, with the response.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="request">The request, which the caller keeps owning.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object with the response.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected virtual async Task<HttpResult<T>> HttpSendAsync<T>(string urlPart,
         Dictionary<string, object?>? parameters,
         HttpRequestMessage request, CancellationToken cancellationToken)
@@ -356,66 +476,166 @@ public class ApiClientBase : ApiClientCommon
     }
 
     /// <summary>
-    /// The exception an ApiError body names, so a caller catches the same type it would have caught
-    /// in process. Null - the default - leaves the failure as a plain ApiException, which carries
-    /// the name in <see cref="ApiException.ExceptionTypeName" /> either way. A client whose server
-    /// throws types the toolkit cannot see overrides this; <see cref="ApiError.ToException" />
-    /// covers the ones it can.
+    /// Makes the exception an error response names, so a caller catches the same type it would have caught in process.
     /// </summary>
+    /// <remarks>
+    /// <see langword="null"/>, the default, leaves the failure as an <see cref="ApiException"/>, which carries the name
+    /// in <see cref="ApiException.ExceptionTypeName"/> either way. An override can return
+    /// <see cref="ApiError.ToException"/>'s, which covers the common types, or its own.
+    /// </remarks>
+    /// <param name="apiError">The error.</param>
+    /// <returns>The exception, or <see langword="null"/> for an <see cref="ApiException"/>.</returns>
     protected virtual Exception? ToException(ApiError apiError)
     {
         _ = apiError;
         return null;
     }
 
+    /// <summary>Sends a request through the HTTP client; a derived class may send it otherwise.</summary>
+    /// <param name="client">The HTTP client.</param>
+    /// <param name="request">The request.</param>
+    /// <param name="responseHeadersRead">When the send completes: once the headers are read, or the whole response.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the response.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected virtual Task<HttpResponseMessage> HttpClientSendAsync(HttpClient client, HttpRequestMessage request,
         HttpCompletionOption responseHeadersRead, CancellationToken cancellationToken)
     {
         return client.SendAsync(request, responseHeadersRead, cancellationToken);
     }
 
+    /// <summary>Sends a GET request and reads its response as an object.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object; the default for status 204.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected Task<T> HttpGetAsync<T>(string urlPart,
         Dictionary<string, object?>? parameters, CancellationToken cancellationToken)
     {
         return HttpSendAsync<T>(HttpMethod.Get, urlPart, parameters, null, cancellationToken);
     }
 
+    /// <summary>Sends a POST request and reads its response as an object.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object; the default for status 204.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected Task<T> HttpPostAsync<T>(string urlPart, Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
     {
         return HttpSendAsync<T>(HttpMethod.Post, urlPart, parameters, data, cancellationToken);
     }
 
+    /// <summary>Sends a POST request.</summary>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected Task HttpPostAsync(string urlPart, Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
     {
         return HttpSendAsync(HttpMethod.Post, urlPart, parameters, data, cancellationToken);
     }
 
+    /// <summary>Sends a PUT request and reads its response as an object.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object; the default for status 204.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected Task<T> HttpPutAsync<T>(string urlPart, Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
     {
         return HttpSendAsync<T>(HttpMethod.Put, urlPart, parameters, data, cancellationToken);
     }
 
+    /// <summary>Sends a PUT request.</summary>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected Task HttpPutAsync(string urlPart, Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
     {
         return HttpSendAsync(HttpMethod.Put, urlPart, parameters, data, cancellationToken);
     }
 
+    /// <summary>Sends a PATCH request and reads its response as an object.</summary>
+    /// <typeparam name="T">The object's type.</typeparam>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the object; the default for status 204.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected Task<T> HttpPatchAsync<T>(string urlPart, Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
     {
         return HttpSendAsync<T>(HttpMethod.Patch, urlPart, parameters, data, cancellationToken);
     }
 
+    /// <summary>Sends a PATCH request.</summary>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected Task HttpPatchAsync(string urlPart, Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken)
     {
         return HttpSendAsync(HttpMethod.Patch, urlPart, parameters, data, cancellationToken);
     }
 
+    /// <summary>Sends a DELETE request.</summary>
+    /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
+    /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
+    /// <exception cref="Exception">
+    /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the HTTP client timed out.</exception>
     protected Task HttpDeleteAsync(string urlPart,
         Dictionary<string, object?>? parameters, CancellationToken cancellationToken)
     {

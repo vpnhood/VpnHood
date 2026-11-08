@@ -127,7 +127,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
                 _readEof = true;
 
             // Empty completion is EOF (n == 0). A non-empty final chunk (isComplete == true) is still
-            // returned here; the NEXT read arms a receive that returns empty -> 0, i.e. standard EOF.
+            // returned here; the next read returns 0 from the kept EOF without arming a receive.
             var n = 0;
             var buffer = op.Buffer;
             if (data != null && data.Size > 0 && !buffer.IsEmpty) {

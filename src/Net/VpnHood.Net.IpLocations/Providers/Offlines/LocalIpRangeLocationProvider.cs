@@ -13,10 +13,22 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.IpLocations.Providers.Offlines;
 
-// Every country's IP ranges, out of one zip the caller names: an entry per country ({code}.ips),
-// read on the first lookup that needs it and kept open for the rest, since a lookup walks many
-// countries and each is a few hundred KB. userAgent is what the current location's public-IP lookup
-// calls the app (IPAddressUtil.GetPublicIpAddress).
+/// <summary>
+/// Provides locations, the country only, and each country's IP ranges, from a zip with an entry of IP ranges per
+/// country (<c>cc.ips</c>), which <see cref="Ip2LocationDbParser.BuildLocalIpRangeLocationDb"/> builds.
+/// </summary>
+/// <remarks>
+/// A country's ranges are read on the first lookup that needs them and kept, since a lookup walks many countries. A lookup tries the current country first, then every country in turn. Where the asset's
+/// stream cannot seek, as in an Android package, the zip is copied into memory for the provider's life.
+/// </remarks>
+/// <param name="zipAsset">The zip.</param>
+/// <param name="currentCountryCodeFunc">
+/// Returns the current country's code, tried first, or <see langword="null"/> to try the one
+/// <see cref="GetCurrentLocation"/> found last.
+/// </param>
+/// <param name="userAgent">
+/// The User-Agent header the current location's public-IP lookup sends, or <see langword="null"/>.
+/// </param>
 public class LocalIpRangeLocationProvider(
     IAsset zipAsset,
     Func<string?> currentCountryCodeFunc,
@@ -30,6 +42,7 @@ public class LocalIpRangeLocationProvider(
     private ZipArchive? _zipArchive;
     private string? CurrentCountryCode => currentCountryCodeFunc() ?? _lasCurrentCountryCode;
 
+    /// <inheritdoc/>
     public async Task<string[]> GetCountryCodes(CancellationToken cancellationToken)
     {
         using var _ = await _lock.LockAsync(cancellationToken).Vhc();
@@ -45,6 +58,8 @@ public class LocalIpRangeLocationProvider(
         return _countryCodes;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>A country the zip has no entry for, or whose entry cannot be read, has no ranges; the error is logged.</remarks>
     public async Task<IpRangeOrderedList> GetIpRanges(string countryCode, CancellationToken cancellationToken)
     {
         using var _ = await _lock.LockAsync(cancellationToken).Vhc();
@@ -72,6 +87,12 @@ public class LocalIpRangeLocationProvider(
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It finds the device's public IP address online, IPv4 first, then looks the address up locally.
+    /// </remarks>
+    /// <exception cref="Exception">No public IP address was found.</exception>
+    /// <exception cref="KeyNotFoundException">No range holds the address.</exception>
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
@@ -84,6 +105,8 @@ public class LocalIpRangeLocationProvider(
         return ipLocation;
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="KeyNotFoundException">No country's ranges hold the address.</exception>
     public async Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         // first try CurrentCountryCode for performance
@@ -133,6 +156,7 @@ public class LocalIpRangeLocationProvider(
         return _zipArchive;
     }
 
+    /// <summary>Closes the zip.</summary>
     public void Dispose()
     {
         _zipArchive?.Dispose();

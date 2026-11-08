@@ -6,32 +6,89 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
+/// <summary>
+/// Provides the means to run a program or a shell command and read its output.
+/// </summary>
 public static class OsUtils
 {
+    /// <summary>Runs a program with its arguments, and waits for it.</summary>
+    /// <param name="fileName">The program.</param>
+    /// <param name="command">The arguments, as one string.</param>
+    /// <returns>The program's standard output.</returns>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
+    /// command line, is the message.
+    /// </exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">The program cannot be started.</exception>
     public static string ExecuteCommand(string fileName, string command)
     {
         return ExecuteCommand(fileName, command, Timeout.InfiniteTimeSpan);
     }
 
-    // a command still running at the timeout is killed
+    /// <summary>
+    /// Runs a program with its arguments, and waits for it at most a timeout, after which it is killed; reading the rest of
+    /// its output then is not timed.
+    /// </summary>
+    /// <param name="fileName">The program.</param>
+    /// <param name="command">The arguments, as one string.</param>
+    /// <param name="timeout">How long to wait, or <see cref="Timeout.InfiniteTimeSpan"/> for no limit.</param>
+    /// <returns>The program's standard output.</returns>
+    /// <exception cref="TimeoutException">The program was still running at the timeout.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
+    /// command line, is the message.
+    /// </exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">The program cannot be started.</exception>
     public static string ExecuteCommand(string fileName, string command, TimeSpan timeout)
     {
         return Execute(CreateStartInfo(fileName, command), $"{fileName} {command}", timeout);
     }
 
+    /// <summary>Runs a program with its arguments, and waits for it asynchronously.</summary>
+    /// <param name="fileName">The program.</param>
+    /// <param name="command">The arguments, as one string.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the program's standard output.</returns>
+    /// <remarks>A cancellation stops the wait, not the program.</remarks>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
+    /// command line, is the message.
+    /// </exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">The program cannot be started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<string> ExecuteCommandAsync(string fileName, string command,
         CancellationToken cancellationToken)
     {
         return ExecuteAsync(CreateStartInfo(fileName, command), $"{fileName} {command}", cancellationToken);
     }
 
-    // A command line for bash, given to it as one argument, as written. Never through Arguments, which parses
-    // its quotes again by Windows' rules: an inner double quote could change the command bash runs
+    /// <summary>Runs a command line in bash, given to it as one argument, as written, and waits for it.</summary>
+    /// <param name="command">The command line.</param>
+    /// <returns>The command's standard output.</returns>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
+    /// command line, is the message.
+    /// </exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">The program cannot be started.</exception>
+    // Never through Arguments, which parses its quotes again by Windows' rules: an inner double quote could change the
+    // command bash runs
     public static string ExecuteShellCommand(string command)
     {
         return Execute(CreateShellStartInfo(command), $"/bin/bash -c {command}", Timeout.InfiniteTimeSpan);
     }
 
+    /// <summary>Runs a command line in bash, as <see cref="ExecuteShellCommand"/> does, and waits for it asynchronously.</summary>
+    /// <param name="command">The command line.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the command's standard output.</returns>
+    /// <remarks>A cancellation stops the wait, not the program.</remarks>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
+    /// command line, is the message.
+    /// </exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">The program cannot be started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<string> ExecuteShellCommandAsync(string command, CancellationToken cancellationToken)
     {
         return ExecuteAsync(CreateShellStartInfo(command), $"/bin/bash -c {command}", cancellationToken);

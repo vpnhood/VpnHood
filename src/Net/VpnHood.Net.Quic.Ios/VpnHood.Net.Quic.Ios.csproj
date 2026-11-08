@@ -2,6 +2,8 @@
 	<PropertyGroup>
 		<Description>iOS (Apple Network.framework, iOS 15+) implementation of the VpnHood QUIC abstractions.</Description>
 		<TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
+		<!-- the whole public API is documented: a missing or broken doc comment fails the build -->
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-tvos'))">17.0</SupportedOSPlatformVersion>
 	</PropertyGroup>

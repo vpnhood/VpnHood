@@ -17,16 +17,18 @@ low-level `VpnHood.Net.Toolkit`.
 
 | Type | Role |
 |------|------|
-| `IQuicClient` | Client connector — `ConnectAsync(QuicClientConnectOptions)` → `IQuicConnection` |
-| `IQuicServer` | Server listener factory — `ListenAsync(QuicListenerOptions)` → `IQuicListener` |
-| `IQuicListener` | Accepts inbound connections (server) — `AcceptConnectionAsync()` |
-| `IQuicConnection` | Opens (`OpenOutboundStreamAsync`, client) / accepts (`AcceptInboundStreamAsync`, server) bidirectional streams as `System.IO.Stream` |
-| `QuicClientConnectOptions` | `RemoteEndPoint`, `TargetHost`, `CertificateValidationCallback` |
-| `QuicListenerOptions` | `ListenEndPoint`, `IdleTimeout`, `ServerCertificateSelector` |
+| `IQuicClient` | Client connector — `ConnectAsync(QuicClientConnectOptions, ct)` → `IQuicConnection` |
+| `IQuicServer` | Server listener factory — `ListenAsync(QuicListenerOptions, ct)` → `IQuicListener` |
+| `IQuicListener` | Accepts inbound connections (server) — `AcceptConnectionAsync(ct)` |
+| `IQuicConnection` | Opens (`OpenOutboundStreamAsync(ct)`) and accepts (`AcceptInboundStreamAsync(ct)`) streams as `System.IO.Stream`; both sides do both |
+| `IQuicServerConnection` | A server's connection: also opens write-only streams (`OpenOutboundUnidirectionalStreamAsync(ct)`) and closes with an error code (`CloseAsync(errorCode, ct)`) |
+| `IQuicStream` | The QUIC controls of a server's stream: `StreamId`, `AbortRead`/`AbortWrite` codes, `CompleteWrites`, `WriteFinal`, `ReadsClosed`/`WritesClosed` |
+| `QuicClientConnectOptions` | `RemoteEndPoint`, `TargetHost`, `CertificateValidationCallback`, `MaxInboundBidirectionalStreams` |
+| `QuicListenerOptions` | `ListenEndPoint`, `IdleTimeout`, `ServerCertificateSelector`, stream limits and default error codes |
 
-Everything else VpnHood needs is constant and is baked into the implementation, not exposed here:
-TLS 1.3, the `Http3` ALPN token, `EncryptionPolicy.RequireEncryption`, `X509RevocationMode.NoCheck`,
-default stream/close error codes `0`, and `QuicStreamType.Bidirectional`.
+The implementations set what VpnHood keeps constant, which is not exposed here: TLS 1.3, the `Http3` ALPN
+token and `EncryptionPolicy.RequireEncryption`; MsQuic also sets `X509RevocationMode.NoCheck`. Each client
+leaves the server's certificate to `CertificateValidationCallback`; none pins a certificate itself.
 
 ## How it is wired into VpnHood
 

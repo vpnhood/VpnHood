@@ -27,6 +27,13 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!-- Every project writes its XML doc file, so each package carries its comments to IntelliSense. Set here,
+         before the project body, because the SDK derives the file's path from it. Whether a missing comment
+         fails a build is decided per library in Directory.Build.targets (VhApiDocsComplete). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <!-- The Apple libraries' targets, and the Apple heads' (Client.Ios.Apple and Connect.Ios.Apple, each one
          app on the iPhone, the iPad and the Apple TV): building them needs the ios and tvos workloads. A
          library's tvOS floor is 17, the first tvOS with Network Extension. -->

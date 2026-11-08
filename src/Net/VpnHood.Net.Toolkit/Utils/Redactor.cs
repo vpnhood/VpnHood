@@ -6,7 +6,9 @@ using VpnHood.Net.Toolkit.Net;
 namespace VpnHood.Net.Toolkit.Utils;
 
 /// <summary>
-/// Turns identifying values into tokens that cannot be turned back into the original.
+/// Redacts identifying values for logs and screens: a globally routable address becomes a keyed token that cannot be
+/// turned back without the process's key, which dies with it; a private or local address stays readable, and host
+/// names and IDs keep some of their characters.
 /// <para>
 /// Whether redaction applies is carried by the instance, not by the method you pick, so a call site states
 /// its own guarantee. <see cref="Always" /> redacts whatever the settings say — the app UI and the tracking
@@ -15,9 +17,10 @@ namespace VpnHood.Net.Toolkit.Utils;
 /// </para>
 /// <para>
 /// <c>Redact*</c> produces a string now; <c>Format*</c> wraps the same work in a <see cref="RedactedValue{T}" />
-/// that a logger only evaluates if it actually writes the record.
+/// that redacts on its <c>ToString</c>, which a logger calls when it writes the record.
 /// </para>
 /// </summary>
+/// <param name="isAnonymousMode">Whether the instance redacts; otherwise, it writes the values as they are.</param>
 public class Redactor(bool isAnonymousMode)
 {
     /// <summary>
@@ -26,17 +29,23 @@ public class Redactor(bool isAnonymousMode)
     /// A log argument is an ordinary method argument, so <c>VhLogger.Format(x)</c> runs before the logger is
     /// ever asked whether the level is enabled. Returning a string there means every disabled hot-path
     /// statement still pays for the redaction — an allocation, and since the redaction became keyed, an
-    /// HMAC. This type defers that work to <see cref="ToString" />, which a logger only calls when it is
-    /// actually writing the record.
+    /// HMAC. This type defers that work to <see cref="ToString" />, which a logger calls when it writes the
+    /// record; any other call to it redacts too.
     /// </para>
     /// <para>
     /// The point is that no call site has to remember anything. Guarding hot statements with a level check
     /// works too, but it is a ritual that the next log statement someone adds will not repeat.
     /// </para>
     /// </summary>
+    /// <typeparam name="T">The type of the value.</typeparam>
+    /// <param name="redactor">The redactor that redacts it.</param>
+    /// <param name="value">The value, or <see langword="null"/>.</param>
+    /// <param name="redact">The redaction.</param>
     public readonly struct RedactedValue<T>(Redactor redactor, T? value, Func<Redactor, T, string> redact)
         where T : class
     {
+        /// <summary>Redacts the value now.</summary>
+        /// <returns>The redacted text, or <c>&lt;null&gt;</c>.</returns>
         public override string ToString() => value is null ? "<null>" : redact(redactor, value);
     }
 
@@ -62,13 +71,23 @@ public class Redactor(bool isAnonymousMode)
     public static Redactor Always { get; } = new(isAnonymousMode: true);
 
 
+    /// <summary>Gets a value indicating whether this redactor redacts; otherwise, it writes the values as they are.</summary>
     public bool IsAnonymousMode { get; } = isAnonymousMode;
 
+    /// <summary>
+    /// Redacts an address: a globally routable address becomes a keyed token, the same for the same address within the run; a private or
+    /// local one stays as it is.
+    /// </summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <returns>The text.</returns>
     public string RedactIpAddress(IPAddress ipAddress)
     {
         return IsAnonymousMode ? RedactIpAddressCore(ipAddress) : ipAddress.ToString();
     }
 
+    /// <summary>Redacts an endpoint's address as <see cref="RedactIpAddress"/> does, and keeps its port.</summary>
+    /// <param name="endPoint">The endpoint; one that is not an IP endpoint is written as it is.</param>
+    /// <returns>The text.</returns>
     public string RedactEndPoint(EndPoint endPoint)
     {
         if (endPoint is not IPEndPoint ipEndPoint)
@@ -79,6 +98,9 @@ public class Redactor(bool isAnonymousMode)
             : ipEndPoint.ToString();
     }
 
+    /// <summary>Redacts a network's prefix as <see cref="RedactIpAddress"/> does, and keeps its length.</summary>
+    /// <param name="ipNetwork">The network.</param>
+    /// <returns>The text.</returns>
     public string RedactIpNetwork(IpNetwork ipNetwork)
     {
         return IsAnonymousMode
@@ -86,16 +108,28 @@ public class Redactor(bool isAnonymousMode)
             : ipNetwork.ToString();
     }
 
+    /// <summary>Redacts addresses, separated by commas.</summary>
+    /// <param name="ipAddresses">The addresses.</param>
+    /// <returns>The text.</returns>
     public string RedactIpAddresses(IReadOnlyList<IPAddress> ipAddresses)
     {
         return string.Join(", ", ipAddresses.Select(RedactIpAddress));
     }
 
+    /// <summary>Redacts networks, separated by commas.</summary>
+    /// <param name="ipNetworks">The networks.</param>
+    /// <returns>The text.</returns>
     public string RedactIpNetworks(IReadOnlyList<IpNetwork> ipNetworks)
     {
         return string.Join(", ", ipNetworks.Select(RedactIpNetwork));
     }
 
+    /// <summary>
+    /// Redacts a host name: one that is an address or an endpoint as one; otherwise, in anonymous mode, all but its first
+    /// two and last four characters, or for a short name all but its last four.
+    /// </summary>
+    /// <param name="dnsName">The host name, or <see langword="null"/>.</param>
+    /// <returns>The text, or <c>&lt;null&gt;</c>.</returns>
     public string RedactHostName(string? dnsName)
     {
         if (dnsName == null) return "<null>";
@@ -108,6 +142,9 @@ public class Redactor(bool isAnonymousMode)
             : dnsName[..2] + "***" + dnsName[^4..];
     }
 
+    /// <summary>Redacts an ID: in anonymous mode, only its second half shows, after <c>**</c>.</summary>
+    /// <param name="id">The ID, or <see langword="null"/>.</param>
+    /// <returns>The text, or <c>&lt;null&gt;</c>.</returns>
     public string RedactId(object? id)
     {
         if (id == null) return "<null>";
@@ -116,6 +153,13 @@ public class Redactor(bool isAnonymousMode)
         return IsAnonymousMode ? "**" + str[(str.Length / 2)..] : str;
     }
 
+    /// <summary>
+    /// Redacts the addresses in a packet's text, after its <c>SourceAddress</c>, <c>DestinationAddress</c>, <c>Src</c> and
+    /// <c>Dst</c> labels, as <see cref="RedactIpAddress"/> does: only each label's first occurrence, up to the next
+    /// comma; a text without a label may come out as <c>*</c> whole.
+    /// </summary>
+    /// <param name="ipPacketText">The packet's text.</param>
+    /// <returns>The text.</returns>
     public string RedactPacketText(string ipPacketText)
     {
         if (!IsAnonymousMode)
@@ -130,21 +174,33 @@ public class Redactor(bool isAnonymousMode)
 
     // the lambdas are static, so the compiler caches each one in a static field and no delegate is
     // allocated per call — an instance method group could not be cached that way, being bound to its receiver
+    /// <summary>Wraps an endpoint for a log line; it redacts on its <c>ToString</c>.</summary>
+    /// <param name="endPoint">The value, or <see langword="null"/>.</param>
+    /// <returns>The wrapped value.</returns>
     public RedactedValue<EndPoint> Format(EndPoint? endPoint)
     {
         return new RedactedValue<EndPoint>(this, endPoint, static (r, v) => r.RedactEndPoint(v));
     }
 
+    /// <summary>Wraps an endpoint for a log line; it redacts on its <c>ToString</c>.</summary>
+    /// <param name="endPoint">The value, or <see langword="null"/>.</param>
+    /// <returns>The wrapped value.</returns>
     public RedactedValue<EndPoint> Format(IpEndPointValue? endPoint)
     {
         return new RedactedValue<EndPoint>(this, endPoint?.ToIPEndPoint(), static (r, v) => r.RedactEndPoint(v));
     }
 
+    /// <summary>Wraps an address for a log line; it redacts on its <c>ToString</c>.</summary>
+    /// <param name="ipAddress">The value, or <see langword="null"/>.</param>
+    /// <returns>The wrapped value.</returns>
     public RedactedValue<IPAddress> Format(IPAddress? ipAddress)
     {
         return new RedactedValue<IPAddress>(this, ipAddress, static (r, v) => r.RedactIpAddress(v));
     }
 
+    /// <summary>Wraps a network for a log line; it redacts on its <c>ToString</c>.</summary>
+    /// <param name="ipNetwork">The value, or <see langword="null"/>.</param>
+    /// <returns>The wrapped value.</returns>
     public RedactedValue<IpNetwork> Format(IpNetwork? ipNetwork)
     {
         return new RedactedValue<IpNetwork>(this, ipNetwork, static (r, v) => r.RedactIpNetwork(v));
@@ -152,12 +208,18 @@ public class Redactor(bool isAnonymousMode)
 
     // the sequence is materialized now and formatted later: deferring the enumeration itself would let a
     // collection change between the log call and the record being written
+    /// <summary>Wraps addresses for a log line; it redacts on its <c>ToString</c>.</summary>
+    /// <param name="ipAddresses">The value.</param>
+    /// <returns>The wrapped value.</returns>
     public RedactedValue<IReadOnlyList<IPAddress>> Format(IEnumerable<IPAddress> ipAddresses)
     {
         return new RedactedValue<IReadOnlyList<IPAddress>>(this,
             ipAddresses as IReadOnlyList<IPAddress> ?? [.. ipAddresses], static (r, v) => r.RedactIpAddresses(v));
     }
 
+    /// <summary>Wraps networks for a log line; it redacts on its <c>ToString</c>.</summary>
+    /// <param name="ipNetworks">The value.</param>
+    /// <returns>The wrapped value.</returns>
     public RedactedValue<IReadOnlyList<IpNetwork>> Format(IEnumerable<IpNetwork> ipNetworks)
     {
         return new RedactedValue<IReadOnlyList<IpNetwork>>(this,

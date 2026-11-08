@@ -1,5 +1,24 @@
 <Project>
 
+  <!-- A library whose whole public API is documented sets VhApiDocsComplete in its csproj, and from then on a
+       missing or broken doc comment fails its build, in every target framework. Read here, not in the props:
+       those come before the project body and cannot see the property. CS1591 must never be in NoWarn as well,
+       because NoWarn beats WarningsAsErrors. -->
+  <PropertyGroup Condition="'$(VhApiDocsComplete)' == 'true'">
+    <WarningsAsErrors>$(WarningsAsErrors);CS0419;CS1570;CS1571;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1589;CS1590;CS1591;CS1592;CS1658;CS1710;CS1711;CS1712;CS1723;CS1734;CS1735</WarningsAsErrors>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(VhApiDocsComplete)' != 'true'">
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- The Android SDK's targets, read after this file, add CS1573 and CS1591 to NoWarn, which would turn the gate
+       off without a word: a gated library takes them out again right before the compiler runs. -->
+  <Target Name="VhApiDocsGate" BeforeTargets="CoreCompile" Condition="'$(VhApiDocsComplete)' == 'true'">
+    <PropertyGroup>
+      <NoWarn>$([System.Text.RegularExpressions.Regex]::Replace('$(NoWarn)', '\bCS(1573|1591)\b', ''))</NoWarn>
+    </PropertyGroup>
+  </Target>
+
   <!-- Native symbol files never ship: the SkiaSharp and HarfBuzzSharp packages the Avalonia UI brings
        put libSkiaSharp.pdb (80 MB) and libHarfBuzzSharp.pdb (20 MB) beside their DLLs, and a publish
        would carry them into every desktop installer. Nothing reads them - a native crash is not

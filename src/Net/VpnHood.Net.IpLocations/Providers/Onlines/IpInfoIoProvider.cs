@@ -8,6 +8,12 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.IpLocations.Providers.Onlines;
 
+/// <summary>
+/// Provides locations from ipinfo.io: the country, and the region, without diacritics, and city where known.
+/// </summary>
+/// <param name="httpClient">The HTTP client the requests go through; the caller keeps owning it.</param>
+/// <param name="userAgent">The User-Agent header the requests send.</param>
+/// <param name="apiKey">The API key, or <see langword="null"/>; the current location's lookup sends none.</param>
 public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? apiKey)
     : IIpLocationProvider
 {
@@ -47,12 +53,16 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
             .Normalize(NormalizationForm.FormC);
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="HttpRequestException">The request failed.</exception>
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         var uri = new Uri($"https://ipinfo.io/{ipAddress}?token={apiKey}");
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="HttpRequestException">The request failed.</exception>
     public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var uri = new Uri("https://ipinfo.io");
@@ -89,6 +99,7 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
         return ipLocation;
     }
 
+    /// <summary>Does nothing: the provider holds nothing to release.</summary>
     public void Dispose()
     {
     }

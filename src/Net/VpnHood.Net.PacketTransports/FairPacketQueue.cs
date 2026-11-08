@@ -8,11 +8,17 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.PacketTransports;
 
-// A send queue split into lanes by a packet's ports, so a flow that floods fills only its own lane. The busy
-// lanes take turns a packet each, and a lane that was empty goes first, every other turn at least: a DNS lookup
-// or a call's small packet waits for one packet, not for a backlog. The lanes share the capacity, so one flow
-// alone may use all of it, and a full queue drops the oldest packet of its longest lane. A send never waits,
-// and the memory is fixed at construction
+/// <summary>
+/// Provides a send queue split into 64 lanes by a hash of a packet's ports, so a flow that floods fills mostly its own
+/// lane and the packets of other flows need not wait behind its backlog.
+/// </summary>
+/// <remarks>
+/// The busy lanes take turns a packet each, and a lane that was empty is preferred, every other turn at least; flows
+/// whose ports hash alike share a lane, and the queue promises no latency. The lanes share the capacity, so one flow
+/// alone may use all of it, and a full queue drops the oldest packet of its longest lane. A send never waits for room,
+/// though it takes a lock; the slots are allocated at construction. A derived class sends each packet
+/// in <see cref="SendQueuedPacketAsync"/>.
+/// </remarks>
 public abstract class FairPacketQueue : IDisposable
 {
     private const int LaneCount = 64;
@@ -45,10 +51,21 @@ public abstract class FairPacketQueue : IDisposable
         FullMode = BoundedChannelFullMode.DropWrite
     });
 
+    /// <summary>Gets the number of packets waiting in the queue.</summary>
     public int QueueLength => Volatile.Read(ref _count);
+    /// <summary>
+    /// Gets the number of packets dropped: pushed out of a full queue, refused once disposed, failed, or discarded when the
+    /// queue is disposed or starts afresh.
+    /// </summary>
     public long DroppedPackets => Interlocked.Read(ref _droppedPackets);
+    /// <summary>Gets the name the queue's log lines carry. The default is its type's name.</summary>
     protected virtual string Name => VhLogger.FormatType(this);
 
+    /// <summary>
+    /// Initializes the queue and starts its sending loop.
+    /// </summary>
+    /// <param name="capacity">The number of packets the lanes hold together; at least 1.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> is less than 1.</exception>
     protected FairPacketQueue(int capacity)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
@@ -60,10 +77,22 @@ public abstract class FairPacketQueue : IDisposable
 
     // A packet's turn: the step sends the packet on or disposes it, and must not throw once it has handed it on,
     // as a throw drops the packet. The next turn waits for the step
+    /// <summary>
+    /// Sends one queued packet on, or disposes it. A throw drops the packet, so do not throw after handing it on.
+    /// The next packet waits for this call.
+    /// </summary>
+    /// <param name="ipPacket">The packet, which this call takes.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract ValueTask SendQueuedPacketAsync(IpPacket ipPacket);
 
     // Queues the packet, never waiting: a full queue makes room in its longest lane. A disposed queue refuses
     // it, and the packet is dropped
+    /// <summary>
+    /// Queues a packet in its flow's lane, never waiting: a full queue drops the oldest packet of its longest lane.
+    /// The queue takes the packet whatever the outcome.
+    /// </summary>
+    /// <param name="ipPacket">The packet.</param>
+    /// <returns><see langword="true"/> if it was queued; <see langword="false"/> if the queue is disposed, and the packet with it.</returns>
     public bool SendPacketQueued(IpPacket ipPacket)
     {
         var (isQueued, droppedPacket, isWaiting) = Enqueue(GetLane(ipPacket), ipPacket);
@@ -253,6 +282,9 @@ public abstract class FairPacketQueue : IDisposable
     }
 
     // drops what the queue holds and refuses later sends; a packet in its step is the step's
+    /// <summary>
+    /// Drops and disposes the packets the queue holds and refuses later sends. A packet being sent is the send's.
+    /// </summary>
     public void Dispose()
     {
         var ipPackets = Close();

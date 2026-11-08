@@ -3,14 +3,20 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Assets;
 
-// Assets fetched from a web server by name, at "<baseUrl><assetPath>": for a caller with nothing
-// placed beside it, which reads over the network instead. 404 is the absent asset; any other
-// failure is its own.
-//
-// The body as it arrives, read forward and not buffered - what to do about that is the caller's
-// decision, not this one's.
+/// <summary>
+/// Provides the assets a web server serves, each at the base URL followed by the asset path, for a caller with nothing
+/// placed beside it.
+/// </summary>
+/// <remarks>
+/// Status 404 is an absent asset; any other failure is its own. The body is read as it arrives, forward and not
+/// buffered; disposing the stream gives the connection back.
+/// </remarks>
+/// <param name="httpClient">The HTTP client the requests go through; the caller keeps owning it.</param>
+/// <param name="baseUrl">The URL the asset paths are appended to.</param>
 public class HttpAssetProvider(HttpClient httpClient, string baseUrl) : IAssetProvider
 {
+    /// <inheritdoc/>
+    /// <exception cref="HttpRequestException">The request failed, or its status is a failure other than 404.</exception>
     public async Task<Stream> OpenReadAsync(string assetPath, CancellationToken cancellationToken)
     {
         var response = await httpClient

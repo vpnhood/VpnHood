@@ -1,11 +1,15 @@
 namespace VpnHood.Net.Toolkit.Utils;
 
+/// <summary>
+/// Provides a cached UTC clock for hot paths, refreshed at most once per <see cref="Precision"/>.
+/// </summary>
 public static class FastDateTime
 {
     private static readonly Lock RefreshLocker = new();
     private static long _utcNowTicks;
     private static long _lastTickCountUtc;
 
+    /// <summary>Gets or sets how often, by the tick count, the cached time is refreshed. The default is 1 second.</summary>
     public static TimeSpan Precision { get; set; } = TimeSpan.FromSeconds(1);
 
     // Hot packet paths call this several times per packet across all threads, so the
@@ -14,6 +18,11 @@ public static class FastDateTime
     // blocks the next one instead of racing it, and the cached clock can never roll
     // backward from a stale sample. It still follows system clock changes in both directions.
     // UTC only: the first read of local time in a process loads its time zone, slow on some phones
+    /// <summary>
+    /// Gets the cached UTC time, refreshed from the system clock once <see cref="Precision"/> has passed by the tick count.
+    /// A read between refreshes takes no lock, refreshes are serialized, and a change of the system clock shows at the
+    /// next refresh.
+    /// </summary>
     public static DateTime UtcNow {
         get {
             var tickCount = Environment.TickCount64;

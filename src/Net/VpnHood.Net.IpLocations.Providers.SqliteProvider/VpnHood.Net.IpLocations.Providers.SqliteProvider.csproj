@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>SQLite-backed offline IP range provider for VpnHood.</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<PropertyGroup>

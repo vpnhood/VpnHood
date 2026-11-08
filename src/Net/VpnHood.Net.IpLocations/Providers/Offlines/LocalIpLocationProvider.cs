@@ -7,19 +7,30 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.IpLocations.Providers.Offlines;
 
+/// <summary>
+/// Provides locations, the country only, from IP ranges held in memory, which <see cref="Deserialize"/> reads and
+/// <see cref="Ip2LocationDbParser.BuildLocalIpLocationDb"/> builds.
+/// </summary>
 public class LocalIpLocationProvider : IIpLocationProvider
 {
+    /// <summary>Represents one IP range and its country.</summary>
     public class IpRangeInfo
     {
+        /// <summary>Gets the IP range.</summary>
         public required IpRange IpRanges { get; init; }
+
+        /// <summary>Gets the country's two-letter code.</summary>
         public required string CountryCode { get; init; }
     }
 
     private readonly List<IpRangeInfo> _ipRangeInfoList;
     private readonly string? _userAgent;
 
-    // userAgent is what the current location's public-IP lookup calls the app
-    // (IPAddressUtil.GetPublicIpAddress).
+    /// <summary>Initializes a new instance of the <see cref="LocalIpLocationProvider"/> class.</summary>
+    /// <param name="ipRangeInfos">The IP ranges with their countries.</param>
+    /// <param name="userAgent">
+    /// The User-Agent header the current location's public-IP lookup sends, or <see langword="null"/>.
+    /// </param>
     public LocalIpLocationProvider(IEnumerable<IpRangeInfo> ipRangeInfos, string? userAgent = null)
     {
         _ipRangeInfoList = ipRangeInfos
@@ -28,6 +39,12 @@ public class LocalIpLocationProvider : IIpLocationProvider
         _userAgent = userAgent;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It finds the device's public IP address online, IPv4 first, then looks the address up locally.
+    /// </remarks>
+    /// <exception cref="Exception">No public IP address was found.</exception>
+    /// <exception cref="KeyNotFoundException">No range holds the address.</exception>
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
@@ -40,6 +57,9 @@ public class LocalIpLocationProvider : IIpLocationProvider
         return ipLocation;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>An IPv4-mapped IPv6 address is looked up as IPv4.</remarks>
+    /// <exception cref="KeyNotFoundException">No range holds the address.</exception>
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         if (ipAddress.IsIPv4MappedToIPv6)
@@ -86,6 +106,8 @@ public class LocalIpLocationProvider : IIpLocationProvider
         }
     }
 
+    /// <summary>Writes the IP ranges in the binary form <see cref="Deserialize"/> reads.</summary>
+    /// <param name="stream">The stream to write to; it stays open.</param>
     public void Serialize(Stream stream)
     {
         // serialize to binary
@@ -108,6 +130,13 @@ public class LocalIpLocationProvider : IIpLocationProvider
         }
     }
 
+    /// <summary>Reads IP ranges that <see cref="Serialize"/> wrote.</summary>
+    /// <param name="stream">The stream to read from; it is closed after.</param>
+    /// <param name="userAgent">
+    /// The User-Agent header the current location's public-IP lookup sends, or <see langword="null"/>.
+    /// </param>
+    /// <returns>A new provider with the ranges.</returns>
+    /// <exception cref="EndOfStreamException">The stream ends early.</exception>
     public static LocalIpLocationProvider Deserialize(Stream stream, string? userAgent = null)
     {
         using var reader = new BinaryReader(stream);
@@ -130,6 +159,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
         return new LocalIpLocationProvider(ipRangeInfos, userAgent);
     }
 
+    /// <summary>Does nothing: the provider holds nothing to release.</summary>
     public void Dispose()
     {
     }

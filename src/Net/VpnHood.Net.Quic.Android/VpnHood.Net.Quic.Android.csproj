@@ -2,6 +2,8 @@
 	<PropertyGroup>
 		<Description>Android implementation of the VpnHood QUIC abstractions (IQuicClient/IQuicConnection/Stream) over MsQuic. All native linking (libmsquic.so) and the Microsoft.Quic P/Invoke bindings are provided by the VpnHood.Net.Quic.MsQuic.AndroidNative package; this project is pure managed code.</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
+		<!-- the whole public API is documented: a missing or broken doc comment fails the build -->
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 	</PropertyGroup>
 

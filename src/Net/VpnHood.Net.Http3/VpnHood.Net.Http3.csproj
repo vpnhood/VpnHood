@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood HTTP/3. A server-side HTTP/3 engine over the VpnHood QUIC abstractions: frames, QPACK without a dynamic table, request validation and the response, with hooks through which an application claims its own streams.</Description>
 		<TargetFramework>net10.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

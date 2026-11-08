@@ -7,10 +7,21 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Quic.MsQuic;
 
+/// <summary>
+/// Represents a QUIC client on MsQuic, through .NET's <see cref="QuicConnection"/>, for Windows and Linux.
+/// </summary>
+/// <remarks>
+/// Its connections use TLS 1.3 only, the "h3" ALPN token and no certificate revocation check, and abort streams and
+/// close with error code 0 unless told otherwise.
+/// </remarks>
 public sealed class MsQuicClient : IQuicClient
 {
+    /// <summary>
+    /// Gets a value indicating whether MsQuic connections are supported on this platform.
+    /// </summary>
     public static bool IsSupported => QuicConnection.IsSupported;
 
+    /// <inheritdoc/>
     public async ValueTask<IQuicConnection> ConnectAsync(
         QuicClientConnectOptions options, CancellationToken cancellationToken)
     {

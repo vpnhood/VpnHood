@@ -3,9 +3,13 @@
 namespace VpnHood.Net.Toolkit.Streams;
 
 /// <summary>
-/// Caches read operations for small-sized requests to reduce overhead.
-/// Write operations are delegated to the underlying source stream.
+/// Provides a stream that buffers small reads of another stream, to read it in fewer, larger reads; writes go to the
+/// source as they are.
 /// </summary>
+/// <remarks>
+/// A read larger than the buffer, with the buffer empty, goes to the source directly. A read takes from the buffer while it
+/// holds data, and refills it only once it is empty, so a read never waits for more data while some is buffered.
+/// </remarks>
 public class ReadBufferedStream : StreamDecoratorAsync
 {
     private readonly Memory<byte> _buffer;
@@ -13,10 +17,28 @@ public class ReadBufferedStream : StreamDecoratorAsync
     private int _bufferOffset;
     private const int DefaultBufferSize = 1024;
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: the buffer hides the source's position.</remarks>
     public override bool CanSeek => false;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an empty buffer is filled again; otherwise, once it is empty, reads go to
+    /// the source directly. The default is <see langword="true"/>.
+    /// </summary>
     public bool AllowBufferRefill { get; set; } = true;
+
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="true"/> while the buffer holds data; otherwise, the source tells.</remarks>
     public override bool? DataAvailable => _bufferRemain > 0 ? true : base.DataAvailable;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReadBufferedStream"/> class whose buffer starts with data already read
+    /// from the source, and is that long.
+    /// </summary>
+    /// <param name="sourceStream">The source stream.</param>
+    /// <param name="leaveOpen"><see langword="true"/> to leave the source open when this stream is disposed.</param>
+    /// <param name="initData">The data read before, which reads return first.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="initData"/> is empty.</exception>
     public ReadBufferedStream(Stream sourceStream, bool leaveOpen, ReadOnlySpan<byte> initData)
         : this(sourceStream, leaveOpen, initData.Length, initData)
     {
@@ -24,6 +46,14 @@ public class ReadBufferedStream : StreamDecoratorAsync
             throw new ArgumentException("Cache data cannot be empty when using this constructor.", nameof(initData));
     }
 
+    /// <summary>Initializes a new instance of the <see cref="ReadBufferedStream"/> class.</summary>
+    /// <param name="sourceStream">The source stream.</param>
+    /// <param name="leaveOpen"><see langword="true"/> to leave the source open when this stream is disposed.</param>
+    /// <param name="bufferSize">The buffer's size, in bytes. The default is 1024.</param>
+    /// <param name="initData">Data read before, which reads return first, or empty.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="bufferSize"/> is not above zero, or <paramref name="initData"/> is longer than it.
+    /// </exception>
     public ReadBufferedStream(Stream sourceStream, bool leaveOpen, int bufferSize = DefaultBufferSize,
         ReadOnlySpan<byte> initData = default)
         : base(sourceStream, leaveOpen)
@@ -39,11 +69,15 @@ public class ReadBufferedStream : StreamDecoratorAsync
         _bufferRemain = initData.Length;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Reading it gives the source's position less the buffered bytes; setting it is not supported.</remarks>
+    /// <exception cref="NotSupportedException">The position is set, or the source cannot tell its position.</exception>
     public override long Position {
         get => base.Position - _bufferRemain;
         set => throw new NotSupportedException();
     }
 
+    /// <inheritdoc/>
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         // read directly to user buffer if there is no buffer, and it is larger than cache

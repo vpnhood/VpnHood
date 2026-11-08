@@ -5,19 +5,35 @@ using VpnHood.Net.Toolkit.Exceptions;
 
 namespace VpnHood.Net.Toolkit.ApiClients;
 
+/// <summary>
+/// Represents an exception as an API sends it: its type's names, its message, its data and its inner exception's
+/// message, as JSON a client turns back into an exception.
+/// </summary>
 public class ApiError : ICloneable, IEquatable<ApiError>
 {
+    /// <summary>The data key that marks an exception made from an <see cref="ApiError"/>: <c>IsApiError</c>.</summary>
     public const string Flag = "IsApiError";
 
     // A copy of the context's settings, as new ones would write by reflection, which the browser page has off.
     private static readonly JsonSerializerOptions IndentedOptions = new(ApiErrorJsonContext.Default.Options) { WriteIndented = true };
 
+    /// <summary>Gets the exception type's name, such as <c>NotExistsException</c>.</summary>
     public required string TypeName { get; init; }
+
+    /// <summary>Gets the exception type's full name, or <see langword="null"/>.</summary>
     public string? TypeFullName { get; init; }
+
+    /// <summary>Gets the exception's message.</summary>
     public required string Message { get; init; }
+
+    /// <summary>Gets the exception's data, as text. The default is none.</summary>
     public Dictionary<string, string?> Data { get; init; } = new();
+
+    /// <summary>Gets the inner exception's message, or <see langword="null"/>.</summary>
     public string? InnerMessage { get; init; }
 
+    /// <summary>Copies the error, with a data dictionary of its own.</summary>
+    /// <returns>The copy.</returns>
     public object Clone() => new ApiError {
         TypeName = TypeName,
         TypeFullName = TypeFullName,
@@ -27,6 +43,12 @@ public class ApiError : ICloneable, IEquatable<ApiError>
     };
 
 
+    /// <summary>Tries to read an error from its JSON, whose names match ignoring case.</summary>
+    /// <param name="value">The JSON.</param>
+    /// <param name="apiError">The error, when read; otherwise, <see langword="null"/>.</param>
+    /// <returns>
+    /// <see langword="true"/> if the JSON is an error with a type name and a message; otherwise, <see langword="false"/>.
+    /// </returns>
     public static bool TryParse(string value, [NotNullWhen(true)] out ApiError? apiError)
     {
         apiError = null;
@@ -44,6 +66,10 @@ public class ApiError : ICloneable, IEquatable<ApiError>
         }
     }
 
+    /// <summary>Reads an error from its JSON, whose names match ignoring case.</summary>
+    /// <param name="value">The JSON.</param>
+    /// <returns>The error.</returns>
+    /// <exception cref="FormatException">The JSON is not an error with a type name and a message.</exception>
     public static ApiError Parse(string value)
     {
         if (TryParse(value, out var apiError))
@@ -52,17 +78,29 @@ public class ApiError : ICloneable, IEquatable<ApiError>
         throw new FormatException("Invalid ApiError format.");
     }
 
+    /// <summary>Writes the error as JSON.</summary>
+    /// <param name="writeIndented"><see langword="true"/> to indent the JSON.</param>
+    /// <returns>The JSON.</returns>
     public string ToJson(bool writeIndented = false)
     {
         var options = writeIndented ? IndentedOptions : ApiErrorJsonContext.Default.Options;
         return JsonSerializer.Serialize(this, options.GetTypeInfo(typeof(ApiError)));
     }
 
+    /// <summary>Determines whether the error's type has the name of a type.</summary>
+    /// <typeparam name="T">The type.</typeparam>
+    /// <returns><see langword="true"/> if the names match; otherwise, <see langword="false"/>.</returns>
     public bool Is<T>()
     {
         return TypeName == typeof(T).Name;
     }
 
+    /// <summary>
+    /// Makes the exception the error stands for: one of the common types it names, such as
+    /// <see cref="OperationCanceledException"/>, <see cref="TimeoutException"/> or <see cref="NotExistsException"/>,
+    /// or else an <see cref="ApiException"/>, with the error's data and names in its <see cref="Exception.Data"/>.
+    /// </summary>
+    /// <returns>The exception.</returns>
     public Exception ToException()
     {
         // create exception
@@ -81,6 +119,8 @@ public class ApiError : ICloneable, IEquatable<ApiError>
         return exception;
     }
 
+    /// <summary>Adds an exception's data to the error's, as text, keeping the keys it has, and adds <see cref="Flag"/>.</summary>
+    /// <param name="data">The exception's data.</param>
     public void ImportData(IDictionary data)
     {
         foreach (DictionaryEntry item in data) {
@@ -92,6 +132,10 @@ public class ApiError : ICloneable, IEquatable<ApiError>
         Data.TryAdd(Flag, "true");
     }
 
+    /// <summary>
+    /// Adds the error's data, its type's names and <see cref="Flag"/> to an exception's data, keeping the keys it has.
+    /// </summary>
+    /// <param name="data">The exception's data.</param>
     public void ExportData(IDictionary data)
     {
         foreach (var kvp in Data.Where(kvp => !data.Contains(kvp.Key)))
@@ -107,6 +151,9 @@ public class ApiError : ICloneable, IEquatable<ApiError>
             data.Add(Flag, "true");
     }
 
+    /// <summary>Determines whether another error has the same names, messages and data.</summary>
+    /// <param name="other">The other error.</param>
+    /// <returns><see langword="true"/> if they are the same; otherwise, <see langword="false"/>.</returns>
     public bool Equals(ApiError? other)
     {
         if (other is null) return false;
@@ -118,6 +165,7 @@ public class ApiError : ICloneable, IEquatable<ApiError>
                DictionariesEqual(Data, other.Data);
     }
 
+    /// <inheritdoc/>
     public override bool Equals(object? obj)
     {
         if (obj is null) return false;
@@ -139,11 +187,14 @@ public class ApiError : ICloneable, IEquatable<ApiError>
         return true;
     }
 
+    /// <inheritdoc/>
     public override int GetHashCode()
     {
         return HashCode.Combine(TypeName, TypeFullName, Message, InnerMessage);
     }
 
+    /// <summary>Returns the error's names, messages and data on one line.</summary>
+    /// <returns>The text.</returns>
     public override string ToString()
     {
         return $"ApiError: TypeName={TypeName}, " +

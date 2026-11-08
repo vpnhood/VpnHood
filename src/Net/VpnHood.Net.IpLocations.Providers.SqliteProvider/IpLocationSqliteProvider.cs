@@ -9,6 +9,10 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.IpLocations.Providers.SqliteProvider;
 
+/// <summary>
+/// Provides locations, the country only, and each country's IP ranges, from the SQLite database
+/// <see cref="IpLocationSqliteBuilder"/> builds.
+/// </summary>
 public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposable
 {
     private readonly Lazy<SqliteConnection> _connection;
@@ -30,8 +34,11 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         _userAgent = userAgent;
     }
 
-    // userAgent is what the current location's public-IP lookup calls the app
-    // (IPAddressUtil.GetPublicIpAddress).
+    /// <summary>Opens a provider on a database file, read-only.</summary>
+    /// <param name="dbPath">The database file.</param>
+    /// <param name="userAgent">The User-Agent header the current location's public-IP lookup sends, or <see langword="null"/>.</param>
+    /// <returns>A task whose result is the provider, which owns its connection.</returns>
+    /// <exception cref="SqliteException">The file cannot be opened.</exception>
     public static async Task<IpLocationSqliteProvider> Open(string dbPath, string? userAgent = null)
     {
         var provider = new IpLocationSqliteProvider(dbPath, userAgent);
@@ -39,6 +46,16 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return provider;
     }
 
+    /// <summary>Opens a provider on a connection, which it opens when it is closed.</summary>
+    /// <param name="connection">The connection.</param>
+    /// <param name="leaveOpen">
+    /// <see langword="true"/> to leave the connection to the caller when the provider is disposed;
+    /// <see langword="false"/> to dispose it with the provider.
+    /// </param>
+    /// <param name="userAgent">The User-Agent header the current location's public-IP lookup sends, or <see langword="null"/>.</param>
+    /// <returns>A task whose result is the provider.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="connection"/> is <see langword="null"/>.</exception>
+    /// <exception cref="SqliteException">The connection cannot be opened.</exception>
     public static async Task<IpLocationSqliteProvider> Open(SqliteConnection connection, bool leaveOpen = false,
         string? userAgent = null)
     {
@@ -51,6 +68,9 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return provider;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>An IPv4-mapped IPv6 address is looked up as IPv4.</remarks>
+    /// <exception cref="KeyNotFoundException">No range holds the address.</exception>
     public async Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         if (ipAddress.IsIPv4MappedToIPv6)
@@ -75,6 +95,12 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         };
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It finds the device's public IP address online, IPv4 first, then looks the address up in the database.
+    /// </remarks>
+    /// <exception cref="Exception">No public IP address was found.</exception>
+    /// <exception cref="KeyNotFoundException">No range holds the address.</exception>
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var ipAddress =
@@ -85,6 +111,10 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return await GetLocation(ipAddress, cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The code's case does not matter; an unknown country has no ranges.</remarks>
+    /// <exception cref="ArgumentException"><paramref name="countryCode"/> is empty or white space.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="countryCode"/> is <see langword="null"/>.</exception>
     public async Task<IpRangeOrderedList> GetIpRanges(string countryCode, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(countryCode);
@@ -105,6 +135,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return new IpRangeOrderedList(ranges);
     }
 
+    /// <inheritdoc/>
     public async Task<string[]> GetCountryCodes(CancellationToken cancellationToken)
     {
         var countryCodes = new List<string>();
@@ -129,6 +160,11 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return new SqliteConnection(connectionString);
     }
 
+    /// <summary>
+    /// Converts an IP address to the database's key form: its 16 IPv6 bytes, an IPv4 address mapped to IPv6 first.
+    /// </summary>
+    /// <param name="ipAddress">The IP address.</param>
+    /// <returns>The 16 bytes.</returns>
     public static byte[] ToBytes(IPAddress ipAddress)
     {
         return ipAddress.AddressFamily == AddressFamily.InterNetwork
@@ -142,6 +178,8 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return ipAddress.IsIPv4MappedToIPv6 ? ipAddress.MapToIPv4() : ipAddress;
     }
 
+    /// <summary>Disposes the provider, as <see cref="Dispose"/> does; the task is already complete.</summary>
+    /// <returns>A completed task.</returns>
     // the connection's one close, which is not thread-safe, is the quick one: it is local, with nothing to wait for
     public ValueTask DisposeAsync()
     {
@@ -149,6 +187,10 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Disposes the connection, unless the caller keeps it. A failure to close the connection is logged, not thrown.
+    /// Calling it again does nothing.
+    /// </summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true) || !_connection.IsValueCreated || !_disposeConnection)

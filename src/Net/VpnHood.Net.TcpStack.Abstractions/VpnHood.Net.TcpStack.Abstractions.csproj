@@ -2,6 +2,8 @@
     <PropertyGroup>
         <Description>Abstractions (interfaces) for VpnHood TCP stack implementations.</Description>
         <TargetFramework>net11.0</TargetFramework>
+        <!-- the whole public API is documented: a missing or broken doc comment fails the build -->
+        <VhApiDocsComplete>true</VhApiDocsComplete>
     </PropertyGroup>
 
     <ItemGroup>

@@ -16,6 +16,31 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.VpnAdapters.Abstractions;
 
+/// <summary>
+/// Provides the start, stop, restart, packet I/O and network-change handling of a VPN adapter over a TUN-like
+/// interface; a derived class supplies the platform's steps.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A start runs the derived class's steps in order: <see cref="AdapterAdd"/>; <see cref="SetSessionName"/> when a
+/// name is given; <see cref="AddAddress"/> per configured IP version; <see cref="SetMetric"/> and <see cref="SetMtu"/>
+/// when given; <see cref="SetDnsServers"/>; <see cref="AddRoute"/> per network and IP version; <see cref="AddNat"/>;
+/// the app filter; then <see cref="AdapterOpen"/>. A stop runs <see cref="AdapterClose"/> and
+/// <see cref="AdapterRemove"/>. A stop or disposal during a start cancels the token the steps get; the base checks it
+/// before the routes and before opening, and each step should observe it, as a start may be torn down part-way.
+/// An owner's start runs its steps under no lock of the base, a restart under its restart lock.
+/// </para>
+/// <para>
+/// Packets are read on a task of the adapter's own and handed to the transport's receivers; sent packets are
+/// written one by one. Ten exceptions in a row from reading, or ten from writing, stop the adapter: it then
+/// restarts itself with <see cref="VpnAdapterSettings.AutoRestart"/>, or raises <see cref="Failed"/>.
+/// </para>
+/// <para>
+/// When the host's network changes, the adapter restarts if <see cref="RestartAfterNetworkAddressChanged"/>
+/// says so, or takes the new primary addresses and raises <see cref="PrimaryNetworkChanged"/>; a new temporary
+/// IPv6 address on the same network only refreshes the primary addresses.
+/// </para>
+/// </remarks>
 public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 {
     private readonly int _maxPacketSendDelayMs;
@@ -54,75 +79,274 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private volatile int _readerThreadId;
     [ThreadStatic] private static TunVpnAdapter? _senderErrorStopAdapter;
 
+    /// <summary>
+    /// Gets the VPN server's address the current run's options name, or <see langword="null"/>.
+    /// </summary>
     protected IPAddress? ServerIp => _startOptions?.ServerIp;
 
+    /// <summary>
+    /// Gets a value indicating whether the current run translates its virtual networks (NAT).
+    /// </summary>
     // ReSharper disable once FieldCanBeMadeReadOnly.Local
     protected bool UseNat { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the adapter can include or exclude apps from the tunnel
+    /// (<see cref="VpnAdapterOptions.IncludeApps"/>, <see cref="VpnAdapterOptions.ExcludeApps"/>).
+    /// </summary>
     public abstract bool IsAppFilterSupported { get; }
+
+    /// <inheritdoc/>
     public abstract bool IsNatSupported(IpVersion ipVersion);
+
+    /// <summary>
+    /// Gets a value indicating whether the adapter can keep a socket's traffic out of the tunnel. The default is
+    /// <see langword="true"/>.
+    /// </summary>
     public virtual bool CanProtectSocket => true;
+
+    /// <summary>
+    /// Gets a value indicating whether the adapter keeps a socket out of the tunnel by binding it to the primary
+    /// address, rather than by an OS call of its own.
+    /// </summary>
+    /// <remarks>
+    /// When <see langword="true"/>, the routes leave out the probe networks the adapter aims at to find the primary
+    /// addresses, and that search runs on an unprotected socket after a network change.
+    /// </remarks>
     protected abstract bool IsSocketProtectedByBind { get; }
+
+    /// <summary>
+    /// Gets the ID the app filter knows this app by, which it always lets into the tunnel, or
+    /// <see langword="null"/> where there is no app filter.
+    /// </summary>
     protected abstract string? AppPackageId { get; }
+
+    /// <summary>
+    /// Sets the interface's MTU. A start calls it when <see cref="VpnAdapterOptions.Mtu"/> is set.
+    /// </summary>
+    /// <param name="mtu">The MTU in bytes.</param>
+    /// <param name="ipV4"><see langword="true"/> if the interface carries IPv4 in this run.</param>
+    /// <param name="ipV6"><see langword="true"/> if the interface carries IPv6 in this run.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets the interface's route metric. A start calls it when <see cref="VpnAdapterOptions.Metric"/> is set.
+    /// </summary>
+    /// <param name="metric">The metric.</param>
+    /// <param name="ipV4"><see langword="true"/> if the interface carries IPv4 in this run.</param>
+    /// <param name="ipV6"><see langword="true"/> if the interface carries IPv6 in this run.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets the DNS servers the interface gives the host. A start calls it every time.
+    /// </summary>
+    /// <param name="dnsServers">The servers, only of the IP versions the interface carries; may be empty.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Routes a network through the interface. A start calls it once per network, for each IP version the
+    /// interface carries.
+    /// </summary>
+    /// <param name="ipNetwork">The network.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gives the interface its address in a virtual network. A start calls it once per configured IP version.
+    /// </summary>
+    /// <param name="ipNetwork">The interface's address with its network.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Translates a virtual network to the host's primary address (NAT). A start calls it with
+    /// <see cref="VpnAdapterOptions.UseNat"/>, for each IP version the adapter's NAT translates and the host has
+    /// a primary address of.
+    /// </summary>
+    /// <param name="ipNetwork">The virtual network.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Names the session where the OS shows it. A start calls it when <see cref="VpnAdapterOptions.SessionName"/>
+    /// is not empty.
+    /// </summary>
+    /// <param name="sessionName">The name.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task SetSessionName(string sessionName, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lets only these apps' traffic into the tunnel. A start calls it with
+    /// <see cref="VpnAdapterOptions.IncludeApps"/>, where <see cref="IsAppFilterSupported"/> is <see langword="true"/>.
+    /// </summary>
+    /// <param name="packageIds">The apps' IDs, this app's own included.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Keeps these apps' traffic out of the tunnel. A start calls it with
+    /// <see cref="VpnAdapterOptions.ExcludeApps"/>, where <see cref="IsAppFilterSupported"/> is <see langword="true"/>.
+    /// </summary>
+    /// <param name="packageIds">The apps' IDs, never this app's own.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Makes the interface: the first step of a start.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task AdapterAdd(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes the interface and what the start added with it: the last step of a stop, after
+    /// <see cref="AdapterClose"/>. When the base calls it, it runs under the base's stop lock and must not wait for
+    /// the reader or a sender to take that lock. It may run after a partial start.
+    /// </summary>
     protected abstract void AdapterRemove();
+
+    /// <summary>
+    /// Opens the interface for reading and writing packets: the last step of a start, before the reader starts.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     protected abstract Task AdapterOpen(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Closes the interface for reading and writing: the first step of a stop, under the base's stop lock. It may run
+    /// after a partial start.
+    /// </summary>
     protected abstract void AdapterClose();
+
+    /// <summary>
+    /// Blocks until the interface may take a packet again, between the retries of a write it refused.
+    /// </summary>
     protected abstract void WaitForTunWrite();
+
+    /// <summary>
+    /// Blocks until a packet may be ready, after a read found none. It runs on the reader's task.
+    /// </summary>
     protected abstract void WaitForTunRead();
+
+    /// <summary>
+    /// Gets a value indicating whether the adapter restarts when the host moves to other networks. When
+    /// <see langword="false"/>, it takes the new primary addresses and raises <see cref="PrimaryNetworkChanged"/>.
+    /// </summary>
     protected abstract bool RestartAfterNetworkAddressChanged { get; }
 
+    /// <summary>
+    /// Gets a value indicating whether the adapter checks, at each change of the host's network, that its
+    /// interface is still there, and stops when it is not. The check is <see cref="IsAdapterInterfaceEnabled"/>,
+    /// which by default looks for the interface by name or address only.
+    /// </summary>
     // an interface of the adapter's own, which a user can disable or set down: no I/O error tells of it,
     // only the OS's network events (CheckAdapterInterface)
     protected abstract bool CheckAdapterInterfaceAfterNetworkChanged { get; }
 
-    // the wait before AutoRestart tries a failed restart again
+    /// <summary>
+    /// Gets the wait before <see cref="VpnAdapterSettings.AutoRestart"/> tries a failed restart again. The
+    /// default is 10 seconds.
+    /// </summary>
     protected virtual TimeSpan AutoRestartDelay => TimeSpan.FromSeconds(10);
 
     /// <summary>
-    /// Return false if there is no packet
+    /// Reads one packet from the interface into a buffer, without waiting for one.
     /// </summary>
-    /// <returns></returns>
+    /// <param name="buffer">The buffer, at least the MTU long.</param>
+    /// <returns><see langword="true"/> if a packet was read; <see langword="false"/> if none is ready.</returns>
     protected abstract bool ReadPacket(byte[] buffer);
 
+    /// <summary>
+    /// Writes one packet to the interface, without waiting for room.
+    /// </summary>
+    /// <param name="ipPacket">The packet.</param>
+    /// <returns>
+    /// <see langword="true"/> if the interface took it; <see langword="false"/> if it cannot take it now, which the
+    /// adapter retries with doubling waits (see <see cref="VpnAdapterSettings.MaxPacketSendDelay"/>).
+    /// </returns>
     protected abstract bool WritePacket(IpPacket ipPacket);
 
-
+    /// <inheritdoc/>
     public event EventHandler? Disposed;
+
+    /// <inheritdoc/>
     public event EventHandler<Exception>? Failed;
+
+    /// <inheritdoc/>
     public event EventHandler<VpnAdapterOptions>? Started;
-    public string AdapterName { get; }
-    public IPAddress? PrimaryAdapterIpV4 { get; private set; } = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
-    public IPAddress? PrimaryAdapterIpV6 { get; private set; } = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
-    public IpNetwork? AdapterIpNetworkV4 { get; private set; }
-    public IpNetwork? AdapterIpNetworkV6 { get; private set; }
-    public IPAddress? GatewayIpV4 { get; private set; }
-    public IPAddress? GatewayIpV6 { get; private set; }
+
     /// <summary>
-    /// Checks if the physical device network/primary adapter supports the specified IP version.
+    /// Gets the name of the adapter's interface.
     /// </summary>
-    /// <remarks>
-    /// This is used to determine if the primary physical interface has connectivity/IP configuration
-    /// for the given IP version. It is typically used for routing and split-tunneling decisions,
-    /// and to check if the channel to the server can be established using this IP version.
-    /// It does NOT represent the capabilities of the virtual VPN adapter inside the tunnel.
-    /// </remarks>
+    public string AdapterName { get; }
+
+    /// <summary>
+    /// Gets the host's primary IPv4 address, outside the tunnel, or <see langword="null"/>. A stop clears it; a
+    /// start finds it again.
+    /// </summary>
+    public IPAddress? PrimaryAdapterIpV4 { get; private set; } = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
+
+    /// <summary>
+    /// Gets the host's primary IPv6 address, outside the tunnel, or <see langword="null"/>. A stop clears it; a
+    /// start finds it again.
+    /// </summary>
+    public IPAddress? PrimaryAdapterIpV6 { get; private set; } = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
+
+    /// <summary>
+    /// Gets the interface's IPv4 address with its network in the current run, or <see langword="null"/>.
+    /// </summary>
+    public IpNetwork? AdapterIpNetworkV4 { get; private set; }
+
+    /// <summary>
+    /// Gets the interface's IPv6 address with its network in the current run, or <see langword="null"/>.
+    /// </summary>
+    public IpNetwork? AdapterIpNetworkV6 { get; private set; }
+
+    /// <summary>
+    /// Gets the gateway of the interface's IPv4 network: its first address plus one, or <see langword="null"/>
+    /// for a /31 or /32 network or when not started.
+    /// </summary>
+    public IPAddress? GatewayIpV4 { get; private set; }
+
+    /// <summary>
+    /// Gets the gateway of the interface's IPv6 network: its first address plus one, or <see langword="null"/>
+    /// for a /128 network or when not started. A run whose IPv6 address could not be added may still show it.
+    /// </summary>
+    public IPAddress? GatewayIpV6 { get; private set; }
+
+    /// <inheritdoc/>
     public virtual bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
+
+    /// <inheritdoc/>
     public bool IsStarted { get; private set; }
+
+    /// <inheritdoc/>
     public event EventHandler? PrimaryAdapterIpChanged;
+
+    /// <inheritdoc/>
     public event EventHandler? PrimaryNetworkChanged;
 
     // ReSharper disable once InconsistentlySynchronizedField
     private bool IsReady => IsStarted && !_isStopping && !IsDisposed && !IsDisposing;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TunVpnAdapter"/> class, which starts watching the host's
+    /// network changes until it is disposed.
+    /// </summary>
+    /// <param name="adapterSettings">The adapter's settings.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The settings' blocking timeout is negative or too long.</exception>
     protected TunVpnAdapter(VpnAdapterSettings adapterSettings)
         : base(adapterSettings)
     {
@@ -134,21 +358,57 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
     }
 
+    /// <inheritdoc/>
     public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
         return ipVersion == IpVersion.IPv4 ? PrimaryAdapterIpV4 : PrimaryAdapterIpV6;
     }
 
+    /// <summary>
+    /// Gets the gateway of the interface's network of an IP version.
+    /// </summary>
+    /// <param name="ipVersion">The IP version.</param>
+    /// <returns><see cref="GatewayIpV4"/> or <see cref="GatewayIpV6"/>, which may be <see langword="null"/>.</returns>
     public IPAddress? GetGatewayIp(IpVersion ipVersion)
     {
         return ipVersion == IpVersion.IPv4 ? GatewayIpV4 : GatewayIpV6;
     }
 
+    /// <summary>
+    /// Gets the interface's address with its network of an IP version.
+    /// </summary>
+    /// <param name="ipVersion">The IP version.</param>
+    /// <returns><see cref="AdapterIpNetworkV4"/> or <see cref="AdapterIpNetworkV6"/>, which may be <see langword="null"/>.</returns>
     public IpNetwork? GetIpNetwork(IpVersion ipVersion)
     {
         return ipVersion == IpVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
     }
 
+    /// <summary>
+    /// Starts the adapter: makes its interface with its addresses, DNS servers, routes, NAT and app filter, opens
+    /// it and starts reading packets.
+    /// </summary>
+    /// <remarks>
+    /// Await one start before the next. From here the adapter keeps itself started until <see cref="Stop()"/>,
+    /// disposal, or a failure it does not recover from (without <see cref="VpnAdapterSettings.AutoRestart"/>).
+    /// <see cref="IsStarted"/> is <see langword="true"/> from the start's beginning, before the interface exists. A
+    /// failed start tries to remove what it added and leaves the adapter stopped; it raises no
+    /// <see cref="Failed"/>, as the caller has the exception. An IPv6 address the interface refuses is logged, and
+    /// the run goes on without IPv6. Before it completes, it raises <see cref="Started"/> on its own thread.
+    /// </remarks>
+    /// <param name="options">The options this run uses, which each restart uses again.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation. It completes when the adapter is up.</returns>
+    /// <exception cref="ObjectDisposedException">The adapter is disposed.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or a stop or disposal came during the start.
+    /// </exception>
+    /// <exception cref="NotSupportedException"><see cref="VpnAdapterOptions.UseNat"/> is set and the adapter's NAT does not translate IPv4.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Both <see cref="VpnAdapterOptions.IncludeApps"/> and <see cref="VpnAdapterOptions.ExcludeApps"/> are non-empty
+    /// on an adapter with an app filter, or the filter has no <see cref="AppPackageId"/>.
+    /// </exception>
+    /// <exception cref="Exception">A route could not be added; the message names it.</exception>
     // The owner awaits a start before the next: one a stop overtook stops the adapter as it fails, and so a
     // start made meanwhile
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
@@ -426,6 +686,15 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
+    /// <summary>
+    /// Stops the adapter and removes its interface, with its routes and DNS servers. A restart under way ends
+    /// first, and a pending retry is dropped, even when the adapter is already stopped.
+    /// </summary>
+    /// <remarks>
+    /// The adapter counts as stopped even when closing or removing the interface fails: the error reaches the caller,
+    /// and the next start removes the leftover.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The adapter is disposed.</exception>
     public void Stop()
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -494,11 +763,29 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
+    /// <summary>
+    /// Binds a socket to an address, which is how <see cref="ProtectSocket(Socket)"/> keeps it out of the tunnel.
+    /// The default binds it to the address with any port.
+    /// </summary>
+    /// <param name="socket">The socket, not bound yet.</param>
+    /// <param name="address">The host's primary address of the socket's IP version.</param>
     protected virtual void BindSocketToIp(Socket socket, IPAddress address)
     {
         socket.Bind(new IPEndPoint(address, 0));
     }
 
+    /// <summary>
+    /// Keeps a socket's traffic out of the tunnel by binding it to the host's primary address of its IP version.
+    /// Call it before the socket is bound or connected.
+    /// </summary>
+    /// <param name="socket">The socket, not bound yet.</param>
+    /// <returns>
+    /// <see langword="true"/> if the socket is bound; <see langword="false"/> if the host has no primary address of
+    /// the socket's IP version.
+    /// </returns>
+    /// <exception cref="ObjectDisposedException">The adapter is disposed.</exception>
+    /// <exception cref="InvalidOperationException">The socket is already bound.</exception>
+    /// <exception cref="NotSupportedException">The socket is neither IPv4 nor IPv6.</exception>
     public virtual bool ProtectSocket(Socket socket)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -516,6 +803,20 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return true;
     }
 
+    /// <summary>
+    /// Keeps a socket's traffic to a given address out of the tunnel by binding it to the host's primary address
+    /// of its IP version. Call it before the socket is bound or connected.
+    /// </summary>
+    /// <param name="socket">The socket, not bound yet.</param>
+    /// <param name="remoteAddress">The remote address the socket will reach.</param>
+    /// <returns>
+    /// <see langword="true"/> if the socket is bound; <see langword="false"/> if the host has no primary address of
+    /// the socket's IP version, or exactly one of the two addresses is a loopback address, which no bind can
+    /// route.
+    /// </returns>
+    /// <exception cref="ObjectDisposedException">The adapter is disposed.</exception>
+    /// <exception cref="InvalidOperationException">The socket is already bound.</exception>
+    /// <exception cref="NotSupportedException">The socket is neither IPv4 nor IPv6.</exception>
     public virtual bool ProtectSocket(Socket socket, IPAddress remoteAddress)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -537,6 +838,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return true;
     }
 
+    /// <summary>
+    /// Gets the DNS servers of the network the tunnel runs over: the host's DNS servers as .NET lists them, less
+    /// those the tunnel itself gives.
+    /// </summary>
+    /// <returns>The DNS servers; none where .NET lists none, which a platform's adapter may answer itself.</returns>
     // The machine's DNS servers as .NET lists them, but this tunnel's own: Linux lists them among systemd-resolved's
     // links. A platform where .NET lists none, Android, has its own.
     public virtual IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers()
@@ -622,6 +928,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             : IPAddressUtil.Increment(ipNetwork.FirstIpAddress);
     }
 
+    /// <summary>
+    /// Writes a batch of packets to the interface, one after another, with <see cref="SendPacket"/>.
+    /// </summary>
+    /// <param name="ipPackets">The packets.</param>
+    /// <returns>A completed task: the writes are synchronous.</returns>
+    /// <exception cref="InvalidOperationException">The adapter is not started, or is stopping or disposed.</exception>
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
@@ -631,6 +943,17 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return default;
     }
 
+    /// <summary>
+    /// Writes one packet to the interface, retrying with doubling waits while it cannot take it (see
+    /// <see cref="VpnAdapterSettings.MaxPacketSendDelay"/>), after which the packet is dropped with a warning.
+    /// </summary>
+    /// <remarks>
+    /// A packet the interface refuses during a stop or a start is dropped. Ten exceptions in a row from writing stop
+    /// the adapter, which then restarts itself or raises <see cref="Failed"/>; a send that completes without an
+    /// exception, a drop included, resets the count.
+    /// </remarks>
+    /// <param name="ipPacket">The packet.</param>
+    /// <exception cref="InvalidOperationException">The adapter is not started, or is stopping or disposed.</exception>
     protected void SendPacket(IpPacket ipPacket)
     {
         if (!IsReady)
@@ -729,10 +1052,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     }
 
     /// <summary>
-    /// Waits for this run's reader to end, for an adapter about to free what the reader uses. Returns
-    /// false when it did not end in time. A stop made on the reader's own thread, by its read errors or
-    /// by a subscriber, does not wait for itself.
+    /// Waits for this run's reader to end, for an adapter about to free what the reader uses. A stop made on the
+    /// reader's own thread, by its read errors or by a subscriber, does not wait for itself.
     /// </summary>
+    /// <param name="timeout">The longest wait.</param>
+    /// <returns><see langword="true"/> if the reader has ended, or the call is on its thread; otherwise, <see langword="false"/>.</returns>
     protected bool WaitForReader(TimeSpan timeout)
     {
         return Environment.CurrentManagedThreadId == _readerThreadId || _readerTask.Wait(timeout);
@@ -743,9 +1067,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// uses: that batch may still hold the handle, a later one finds it cleared. The sender writes its
     /// flag with no fence, so a process-wide barrier before the wait makes a flag set before the clearing
     /// seen here, and one after it makes all the batch did before clearing its flag seen too (ARM64 may
-    /// show the clearing first). Returns false when it did not end in time. A stop made by this adapter's
-    /// sender, on its own errors, does not wait for itself.
+    /// show the clearing first). A stop made by this adapter's sender, on its own errors, does not wait for
+    /// itself.
     /// </summary>
+    /// <param name="timeout">The longest wait.</param>
+    /// <returns><see langword="true"/> if no batch is being sent, or the call is the sender's own; otherwise, <see langword="false"/>.</returns>
     protected bool WaitForSender(TimeSpan timeout)
     {
         if (_senderErrorStopAdapter == this)
@@ -766,6 +1092,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return true;
     }
 
+    /// <summary>
+    /// Reads packets from the interface and hands each to the transport's receivers, until a stop retires this
+    /// run. It runs on the reader's task; ten read errors in a row stop the adapter.
+    /// </summary>
     protected virtual void StartReadingPackets()
     {
         // Read packets from TUN adapter while this reader's run is the current one: a stop retires it, so
@@ -807,6 +1137,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         VhLogger.Instance.LogDebug("Finish reading the packets from the TUN adapter.");
     }
 
+    /// <summary>
+    /// Reads one packet into memory rented from <see cref="MemoryPool{T}.Shared"/>, with
+    /// <see cref="ReadPacket(byte[])"/>.
+    /// </summary>
+    /// <param name="mtu">The size of the memory to rent: the run's MTU.</param>
+    /// <returns>The packet, which owns the memory, or <see langword="null"/> if none is ready.</returns>
+    /// <exception cref="ArgumentException">The bytes read are no valid IP packet.</exception>
+    /// <exception cref="InvalidOperationException">The rented memory has no array behind it.</exception>
     protected virtual IpPacket? ReadPacket(int mtu)
     {
         // Allocate a memory block for the packet
@@ -879,6 +1217,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     // Our interface, by our name or our address, still on the IP stack, which a disabled adapter leaves
     // (Windows). Never its operational status: a fresh interface may report Down for a while after its
     // start, and a look then would stop a good start
+    /// <summary>
+    /// Determines whether the adapter's interface is still on the host's IP stack, found by its name or its
+    /// address. Its operational status is not consulted: a fresh interface may report down for a while.
+    /// </summary>
+    /// <returns><see langword="true"/> if the interface is there; otherwise, <see langword="false"/>.</returns>
     protected virtual bool IsAdapterInterfaceEnabled()
     {
         var adapterAddresses = new[] { AdapterIpNetworkV4?.Prefix, AdapterIpNetworkV6?.Prefix }.OfType<IPAddress>().ToArray();
@@ -942,6 +1285,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
+    /// <summary>
+    /// Raises <see cref="PrimaryNetworkChanged"/>.
+    /// </summary>
     // protected, so a test adapter raises it: a test never moves the host's network
     protected void OnPrimaryNetworkChanged()
     {
@@ -988,9 +1334,17 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private readonly AsyncLock _restartLock = new();
 
     /// <summary>
-    /// Stops and starts the adapter again with its start options. A failed start leaves it stopped,
-    /// and the adapter answers that itself: it retries with AutoRestart, else raises Failed.
+    /// Stops the adapter and starts it again with its last start's options, after two seconds.
     /// </summary>
+    /// <remarks>
+    /// A restart already under way, an owner's start under way, the owner's stop or a disposal makes it return
+    /// without restarting; the stop or disposal is checked again after the two seconds. A failed start leaves the adapter stopped, and the adapter answers that itself: it retries with
+    /// <see cref="VpnAdapterSettings.AutoRestart"/>, else raises <see cref="Failed"/>.
+    /// </remarks>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="InvalidOperationException">The adapter has never been started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the owner stopped the adapter meanwhile.</exception>
     public async Task Restart(CancellationToken cancellationToken)
     {
         var startOptions = _startOptions ?? throw new InvalidOperationException("The adapter has not been started.");
@@ -1095,6 +1449,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return Task.Run(() => _restartLock.LockAsync(CancellationToken.None)).GetAwaiter().GetResult();
     }
 
+    /// <summary>
+    /// Stops the adapter, after any restart under way ends, before the transport is disposed.
+    /// </summary>
     protected sealed override void PreDispose()
     {
         _keepStarted = false;
@@ -1104,6 +1461,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         base.PreDispose();
     }
 
+    /// <summary>
+    /// Stops watching the host's network changes, raises <see cref="Disposed"/>, then disposes the transport.
+    /// </summary>
     protected override void DisposeManaged()
     {
         // notify the subscribers that the adapter is disposed

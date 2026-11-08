@@ -5,6 +5,13 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.Toolkit.Jobs;
 
+/// <summary>
+/// Provides a loop that checks its jobs at an interval and runs the ready ones, a few at a time.
+/// </summary>
+/// <remarks>
+/// It holds its jobs weakly: a job no one else references is dropped, and logged at Debug. Its loop runs for the
+/// process's life.
+/// </remarks>
 public class JobRunner
 {
     private SemaphoreSlim _semaphore;
@@ -19,12 +26,25 @@ public class JobRunner
     // a new period restarts its countdown, so a new interval applies at once, even to a runner asleep on the old one
     private readonly PeriodicTimer _timer;
 
+    /// <summary>Gets the shared runner that checks its jobs every 10 seconds.</summary>
     public static JobRunner SlowInstance => SlowInstanceLazy.Value;
+
+    /// <summary>Gets the shared runner that checks its jobs every 2 seconds.</summary>
     public static JobRunner FastInstance => FastInstanceLazy.Value;
+
+    /// <summary>
+    /// Gets or sets the logger of the jobs' failures, or <see langword="null"/> for none. The default is the process's
+    /// <c>VhLogger.Instance</c>.
+    /// </summary>
     public ILogger? Logger { get; set; } = VhLogger.Instance;
 
     // Locked, as the timer stores its period and restarts its countdown in two steps. The same interval again changes
     // nothing: each set restarts the countdown, so repeated ones would keep putting off the tick
+    /// <summary>
+    /// Gets or sets how often the runner checks its jobs. A new interval restarts the countdown; the same one changes
+    /// nothing.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The interval is not a timer's valid period.</exception>
     public TimeSpan Interval {
         get {
             lock (_intervalLock)
@@ -38,6 +58,8 @@ public class JobRunner
         }
     }
 
+    /// <summary>Gets or sets how many jobs run at once. The default is 2.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">The value is less than 1.</exception>
     public int MaxDegreeOfParallelism {
         get => _maxDegreeOfParallelism;
         set {
@@ -48,6 +70,9 @@ public class JobRunner
         }
     }
 
+    /// <summary>Initializes a new instance of the <see cref="JobRunner"/> class and starts its loop.</summary>
+    /// <param name="interval">How often the runner checks its jobs.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The interval is not a timer's valid period.</exception>
     public JobRunner(TimeSpan interval)
     {
         _timer = new PeriodicTimer(interval);
@@ -136,6 +161,8 @@ public class JobRunner
         return jobs;
     }
 
+    /// <summary>Adds a job, held weakly.</summary>
+    /// <param name="job">The job.</param>
     public void Add(Job job)
     {
         lock (_jobs)
@@ -145,6 +172,8 @@ public class JobRunner
             });
     }
 
+    /// <summary>Removes a job.</summary>
+    /// <param name="job">The job.</param>
     public void Remove(Job job)
     {
         lock (_jobs) {

@@ -2,18 +2,26 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Assets;
 
-// For a caller that is asking rather than requiring: null instead of AssetNotFoundException. Asking
-// is normal - a language falls back to another, a document never translated falls back, a picture
-// that is not there shows nothing, a server answers 404 - and this keeps the catch out of every
-// such call, and narrow: only an absent asset is turned into null, so a file that exists and will
-// not open still fails.
-//
-// On both, under one name, because both mean the same thing: an asset by path, and an asset whose
-// path is already chosen.
+/// <summary>
+/// Provides opening for a caller that only asks: <see langword="null"/> instead of <see cref="AssetNotFoundException"/>.
+/// </summary>
+/// <remarks>
+/// Asking is normal: a language falls back to another, a picture that is not there shows nothing, a server answers 404.
+/// Only what the provider classes as absent becomes <see langword="null"/>; a file it finds and cannot open still fails.
+/// A file provider classes as absent a file <see cref="File.Exists"/> cannot see.
+/// </remarks>
 public static class AssetProviderExtensions
 {
+    /// <summary>Provides opening by path that gives <see langword="null"/> for an absent asset.</summary>
+    /// <param name="assetProvider">The provider.</param>
     extension(IAssetProvider assetProvider)
     {
+        /// <summary>Opens the asset at a path, or gives <see langword="null"/> when there is none.</summary>
+        /// <param name="assetPath">The asset's path.</param>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>
+        /// A task whose result is a new stream, which the caller owns and disposes, or <see langword="null"/>.
+        /// </returns>
         public async Task<Stream?> TryOpenReadAsync(string assetPath, CancellationToken cancellationToken)
         {
             try {
@@ -25,8 +33,15 @@ public static class AssetProviderExtensions
         }
     }
 
+    /// <summary>Provides opening that gives <see langword="null"/> for an absent asset.</summary>
+    /// <param name="asset">The asset.</param>
     extension(IAsset asset)
     {
+        /// <summary>Opens the asset, or gives <see langword="null"/> when there is none.</summary>
+        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+        /// <returns>
+        /// A task whose result is a new stream, which the caller owns and disposes, or <see langword="null"/>.
+        /// </returns>
         public async Task<Stream?> TryOpenReadAsync(CancellationToken cancellationToken)
         {
             try {

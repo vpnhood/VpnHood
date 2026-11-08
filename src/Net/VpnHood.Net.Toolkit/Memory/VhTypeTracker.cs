@@ -1,5 +1,12 @@
 namespace VpnHood.Net.Toolkit.Memory;
 
+/// <summary>
+/// Provides a process-wide tracker of objects and events for memory investigations: it counts, by name, the objects it
+/// was given that are still alive, and counts named events.
+/// </summary>
+/// <remarks>
+/// It does nothing until <see cref="Enabled"/>. Each call takes a lock, so it is no tool for production paths.
+/// </remarks>
 public static class VhTypeTracker
 {
     private sealed record TrackedReference(WeakReference Reference, string Name);
@@ -8,6 +15,9 @@ public static class VhTypeTracker
     private static readonly Dictionary<string, long> Counters = new(StringComparer.Ordinal);
     private static int _addedCount;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the tracker records. Turning it on clears what was recorded before.
+    /// </summary>
     public static bool Enabled
     {
         get => Volatile.Read(ref field);
@@ -27,11 +37,23 @@ public static class VhTypeTracker
         }
     }
 
+    /// <summary>Tracks an object under its type's name, holding it weakly, and counts its creation.</summary>
+    /// <param name="obj">The object.</param>
+    /// <returns><see langword="true"/> if it is tracked; <see langword="false"/> when the tracker is off.</returns>
     public static bool Track(object obj)
     {
         return Track(obj, obj.GetType().Name);
     }
 
+    /// <summary>
+    /// Tracks an object under a name, holding it weakly, and counts the event <c>name.created</c>.
+    /// </summary>
+    /// <param name="obj">The object, or <see langword="null"/>.</param>
+    /// <param name="diagnosticName">The name it is counted under.</param>
+    /// <returns>
+    /// <see langword="true"/> if it is tracked; <see langword="false"/> when the tracker is off or the object is
+    /// <see langword="null"/>.
+    /// </returns>
     public static bool Track(object? obj, string diagnosticName)
     {
         if (!Enabled || obj == null) return false;
@@ -48,6 +70,8 @@ public static class VhTypeTracker
         return true;
     }
 
+    /// <summary>Counts an event.</summary>
+    /// <param name="eventName">The event's name.</param>
     public static void Record(string eventName)
     {
         if (!Enabled) return;
@@ -57,6 +81,11 @@ public static class VhTypeTracker
         }
     }
 
+    /// <summary>
+    /// Returns the tracked objects still alive, counted by name, a task's split into its completed and active ones, and
+    /// the event counts.
+    /// </summary>
+    /// <returns>One line, such as <c>live=[Name:3] events=[Name.created:5]</c>.</returns>
     public static string GetSnapshotString()
     {
         lock (TrackedObjects)

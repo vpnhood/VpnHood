@@ -4,11 +4,8 @@ using VpnHood.Net.Toolkit.Streams;
 
 namespace VpnHood.Net.TcpStack;
 
-/// <summary>
-/// A standard .NET Stream implementation for TCP connections through the local TCP stack.
-/// Provides async read/write operations over TCP connections using System.IO.Pipelines for efficiency.
-/// </summary>
-public sealed class LocalTcpStream : AsyncStream
+// The stream of a LocalTcpClient; its behavior is documented on LocalTcpClient.Stream.
+internal sealed class LocalTcpStream : AsyncStream
 {
     private readonly LocalTcpConnection _connection;
     private readonly LocalTcpStack _stack;
@@ -28,9 +25,10 @@ public sealed class LocalTcpStream : AsyncStream
     public override bool CanRead => !IsDisposed;
 
     /// <inheritdoc />
-    /// <remarks>Reflects CONNECTION liveness, not just stream disposal, so consumer health checks
-    /// (e.g. StreamForwardingChannel.CheckAlive via <c>Stream is { CanRead: true, CanWrite: true }</c>) observe a
-    /// dead write path after a FIN/RST/idle-abort instead of pumping into a black hole.</remarks>
+    /// <remarks>Reflects the connection's write side, not just stream disposal: false once the connection is closed
+    /// for writing (our close, a reset, an abort), not on the peer's FIN. Consumer health checks (e.g.
+    /// StreamForwardingChannel.CheckAlive via <c>Stream is { CanRead: true, CanWrite: true }</c>) so observe a dead
+    /// write path instead of pumping into a black hole.</remarks>
     public override bool CanWrite => !IsDisposed && !_connection.IsWriteClosed;
 
     /// <inheritdoc />

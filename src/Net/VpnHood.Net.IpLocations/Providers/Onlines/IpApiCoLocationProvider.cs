@@ -7,6 +7,11 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Net.IpLocations.Providers.Onlines;
 
+/// <summary>
+/// Provides locations from ipapi.co: the country, and the region and city where known.
+/// </summary>
+/// <param name="httpClient">The HTTP client the requests go through; the caller keeps owning it.</param>
+/// <param name="userAgent">The User-Agent header the requests send.</param>
 public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
 {
     internal class ApiLocation
@@ -25,12 +30,16 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         public string? CityName { get; set; }
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="HttpRequestException">The request failed.</exception>
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         var uri = new Uri($"https://ipapi.co/{ipAddress}/json/");
         return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="HttpRequestException">The request failed.</exception>
     public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         var uri = new Uri("https://ipapi.co/json/");
@@ -63,6 +72,7 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         return ipLocation;
     }
 
+    /// <summary>Does nothing: the provider holds nothing to release.</summary>
     public void Dispose()
     {
     }

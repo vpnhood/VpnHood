@@ -5,10 +5,9 @@ using VpnHood.Net.Toolkit.Memory;
 namespace VpnHood.Net.Quic.Ios;
 
 /// <summary>
-/// iOS QUIC <b>investigation instrumentation</b>, owned by this project (mirrors <c>TcpStackDiagnostics</c>):
-/// it holds the QUIC stream counters and the <c>[VHQUIC]</c> open/close logging; every mutating method
-/// is a no-op when <see cref="Enabled"/> is false, so call sites stay clean, and it costs nothing in
-/// production.
+/// Provides the iOS QUIC client's investigation counters and its <c>[VHQUIC]</c> open and close log lines, as
+/// <c>TcpStackDiagnostics</c> does for the TCP stack. The counters move only while <see cref="Enabled"/>, so production
+/// pays nothing.
 /// </summary>
 /// <remarks>
 /// Only the diagnostic counters live here. The load-bearing jetsam brake input is deliberately NOT gated: the
@@ -31,14 +30,21 @@ public static class IosQuicDiagnostics
     private static long _maxStreamCancelMs;
 
     // ---- public state ----------------------------------------------------------------------------
-    /// <summary>Read-only master gate: on whenever the effective log level is below Information.</summary>
+    /// <summary>
+    /// Gets a value indicating whether the counters move and the lines are logged: while the log level is below
+    /// Information.
+    /// </summary>
+    /// <remarks>A change of the log level while streams are open leaves the counts off by those streams.</remarks>
     public static bool Enabled => VhLogger.MinLogLevel < LogLevel.Information;
 
-    /// <summary>Live count of open QUIC streams (= native NWConnections).</summary>
+    /// <summary>Gets the number of open QUIC streams, each a native NWConnection.</summary>
     public static int LiveStreamCount => Volatile.Read(ref _liveStreamCount);
-    /// <summary>Live count of underlying QUIC connection groups.</summary>
+    /// <summary>Gets the number of open QUIC connections, each a native connection group.</summary>
     public static int LiveConnectionCount => Volatile.Read(ref _liveConnectionCount);
-    /// <summary>Bytes handed to <c>nw_connection_send</c> whose completion callback has not yet fired.</summary>
+    /// <summary>
+    /// Gets the bytes of the sends under way: counted just before a send goes to <c>nw_connection_send</c>, until its
+    /// completion callback, a failure before it is submitted, or the stream's disposal.
+    /// </summary>
     public static long OutstandingSendBytes => Interlocked.Read(ref _outstandingSendBytes);
 
     // ---- stream lifecycle ------------------------------------------------------------------------
@@ -46,7 +52,7 @@ public static class IosQuicDiagnostics
     /// Records a QUIC stream open (logs <c>[VHQUIC] +CONN</c>) and returns the assigned monotonic id so
     /// the matching close can be paired in the log. Returns 0 (and logs nothing) when disabled.
     /// </summary>
-    public static int OnStreamOpened()
+    internal static int OnStreamOpened()
     {
         if (!Enabled) return 0;
         var id = Interlocked.Increment(ref _streamSeq);
@@ -56,7 +62,7 @@ public static class IosQuicDiagnostics
     }
 
     /// <summary>Records a QUIC stream close (logs <c>[VHQUIC] -CONN</c>). No-op unless enabled.</summary>
-    public static void OnStreamClosed(int id)
+    internal static void OnStreamClosed(int id)
     {
         if (!Enabled) return;
         var live = Interlocked.Decrement(ref _liveStreamCount);
@@ -64,7 +70,7 @@ public static class IosQuicDiagnostics
     }
 
     /// <summary>Records creation of an underlying QUIC connection group.</summary>
-    public static int OnConnectionOpened()
+    internal static int OnConnectionOpened()
     {
         if (!Enabled) return 0;
         var id = Interlocked.Increment(ref _connectionSeq);
@@ -76,7 +82,7 @@ public static class IosQuicDiagnostics
     }
 
     /// <summary>Records disposal of an underlying QUIC connection group.</summary>
-    public static void OnConnectionClosed(int id)
+    internal static void OnConnectionClosed(int id)
     {
         if (!Enabled || id == 0) return;
         var live = Interlocked.Decrement(ref _liveConnectionCount);
@@ -111,10 +117,10 @@ public static class IosQuicDiagnostics
     /// Returns a start timestamp for bracketing the native stream teardown, or 0 when disabled so the
     /// paired <see cref="EndStreamTeardown"/> becomes a no-op.
     /// </summary>
-    public static long BeginTiming() => Enabled ? Environment.TickCount64 : 0;
+    internal static long BeginTiming() => Enabled ? Environment.TickCount64 : 0;
 
     /// <summary>Records a completed QUIC stream teardown, tracking the worst duration.</summary>
-    public static void EndStreamTeardown(long startTimestamp)
+    internal static void EndStreamTeardown(long startTimestamp)
     {
         if (!Enabled) return;
         var elapsed = Environment.TickCount64 - startTimestamp;
@@ -123,21 +129,25 @@ public static class IosQuicDiagnostics
                Interlocked.CompareExchange(ref _maxStreamCancelMs, elapsed, prev) != prev) { }
     }
 
-    /// <summary>Worst single QUIC stream teardown (ms) since the last call; reading resets it to 0.</summary>
+    /// <summary>
+    /// Returns the longest QUIC stream teardown since the last call, and starts the next period at 0, whether or not
+    /// <see cref="Enabled"/>.
+    /// </summary>
+    /// <returns>The longest teardown, in milliseconds; 0 when none was timed.</returns>
     public static long TakeMaxStreamCancelMs() => Interlocked.Exchange(ref _maxStreamCancelMs, 0);
 
 
 
     // ---- in-flight sends -------------------------------------------------------------------------
     /// <summary>Adds to the in-flight QUIC send-bytes counter. No-op unless <see cref="Enabled"/>.</summary>
-    public static void AddOutstandingSend(long bytes)
+    internal static void AddOutstandingSend(long bytes)
     {
         if (Enabled)
             Interlocked.Add(ref _outstandingSendBytes, bytes);
     }
 
     /// <summary>Subtracts from the in-flight QUIC send-bytes counter. No-op unless <see cref="Enabled"/>.</summary>
-    public static void SubtractOutstandingSend(long bytes)
+    internal static void SubtractOutstandingSend(long bytes)
     {
         if (Enabled)
             Interlocked.Add(ref _outstandingSendBytes, -bytes);

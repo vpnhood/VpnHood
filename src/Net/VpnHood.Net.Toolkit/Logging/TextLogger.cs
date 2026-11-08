@@ -3,11 +3,24 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Net.Toolkit.Logging;
 
-// A decorator that makes a line's text once for the logger behind it - the time, the category, the
-// level and the scopes, the event's name, the message and the exception - and hands it over as the
-// message. singleLine: one line per entry, its own line breaks written as "\n", for a destination
-// that keeps each line as an entry of its own; includeTime: false where the destination stamps its
-// lines itself.
+/// <summary>
+/// Provides a logger that makes a line's text once, for the logger behind it: the time in UTC, the category, the level and
+/// the scopes, the event's name, the message and the exception; it hands that over as the message.
+/// </summary>
+/// <remarks>
+/// A line reads <c>HH:mm:ss.ffff | category | Info | scope =&gt; scope | event | message</c>: the time in UTC, the level's first
+/// four characters, the scopes separated by <c>=&gt;</c>, the event's name without its number, and after the message
+/// <c>Exception:</c> and the exception's text. A single line has every line break written as <c>\n</c>; otherwise the
+/// entry ends with a line break.
+/// </remarks>
+/// <param name="logger">The logger behind it.</param>
+/// <param name="singleLine">
+/// <see langword="true"/> for one line per entry, its own line breaks written as <c>\n</c>, for a destination that keeps
+/// each line as an entry of its own.
+/// </param>
+/// <param name="includeTime"><see langword="true"/> to write the time; <see langword="false"/> where the destination stamps its lines itself.</param>
+/// <param name="includeScopes"><see langword="true"/> to write the level and the scopes.</param>
+/// <param name="categoryName">The category to write, or <see langword="null"/> for none.</param>
 public sealed class TextLogger(
     ILogger logger,
     bool singleLine = true,
@@ -19,16 +32,22 @@ public sealed class TextLogger(
     private static readonly Func<string, Exception?, string> TextFormatter = (text, _) => text;
     private readonly LoggerExternalScopeProvider _scopeProvider = new();
 
+    /// <inheritdoc/>
+    /// <remarks>The scopes are its own, written into each line with <c>includeScopes</c>.</remarks>
     public IDisposable BeginScope<TState>(TState state) where TState : notnull
     {
         return _scopeProvider.Push(state);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It asks the logger behind it.</remarks>
     public bool IsEnabled(LogLevel logLevel)
     {
         return logger.IsEnabled(logLevel);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It writes the line's text to the logger behind it, when that one takes the level.</remarks>
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {

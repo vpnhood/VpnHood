@@ -10,34 +10,43 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.Net.Quic.Ios;
 
 /// <summary>
-/// Client-side QUIC connector for iOS, backed by Apple's Network.framework (iOS 15+). Establishes a
-/// multiplexed QUIC tunnel and exposes lightweight streams over it, matching the desktop MsQuic client.
+/// Provides the QUIC client for iOS, on Apple's Network.framework (iOS 15 or later): one multiplexed QUIC connection
+/// whose streams are opened and accepted as with the desktop MsQuic client.
 /// </summary>
-/// <param name="initialMaxStreamDataBidirectionalLocal">Per-stream QUIC receive window (bytes) for streams
-/// this client opens (TCP forwarding's download streams). <c>null</c> keeps Network.framework's OS default.</param>
-/// <param name="initialMaxStreamDataBidirectionalRemote">Per-stream QUIC receive window (bytes) for
-/// peer-opened streams. <c>null</c> keeps the OS default.</param>
-/// <param name="initialMaxData">Connection-wide aggregate QUIC receive window (bytes) across all streams —
-/// the real ceiling. <c>null</c> keeps the OS default. On iOS the factory sets these as the ~52 MB jetsam
-/// fix; see <see cref="IosSocketFactory"/>.</param>
+/// <remarks>
+/// Network.framework does the TLS handshake and evaluates the system's trust; then
+/// <see cref="QuicClientConnectOptions.CertificateValidationCallback"/> decides. The callback gets the server's leaf
+/// certificate, no chain, and either no error or <see cref="System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors"/>
+/// when the system does not trust it; a callback that throws rejects the certificate. The client pins nothing itself.
+/// </remarks>
+/// <param name="initialMaxStreamDataBidirectionalLocal">The initial QUIC flow-control credit, in bytes, each stream this
+/// client opens advertises, or <see langword="null"/> for Network.framework's default.</param>
+/// <param name="initialMaxStreamDataBidirectionalRemote">The initial QUIC flow-control credit, in bytes, each stream the
+/// server opens advertises, or <see langword="null"/> for Network.framework's default.</param>
+/// <param name="initialMaxData">The initial QUIC flow-control credit, in bytes, the whole connection advertises, or
+/// <see langword="null"/> for Network.framework's default. Network.framework grants more credit as it buffers data,
+/// not as the app reads it, so these credits bound no memory. <see cref="IosSocketFactory"/> sets small ones.</param>
 public sealed class IosQuicClient(
     ulong? initialMaxStreamDataBidirectionalLocal = null,
     ulong? initialMaxStreamDataBidirectionalRemote = null,
     ulong? initialMaxData = null)
     : IQuicClient
 {
+    /// <summary>
+    /// Gets a value indicating whether Network.framework QUIC is supported: on iOS 15 or later. It is
+    /// <see langword="false"/> on tvOS.
+    /// </summary>
     public static bool IsSupported => OperatingSystem.IsIOSVersionAtLeast(15);
 
     // DIAGNOSTIC counters (live QUIC stream count, in-flight send bytes, teardown timing, [VHQUIC] logs)
     // live in IosQuicDiagnostics — maintained only when that switch is on.
-    //
-    // JETSAM GUARD input: the extension's live phys_footprint in MB, read on demand via
-    // VhMemory.Instance (IosMemory, registered by the device/service). At full download rate
-    // (~130 Mbps) the per-packet native transients (NSData copies retained briefly by NE/nw) float several MB
-    // and their peaks ratchet over the 52 MB limit with no leak, freeze, or backlog anywhere we can bound
-    // directly (2026-07-01 third crash flavor). IosQuicStream.ReadAsync brakes download intake while the
-    // footprint is within a few MB of the limit, letting the transients drain. No provider set -> guard inactive.
 
+    /// <inheritdoc/>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="IOException">
+    /// The connection failed: the endpoint could not be made, the server could not be reached, or the certificate was
+    /// rejected.
+    /// </exception>
     public async ValueTask<IQuicConnection> ConnectAsync(
         QuicClientConnectOptions options, CancellationToken cancellationToken)
     {

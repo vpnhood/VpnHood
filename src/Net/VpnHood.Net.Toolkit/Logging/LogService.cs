@@ -3,21 +3,41 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Net.Toolkit.Logging;
 
-// The process's log file and the user's log settings - the app's, or a VPN service's in a process
-// of its own. The file is the process's sink from the first Start on, opened at each start request
-// (a connect) so it holds one session, and closed at Stop; the settings go to VhLogger's level and
-// redaction, which every sink is behind. The other sinks are the head's, added at its start.
+/// <summary>
+/// Provides the process's log file and applies the user's log settings, for an app or for a VPN service in a process of
+/// its own.
+/// </summary>
+/// <remarks>
+/// The file joins the process's log at the first <see cref="Start"/> that opens it; each start, such as a connect's, opens
+/// it again, starting afresh unless told to keep what it has, and <see cref="Stop"/> closes it. The settings go to
+/// <see cref="VhLogger"/>'s level and redaction, which every sink is behind, before the file opens.
+/// </remarks>
+/// <param name="logFilePath">The log file's path.</param>
 public class LogService(string logFilePath) : IDisposable
 {
     private readonly FileLogger _file = new(logFilePath);
     private bool _isSinkAdded;
     private bool _disposed;
 
+    /// <summary>Gets the log file's path.</summary>
     public string LogFilePath { get; } = logFilePath;
+
+    /// <summary>Gets a value indicating whether the log file exists.</summary>
     public bool Exists => File.Exists(LogFilePath);
 
-    // deleteOldReport: false keeps what the file has, so a log opened before a connect is not the
-    // end of the last session's
+    /// <summary>
+    /// Applies the options to the process's log, and opens the log file or closes it. With the options off, it does
+    /// nothing.
+    /// </summary>
+    /// <param name="options">The options.</param>
+    /// <param name="deleteOldReport">
+    /// <see langword="true"/> to start the file afresh; <see langword="false"/> to keep what it has, so a log opened
+    /// before a connect is not the end of the last session's.
+    /// </param>
+    /// <exception cref="ObjectDisposedException">The service is disposed.</exception>
+    /// <exception cref="IOException">The file cannot be opened.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
+    /// <exception cref="ArgumentException">The file's path is not valid.</exception>
     public void Start(LogServiceOptions options, bool deleteOldReport = true)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -46,6 +66,7 @@ public class LogService(string logFilePath) : IDisposable
                 JsonSerializer.Serialize(options));
     }
 
+    /// <summary>Closes the log file; the log's level and redaction stay. Calling it on a closed file does nothing.</summary>
     public void Stop()
     {
         if (!_file.IsOpen)
@@ -55,6 +76,11 @@ public class LogService(string logFilePath) : IDisposable
         _file.Close();
     }
 
+    /// <summary>Joins event names with those a debug command names.</summary>
+    /// <param name="currentNames">The names so far.</param>
+    /// <param name="debugCommand">The debug command, whose <c>/log:</c> parts name events, separated by commas.</param>
+    /// <returns>The names, each once, <c>*</c> among them.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="currentNames"/> is <see langword="null"/>.</exception>
     public static IEnumerable<string> GetLogEventNames(string[] currentNames, string debugCommand)
     {
         return currentNames
@@ -62,6 +88,9 @@ public class LogService(string logFilePath) : IDisposable
             .Distinct();
     }
 
+    /// <summary>Gets the event names a debug command names.</summary>
+    /// <param name="debugCommand">The debug command, whose <c>/log:</c> parts name events, separated by commas.</param>
+    /// <returns>The names, each once, <c>*</c> first.</returns>
     public static IEnumerable<string> GetLogEventNames(string debugCommand)
     {
         var names = new List<string> { "*" };
@@ -74,6 +103,7 @@ public class LogService(string logFilePath) : IDisposable
         return names.Distinct();
     }
 
+    /// <summary>Closes the log file, as <see cref="Stop"/> does. Calling it again does nothing.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

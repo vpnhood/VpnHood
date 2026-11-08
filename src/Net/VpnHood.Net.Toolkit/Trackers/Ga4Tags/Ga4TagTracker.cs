@@ -8,11 +8,28 @@ using VpnHood.Net.Toolkit.Extensions;
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers.Ga4Tags;
 
+/// <summary>
+/// Provides a tracker that sends events the way a web page's Google tag (gtag.js) does, with no API secret.
+/// </summary>
 public class Ga4TagTracker : TrackerBase, IGa4TagTracker
 {
+    /// <summary>Gets or sets the number of the user's sessions, this one included.</summary>
     public required int SessionCount { get; set; } = 1;
+
+    /// <summary>
+    /// Gets a value indicating whether the device is mobile, or <see langword="null"/> to tell it from
+    /// <see cref="TrackerBase.UserAgent"/>.
+    /// </summary>
     public bool? IsMobile { get; init; }
 
+    /// <summary>
+    /// Sends an event. The send logs a failure as an error, and throws it only with
+    /// <see cref="TrackerBase.ThrowExceptionOnError"/>; what it throws then is logged here at Debug.
+    /// </summary>
+    /// <param name="ga4Event">The event.</param>
+    /// <param name="logger">The logger a failure goes to.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public async Task TryTrack(Ga4TagEvent ga4Event, ILogger logger, CancellationToken cancellationToken)
     {
         try {
@@ -23,6 +40,11 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
         }
     }
 
+    /// <summary>Sends an event.</summary>
+    /// <param name="ga4Event">The event.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="Exception">The request failed, with <see cref="TrackerBase.ThrowExceptionOnError"/>.</exception>
     public Task Track(Ga4TagEvent ga4Event, CancellationToken cancellationToken)
     {
         if (!IsEnabled)
@@ -117,12 +139,20 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
         return SendHttpRequest(requestMessage, "GTag", null, cancellationToken);
     }
 
+    /// <summary>Sends events, one request each, in order.</summary>
+    /// <param name="ga4Events">The events.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="Exception">The request failed, with <see cref="TrackerBase.ThrowExceptionOnError"/>.</exception>
     public async Task Track(IEnumerable<Ga4TagEvent> ga4Events, CancellationToken cancellationToken)
     {
         foreach (var ga4TagEvent in ga4Events)
             await Track(ga4TagEvent, cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Each event's parameters are sent as its properties, one request each.</remarks>
+    /// <exception cref="Exception">The request failed, with <see cref="TrackerBase.ThrowExceptionOnError"/>.</exception>
     public override Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)
     {
         var ga4TagEvents = trackEvents.Select(x =>

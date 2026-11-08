@@ -5,11 +5,23 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
+/// <summary>
+/// Provides file helpers: moves, atomic writes, and reads and writes that wait out another process's sharing.
+/// </summary>
 public static class FileUtils
 {
-    // A file or folder moved to its new place - a rename on one volume - unless the new place already has
-    // one, which is then the one in use, so the old goes. False where the old is gone: another process
-    // may have moved it first.
+    /// <summary>
+    /// Moves a file or a folder to a new place, unless the new place has one already, which is then the one in use, so the
+    /// old one is deleted.
+    /// </summary>
+    /// <param name="sourcePath">The file's or folder's path.</param>
+    /// <param name="targetPath">The new path.</param>
+    /// <returns>
+    /// <see langword="true"/> if it was moved or deleted; <see langword="false"/> if it is gone, as another process may
+    /// have moved it first.
+    /// </returns>
+    /// <exception cref="IOException">The move or the deletion failed.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not move or delete it.</exception>
     public static bool MoveOrDiscard(string sourcePath, string targetPath)
     {
         try {
@@ -29,9 +41,19 @@ public static class FileUtils
         }
     }
 
-    // A file two processes share - one writes it while the other may be reading it - fails the access that meets
-    // the other's for that moment only, so the access is tried again up to the timeout; a missing file fails
-    // at once. The token ends the wait between tries.
+    /// <summary>
+    /// Runs a file access, and again after 50 milliseconds when it is refused, or fails with an I/O error other than a
+    /// missing file, while the time since the first try is under the timeout; a try under way is not cut, so the whole may
+    /// last longer. The token cancels the waits between tries, not the access.
+    /// </summary>
+    /// <typeparam name="T">The type of the access's result.</typeparam>
+    /// <param name="access">The access.</param>
+    /// <param name="timeout">How long to keep trying.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the access's.</returns>
+    /// <exception cref="IOException">The access still meets the sharing at the timeout, or fails otherwise.</exception>
+    /// <exception cref="UnauthorizedAccessException">The access is refused, at the timeout.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<T> WaitOutSharingAsync<T>(Func<Task<T>> access, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
@@ -47,6 +69,17 @@ public static class FileUtils
         }
     }
 
+    /// <summary>
+    /// Runs a file access, and again after 50 milliseconds when it is refused, or fails with an I/O error other than a
+    /// missing file, while the time since the first try is under the timeout. The token cancels the waits, not the access.
+    /// </summary>
+    /// <param name="access">The access.</param>
+    /// <param name="timeout">How long to keep trying.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="IOException">The access still meets the sharing at the timeout, or fails otherwise.</exception>
+    /// <exception cref="UnauthorizedAccessException">The access is refused, at the timeout.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task WaitOutSharingAsync(Func<Task> access, TimeSpan timeout, CancellationToken cancellationToken)
     {
         return WaitOutSharingAsync(async () => {
@@ -63,9 +96,17 @@ public static class FileUtils
                ex is IOException and not FileNotFoundException and not DirectoryNotFoundException;
     }
 
-    // A file's text, or null where there is none to take: no file yet, a first run's case, goes unlogged, and one
-    // that can't be read is logged. A cancel goes out: taken for a missing file, it would have the caller make the
-    // file anew.
+    /// <summary>
+    /// Reads a file's text, or gives <see langword="null"/>: a missing file, as on a first run, goes unlogged, and any other
+    /// failure, a file gone after the check included, is logged as a warning.
+    /// </summary>
+    /// <param name="filePath">The file's path.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the text, or <see langword="null"/>.</returns>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled; taken for a missing file, it would have the caller make the file
+    /// anew.
+    /// </exception>
     public static async Task<string?> TryReadAllTextAsync(string filePath, CancellationToken cancellationToken)
     {
         try {
@@ -80,13 +121,31 @@ public static class FileUtils
         }
     }
 
-    // The file is replaced whole or not at all: the content goes to a file beside it, under the token, which then
-    // takes the file's place, so a cancel or a crash leaves the old file, never a part of the new one.
+    /// <summary>
+    /// Replaces a file's text, in UTF-8: the text goes to a file beside it, which is then moved over the file, so a write
+    /// that fails or is canceled leaves the old file, not a part of the new one. The move is not canceled, and nothing is
+    /// flushed to the disk first.
+    /// </summary>
+    /// <param name="filePath">The file's path.</param>
+    /// <param name="content">The text.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="IOException">The write or the move failed.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task WriteAllTextAtomicAsync(string filePath, string content, CancellationToken cancellationToken)
     {
         return WriteAllBytesAtomicAsync(filePath, Encoding.UTF8.GetBytes(content), cancellationToken);
     }
 
+    /// <summary>Replaces a file's bytes through a file beside it, as <see cref="WriteAllTextAtomicAsync"/> does.</summary>
+    /// <param name="filePath">The file's path.</param>
+    /// <param name="bytes">The bytes.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="IOException">The write or the move failed.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task WriteAllBytesAtomicAsync(string filePath, byte[] bytes,
         CancellationToken cancellationToken)
     {
@@ -101,7 +160,14 @@ public static class FileUtils
         }
     }
 
-    // The same for a write behind a sync setter: a full disk or a crash leaves the old file.
+    /// <summary>
+    /// Replaces a file's text through a file beside it, synchronously, for a write behind a setter: a write that fails,
+    /// as on a full disk, leaves the old file.
+    /// </summary>
+    /// <param name="filePath">The file's path.</param>
+    /// <param name="content">The text.</param>
+    /// <exception cref="IOException">The write or the move failed.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
     public static void WriteAllTextAtomic(string filePath, string content)
     {
         var tempFilePath = CreateAtomicTempFilePath(filePath);
@@ -121,6 +187,18 @@ public static class FileUtils
         return $"{filePath}.{Guid.NewGuid():N}.tmp";
     }
 
+    /// <summary>
+    /// Writes a file's text, and again after 100 milliseconds when it fails with an I/O error, while the time since the
+    /// first try is under the timeout.
+    /// </summary>
+    /// <param name="filePath">The file's path.</param>
+    /// <param name="content">The text.</param>
+    /// <param name="timeout">How long to keep trying.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="IOException">The write still fails at the timeout.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
@@ -137,6 +215,17 @@ public static class FileUtils
         }
     }
 
+    /// <summary>
+    /// Reads a file's text, sharing it with readers, and again after 100 milliseconds when it fails with an I/O error,
+    /// while the time since the first try is under the timeout.
+    /// </summary>
+    /// <param name="filePath">The file's path.</param>
+    /// <param name="timeout">How long to keep trying.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the text.</returns>
+    /// <exception cref="IOException">The read still fails at the timeout, or the file is missing then.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not read the file.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<string> ReadAllTextAsync(string filePath, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
@@ -155,7 +244,12 @@ public static class FileUtils
         }
     }
 
-    // a name from outside, so a file of it stays in its folder: "..\x" becomes ".._x"
+    /// <summary>
+    /// Replaces each character a file name may not hold with <c>_</c>, such as a path separator; it leaves <c>..</c> and
+    /// reserved names as they are.
+    /// </summary>
+    /// <param name="name">The name.</param>
+    /// <returns>The name with those characters replaced.</returns>
     public static string ReplaceInvalidFileNameChars(string name)
     {
         return string.Join('_', name.Split(Path.GetInvalidFileNameChars()));

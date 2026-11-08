@@ -25,4 +25,10 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- The libraries' XML doc files are for developers: a publish leaves them out, or every installer would
+       carry one beside each library. -->
+  <PropertyGroup>
+    <PublishDocumentationFiles>false</PublishDocumentationFiles>
+  </PropertyGroup>
+
 </Project>

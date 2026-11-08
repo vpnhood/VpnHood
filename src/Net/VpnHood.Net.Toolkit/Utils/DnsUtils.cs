@@ -6,17 +6,27 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
+/// <summary>
+/// Provides DNS helpers: the network's resolvers, and a minimal A-record lookup over UDP.
+/// </summary>
 public static class DnsUtils
 {
     private const ushort DnsResponseFlag = 0x8000; // QR
     private const ushort DnsTruncatedFlag = 0x0200; // TC
     private const ushort DnsResponseCodeMask = 0x000F; // RCODE
 
-    // The resolvers of the networks the machine reaches beyond itself by: adapters up with a gateway, no
-    // loopback or tunnel. Not Windows' fec0:0:0:ffff:: placeholders, which it lists where IPv6 has none, nor a
-    // resolver on this machine: a stub, which asks from a process of its own. Linux's .NET reads /etc/resolv.conf
-    // for every adapter, which names only systemd-resolved's stub (127.0.0.53) where it runs, so the upstream list
-    // it writes stands in (seen on Ubuntu 26.04, where the kill switch's block stopped the stub's own lookups).
+    /// <summary>
+    /// Gets the resolvers of the networks the machine reaches beyond itself by: adapters that are up with a gateway, not
+    /// loopback or tunnel ones.
+    /// </summary>
+    /// <remarks>
+    /// IPv6 site-local addresses, as Windows' <c>fec0:0:0:ffff::</c> placeholders, and loopback ones, as a stub on this
+    /// machine, are left out. On Linux, when none is left, as where it names only systemd-resolved's stub, the upstream
+    /// list it writes, <c>/run/systemd/resolve/resolv.conf</c>, stands in.
+    /// </remarks>
+    /// <returns>The resolvers' addresses; none where there are none.</returns>
+    // Linux's .NET reads /etc/resolv.conf for every adapter (seen on Ubuntu 26.04, where the kill switch's block stopped
+    // the stub's own lookups)
     public static IReadOnlyList<IPAddress> GetNetworkDnsServers()
     {
         var dnsServers = NetworkInterface.GetAllNetworkInterfaces()
@@ -54,6 +64,22 @@ public static class DnsUtils
             .ToArray();
     }
 
+    /// <summary>
+    /// Looks up a host's IPv4 addresses with one query to a resolver, over a UDP client of its own: the IN A records of the answer
+    /// section; the names and the other sections are not checked.
+    /// </summary>
+    /// <param name="host">The host name.</param>
+    /// <param name="dnsEndPoint">The resolver.</param>
+    /// <param name="timeout">How long the send and the answer may take.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the host's addresses.</returns>
+    /// <exception cref="ArgumentException"><paramref name="host"/> is empty or white space.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="dnsEndPoint"/> is <see langword="null"/>.</exception>
+    /// <exception cref="OperationCanceledException">The timeout passed, or <paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="InvalidOperationException">The answer is not this query's, not a response, truncated, or an error.</exception>
+    /// <exception cref="Exception">The answer has no A record.</exception>
+    /// <exception cref="EndOfStreamException">The answer ends early.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
     public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
@@ -61,6 +87,23 @@ public static class DnsUtils
         return await GetHostEntry(host, dnsEndPoint, udpClientTemp, timeout, cancellationToken).Vhc();
     }
 
+    /// <summary>
+    /// Looks up a host's IPv4 addresses with one query to a resolver, over a given UDP client: the IN A records of the answer
+    /// section; the names and the other sections are not checked.
+    /// </summary>
+    /// <param name="host">The host name.</param>
+    /// <param name="dnsEndPoint">The resolver.</param>
+    /// <param name="udpClient">The UDP client, which this call connects to the resolver; the caller keeps owning it.</param>
+    /// <param name="timeout">How long the send and the answer may take.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the host's addresses.</returns>
+    /// <exception cref="ArgumentException"><paramref name="host"/> is empty or white space.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="dnsEndPoint"/> is <see langword="null"/>.</exception>
+    /// <exception cref="OperationCanceledException">The timeout passed, or <paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="InvalidOperationException">The answer is not this query's, not a response, truncated, or an error.</exception>
+    /// <exception cref="Exception">The answer has no A record.</exception>
+    /// <exception cref="EndOfStreamException">The answer ends early.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
     public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
         UdpClient udpClient, TimeSpan timeout, CancellationToken cancellationToken)
     {
@@ -98,6 +141,10 @@ public static class DnsUtils
         return hostEntry;
     }
 
+    /// <summary>Builds a DNS query for a host's A records, recursion desired.</summary>
+    /// <param name="queryId">The query's ID.</param>
+    /// <param name="host">The host name.</param>
+    /// <returns>The query's bytes.</returns>
     public static byte[] BuildDnsQuery(ushort queryId, string host)
     {
         using var stream = new MemoryStream();
@@ -124,6 +171,17 @@ public static class DnsUtils
         return stream.ToArray();
     }
 
+    /// <summary>
+    /// Reads the IN A records of a DNS response's answer section, after checking its ID and flags: a response, not
+    /// truncated, as a truncated one may lack some of the name's addresses, and without an error. The names and the other
+    /// sections are not checked.
+    /// </summary>
+    /// <param name="response">The response's bytes.</param>
+    /// <param name="queryId">The query's ID.</param>
+    /// <returns>The addresses, with an empty host name.</returns>
+    /// <exception cref="InvalidOperationException">The answer is not this query's, not a response, truncated, or an error.</exception>
+    /// <exception cref="EndOfStreamException">The response ends early.</exception>
+    /// <exception cref="Exception">The response has no A record.</exception>
     public static IPHostEntry ParseDnsResponse(byte[] response, ushort queryId)
     {
         using var stream = new MemoryStream(response);

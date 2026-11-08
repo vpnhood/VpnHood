@@ -2,17 +2,41 @@
 
 namespace Ga4.Trackers.Ga4Measurements;
 
+/// <summary>
+/// Provides a tracker that sends events through Google Analytics 4's Measurement Protocol, which a server or an app
+/// uses with an API secret.
+/// </summary>
+/// <remarks>
+/// Each event gets the session's ID, when there is one, and <c>debug_mode</c> with
+/// <see cref="TrackerBase.IsAdminDebugView"/>, unless it has them already. A failed request throws only with
+/// <see cref="TrackerBase.ThrowExceptionOnError"/>.
+/// </remarks>
 public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
 {
+    /// <summary>Gets the Measurement Protocol API secret of the data stream.</summary>
     public required string ApiSecret { get; init; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the events go to the validation endpoint, which checks them and records
+    /// nothing.
+    /// </summary>
     public bool IsDebugEndPoint { get; set; }
 
+    /// <summary>Sends an event.</summary>
+    /// <param name="ga4Event">The event.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">The event's parameter names collide when case is ignored, with the tracker on.</exception>
+    /// <exception cref="Exception">The request failed, with <see cref="TrackerBase.ThrowExceptionOnError"/>.</exception>
     public Task Track(Ga4MeasurementEvent ga4Event, CancellationToken cancellationToken)
     {
         var tracks = new[] { ga4Event };
         return Track(tracks, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentException"><paramref name="ga4Events"/> is empty, with the tracker on, or an event's parameter names collide when case is ignored.</exception>
+    /// <exception cref="Exception">The request failed, with <see cref="TrackerBase.ThrowExceptionOnError"/>.</exception>
     public Task Track(IEnumerable<Ga4MeasurementEvent> ga4Events, CancellationToken cancellationToken)
     {
         if (!IsEnabled)
@@ -51,6 +75,9 @@ public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
         return SendHttpRequest(requestMessage, "Measurement", ga4Payload, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentException"><paramref name="trackEvents"/> is empty, with the tracker on, or an event's parameter names collide when case is ignored.</exception>
+    /// <exception cref="Exception">The request failed, with <see cref="TrackerBase.ThrowExceptionOnError"/>.</exception>
     public override Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)
     {
         var ga4MeasurementEvents = trackEvents.Select(x =>

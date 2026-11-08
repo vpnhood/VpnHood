@@ -70,15 +70,16 @@ CLIENT | INDICATE_CERTIFICATE_RECEIVED | DEFER_CERTIFICATE_VALIDATION | USE_PORT
 - `USE_PORTABLE_CERTIFICATES` — the peer cert + chain arrive as **DER** (`QUIC_BUFFER`s), not native
   handles.
 
-In `PEER_CERTIFICATE_RECEIVED` we then replicate exactly what `SslStream`/System.Net.Quic would do,
-using the **Android** crypto backend (no OpenSSL):
+In `PEER_CERTIFICATE_RECEIVED` we then work out what `SslStream` would hand its callback, using the
+**Android** crypto backend (no OpenSSL):
 1. Build `X509Certificate2` from the leaf DER.
 2. Add the intermediates from the event's **`Chain`** buffer to `X509Chain.ChainPolicy.ExtraStore`
    (otherwise the chain never builds → false `RemoteCertificateChainErrors`).
 3. Compute `SslPolicyErrors`: `chain.Build(cert)` → `RemoteCertificateChainErrors`;
    `cert.MatchesHostname(TargetHost)` → `RemoteCertificateNameMismatch`.
-4. Call VpnHood's `RemoteCertificateValidationCallback` (accepts when `errors == None`, or by pinned
-   hash otherwise). Return `QUIC_STATUS_SUCCESS` / `QUIC_STATUS_BAD_CERTIFICATE`.
+4. Call the caller's `CertificateValidationCallback`, whose answer decides; the library pins nothing
+   itself (VpnHood's client accepts `errors == None`, or its server's pinned hash). Return
+   `QUIC_STATUS_SUCCESS` / `QUIC_STATUS_BAD_CERTIFICATE`.
 
 ### SNI / connect target
 
@@ -104,8 +105,8 @@ links its own OpenSSL, so no `libcrypto`/`libssl`/.NET-OpenSSL-shim is needed.
   (`lib/<abi>/libmsquic.so`), through this project and on to the app.
 - **arm64-v8a**, **armeabi-v7a** and **x86_64** are produced (armeabi-v7a since package 8.0.7 —
   many Android TVs run a 32-bit userland), covering every ABI the apps publish. Should the lib ever
-  be missing for an ABI, `IsQuicSupported` is `false` there and the client transparently falls back
-  to TCP.
+  be missing for an ABI, `IsQuicSupported` is `false` there and `CreateQuicClient()` throws
+  `NotSupportedException`; VpnHood's client checks `IsQuicSupported` first and uses TCP instead.
 
 Wiring: `AndroidSocketFactory` (which `AndroidVpnService` hands the client) exposes `IsQuicSupported` /
 `CreateQuicClient()` → `AndroidQuicClient`. QUIC engages only when the client's `ChannelProtocol`

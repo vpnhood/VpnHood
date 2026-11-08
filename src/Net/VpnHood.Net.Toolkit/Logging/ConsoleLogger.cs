@@ -2,22 +2,31 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Net.Toolkit.Logging;
 
-// A terminal: the message as a line, in the level's color where the console has colors.
+/// <summary>
+/// Provides a logger that writes each message as a line to the console, in the level's color where the console has
+/// colors.
+/// </summary>
 public sealed class ConsoleLogger : ILogger
 {
     private static readonly bool IsColorSupported = GetIsColorSupported();
     private readonly Lock _lock = new();
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps no scopes: it returns <see langword="null"/>.</remarks>
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         return null;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is always <see langword="true"/>.</remarks>
     public bool IsEnabled(LogLevel logLevel)
     {
         return true;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It writes the formatted message as a line, one writer at a time.</remarks>
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {

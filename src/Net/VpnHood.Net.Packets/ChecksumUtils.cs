@@ -6,13 +6,36 @@ using System.Runtime.Intrinsics.Arm;
 
 namespace VpnHood.Net.Packets;
 
+/// <summary>
+/// Provides the Internet checksum (RFC 1071), vectorized where the processor allows.
+/// </summary>
 public static class ChecksumUtils
 {
+    /// <summary>
+    /// Computes the Internet checksum of some bytes: the complement of the ones' complement sum of their 16-bit
+    /// words.
+    /// </summary>
+    /// <remarks>
+    /// Despite its name, the method returns the checksum, not the sum. Over bytes that already hold a valid
+    /// checksum it returns zero.
+    /// </remarks>
+    /// <param name="data">The bytes to sum, with any checksum field among them zero.</param>
+    /// <returns>The checksum, as a number to write in network byte order.</returns>
     public static ushort OnesComplementSum(ReadOnlySpan<byte> data)
     {
         return OnesComplementSum(ReadOnlySpan<byte>.Empty, data);
     }
 
+    /// <summary>
+    /// Computes the Internet checksum of a pseudo-header followed by some bytes, as if the two were one buffer.
+    /// </summary>
+    /// <remarks>
+    /// Despite its name, the method returns the checksum, not the sum. A computed zero is returned as it is;
+    /// UDP's rule to send it as 0xFFFF is <see cref="UdpPacket.ComputeChecksum"/>'s.
+    /// </remarks>
+    /// <param name="pseudoHeader">The bytes summed first, such as an IP pseudo-header; may be empty or odd in length.</param>
+    /// <param name="data">The bytes summed after them, with any checksum field among them zero.</param>
+    /// <returns>The checksum, as a number to write in network byte order.</returns>
     // The Internet checksum (RFC 1071): the complement of the ones' complement sum of the 16-bit words. The words
     // are added as native 32-bit ones into 64-bit sums, which no carry leaves, then folded and turned to network
     // order once (RFC 1071 2(B)): a carry checked per word is a branch that random data mispredicts half the time.

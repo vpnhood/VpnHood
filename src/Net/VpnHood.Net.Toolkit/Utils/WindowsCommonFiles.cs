@@ -6,10 +6,14 @@ using System.Text;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
-// Installs files, such as a vendor's DLL and driver, into a folder of their own under Common Files:
-// only administrators write there, it is apart from every app folder (a driver holds its file until a
-// reboot, which there blocks no update or cleanup), and it is named by the files' hash, so another
-// build gets another folder and a file in use is never overwritten.
+/// <summary>
+/// Provides the means to install files, such as a vendor's DLL and driver, into a folder of their own under Common
+/// Files, which only administrators may change.
+/// </summary>
+/// <remarks>
+/// The folder is apart from every app's, so a driver that holds its file until a reboot blocks no update or cleanup, and
+/// it is named by the files' hash, so another build gets another folder and a file in use is never overwritten.
+/// </remarks>
 [SupportedOSPlatform("windows")]
 public static class WindowsCommonFiles
 {
@@ -29,9 +33,23 @@ public static class WindowsCommonFiles
                                            FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership) |
                                      0x10000000 | 0x40000000;
 
-    // Returns the folder holding the files, named by name, such as WinTun-x64, and by the files' hash.
-    // Each stream must seek: it is read from its start for its hash, and again to write a missing file.
-    // A folder or a file others than administrators may change fails it, never repaired.
+    /// <summary>
+    /// Installs files into the folder of a name, such as <c>WinTun-x64</c>, and the files' hash, unless they are there
+    /// already. A folder or a file that others than administrators may change fails the install; it is never repaired.
+    /// </summary>
+    /// <param name="name">The folder's name, before the hash; a single name, which is not checked.</param>
+    /// <param name="files">
+    /// The files' names, single names, which are not checked, and their contents. Each stream must seek: it is read from its start for its hash, and again to write a
+    /// missing file.
+    /// </param>
+    /// <returns>The folder's path.</returns>
+    /// <exception cref="UnauthorizedAccessException">
+    /// The process is not an administrator's, or Common Files or the folder is a link or not only administrators may
+    /// change it.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// A file there is not the one installed, is a link, or not only administrators may change it.
+    /// </exception>
     public static string Install(string name, IReadOnlyDictionary<string, Stream> files)
     {
         // what such files serve needs administrators anyway; checked first, for one clear error

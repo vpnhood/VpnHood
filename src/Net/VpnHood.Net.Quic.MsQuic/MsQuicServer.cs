@@ -10,10 +10,20 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Net.Quic.MsQuic;
 
+/// <summary>
+/// Represents a QUIC server on MsQuic, through .NET's <see cref="QuicListener"/>, for Windows and Linux.
+/// </summary>
+/// <remarks>
+/// Its listeners use TLS 1.3 only and the "h3" ALPN token, ask for no client certificate and check no revocation.
+/// </remarks>
 public sealed class MsQuicServer : IQuicServer
 {
+    /// <summary>
+    /// Gets a value indicating whether MsQuic listeners are supported on this platform.
+    /// </summary>
     public static bool IsSupported => QuicListener.IsSupported;
 
+    /// <inheritdoc/>
     public async ValueTask<IQuicListener> ListenAsync(
         QuicListenerOptions options, CancellationToken cancellationToken)
     {

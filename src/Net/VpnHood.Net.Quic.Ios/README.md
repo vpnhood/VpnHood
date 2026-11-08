@@ -1,6 +1,6 @@
 # VpnHood.Net.Quic.Ios
 
-iOS/tvOS QUIC client backed by Apple's **Network.framework** (`NWConnectionGroup` /
+iOS QUIC client backed by Apple's **Network.framework** (`NWConnectionGroup` /
 `NWMultiplexGroup`, iOS 15+). It implements the same `VpnHood.Net.Quic.Abstractions` surface
 (`IQuicClient` / `IQuicConnection` / stream) as the desktop **MsQuic** client, so the tunneling layer
 consumes QUIC identically on every platform. There is **no MsQuic on iOS** — `libmsquic` is not
@@ -47,21 +47,24 @@ throughput. See the shared record in the app repo's
 - With TCP forwarding there is **one QUIC stream per forwarded flow** — this is why stream lifecycle and the
   per-stream window dominate memory (see below).
 
-## Flow control & native-memory cap (the load-bearing numbers)
+## Flow control (the load-bearing numbers)
 
-Set in `IosQuicClient.ConnectAsync` on the QUIC options block:
+`IosSocketFactory.CreateQuicClient` picks them, times its memory scale (at least 1), and
+`IosQuicClient.ConnectAsync` sets them on the QUIC options block; an `IosQuicClient` made directly
+keeps Network.framework's defaults:
 
 | Parameter | Value | Why |
 |---|---|---|
-| `InitialMaxData` | **256 KB** | Connection-wide aggregate receive window across all streams — the real ceiling on native inbound buffering. Tuned down from 1 MB after measured sub-second native transient spikes near the jetsam limit; prioritizes extension stability over peak iOS download speed. |
-| `InitialMaxStreamDataBidirectionalLocal` | **32 KB** | Per-stream window for streams we open (TCP forwarding's download streams). |
-| `InitialMaxStreamDataBidirectionalRemote` | **32 KB** | Per-stream window for peer-opened streams. |
-| `IosQuicStream.MaxReceiveLength` | **16 KB** | Caps a single armed native receive so even a huge caller buffer pulls native data in bounded chunks. The QUIC window above is the real ceiling; this just bounds one receive. |
+| `InitialMaxData` | **16 KB** | Connection-wide initial flow-control credit across all streams. Tuned down in steps after measured sub-second native transient spikes near the jetsam limit; prioritizes extension stability over peak iOS download speed. |
+| `InitialMaxStreamDataBidirectionalLocal` | **4 KB** | Per-stream credit for streams we open (TCP forwarding's download streams). |
+| `InitialMaxStreamDataBidirectionalRemote` | **4 KB** | Per-stream credit for peer-opened streams. |
+| `IosQuicStream.MaxReceiveLength` | **16 KB** | Caps a single armed native receive so even a huge caller buffer pulls native data in bounded chunks. |
 
 Without an explicit window, Network.framework advertises a large default and a download burst floods
 native receive buffers faster than forwarding drains them — measured **+16 MB in ~1 s at ~25
-streams** → jetsam kill. These windows are real QUIC flow control: the server may not send past the
-window until we consume and the stack emits window updates.
+streams** → jetsam kill. These are the initial credits the client advertises. Network.framework grants more as it buffers
+data, not as we read it, so they bound no native memory, and the read path has no memory brake of
+its own.
 
 ### ⚠️ Interaction with the shared `LocalTcpStack` (read this before tuning windows)
 
@@ -78,9 +81,7 @@ under sustained download.**
 
 Network.framework delivers a connection's callbacks (receive, FIN/close, state, and `Cancel`
 teardown) serially on its assigned queue. The QUIC tunnel and extracted streams currently share the
-same `VpnHood.Quic.Ios` queue. Stream callbacks are therefore serialized through one queue; the
-native-memory cap is handled by QUIC flow-control windows and bounded receives rather than a
-per-stream queue pool.
+same `VpnHood.Quic.Ios` queue. Stream callbacks are therefore serialized through one queue, with no per-stream queue pool.
 
 ## Native interop gotchas
 
@@ -96,25 +97,24 @@ per-stream queue pool.
 
 ## Read / write semantics
 
-- **Read:** one native `ReceiveReadOnlyData(min:1, max:min(buf, 16 KB))` per `ReadAsync`; the
-  completion **reserves** the value-task source *before* touching the caller buffer
+- **Read:** one native `ReceiveData(minimumIncompleteLength: 1, maximumLength: min(buf, 16 KB))` per
+  `ReadAsync`; the completion **reserves** the value-task source *before* touching the caller buffer
   (`TryReserve()` on the read operation's `Source`) — if cancellation/Dispose already completed the
   read, the buffer may have been returned to a shared pool and re-rented, so copying into it would
-  corrupt unrelated memory. Empty completion ⇒ EOF (returns 0); a non-empty final chunk is returned
-  and the next read observes empty → 0.
-- **Write:** `isComplete:false` always (never signals FIN mid-stream). Non-array-backed buffers are
-  copied through a pooled rental returned in the write completion (idempotent via
-  `Interlocked.Exchange`).
+  corrupt unrelated memory. Empty completion ⇒ EOF (returns 0); a non-empty final chunk is returned,
+  the EOF is kept, and the next read returns 0 without a native receive.
+- **Write:** `isComplete:false` always (never signals FIN mid-stream). The bytes are copied into a
+  `DispatchData`, native-owned storage that Network.framework keeps for the asynchronous send.
 - **Dispose:** `Cancel()` + `Dispose()` the `NWConnection`, dispose pending cancellation
   registrations (native callbacks may never fire after `Cancel()`), then unblock any pending
-  read/write and reclaim an in-flight write's rental. Second native completions are no-ops via the
-  value-task source's state guard.
+  read/write. Second native completions are no-ops via the value-task source's state guard.
 
 ## Diagnostics
 
 `IosQuicDiagnostics` holds the stream counters and the `[VHQUIC] +CONN/-CONN live=… id=…` log lines,
 which confirm streams (= native `NWConnection`s) are released promptly at flow-end rather than
-lingering. Every call is a no-op unless it is enabled, so production pays nothing. `LiveStreamCount`
+lingering. Its counters move only while it is enabled (a log level below Information), so production pays
+nothing; `TakeMaxStreamCancelMs` resets its figure either way. `LiveStreamCount`
 is `public static` so the iOS memory probe in another assembly can read it.
 
 ## Targeting

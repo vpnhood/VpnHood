@@ -1,12 +1,13 @@
 ﻿namespace VpnHood.Net.Toolkit.Utils;
 
+/// <summary>
+/// Provides the means to read the operating system from a browser's User-Agent.
+/// </summary>
 public static class UserAgentParser
 {
-    // <summary>
-    // Extracts human-readable Operating system name.
-    // </summary>
-    // <param name="userAgent">User Agent string from Request.</param>
-    // <returns>Human-readable Operating system name.</returns>
+    /// <summary>Reads the operating system's name by a heuristic, with a version where it finds one.</summary>
+    /// <param name="userAgent">The User-Agent, or <see langword="null"/>.</param>
+    /// <returns>The name, such as <c>Windows 7</c>, or <c>Unknown OS</c>.</returns>
     public static string GetOperatingSystem(string? userAgent)
     {
         userAgent ??= string.Empty;

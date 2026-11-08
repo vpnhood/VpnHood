@@ -7,17 +7,18 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Net.Toolkit.Assets;
 
-// What a zip's contents are called: a stamp in front of the zip - "VHSTAMP:", 16 hex digits, "\n" -
-// the first 16 hex digits of the SHA-256 of the whole file, taken while the digits were still zero,
-// so the stamp can sit in what it hashes. The tool that packs the zip writes it (StampedZipArchive,
-// the UI store's _zip-assets.ps1, the page's _publish.ps1), the zip right after it in the same file:
-// a zip is read from its end, by offsets that then count the stamp, so every zip tool still opens it.
-// Reading it reads those 25 bytes and closes the stream - an Android asset's forward-only stream
-// included, which a ZipArchive would first copy whole into memory. It names a zip's unpacked copy
-// (ZipAssetProvider) and the split db built from the IP-location zip.
-//
-// A zip without one, such as a fork's packed by its own tool, is read whole and hashed instead, with
-// a warning: a slower start, rather than a fork that must pack the way we do.
+/// <summary>
+/// Provides the stamp that names a zip's contents: in front of the zip, <c>VHSTAMP:</c>, 16 hex digits and a newline. The
+/// digits are the first 16 hex digits of the SHA-256 of the whole file, taken while they were still zero, so the stamp
+/// can sit in what it hashes.
+/// </summary>
+/// <remarks>
+/// A zip is read from its end, by offsets that count the stamp, so a zip tool that finds the directory from the end still
+/// opens a stamped zip. Reading the
+/// stamp reads its 25 bytes alone, even from a stream that only goes forward, such as an Android asset's. A zip without
+/// one, such as one a fork packed with its own tool, is read whole and hashed instead, with a warning.
+/// <see cref="StampedZipArchive"/> writes one.
+/// </remarks>
 public static class ZipStamp
 {
     private const int DigitCount = 16;
@@ -25,13 +26,23 @@ public static class ZipStamp
     private static readonly SearchValues<byte> HexDigits = SearchValues.Create("0123456789abcdefABCDEF"u8);
     private static int Length => Magic.Length + DigitCount + 1; // the digits, then "\n"
 
+    /// <summary>Reads a zip's stamp, or hashes the zip when it has none.</summary>
+    /// <param name="zip">The zip.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the 16 hex digits.</returns>
     public static async Task<string> ReadAsync(IAsset zip, CancellationToken cancellationToken)
     {
         await using var stream = await zip.OpenReadAsync(cancellationToken).Vhc();
         return await ReadAsync(stream, zip.ToString(), cancellationToken).Vhc();
     }
 
-    // From the stream's position on; zipName is for the warning alone.
+    /// <summary>
+    /// Reads the stamp of the zip at the stream's position, or hashes the rest of the stream when there is none.
+    /// </summary>
+    /// <param name="stream">The stream, at the zip's start; it is read, not closed.</param>
+    /// <param name="zipName">The zip's name, for the warning alone, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the 16 hex digits.</returns>
     public static async Task<string> ReadAsync(Stream stream, string? zipName, CancellationToken cancellationToken)
     {
         var head = new byte[Length];

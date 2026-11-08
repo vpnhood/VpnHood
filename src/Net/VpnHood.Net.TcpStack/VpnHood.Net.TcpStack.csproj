@@ -2,6 +2,8 @@
 	<PropertyGroup>
 		<Description>A lightweight user-space TCP stack: it terminates the TCP connections carried in raw IP packets, from a TUN or WinDivert adapter, and gives you each one as a Stream.</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<!-- the whole public API is documented: a missing or broken doc comment fails the build -->
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

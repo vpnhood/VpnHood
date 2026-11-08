@@ -63,7 +63,6 @@ public class ForwardingManagerTest
         forwardingManager.SendPacketQueued(ipPacket);
         await peer.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
         await WaitFor(() => memory.IsDisposed, "The UDP forwarder should dispose the packet it sent.");
-        GC.KeepAlive(ipPacket);
     }
 
     [TestMethod]
@@ -84,7 +83,6 @@ public class ForwardingManagerTest
         forwardingManager.SendPacketQueued(request);
         await replied.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitFor(() => memory.IsDisposed, "The ping forwarder should dispose the request it sent.");
-        GC.KeepAlive(request);
     }
 
     [TestMethod]

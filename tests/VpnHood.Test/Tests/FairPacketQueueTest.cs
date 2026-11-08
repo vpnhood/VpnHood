@@ -57,7 +57,6 @@ public class FairPacketQueueTest : TestBase
         queue.Release();
         await AssertEqualsWait(7, () => queue.SentPorts.Count);
         CollectionAssert.AreEqual(new[] { 1000, 1064, 1128, 2000, 1256, 1320, 1384 }, queue.SentPorts.ToArray());
-        GC.KeepAlive(oldestPacket);
     }
 
     [TestMethod]
@@ -119,7 +118,6 @@ public class FairPacketQueueTest : TestBase
         queue.Release();
         await AssertEqualsWait(3, () => queue.SentPorts.Count);
         CollectionAssert.AreEquivalent(new[] { 5000, 1064, 2064 }, queue.SentPorts.ToArray());
-        GC.KeepAlive(tiedPacket);
     }
 
     [TestMethod]
@@ -145,7 +143,6 @@ public class FairPacketQueueTest : TestBase
         var sentPorts = queue.SentPorts.ToList();
         Assert.IsLessThan(sentPorts.IndexOf(1002), sentPorts.IndexOf(1001));
         CollectionAssert.Contains(sentPorts, 2000);
-        GC.KeepAlive(fragments);
     }
 
     [TestMethod]
@@ -175,7 +172,6 @@ public class FairPacketQueueTest : TestBase
         Assert.IsTrue(queue.SendPacketQueued(BuildPacket(2000)));
         await AssertEqualsWait(1, () => queue.SentPorts.Count);
         Assert.AreEqual(2000, queue.SentPorts[0]);
-        GC.KeepAlive(failedPacket);
     }
 
     [TestMethod]
@@ -200,10 +196,6 @@ public class FairPacketQueueTest : TestBase
         Assert.IsTrue(queue.SendPacketQueued(BuildPacket(3000)));
         await AssertEqualsWait(1, () => queue.SentPorts.Count);
         Assert.AreEqual(3000, queue.SentPorts[0]);
-
-        // its memory throws only once, so no finalizer meets the fault
-        faultyPacket.Dispose();
-        GC.KeepAlive(heldPacket);
     }
 
     [TestMethod]
@@ -228,8 +220,6 @@ public class FairPacketQueueTest : TestBase
         // the packet in its turn is the turn's, and still goes
         queue.Release();
         await AssertEqualsWait(1, () => queue.SentPorts.Count);
-        GC.KeepAlive(queuedPacket);
-        GC.KeepAlive(refusedPacket);
     }
 
     [TestMethod]
@@ -238,16 +228,13 @@ public class FairPacketQueueTest : TestBase
         var queue = new TestHeldFairPacketQueue(capacity: 8);
         queue.Release();
 
-        // senders that send until the queue refuses them, while it is disposed; the packets are held, so only
-        // the queue or its turns dispose one, not a finalizer
+        // senders that send until the queue refuses them, while it is disposed
         var memories = new ConcurrentQueue<TestMemoryOwner>();
-        var packets = new ConcurrentQueue<IpPacket>();
         var senders = Enumerable.Range(0, 8).Select(_ => Task.Run(() => {
             for (var i = 0; ; i++) {
                 var memory = BuildPacketMemory(1 + i % 60_000);
                 var ipPacket = PacketBuilder.Attach(memory);
                 memories.Enqueue(memory);
-                packets.Enqueue(ipPacket);
                 if (!queue.SendPacketQueued(ipPacket))
                     return;
             }
@@ -261,6 +248,5 @@ public class FairPacketQueueTest : TestBase
         // sent, dropped, refused or left in the queue, every packet ends disposed
         await AssertEqualsWait(0, () => memories.Count(memory => !memory.IsDisposed));
         Assert.AreEqual(0, queue.QueueLength);
-        GC.KeepAlive(packets);
     }
 }

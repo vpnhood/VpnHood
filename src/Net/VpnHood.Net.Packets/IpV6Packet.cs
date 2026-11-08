@@ -251,26 +251,18 @@ public class IpV6Packet : IpPacket
     /// Disposes the memory the packet owns, if any, and marks the packet disposed.
     /// </summary>
     /// <param name="disposing">
-    /// <see langword="true"/> when called from <see cref="IpPacket.Dispose()"/>; <see langword="false"/> when
-    /// called from the finalizer, which disposes the owned memory too.
+    /// <see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release
+    /// only unmanaged resources.
     /// </param>
     protected override void Dispose(bool disposing)
     {
         if (_disposed)
             return;
 
-        // We intentionally dispose the memory owner as unmanaged
-        // because the memory owner does have finalizer
-        _memoryOwner?.Dispose();
+        if (disposing)
+            _memoryOwner?.Dispose();
+
         base.Dispose(disposing);
         _disposed = true;
-    }
-
-    /// <summary>
-    /// Returns the memory the packet owns when it was not disposed.
-    /// </summary>
-    ~IpV6Packet()
-    {
-        Dispose(false);
     }
 }

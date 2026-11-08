@@ -52,7 +52,7 @@ internal class FlowCacheService : IDisposable
                 continue;
 
             // only the packet thread touches a flow's packets: one still in flight may add to them, or take them out
-            // to send. Those of a removed flow go back to the pool by their finalizers
+            // to send. Those of a removed flow are left to the GC, undisposed
             _flowCache.TryRemove(kvp.Key, out _);
         }
 
@@ -66,7 +66,7 @@ internal class FlowCacheService : IDisposable
 
         _cleanupJob.Dispose();
 
-        // the flows' packets go back by their finalizers, as the cleanup's do
+        // the flows' packets are left to the GC, as the cleanup's are
         _flowCache.Clear();
         GC.SuppressFinalize(this);
     }

@@ -52,7 +52,6 @@ public class PacketChannelTest : TestBase
             new byte[16]));
         Assert.AreEqual(PacketChannelState.Connected, channel.State);
         CollectionAssert.AreEqual(new[] { 1 }, receivedPorts);
-        GC.KeepAlive(message);
     }
 
     [TestMethod]
@@ -83,7 +82,6 @@ public class PacketChannelTest : TestBase
             new byte[16]));
         await AssertEqualsWait(false, () => channel.IsSending);
         Assert.AreEqual(1, channel.SentPackets);
-        GC.KeepAlive(close);
     }
 
     [TestMethod]

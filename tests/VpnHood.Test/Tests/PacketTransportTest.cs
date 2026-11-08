@@ -71,7 +71,6 @@ public class PacketTransportTest : TestBase
         transport.Release();
         await AssertEqualsWait(3, () => transport.SentPorts.Count);
         CollectionAssert.AreEqual(new[] { 1, 3, 4 }, transport.SentPorts.ToArray());
-        GC.KeepAlive(oldestPacket);
     }
 
     [TestMethod]
@@ -113,8 +112,6 @@ public class PacketTransportTest : TestBase
         Assert.IsTrue(waitingMemory.IsDisposed);
         await AssertEqualsWait(true, () => queuedMemory.IsDisposed);
         Assert.IsFalse(transport.SentPorts.Contains(3));
-        GC.KeepAlive(queuedPacket);
-        GC.KeepAlive(waitingPacket);
     }
 
     [TestMethod]
@@ -154,7 +151,6 @@ public class PacketTransportTest : TestBase
         transport.Release();
         await AssertEqualsWait(2, () => transport.SentPorts.Count);
         CollectionAssert.AreEqual(new[] { 1, 2 }, transport.SentPorts.ToArray());
-        GC.KeepAlive(ipPacket);
     }
 
     [TestMethod]
@@ -177,7 +173,6 @@ public class PacketTransportTest : TestBase
         transport.Release();
         await AssertEqualsWait(2, () => transport.SentPorts.Count);
         CollectionAssert.AreEqual(new[] { 1, 2 }, transport.SentPorts.ToArray());
-        GC.KeepAlive(ipPacket);
     }
 
     [TestMethod]
@@ -203,7 +198,6 @@ public class PacketTransportTest : TestBase
         await Assert.ThrowsExactlyAsync<ChannelClosedException>(() =>
             sendTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
         Assert.IsTrue(waitingMemory.IsDisposed);
-        GC.KeepAlive(waitingPacket);
     }
 
     [TestMethod]
@@ -229,7 +223,6 @@ public class PacketTransportTest : TestBase
         Assert.IsFalse(await sendTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
         Assert.IsTrue(memory.IsDisposed);
         Assert.AreEqual(1, transport.PacketStat.DroppedPackets);
-        GC.KeepAlive(ipPacket);
     }
 
     [TestMethod]
@@ -248,8 +241,6 @@ public class PacketTransportTest : TestBase
         await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() =>
             transport.SendPacketQueuedAsync(asyncPacket).AsTask());
         Assert.IsTrue(asyncMemory.IsDisposed);
-        GC.KeepAlive(ipPacket);
-        GC.KeepAlive(asyncPacket);
     }
 
     [TestMethod]
@@ -276,9 +267,6 @@ public class PacketTransportTest : TestBase
         await AssertEqualsWait(1, () => transport.SentPorts.Count);
         Assert.IsFalse(deliveredMemory.IsDisposed);
         await AssertEqualsWait(2L, () => transport.PacketStat.DroppedPackets);
-        GC.KeepAlive(deliveredPacket);
-        GC.KeepAlive(droppedPacket);
-        GC.KeepAlive(leftPacket);
     }
 
     [TestMethod]
@@ -289,16 +277,13 @@ public class PacketTransportTest : TestBase
         var transport = new TestHeldPacketTransport(queueCapacity: 2, blocking: blocking);
         transport.Release();
 
-        // senders that send until the transport refuses them, while it is disposed; the packets are held, so
-        // only the transport disposes one, not a finalizer
+        // senders that send until the transport refuses them, while it is disposed
         var memories = new ConcurrentQueue<TestMemoryOwner>();
-        var packets = new ConcurrentQueue<IpPacket>();
         var senders = Enumerable.Range(0, 8).Select(_ => Task.Run(() => {
             for (var i = 0; ; i++) {
                 var memory = BuildPacketMemory(1 + i % 60_000);
                 var ipPacket = PacketBuilder.Attach(memory);
                 memories.Enqueue(memory);
-                packets.Enqueue(ipPacket);
                 try {
                     transport.SendPacketQueued(ipPacket);
                 }
@@ -316,7 +301,6 @@ public class PacketTransportTest : TestBase
         // sent, dropped, refused or left in the queue, every packet ends disposed
         await AssertEqualsWait(0, () => memories.Count(memory => !memory.IsDisposed));
         Assert.AreEqual(0, transport.QueueLength);
-        GC.KeepAlive(packets);
     }
 
     [TestMethod]
@@ -406,8 +390,6 @@ public class PacketTransportTest : TestBase
         transport.Release();
         await AssertEqualsWait(true, () => delayedMemory.IsDisposed);
         await AssertEqualsWait(2L, () => transport.PacketStat.SentPackets);
-        GC.KeepAlive(delayedPacket);
-        GC.KeepAlive(nextPacket);
     }
 
     [TestMethod]
@@ -428,7 +410,6 @@ public class PacketTransportTest : TestBase
         Assert.IsFalse(await sendTask);
         Assert.IsTrue(memory.IsDisposed);
         Assert.AreEqual(1, transport.PacketStat.DroppedPackets);
-        GC.KeepAlive(ipPacket);
     }
 
     [TestMethod]
@@ -455,9 +436,6 @@ public class PacketTransportTest : TestBase
         Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(latePacket));
         Assert.IsTrue(lateMemory.IsDisposed);
         Assert.AreEqual(2, transport.PacketStat.DroppedPackets);
-        GC.KeepAlive(refusedPacket);
-        GC.KeepAlive(sentPacket);
-        GC.KeepAlive(latePacket);
     }
 
     [TestMethod]
@@ -493,10 +471,6 @@ public class PacketTransportTest : TestBase
         var refusedPacket = PacketBuilder.Attach(refusedMemory);
         transport.Receive(refusedPacket);
         Assert.IsTrue(refusedMemory.IsDisposed);
-        GC.KeepAlive(unhandledPacket);
-        GC.KeepAlive(givenBackPacket);
-        GC.KeepAlive(takenPacket);
-        GC.KeepAlive(refusedPacket);
     }
 
     [TestMethod]
@@ -514,7 +488,6 @@ public class PacketTransportTest : TestBase
         Assert.IsTrue(transport.SendPacketQueued(BuildPacket(2)));
         await AssertEqualsWait(1, () => transport.SentPorts.Count);
         Assert.AreEqual(2, transport.SentPorts[0]);
-        GC.KeepAlive(failedPacket);
     }
 
     [TestMethod]

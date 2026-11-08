@@ -19,7 +19,8 @@ namespace VpnHood.Net.Packets;
 /// A packet made with an <see cref="System.Buffers.IMemoryOwner{T}"/> owns that memory, and <see cref="Dispose()"/>
 /// returns it; then <see cref="Buffer"/> throws <see cref="ObjectDisposedException"/>, and every view taken from
 /// the packet before, such as its <see cref="Payload"/> or a <see cref="TcpPacket"/>, must no longer be used. A
-/// packet made on a <see cref="Memory{T}"/> leaves it to the caller. An instance is not thread-safe.
+/// packet never disposed never returns its memory, which is left to the garbage collector. A packet made on a
+/// <see cref="Memory{T}"/> leaves it to the caller. An instance is not thread-safe.
 /// </para>
 /// </remarks>
 /// <param name="buffer">The packet's bytes, exactly as long as the packet.</param>
@@ -203,8 +204,8 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     /// Marks the packet disposed. A derived class returns the memory it owns here.
     /// </summary>
     /// <param name="disposing">
-    /// <see langword="true"/> when called from <see cref="Dispose()"/>; <see langword="false"/> when called from
-    /// the finalizer.
+    /// <see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release
+    /// only unmanaged resources.
     /// </param>
     protected virtual void Dispose(bool disposing)
     {
@@ -212,17 +213,13 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
         _disposed = true;
     }
 
+    // Add no finalizer: every packet would pay for it as it is made, and it could return an array a view of the
+    // packet still uses. An undisposed packet's array goes to the GC; the pool keeps no record of what it lends
     /// <summary>
     /// Disposes the packet and returns the memory it owns, if any. Its buffer must not be used afterwards.
     /// </summary>
     public void Dispose()
     {
         Dispose(true);
-        GC.SuppressFinalize(this);
     }
-
-    /// <summary>
-    /// Returns the memory the packet owns when it was not disposed.
-    /// </summary>
-    ~IpPacket() => Dispose(false);
 }

@@ -69,7 +69,7 @@
 * Fix: On Linux, the install command in the Linux guide works (sudo su -c "bash <(…)"; the installer prints it when run without root); installing or updating removes the downloaded package, an update keeps only the three newest versions and no longer leaves the VPN service stopped when its package does not unpack, and a no to starting at boot no longer turns off updates #linux
 * Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #client #android #store
 * Fix: Online games that send large packets, such as Counter-Strike 2 and Dota 2 on Steam, work through the VPN; every packet over 1280 bytes was dropped. A VpnHoodServer of your own needs this release too
-* Improve: When a server on a dynamic DNS name gets a new address while you are connected, the app finds the new address and connects again by itself, unless it is set to UDP #android #windows #linux
+* Improve: When a server on a dynamic DNS name gets a new address while you are connected, the app finds the new address and connects again by itself, unless it is set to UDP #android #ios #windows #linux
 
 # v8.1.851
 

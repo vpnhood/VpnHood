@@ -46,11 +46,12 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task<bool> GetAutomaticUpdate(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetAutomaticUpdate");
     public Task SetAutomaticUpdate(bool value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetAutomaticUpdate");
 
-    public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetSplitIpsViaApp");
+    // the split lists as a new install has them, empty, so their pages show the format hints
+    public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken) => Task.FromResult(new SplitIpsViaApp { Includes = "", Excludes = "", Blocks = "" });
     public Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitIpsViaApp");
-    public Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetSplitIpsViaDevice");
+    public Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken) => Task.FromResult(new SplitIpsViaDevice { Includes = "", Excludes = "" });
     public Task SetSplitIpsViaDevice(SplitIpsViaDevice value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitIpsViaDevice");
-    public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetSplitDomains");
+    public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken) => Task.FromResult(new SplitDomains { Includes = "", Excludes = "", Blocks = "" });
     public Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitDomains");
     public Task Connect(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Connect");
     public Task Diagnose(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Diagnose");

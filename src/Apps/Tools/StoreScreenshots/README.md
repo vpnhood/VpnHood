@@ -50,6 +50,22 @@ or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words o
 | `store/fixture.ios.json` | a patch too long to read inline — Connect's premium-only location list, derived from its fixture by the app's own rules. |
 | `store/fixture.app-review.json` | Connect only, never read by `generate`: what the iOS build adds for its purchase page (Sign in with Apple, App Store billing - `Connect.Ios.Apple/AppDelegate.cs`) and the purchase options the page shows. |
 
+Beside the AppInfo, a fixture or a patch may carry `installedApps` (what Split Apps lists,
+written by `generate` from the configuration), `purchaseOptions` (the App Review picture) and
+`proxyEndPoints` (the Proxies page's list, `AppProxyEndPointInfo` items; no store set shows
+one, a fresh install has none). The split lists of IPs and domains always answer empty, as a
+fresh install's are.
+
+## The website
+
+The website's feature pages show the app in each of the site's languages, drawn by this tool:
+`tools/make-app-shots.py` in the VpnHood.www repo writes a configuration of its own from
+CLIENT's `store/screenshots.json` (its languages, the Android phone's capabilities, its demo
+apps and the patch of any screen the Google Play set also shows), runs `generate` with a bare
+840-wide device per picture, and writes the pictures into that repo. A route, a fixture field
+or a fake answer the website needs is added here, as for a store; its screens are listed in
+that script, never here.
+
 ## Invariants — do not break these
 
 1. **The fixture says which product it is.** `descriptor.uiTheme`, `logoAssetPath`,

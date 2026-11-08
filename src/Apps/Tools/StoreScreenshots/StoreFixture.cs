@@ -6,12 +6,14 @@ using System.Text.Json.Serialization.Metadata;
 using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Premium;
+using VpnHood.AppLib.Api.Proxies;
 
 namespace VpnHood.App.StoreScreenshots;
 
 // fixture.json, read as the app's API would answer it: the whole document is
-// the AppInfo that Configure returns (descriptor, state, settings, profiles, languages), and
-// installedApps beside it is what GetInstalledApps returns.
+// the AppInfo that Configure returns (descriptor, state, settings, profiles, languages),
+// installedApps beside it is what GetInstalledApps returns, and proxyEndPoints, where a patch
+// gives one, what the proxy list holds.
 //
 // The fixture was recorded from an older client, and the contract has grown since: a member the
 // API now requires and the fixture does not carry is filled here with the value a plain CLIENT
@@ -24,6 +26,10 @@ internal sealed class StoreFixture
 
     // what GetPurchaseOptions answers: only the App Review screenshot's patch carries it
     public AppPurchaseOptions? PurchaseOptions { get; init; }
+
+    // what the proxy list answers: none on a fresh install, and only a picture of the list (the
+    // website's Smart Proxies screenshot) carries some, in its patch
+    public IReadOnlyList<AppProxyEndPointInfo> ProxyEndPoints { get; init; } = [];
     public required IReadOnlyList<string> Filled { get; init; }
     public string? ContractDrift { get; init; }
 
@@ -52,9 +58,11 @@ internal sealed class StoreFixture
                    ?? throw new InvalidOperationException($"{path} holds no app info.");
         var installedApps = root["installedApps"]?.Deserialize<List<DeviceAppInfo>>(Options(strict: false)) ?? [];
         var purchaseOptions = root["purchaseOptions"]?.Deserialize<AppPurchaseOptions>(Options(strict: true));
+        var proxyEndPoints = root["proxyEndPoints"]?.Deserialize<List<AppProxyEndPointInfo>>(Options(strict: true)) ?? [];
 
         return new StoreFixture {
-            Info = info, InstalledApps = installedApps, PurchaseOptions = purchaseOptions, Filled = filled, ContractDrift = drift
+            Info = info, InstalledApps = installedApps, PurchaseOptions = purchaseOptions, ProxyEndPoints = proxyEndPoints,
+            Filled = filled, ContractDrift = drift
         };
     }
 

@@ -4,14 +4,21 @@ using VpnHood.Net.Toolkit.Generics;
 
 namespace VpnHood.App.StoreScreenshots;
 
-// An empty proxy list, which is what the Proxies page shows on a fresh install - the fixture
-// records no proxies.
-internal sealed class FakeProxyEndPointsApi : IProxyEndPointsApi
+// The proxy list from the fixture (StoreFixture.ProxyEndPoints): empty, as the Proxies page is on a
+// fresh install, unless a patch gives one. The page's status filter and paging are answered as the
+// app answers them, so a list longer than a page pages.
+internal sealed class FakeProxyEndPointsApi(IReadOnlyList<AppProxyEndPointInfo> proxies) : IProxyEndPointsApi
 {
     public Task<ListResult<AppProxyEndPointInfo>> List(string? search, bool includeSucceeded, bool includeFailed, bool includeUnknown,
         bool includeDisabled, int? recordIndex, int? recordCount, CancellationToken cancellationToken)
     {
-        return Task.FromResult(new ListResult<AppProxyEndPointInfo> { Items = [], TotalCount = 0 });
+        var matches = proxies.Where(x =>
+            !x.EndPoint.IsEnabled ? includeDisabled
+            : x.Status.FailedCount > x.Status.SucceededCount ? includeFailed
+            : x.Status.SucceededCount > 0 ? includeSucceeded
+            : includeUnknown).ToArray();
+        var items = matches.Skip(recordIndex ?? 0).Take(recordCount ?? matches.Length).ToArray();
+        return Task.FromResult(new ListResult<AppProxyEndPointInfo> { Items = items, TotalCount = matches.Length });
     }
 
     public Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken) => Task.FromResult<AppProxyEndPointInfo?>(null);

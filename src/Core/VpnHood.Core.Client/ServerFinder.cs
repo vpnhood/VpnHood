@@ -32,6 +32,7 @@ public class ServerFinder(
     IProxyConnector? proxyConnector,
     bool includeIpV6,
     bool useKillSwitch,
+    HostNameAddresses? knownHostAddresses = null,
     int maxDegreeOfParallelism = 10)
 {
     private ProgressMonitor? _progressMonitor;
@@ -39,6 +40,8 @@ public class ServerFinder(
     // Kept beside discovery, never in the public endpoint record or its saved/logged representation.
     // Two tokens may name the same endpoint during a key rotation: keep the selected token's key.
     private readonly ConcurrentDictionary<VpnEndPoint, byte[]> _serverSecrets = new(ReferenceEqualityComparer.Instance);
+    // the endpoints the token's name gave, as against its own or a custom one
+    private readonly ConcurrentDictionary<VpnEndPoint, bool> _byHostName = new(ReferenceEqualityComparer.Instance);
     public bool IncludeIpV6 { get; set; } = includeIpV6;
     public string? ServerLocation => serverLocation;
     public IReadOnlyList<IPEndPoint> CustomServerEndpoints => customServerEndpoints;
@@ -46,11 +49,16 @@ public class ServerFinder(
 
     internal byte[] GetServerSecret(VpnEndPoint vpnEndPoint) => _serverSecrets[vpnEndPoint];
 
-    private VpnEndPoint CreateVpnEndPoint(IPEndPoint endPoint, ServerToken serverToken)
+    internal bool IsByHostName(VpnEndPoint vpnEndPoint) => _byHostName.ContainsKey(vpnEndPoint);
+
+    private VpnEndPoint CreateVpnEndPoint(IPEndPoint endPoint, ServerToken serverToken, bool isByHostName)
     {
         var vpnEndPoint = new VpnEndPoint(endPoint, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase);
         // Redirects stay in the access key's farm, even when they name another certificate's host.
         _serverSecrets[vpnEndPoint] = serverToken.Secret ?? farmSecret;
+        if (isByHostName)
+            _byHostName[vpnEndPoint] = true;
+
         return vpnEndPoint;
     }
 
@@ -72,12 +80,19 @@ public class ServerFinder(
         var itemExceptions = new ConcurrentBag<(Exception exception, ServerToken serverToken)>();
         var tasks = serverTokens.Select(async serverToken => {
             try {
-                var endpoints = customServerEndpoints.Any()
-                    ? customServerEndpoints
-                    : await EndPointResolver.ResolveHostEndPoints(serverToken, endPointStrategy, cancellationToken,
-                        ownResolverSocketFactory: useKillSwitch ? socketFactory : null).Vhc();
+                if (customServerEndpoints.Any())
+                    return customServerEndpoints
+                        .Select(ep => CreateVpnEndPoint(ep, serverToken, isByHostName: false))
+                        .ToArray();
 
-                return endpoints.Select(ep => CreateVpnEndPoint(ep, serverToken)).ToArray();
+                var resolved = await EndPointResolver.ResolveHostEndPointsAndName(serverToken,
+                    endPointStrategy, cancellationToken,
+                    ownResolverSocketFactory: useKillSwitch ? socketFactory : null,
+                    knownAddresses: knownHostAddresses).Vhc();
+
+                return resolved.EndPoints
+                    .Select(ep => CreateVpnEndPoint(ep, serverToken, isByHostName: resolved.NameEndPoints.Contains(ep)))
+                    .ToArray();
             }
             catch (OperationCanceledException) {
                 throw;

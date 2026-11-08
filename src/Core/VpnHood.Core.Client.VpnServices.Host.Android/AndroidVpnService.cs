@@ -149,6 +149,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         return new VpnHoodClientFactory();
     }
 
+    public bool CanReconnect => true;
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {

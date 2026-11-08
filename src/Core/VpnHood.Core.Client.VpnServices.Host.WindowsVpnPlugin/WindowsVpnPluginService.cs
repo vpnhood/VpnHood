@@ -173,6 +173,9 @@ internal sealed class WindowsVpnPluginService : IVpnServiceHandler
 
     public VpnHoodClientFactory CreateClientFactory() => new();
 
+    // an adapter starts only inside Windows' Connect, which hands it the channel's main transport
+    public bool CanReconnect => false;
+
     // Windows shows the VPN's state itself.
     public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {

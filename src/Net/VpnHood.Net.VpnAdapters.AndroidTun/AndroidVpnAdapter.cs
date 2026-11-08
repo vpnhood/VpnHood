@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using Android.Content;
 using Android.Net;
 using Android.OS;
 using Microsoft.Extensions.Logging;
@@ -129,6 +130,45 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     {
         var ret = vpnService.Protect(socket.Handle.ToInt32());
         return ret;
+    }
+
+    // .NET lists no DNS servers on Android, so the networks under the VPN give theirs, in the order Android prefers
+    // the networks, as a protected socket takes the best one. One Android has not validated is left out: a captive
+    // portal's resolver may answer every name with the portal's address.
+    public override IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers()
+    {
+        var connectivityManager = vpnService.GetSystemService(Context.ConnectivityService) as ConnectivityManager ??
+                                  throw new InvalidOperationException("Android gave no connectivity service.");
+
+        return connectivityManager.GetAllNetworks()
+            .Where(network => IsInternetNetwork(connectivityManager.GetNetworkCapabilities(network)))
+            .OrderBy(network => GetTransportRank(connectivityManager.GetNetworkCapabilities(network)))
+            .SelectMany(network => connectivityManager.GetLinkProperties(network)?.DnsServers ?? [])
+            .Select(x => x.GetAddress())
+            .OfType<byte[]>()
+            .Select(x => new IPAddress(x))
+            .Where(x => !x.IsIPv6LinkLocal) // its interface's scope is lost here
+            .Distinct()
+            .ToArray();
+    }
+
+    private static bool IsInternetNetwork(NetworkCapabilities? capabilities)
+    {
+        return capabilities != null &&
+               capabilities.HasCapability(NetCapability.Internet) &&
+               capabilities.HasCapability(NetCapability.Validated) &&
+               capabilities.HasCapability(NetCapability.NotVpn);
+    }
+
+    private static readonly TransportType[] PreferredTransports = [
+        TransportType.Ethernet, TransportType.Wifi, TransportType.Usb, TransportType.Satellite,
+        TransportType.Bluetooth, TransportType.Cellular
+    ];
+
+    private static int GetTransportRank(NetworkCapabilities? capabilities)
+    {
+        var rank = capabilities == null ? -1 : Array.FindIndex(PreferredTransports, capabilities.HasTransport);
+        return rank < 0 ? PreferredTransports.Length : rank;
     }
 
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)

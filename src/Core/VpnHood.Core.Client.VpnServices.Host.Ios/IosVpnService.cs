@@ -201,6 +201,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         return new VpnHoodClientFactory();
     }
 
+    // the extension's tunnel outlives an adapter: a new one applies its settings to it anew
+    public bool CanReconnect => true;
+
     private async Task StopTunnelAsync(Action completionHandler, Exception? stopException)
     {
         try {

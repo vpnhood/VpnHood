@@ -50,6 +50,8 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
         return new VpnHoodClientFactory();
     }
 
+    public bool CanReconnect => true;
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {

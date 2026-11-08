@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
@@ -17,6 +18,7 @@ public class TestVpnService
     private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
     public IVpnAdapter? CurrentVpnAdapter { get; private set; }
+    public VpnHoodClient? LastClient { get; private set; }
 
     // config folder should be read from static place in read environment, because service can be started independently
     public TestVpnService(
@@ -59,8 +61,11 @@ public class TestVpnService
 
     public VpnHoodClientFactory CreateClientFactory()
     {
-        return new TestClientFactory(_netFilter);
+        return new TestClientFactory(_netFilter, client => LastClient = client);
     }
+
+    // a test plays a host that cannot connect by itself, as Windows' VPN plug-in
+    public bool CanReconnect { get; set; } = true;
 
     public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {

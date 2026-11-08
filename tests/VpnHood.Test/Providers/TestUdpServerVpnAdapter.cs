@@ -50,6 +50,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketForw
     public bool CanProtectSocket => false;
     public bool ProtectSocket(Socket socket) => false;
     public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;
+    public IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers() => [];
     public void FirePrimaryAdapterIpChanged()=> PrimaryAdapterIpChanged?.Invoke(this, EventArgs.Empty);
 
     public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)

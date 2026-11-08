@@ -537,6 +537,16 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return true;
     }
 
+    // The machine's DNS servers as .NET lists them, but this tunnel's own: Linux lists them among systemd-resolved's
+    // links. A platform where .NET lists none, Android, has its own.
+    public virtual IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers()
+    {
+        var tunnelDnsServers = _startOptions?.DnsServers ?? [];
+        return DnsUtils.GetNetworkDnsServers()
+            .Where(x => !tunnelDnsServers.Contains(x))
+            .ToArray();
+    }
+
     private void DiscoverPrimaryAdapterIps(bool protect)
     {
         var primaryAdapterIpV4 = DiscoverPrimaryAdapterIpViaProtect(AddressFamily.InterNetwork, protect);

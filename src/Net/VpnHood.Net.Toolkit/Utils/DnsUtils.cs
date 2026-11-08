@@ -8,6 +8,10 @@ namespace VpnHood.Net.Toolkit.Utils;
 
 public static class DnsUtils
 {
+    private const ushort DnsResponseFlag = 0x8000; // QR
+    private const ushort DnsTruncatedFlag = 0x0200; // TC
+    private const ushort DnsResponseCodeMask = 0x000F; // RCODE
+
     // The resolvers of the networks the machine reaches beyond itself by: adapters up with a gateway, no
     // loopback or tunnel. Not Windows' fec0:0:0:ffff:: placeholders, which it lists where IPv6 has none, nor a
     // resolver on this machine: a stub, which asks from a process of its own. Linux's .NET reads /etc/resolv.conf
@@ -131,10 +135,22 @@ public static class DnsUtils
             throw new InvalidOperationException("Response ID does not match query ID.");
         }
 
-        // ReSharper disable UnusedVariable
+        // a response, whole and without an error: a truncated one may lack some of the name's addresses, which its
+        // caller cannot tell, as one asking whether an address is still the name's
         var flags = (ushort)IPAddress.NetworkToHostOrder(reader.ReadInt16());
+        if ((flags & DnsResponseFlag) == 0)
+            throw new InvalidOperationException("The DNS message is not a response.");
+
+        if ((flags & DnsTruncatedFlag) != 0)
+            throw new InvalidOperationException("The DNS response is truncated.");
+
+        if ((flags & DnsResponseCodeMask) != 0)
+            throw new InvalidOperationException(
+                $"The DNS response has an error. ResponseCode: {flags & DnsResponseCodeMask}");
+
         var questionCount = (ushort)IPAddress.NetworkToHostOrder(reader.ReadInt16());
         var answerCount = (ushort)IPAddress.NetworkToHostOrder(reader.ReadInt16());
+        // ReSharper disable UnusedVariable
         var authorityCount = (ushort)IPAddress.NetworkToHostOrder(reader.ReadInt16());
         var additionalCount = (ushort)IPAddress.NetworkToHostOrder(reader.ReadInt16());
         // ReSharper restore UnusedVariable
@@ -157,7 +173,7 @@ public static class DnsUtils
             var dataLength = (ushort)IPAddress.NetworkToHostOrder(reader.ReadInt16());
             // ReSharper restore UnusedVariable
 
-            if (type == 1 && @class == 1) // Type A, Class IN
+            if (type == 1 && @class == 1 && dataLength == 4) // Type A, Class IN, an IPv4 address
             {
                 var addressBytes = reader.ReadBytes(dataLength);
                 ipAddresses.Add(new IPAddress(addressBytes));

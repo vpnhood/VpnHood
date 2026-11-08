@@ -47,6 +47,9 @@ public static class ClientExceptionConverter
         if (apiError.Is<VpnAdapterFailedException>())
             exception = new VpnAdapterFailedException(apiError.Message);
 
+        if (apiError.Is<ServerAddressChangedException>())
+            exception = new ServerAddressChangedException(apiError.Message);
+
         if (exception != null)
             apiError.ExportData(exception.Data);
 

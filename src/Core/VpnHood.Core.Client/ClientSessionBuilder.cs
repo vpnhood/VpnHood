@@ -3,6 +3,7 @@ using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
@@ -347,7 +348,8 @@ internal class ClientSessionBuilder(
                     SplitDnsMode = config.SplitDnsMode,
                     DropQuic = config.DropQuic,
                     DropUdp = config.DropUdp,
-                    UseTcpForwarding = config.UseTcpForwarding
+                    UseTcpForwarding = config.UseTcpForwarding,
+                    ServerAddressCheck = CreateServerAddressCheck(vpnEndPoint)
                 },
                 config: new ClientSessionConfig {
                     AdapterOptions = adapterOptions,
@@ -440,6 +442,14 @@ internal class ClientSessionBuilder(
         ServerProtocolMemory.Record(requestSender.ConnectorService.VpnEndPoint.TcpEndPoint, farmSecret,
             requestSender.ConnectorService.IsLegacyProtocol);
         return ret;
+    }
+
+    // only for an address the name gave, and an IPv4 one: the name is asked again for IPv4 addresses only
+    private ServerAddressCheck? CreateServerAddressCheck(VpnEndPoint vpnEndPoint)
+    {
+        return serverFinder.IsByHostName(vpnEndPoint) && vpnEndPoint.TcpEndPoint.AddressFamily == AddressFamily.InterNetwork
+            ? new ServerAddressCheck(vpnEndPoint.HostName, vpnEndPoint.TcpEndPoint.Address, vpnAdapter)
+            : null;
     }
 
     // not waited for: its connections' closes may wait for their peers, and the connect's error would wait with them

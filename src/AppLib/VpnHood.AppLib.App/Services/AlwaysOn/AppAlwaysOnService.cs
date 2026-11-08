@@ -296,7 +296,8 @@ internal sealed class AppAlwaysOnService : IDisposable
     // whose access error after the session was up is no refused key (a key it refuses fails the next connect,
     // and an HTTP 401, UnauthorizedAccessException, is one); a server busy or down for maintenance. And the
     // VPN adapter that stopped on its own - its interface disabled or gone, its I/O broken - whose next connect
-    // makes a new one. And a connect refused while the app installs its update, whose new version's start
+    // makes a new one; and a server that moved from the address its name gave the session, whose next connect looks
+    // the name up again. And a connect refused while the app installs its update, whose new version's start
     // connects; one whose install ended without installing is tried again.
     internal static bool IsTriedAgain(ApiError error, bool sessionWasUp)
     {
@@ -324,6 +325,7 @@ internal sealed class AppAlwaysOnService : IDisposable
                error.Is<VpnServiceNotReadyException>() ||
                error.Is<VpnServiceTimeoutException>() ||
                error.Is<VpnAdapterFailedException>() ||
+               error.Is<ServerAddressChangedException>() ||
                error.Is<AppUpdatingException>();
     }
 

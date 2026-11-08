@@ -16,6 +16,10 @@ public interface IVpnServiceHandler
     /// </summary>
     VpnHoodClientFactory CreateClientFactory();
 
+    // Whether the service may connect again by itself, with no start from the app or the system: false where only
+    // the system's start may bring an adapter up.
+    bool CanReconnect { get; }
+
     void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken);
     void StopNotification();
     void StopSelf();

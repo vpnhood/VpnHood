@@ -49,6 +49,8 @@ public class WindowsVpnService : IVpnServiceHandler, IDisposable
         return new VpnHoodClientFactory();
     }
 
+    public bool CanReconnect => true;
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         IVpnAdapter vpnAdapter = debugData?.Contains("/windivert", StringComparison.OrdinalIgnoreCase) is true

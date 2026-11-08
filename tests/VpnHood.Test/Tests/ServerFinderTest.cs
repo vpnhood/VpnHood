@@ -1,7 +1,11 @@
-﻿using VpnHood.Core.Client;
+﻿using System.Net;
+using System.Net.Sockets;
+using System.Security.Cryptography;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.AccessManagers;
@@ -238,4 +242,92 @@ public class ServerFinderTest : TestBase
         await nextClient.WaitForState(ClientState.Connected, TestCt);
         Assert.AreEqual(server.ServerHost.TcpEndPoints.First(), nextClient.RequiredSession.Config.HostTcpEndPoint);
     }
+
+    // only an address the name gave may move with the name; asks a real name, as EndPointResolverTests do
+    [TestMethod]
+    public async Task Only_the_names_addresses_are_by_host_name()
+    {
+        var tokenEndPoint = IPEndPoint.Parse("192.0.2.1:443");
+        var finder = CreateServerFinder(EndPointStrategy.DnsFirst);
+        var endpoints = await finder.ResolveVpnEndPoints([CreateNamedServerToken(tokenEndPoint)], false, TestCt);
+
+        Assert.IsFalse(finder.IsByHostName(endpoints.Single(x => x.TcpEndPoint.Equals(tokenEndPoint))));
+        var nameEndPoints = endpoints.Where(x => !x.TcpEndPoint.Equals(tokenEndPoint)).ToArray();
+        Assert.IsNotEmpty(nameEndPoints);
+        Assert.IsTrue(nameEndPoints.All(finder.IsByHostName));
+    }
+
+    // the name's address on a port of the token's own is the token's endpoint, which never moves with the name
+    [TestMethod]
+    public async Task The_names_address_on_another_port_is_not_by_host_name()
+    {
+        var nameAddresses = await Dns.GetHostAddressesAsync("vpnhood.com", AddressFamily.InterNetwork, TestCt);
+        var tokenEndPoint = new IPEndPoint(nameAddresses.First(), 8443);
+        var serverToken = CreateNamedServerToken(tokenEndPoint);
+        serverToken.HostPort = 443;
+        var finder = CreateServerFinder(EndPointStrategy.DnsFirst);
+        var endpoints = await finder.ResolveVpnEndPoints([serverToken], false, TestCt);
+
+        Assert.IsFalse(finder.IsByHostName(endpoints.Single(x => x.TcpEndPoint.Equals(tokenEndPoint))));
+    }
+
+    // after a server's move, the connect takes the addresses its check found, never asking the name: a name that never
+    // resolves (.invalid) proves it
+    [TestMethod]
+    public async Task Known_addresses_of_the_name_are_taken_without_asking_it()
+    {
+        var serverToken = CreateNamedServerToken(IPEndPoint.Parse("192.0.2.1:443"));
+        serverToken.HostName = "moved-server.invalid";
+        serverToken.HostEndPoints = null;
+        var knownAddress = IPAddress.Parse("192.0.2.7");
+        var finder = CreateServerFinder(EndPointStrategy.DnsFirst, new HostNameAddresses {
+            HostName = serverToken.HostName,
+            Addresses = [knownAddress]
+        });
+
+        var endpoints = await finder.ResolveVpnEndPoints([serverToken], false, TestCt);
+
+        Assert.AreEqual(new IPEndPoint(knownAddress, 443), endpoints.Single().TcpEndPoint);
+        Assert.IsTrue(finder.IsByHostName(endpoints.Single()));
+    }
+
+    // another name's addresses are never taken for the token's: a redirect's, say
+    [TestMethod]
+    public async Task Known_addresses_of_another_name_are_not_taken()
+    {
+        var serverToken = CreateNamedServerToken(IPEndPoint.Parse("192.0.2.1:443"));
+        serverToken.HostName = "moved-server.invalid";
+        serverToken.HostEndPoints = null;
+        var finder = CreateServerFinder(EndPointStrategy.DnsFirst, new HostNameAddresses {
+            HostName = "another-server.invalid",
+            Addresses = [IPAddress.Parse("192.0.2.7")]
+        });
+
+        await Assert.ThrowsExactlyAsync<EndPointDiscoveryException>(() =>
+            finder.ResolveVpnEndPoints([serverToken], false, TestCt));
+    }
+
+    [TestMethod]
+    public async Task No_address_is_by_host_name_when_the_name_is_not_asked()
+    {
+        var tokenEndPoint = IPEndPoint.Parse("192.0.2.1:443");
+        var finder = CreateServerFinder(EndPointStrategy.IpOnly);
+        var endpoints = await finder.ResolveVpnEndPoints([CreateNamedServerToken(tokenEndPoint)], false, TestCt);
+
+        Assert.IsFalse(finder.IsByHostName(endpoints.Single()));
+    }
+
+    private static ServerFinder CreateServerFinder(EndPointStrategy endPointStrategy,
+        HostNameAddresses? knownHostAddresses = null) =>
+        new(new TestSocketFactory(), RandomNumberGenerator.GetBytes(16), null, TimeSpan.FromSeconds(10),
+            endPointStrategy, [], null, null, false, useKillSwitch: false, knownHostAddresses: knownHostAddresses);
+
+    private static ServerToken CreateNamedServerToken(IPEndPoint tokenEndPoint) => new() {
+        CreatedTime = DateTime.UtcNow,
+        HostName = "vpnhood.com",
+        HostPort = tokenEndPoint.Port,
+        IsValidHostName = true,
+        Secret = RandomNumberGenerator.GetBytes(16),
+        HostEndPoints = [tokenEndPoint]
+    };
 }

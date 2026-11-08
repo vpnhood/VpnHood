@@ -73,7 +73,9 @@ implementation in another language writes and reads the JSON they make.
 1. **The options**, `vpn.config`: JSON (`VpnServiceOptions`) saying what to connect to and how - the
    access key, the transport, the proxies - and the contract version it is written in. The app writes it
    at each connect and at each change of its settings; the VPN service reads it at each start, including
-   one the OS makes on its own.
+   one the OS makes on its own, and one it makes itself when a session's server has moved from the
+   address its name gave: that session's end is never written to the status, which goes on with the
+   new session's states.
 2. **The split-tunnel rules**: SQLite databases the app publishes in two folders beside the options,
    `ip-filters` and `domain-filters`, each with a `manifest.json` naming its databases in the order they
    apply (`{ "DbFiles": [ ... ] }`), which the VPN service reads again at each reconfigure.

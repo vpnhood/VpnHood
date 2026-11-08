@@ -14,8 +14,16 @@ public static class EndPointResolver
     private static readonly TimeSpan OwnResolverTimeout = TimeSpan.FromSeconds(5);
 
     private static async Task<IEnumerable<IPEndPoint>> TryGetEndPointFromDns(ServerToken serverToken,
-        ISocketFactory? ownResolverSocketFactory, CancellationToken cancellationToken)
+        ISocketFactory? ownResolverSocketFactory, HostNameAddresses? knownAddresses,
+        CancellationToken cancellationToken)
     {
+        if (knownAddresses != null &&
+            string.Equals(knownAddresses.HostName, serverToken.HostName, StringComparison.OrdinalIgnoreCase)) {
+            VhLogger.Instance.LogInformation("Taking the host name's addresses known already: {HostName}",
+                VhLogger.FormatHostName(serverToken.HostName));
+            return knownAddresses.Addresses.Select(x => new IPEndPoint(x, serverToken.HostPort));
+        }
+
         try {
             VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...",
                 VhLogger.FormatHostName(serverToken.HostName));
@@ -70,6 +78,17 @@ public static class EndPointResolver
     public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken,
         EndPointStrategy strategy, CancellationToken cancellationToken, ISocketFactory? ownResolverSocketFactory = null)
     {
+        var resolved = await ResolveHostEndPointsAndName(serverToken, strategy, cancellationToken,
+            ownResolverSocketFactory).Vhc();
+        return resolved.EndPoints.ToArray();
+    }
+
+    // ResolveHostEndPoints, with the addresses the name gave among them. knownAddresses: what the token's name gave,
+    // known already, which is taken rather than asking it (HostNameAddresses).
+    public static async Task<ResolvedHostEndPoints> ResolveHostEndPointsAndName(ServerToken serverToken,
+        EndPointStrategy strategy, CancellationToken cancellationToken, ISocketFactory? ownResolverSocketFactory = null,
+        HostNameAddresses? knownAddresses = null)
+    {
         // use token strategy if auto
         if (strategy == EndPointStrategy.Auto)
             strategy = serverToken.EndPointsStrategy;
@@ -83,7 +102,7 @@ public static class EndPointResolver
         // fix token only strategy
         if (strategy == EndPointStrategy.IpOnly) {
             if (!VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))
-                return serverToken.HostEndPoints;
+                return new ResolvedHostEndPoints { EndPoints = serverToken.HostEndPoints, NameEndPoints = [] };
 
             VhLogger.Instance.LogWarning(
                 "TokenOnly strategy is not supported by this token because there are no endpoints in the token. Fallback to DnsOnly.");
@@ -100,7 +119,7 @@ public static class EndPointResolver
         // if token has host name, try to resolve it
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var dnsEndPoints = serverToken.IsValidHostName
-            ? await TryGetEndPointFromDns(serverToken, ownResolverSocketFactory, cancellationToken).Vhc()
+            ? await TryGetEndPointFromDns(serverToken, ownResolverSocketFactory, knownAddresses, cancellationToken).Vhc()
             : [];
 
         // follow the end point strategy to combine the endpoints
@@ -116,6 +135,9 @@ public static class EndPointResolver
         if (!ret.Any())
             throw new EndPointDiscoveryException("Could not resolve any host endpoint from AccessToken.");
 
-        return ret;
+        return new ResolvedHostEndPoints {
+            EndPoints = ret,
+            NameEndPoints = dnsEndPoints.ToArray()
+        };
     }
 }

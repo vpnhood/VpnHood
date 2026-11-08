@@ -23,4 +23,5 @@ internal class ClientSessionOptions
     public required bool DropUdp { get; init; }
     public required bool DropQuic { get; init; }
     public required bool UseTcpForwarding { get; init; }
+    public required ServerAddressCheck? ServerAddressCheck { get; init; }
 }

@@ -1,3 +1,4 @@
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -18,4 +19,8 @@ public class VpnHoodClientParams
 
     // the proxies' folder, which travels with a backup (VpnServiceFolders)
     public required string DataFolder { get; init; }
+
+    // what the token's name gave, known already, after a server's move: the connect takes it rather than asking the
+    // name (HostNameAddresses)
+    public HostNameAddresses? KnownHostAddresses { get; init; }
 }

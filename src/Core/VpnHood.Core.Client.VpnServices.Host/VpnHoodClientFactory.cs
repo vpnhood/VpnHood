@@ -33,7 +33,8 @@ public class VpnHoodClientFactory
             tracker: CreateTracker(clientParams),
             // this device's, so the config folder: the data folder travels with a backup
             workingFolder: clientParams.ConfigFolder,
-            options: clientParams.ServiceOptions.ClientOptions);
+            options: clientParams.ServiceOptions.ClientOptions,
+            knownHostAddresses: clientParams.KnownHostAddresses);
     }
 
     // The filter the split-ip gates chain over: it is evaluated first and its veto wins. Null means no

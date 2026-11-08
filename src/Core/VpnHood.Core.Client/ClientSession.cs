@@ -49,6 +49,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     // the session's UDP when the server offers it, which its tunnel owns
     private readonly ClientUdpPacketChannel? _udpChannel;
 
+    // where the session's address came from the server's name, which may move it
+    private readonly ServerAddressCheck? _serverAddressCheck;
+    private int _isCheckingServerAddress;
+
     private DateTime? _autoWaitTime;
     // the current network's: a change cancels it, so a packet channel still being added on the old network gives
     // up the channel lock at once rather than at its connect timeout
@@ -91,6 +95,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
         _domainFilteringService = options.DomainFilteringService;
+        _serverAddressCheck = options.ServerAddressCheck;
         Config = config;
         Info = options.SessionInfo;
 
@@ -634,12 +639,16 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             if (now - _lastConnectionErrorTime.Value > Config.Transport.SessionTimeout)
                 await DisposeAsync(ex).Vhc();
 
-            // pause after retry limit
+            // pause after retry limit; a pause's start asks whether the server has moved
             else if (now - _lastConnectionErrorTime.Value > Config.Transport.UnstableTimeout) {
+                var isPauseStart = _state != ClientState.Waiting;
                 _autoWaitTime = now;
                 _status.WaitingCount++;
                 State = ClientState.Waiting;
                 VhLogger.Instance.LogWarning(ex, "Client is paused because of too many connection errors.");
+                if (isPauseStart && _serverAddressCheck != null)
+                    _ = VhInvoker.TryInvokeAsync("check whether the server has moved", LogLevel.Warning,
+                        () => CheckServerAddress(_serverAddressCheck, _cancellationTokenSource.Token));
             }
 
             // set unstable state if it could not establish any connection
@@ -661,6 +670,33 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         }
 
         return default;
+    }
+
+    // A server that stopped answering may have moved, its name now giving other addresses: the session then ends with
+    // that error, carrying them, for a new connect. Not once a request was answered meanwhile: the server is still
+    // where the session is, whatever its name says. One check at a time: a pause may start while the last pause's
+    // check still waits for its answer.
+    internal async Task CheckServerAddress(ServerAddressCheck serverAddressCheck, CancellationToken cancellationToken)
+    {
+        if (Interlocked.Exchange(ref _isCheckingServerAddress, 1) == 1)
+            return;
+
+        try {
+            var newAddresses = await serverAddressCheck.TryGetNewAddresses(cancellationToken).Vhc();
+            if (newAddresses is null)
+                return;
+
+            if (_state is not (ClientState.Unstable or ClientState.Waiting)) {
+                VhLogger.Instance.LogInformation("The session recovered while the server's name was asked, so it goes on.");
+                return;
+            }
+
+            await DisposeAsync(new ServerAddressChangedException(
+                "The server's address has changed. Please connect again.", newAddresses)).Vhc();
+        }
+        finally {
+            Volatile.Write(ref _isCheckingServerAddress, 0);
+        }
     }
 
     public void DropCurrentConnections()

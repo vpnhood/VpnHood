@@ -75,6 +75,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     // caches and SNI extraction re-derive themselves.
     public NetFilter NetFilter { get; }
 
+    // knownHostAddresses: what the token's name gave, known already, which the connect takes rather than asking it
+    // (HostNameAddresses)
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
         ISocketFactory socketFactory,
@@ -82,7 +84,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IProxyConnector? proxyConnector,
         ITracker? tracker,
         string workingFolder,
-        ClientOptions options)
+        ClientOptions options,
+        HostNameAddresses? knownHostAddresses = null)
     {
         if (!VhUtils.IsInfinite(options.MaxPacketChannelTimespan) &&
             options.MaxPacketChannelTimespan < options.MinPacketChannelTimespan)
@@ -159,7 +162,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             tracker: options.AllowEndPointTracker ? tracker : null,
             proxyConnector: ProxyConnector,
             includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
-            useKillSwitch: options.UseKillSwitch);
+            useKillSwitch: options.UseKillSwitch,
+            knownHostAddresses: knownHostAddresses);
 
         // SNI extraction is sensitive and costly, so it runs only while a domain rule could consume it
         // (or SNI logging is forced). Nobody tells the client: it derives the answer from its own pipe
@@ -195,18 +199,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private void FireStateChanged()
     {
+        var state = State;
         lock (_stateEventLock) {
-            if (_lastState == State)
+            if (_lastState == state)
                 return;
-            _lastState = State;
+            _lastState = state;
             StateChangedTime = FastDateTime.UtcNow;
         }
 
-        VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
+        VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", state);
         Task.Run(() => {
             StateChanged?.Invoke(this, EventArgs.Empty);
-            if (State == ClientState.Disposed)
-                StateChanged = null; //no more event will be raised after disposed
+
+            // no more event after the Disposed one, which only its own raise may end: an earlier raise that ends
+            // after the client is disposed would leave it no handler
+            if (state == ClientState.Disposed)
+                StateChanged = null;
         }, CancellationToken.None);
     }
 

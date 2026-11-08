@@ -33,6 +33,11 @@ public interface IVpnAdapter : IPacketTransport
     bool CanProtectSocket { get; }
     bool ProtectSocket(Socket socket);
     bool ProtectSocket(Socket socket, IPAddress ipAddress);
+    /// <summary>
+    /// The DNS servers of the network the tunnel runs over, which a protected socket reaches outside the tunnel;
+    /// not the tunnel's own. None where they are unknown.
+    /// </summary>
+    IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers();
     Task Start(VpnAdapterOptions options, CancellationToken cancellationToken);
     void Stop();
     IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion);

@@ -214,10 +214,12 @@ internal sealed class AppApi(VpnHoodApp app) : IAppApi
         return await File.ReadAllBytesAsync(app.SettingsService.PromotionImageFilePath, cancellationToken).Vhc();
     }
 
+    // Off the caller's thread: building the list takes seconds on a slow phone, and in process the
+    // caller is the UI thread, which froze until the list was done
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
     {
-        return Task.FromResult<IReadOnlyList<DeviceAppInfo>>(
-            app.InstalledApps.Select(x => x.ToAppDto()).ToArray());
+        return Task.Run<IReadOnlyList<DeviceAppInfo>>(
+            () => app.InstalledApps.Select(x => x.ToAppDto()).ToArray(), cancellationToken);
     }
 
     public Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken)

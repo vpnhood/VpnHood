@@ -630,6 +630,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         var appState = new AppState {
             ConfigTime = Settings.ConfigTime,
+            AccountTime = Services.AccountService?.AccountTime,
             SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
             SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
             ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, vpnProfileInfo),

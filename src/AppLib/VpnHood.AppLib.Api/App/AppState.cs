@@ -12,6 +12,9 @@ namespace VpnHood.AppLib.Api.App;
 public class AppState
 {
     public required DateTime ConfigTime { get; init; }
+
+    // When the account last changed, from any UI; null where the build has no accounts (AppDescriptor.IsAccountSupported)
+    public required DateTime? AccountTime { get; init; }
     public required AppConnectionState ConnectionState { get; init; }
     public required AppSessionInfo? SessionInfo { get; init; }
     public required AppSessionStatus? SessionStatus { get; init; }

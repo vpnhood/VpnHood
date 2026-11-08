@@ -15,7 +15,7 @@ namespace VpnHood.AppUi.Common;
 // the profiles - and never the app itself, so the same pages run on the device and in a browser.
 // The values are read again through the API: the state every second by the home's clock and after
 // every action, the rest when the state says the configuration moved (AppState.ConfigTime)
-// or a page saved.
+// or a page saved, and the account when the state says it changed (AppState.AccountTime).
 public static class VhApp
 {
     private static VpnHoodApi? _api;
@@ -116,6 +116,10 @@ public static class VhApp
         _state = state;
         if (configMoved)
             await ReloadInfo(cancellationToken);
+
+        // a sign-in or sign-out from another UI: a paired browser's reaches the TV's own screen
+        if (state.AccountTime != _accountTime)
+            await LoadAccount(false, cancellationToken);
     }
 
     public static async Task ReloadInfo(CancellationToken cancellationToken)
@@ -133,12 +137,17 @@ public static class VhApp
         await ReloadInfo(cancellationToken);
     }
 
-    // The account: read once at start and after a sign-in,
-    // sign-out or purchase, never polled.
+    // The account: read at start, after this UI's sign-in, sign-out or purchase, and when the state
+    // says it changed - never polled itself.
     public static Account? Account { get; private set; }
+
+    // the state's AccountTime as of the last read; taken before the read, so a change during it is
+    // read again at the next state, and a read that fails is not repeated every second
+    private static DateTime? _accountTime;
 
     public static async Task LoadAccount(bool withRefresh, CancellationToken cancellationToken)
     {
+        _accountTime = State.AccountTime;
         if (!Descriptor.IsAccountSupported) {
             Account = null;
             return;

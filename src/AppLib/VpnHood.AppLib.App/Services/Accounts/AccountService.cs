@@ -74,6 +74,10 @@ public class AccountService
 
     public BillingService? BillingService { get; }
 
+    // When the account held here last changed. Every UI compares it between polls (AppState.AccountTime),
+    // as a sign-in from a paired browser must reach the device's own UI. Full precision, as for ConfigTime.
+    public DateTime AccountTime { get; private set; } = DateTime.UtcNow;
+
     public Task<Account?> GetAccount(CancellationToken cancellationToken)
     {
         return GetAccount(useCache: true, cancellationToken);
@@ -274,6 +278,7 @@ public class AccountService
         Directory.CreateDirectory(_storageFolderPath);
         await FileUtils.WriteAllTextAtomicAsync(_accountFilePath, JsonSerializer.Serialize(account), cancellationToken)
             .Vhc();
+        AccountTime = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -314,10 +319,15 @@ public class AccountService
     private async Task ClearAccount(CancellationToken cancellationToken)
     {
         using var fileLock = await _fileLock.LockAsync(cancellationToken).Vhc();
+        // moved only when an account was held: every read on a signed-out device comes here, and a UI
+        // reads the account again whenever the time moves. A UI only ever got an account held here.
+        var hadAccount = _account != null;
         if (File.Exists(_accountFilePath))
             File.Delete(_accountFilePath);
 
         _account = null;
+        if (hadAccount)
+            AccountTime = DateTime.UtcNow;
         RemoveAccountAccessCode();
     }
 

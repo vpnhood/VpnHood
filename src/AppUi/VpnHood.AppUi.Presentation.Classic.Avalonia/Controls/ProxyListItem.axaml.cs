@@ -30,16 +30,16 @@ public partial class ProxyListItem : UserControl
 
         SucceededText.Text = status.SucceededCount.ToString();
         SucceededIcon.Classes.Set("disabled", status.SucceededCount == 0);
-        if (status.SucceededCount > 0) SucceededIcon.Foreground = Brush("EnablePremiumBrush");
+        if (status.SucceededCount > 0) SetBrush(SucceededIcon, "EnablePremiumBrush");
         FailedText.Text = status.FailedCount.ToString();
         FailedIcon.Classes.Set("disabled", status.FailedCount == 0);
-        if (status.FailedCount > 0) FailedIcon.Foreground = Brush("ErrorBrush");
+        if (status.FailedCount > 0) SetBrush(FailedIcon, "ErrorBrush");
 
         var (qualityText, qualityBrush) = ProxyQuality.Display(status.HasUsed() ? status.Quality : null);
         QualityText.Text = qualityText;
         QualityText.IsVisible = status.HasUsed();
         QualityDivider.IsVisible = status.HasUsed();
-        if (qualityBrush != null) QualityText.Foreground = Brush(qualityBrush);
+        if (qualityBrush != null) SetBrush(QualityText, qualityBrush);
 
         ErrorText.Text = status.ErrorMessage;
         ErrorText.IsVisible = !string.IsNullOrEmpty(status.ErrorMessage);
@@ -47,9 +47,11 @@ public partial class ProxyListItem : UserControl
 
     public AppProxyEndPointInfo Proxy { get; }
 
-    private IBrush? Brush(string key)
+    // The theme's brush, bound rather than looked up: the row is built before it joins the page, when
+    // a lookup finds no theme and leaves the text without a colour, so it never shows.
+    private void SetBrush(TextBlock target, string key)
     {
-        return this.TryFindResource(key, out var value) && value is IBrush brush ? brush : null;
+        target.Bind(TextBlock.ForegroundProperty, this.GetResourceObservable(key));
     }
 
     public void LandFocus()

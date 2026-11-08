@@ -105,7 +105,8 @@ public partial class ProxyEditDialog : DialogBase
         var valueText = new TextBlock { Text = value, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap, MaxWidth = 260 };
         valueText.Classes.Add("body-small");
         if (brushKey == null) valueText.Classes.Add("disabled");
-        else if (this.TryFindResource(brushKey, out var brush) && brush is IBrush valueBrush) valueText.Foreground = valueBrush;
+        // bound, not looked up: the rows are filled before the dialog is shown, when a lookup finds no theme
+        else valueText.Bind(TextBlock.ForegroundProperty, this.GetResourceObservable(brushKey));
         Grid.SetColumn(valueText, 1);
         row.Children.Add(labelText);
         row.Children.Add(valueText);

@@ -2,6 +2,7 @@
 using VpnHood.AppUi.Common;
 using Avalonia;
 using Avalonia.Layout;
+using Avalonia.Media;
 
 namespace VpnHood.AppUi.Presentation.Classic.Avalonia.Controls;
 
@@ -46,7 +47,10 @@ public partial class SplitListInput : UserControl
         Hints.Children.Clear();
         foreach (var (label, sample) in hints) {
             var row = new WrapPanel { Orientation = Orientation.Horizontal };
-            var text = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+            // a hint wider than the card, the domain rules in every language, wraps rather than being cut
+            var text = new TextBlock {
+                Text = label, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
+            };
             text.Classes.Add("body-small");
             text.Classes.Add("disabled");
             row.Children.Add(text);

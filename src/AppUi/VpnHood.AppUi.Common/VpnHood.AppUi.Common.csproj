@@ -22,4 +22,9 @@
 		<!-- IAssetProvider: the store's files, wherever this platform reads them from. -->
 		<ProjectReference Include="..\..\Net\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<!-- VhApp.AccountRetryDelay: the account tests need no ten-second wait -->
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+	</ItemGroup>
 </Project>

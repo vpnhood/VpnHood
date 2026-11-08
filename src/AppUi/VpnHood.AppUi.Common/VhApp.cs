@@ -38,6 +38,13 @@ public static class VhApp
     public static async Task Init(VpnHoodApi api, CancellationToken cancellationToken)
     {
         _api = api;
+        // another app's account is not this one's: nothing read yet, nothing to wait for, and a read
+        // still on its way from the old API is older than any read from this one
+        Account = null;
+        _accountReadShown = ++_accountReadCount;
+        _accountTime = null;
+        _accountRetryTime = 0;
+        _accountReadFailed = false;
         _info = await Api.App.GetInfo(cancellationToken).ConfigureAwait(false);
         _state = _info.State;
     }
@@ -118,8 +125,29 @@ public static class VhApp
             await ReloadInfo(cancellationToken);
 
         // a sign-in or sign-out from another UI: a paired browser's reaches the TV's own screen
-        if (state.AccountTime != _accountTime)
+        if (state.AccountTime != _accountTime && Environment.TickCount64 >= _accountRetryTime)
+            await ReloadAccount(cancellationToken);
+    }
+
+    // The account read the state asks for. Its failure is not the state's: the page still shows the
+    // state, and the account is tried again after a pause, as the app asks the portal for an account it
+    // holds no copy of. A read cut short by the state's own timeout pauses too, or a slow portal would
+    // be asked again every second.
+    private static async Task ReloadAccount(CancellationToken cancellationToken)
+    {
+        try {
             await LoadAccount(false, cancellationToken);
+            _accountReadFailed = false;
+        }
+        catch (Exception ex) {
+            _accountRetryTime = Environment.TickCount64 + (long)AccountRetryDelay.TotalMilliseconds;
+            if (ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
+                throw;
+
+            VhLogger.Instance.Log(_accountReadFailed ? LogLevel.Debug : LogLevel.Warning, ex,
+                "Could not read the account. It is read again in a while.");
+            _accountReadFailed = true;
+        }
     }
 
     public static async Task ReloadInfo(CancellationToken cancellationToken)
@@ -141,15 +169,25 @@ public static class VhApp
     // says it changed - never polled itself.
     public static Account? Account { get; private set; }
 
-    // the state's AccountTime as of the last read; taken before the read, so a change during it is
-    // read again at the next state, and a read that fails is not repeated every second
+    // the state's AccountTime as of the account shown, taken before its read: a change during the read
+    // is read again at the next state
     private static DateTime? _accountTime;
+
+    // the reads started, and the newest whose answer is shown: an older read answering after it, as
+    // HTTP may, would put back the account it replaced. All on the pages' thread.
+    private static int _accountReadCount;
+    private static int _accountReadShown;
+
+    internal static TimeSpan AccountRetryDelay { get; set; } = TimeSpan.FromSeconds(10);
+    private static long _accountRetryTime;
+    private static bool _accountReadFailed;
 
     public static async Task LoadAccount(bool withRefresh, CancellationToken cancellationToken)
     {
-        _accountTime = State.AccountTime;
+        var accountTime = State.AccountTime;
+        var readId = ++_accountReadCount;
         if (!Descriptor.IsAccountSupported) {
-            Account = null;
+            ShowAccount(readId, null, accountTime);
             return;
         }
 
@@ -162,7 +200,18 @@ public static class VhApp
             }
         }
 
-        Account = await Api.Account.Get(cancellationToken);
+        var account = await Api.Account.Get(cancellationToken);
+        ShowAccount(readId, account, accountTime);
+    }
+
+    private static void ShowAccount(int readId, Account? account, DateTime? accountTime)
+    {
+        if (readId < _accountReadShown)
+            return;
+
+        _accountReadShown = readId;
+        Account = account;
+        _accountTime = accountTime;
     }
 
     // The TV layout: the device's word, unless this UI is the remote.

@@ -75,8 +75,16 @@ public class AccountService
     public BillingService? BillingService { get; }
 
     // When the account held here last changed. Every UI compares it between polls (AppState.AccountTime),
-    // as a sign-in from a paired browser must reach the device's own UI. Full precision, as for ConfigTime.
+    // as a sign-in from a paired browser must reach the device's own UI. A time, not a count: a desktop
+    // window outlives its service, and a count would start again at the same number.
     public DateTime AccountTime { get; private set; } = DateTime.UtcNow;
+
+    // Under the file lock. Each change is later than the last, so two in one tick of the clock still differ.
+    private void MoveAccountTime()
+    {
+        var now = DateTime.UtcNow;
+        AccountTime = now > AccountTime ? now : AccountTime.AddTicks(1);
+    }
 
     public Task<Account?> GetAccount(CancellationToken cancellationToken)
     {
@@ -275,10 +283,11 @@ public class AccountService
     {
         using var fileLock = await _fileLock.LockAsync(cancellationToken).Vhc();
         _account = account;
+        // with the account held, before the file: a write that fails has still changed every read
+        MoveAccountTime();
         Directory.CreateDirectory(_storageFolderPath);
         await FileUtils.WriteAllTextAtomicAsync(_accountFilePath, JsonSerializer.Serialize(account), cancellationToken)
             .Vhc();
-        AccountTime = DateTime.UtcNow;
     }
 
     /// <summary>
@@ -327,7 +336,7 @@ public class AccountService
 
         _account = null;
         if (hadAccount)
-            AccountTime = DateTime.UtcNow;
+            MoveAccountTime();
         RemoveAccountAccessCode();
     }
 

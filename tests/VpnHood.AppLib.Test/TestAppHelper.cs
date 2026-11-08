@@ -16,6 +16,8 @@ using VpnHood.Test.Providers;
 
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.AppLib.Abstractions.UiContexts;
+using System.Net;
+using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.Test;
 
@@ -140,6 +142,29 @@ public class TestAppHelper(CancellationToken testCt) : TestHelper(testCt)
 
         AppUiContext.Context = new TestAppUiContext();
         return clientApp;
+    }
+
+    // A key for a server that need not exist, for tests that never connect: the account services need a
+    // current profile to carry premium.
+    public static Token CreateOfflineToken()
+    {
+        var randomId = Guid.NewGuid();
+        return new Token {
+            Name = "Default Test Server",
+            IssuedAt = DateTime.UtcNow,
+            SupportId = "1",
+            TokenId = randomId.ToString(),
+            Secret = randomId.ToByteArray(),
+            ServerToken = new ServerToken {
+                HostEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
+                CertificateHash = randomId.ToByteArray(),
+                HostName = randomId.ToString(),
+                HostPort = 443,
+                Secret = randomId.ToByteArray(),
+                CreatedTime = DateTime.UtcNow,
+                IsValidHostName = false
+            }
+        };
     }
 
     private static string GenerateSecureRandomDigits(int length)

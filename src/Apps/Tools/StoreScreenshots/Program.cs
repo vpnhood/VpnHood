@@ -100,7 +100,10 @@ internal static class Program
         var window = lifetime.MainWindow ?? throw new InvalidOperationException("The UI has made no main window.");
         window.Width = options.Width;
         window.Height = options.Height;
-        var view = window.Content as MainView ?? throw new InvalidOperationException("The window does not hold the UI's main view.");
+        // a TV's view comes inside TvScreenFit (VpnHoodAvaloniaAppBase), which scales the 960x540 layout to
+        // the screen: at a TV device's own 960x540 it draws the same pixels
+        var view = window.Content as MainView ?? (window.Content as Decorator)?.Child as MainView ??
+            throw new InvalidOperationException("The window does not hold the UI's main view.");
 
         var runner = new ShotRunner(options, window, view, log);
         _ = Dispatcher.UIThread.InvokeAsync(async () => lifetime.Shutdown(await runner.RunAsync()), DispatcherPriority.Background);

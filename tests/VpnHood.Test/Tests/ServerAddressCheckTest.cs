@@ -4,7 +4,6 @@ using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
-using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -48,11 +47,11 @@ public class ServerAddressCheckTest : TestBase
         Assert.IsNull(await check.TryGetNewAddresses(TestCt));
     }
 
-    // its lookup would go into the tunnel it checks, as on iOS
+    // its lookup would go into the tunnel it checks
     [TestMethod]
     public async Task An_adapter_that_cannot_protect_a_socket_asks_no_name()
     {
-        using var vpnAdapter = new TestUdpServerVpnAdapter();
+        using var vpnAdapter = new TestUnprotectedVpnAdapter();
         var check = new ServerAddressCheck(HostName, MovedAddress, vpnAdapter);
 
         Assert.IsNull(await check.TryGetNewAddresses(TestCt));

@@ -25,6 +25,9 @@ public class IosVpnAdapter(
     private readonly List<IpNetwork> _ipv6Networks = [];
     private int? _mtu;
 
+    // the process's, as a reconnect makes a new adapter under the tunnel still up, where only the tunnel's can be read
+    private static IReadOnlyList<IPAddress> _networkDnsServers = [];
+
     private const int MaxWriteBatchSize = 32;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
 
@@ -67,15 +70,10 @@ public class IosVpnAdapter(
     public override bool IsAppFilterSupported => false;
     protected override bool IsSocketProtectedByBind => false;
 
-    // CRITICAL (iOS): we CANNOT protect the tunnel's own transport socket the way desktop/
-    // Android do (binding to the physical adapter IP does NOT make a raw .NET socket bypass
-    // a NEPacketTunnelProvider tunnel; iOS only auto-excludes connections made via its own
-    // NWTCPConnection/NWUDPSession APIs, which VpnHood does not use). If we reported
-    // CanProtectSocket=true, core would leave the VPN server's IP inside the tunnel routes,
-    // and once IPv4 routes are valid the server connection gets routed into its OWN tunnel
-    // -> routing loop -> total freeze (no traffic in or out). Returning false makes core
-    // EXCLUDE the server IP from the tunnel (ClientHelper.BuildIncludeIpRangesByDevice),
-    // so the transport reaches the server over the physical interface.
+    // CRITICAL: false makes core EXCLUDE the VPN server's IP from the tunnel's routes
+    // (ClientHelper.BuildIncludeIpRangesByDevice). On an iPhone, with the server's IP inside them, the
+    // transport went into its OWN tunnel -> routing loop -> total freeze (no traffic in or out), though on
+    // an Apple TV the extension's own sockets were seen going around its tunnel (see ProtectSocket).
     public override bool CanProtectSocket => false;
 
     protected override Task AdapterAdd(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -84,6 +82,7 @@ public class IosVpnAdapter(
     protected override async Task AdapterOpen(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Establishing iOS tun adapter...");
+        TryReadNetworkDnsServers();
 
         // The tunnelRemoteAddress MUST be a valid IP address literal. Passing a non-IP
         // string (e.g. "vpnhood") makes iOS reject the ENTIRE settings object with
@@ -289,14 +288,37 @@ public class IosVpnAdapter(
     protected override string AppPackageId =>
         NSBundle.MainBundle.BundleIdentifier ?? throw new Exception("Could not get the app BundleIdentifier!");
 
-    // Pretend success: sockets cannot be protected on iOS (see CanProtectSocket); core keeps the
-    // server reachable by excluding its IP from the tunnel routes instead. KNOWN LIMITATION: the
-    // base-class primary-IP rediscovery (network change / restart) trusts this return and probes
-    // through the tunnel, so PrimaryAdapterIpV4 can report the tunnel's own virtual IP while the
-    // tunnel is up. Fixing that needs a protect-independent discovery (e.g. NWPathMonitor).
+    // Nothing to do: the extension's own sockets go around its tunnel, as a DNS query and a web request
+    // were seen to on an Apple TV with every route in the tunnel, so the server address check asks the
+    // network's DNS servers over a plain socket. KNOWN LIMITATION: the base-class primary-IP rediscovery
+    // (network change / restart) trusts this return and probes through the tunnel, so PrimaryAdapterIpV4
+    // can report the tunnel's own virtual IP while the tunnel is up. Fixing that needs a protect-independent
+    // discovery (e.g. NWPathMonitor).
     public override bool ProtectSocket(System.Net.Sockets.Socket socket) => true;
 
     public override bool ProtectSocket(System.Net.Sockets.Socket socket, IPAddress ipAddress) => true;
+
+    // Apple gives an app no way to read a network's DNS servers under a VPN that serves the device's DNS
+    public override IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers() => _networkDnsServers;
+
+    // Read before the tunnel's settings take the device's DNS. An open under a tunnel still up, as a reconnect's, reads
+    // the tunnel's, which are left out, so the last read of the network's stands.
+    private void TryReadNetworkDnsServers()
+    {
+        try {
+            var dnsServers = DeviceDnsServers.Read()
+                .Where(x => !_dnsServers.Contains(x) && !x.IsIPv6LinkLocal)
+                .ToArray();
+            if (dnsServers.Length > 0)
+                _networkDnsServers = dnsServers;
+
+            VhLogger.Instance.LogInformation("The network's DNS servers: {DnsServers}",
+                string.Join(", ", _networkDnsServers.Select(x => VhLogger.Format(x))));
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not read the network's DNS servers.");
+        }
+    }
 
     protected override void WaitForTunRead() => Thread.Sleep(10);
 

@@ -14,9 +14,9 @@ namespace VpnHood.Core.Client;
 // in its connections, its UDP and the adapter's routes. Only for an address the name gave: a token's own address, a
 // redirect's or a custom one never moves with the name.
 // The name is asked of the network's DNS servers, those of the network under the tunnel, over a socket the adapter
-// protects, so the lookup bypasses the tunnel; where it cannot protect one, as on iOS, the name is not asked, as the
-// lookup would go into the tunnel it checks. A name that gets no answer, as in an outage of the device's own network,
-// is no move: the session waits, as it did.
+// protects, so the lookup bypasses the tunnel (on Apple, every socket of the VPN's extension goes around its tunnel);
+// where it cannot protect one, the name is not asked, as the lookup would go into the tunnel it checks. A name that
+// gets no answer, as in an outage of the device's own network, is no move: the session waits, as it did.
 internal class ServerAddressCheck(string hostName, IPAddress serverAddress, IVpnAdapter vpnAdapter)
 {
     private static readonly TimeSpan DnsServerTimeout = TimeSpan.FromSeconds(5);
@@ -39,11 +39,6 @@ internal class ServerAddressCheck(string hostName, IPAddress serverAddress, IVpn
     // The first DNS server's answer. Asked at each check, as Linux's adapter protects a socket only once started.
     private async Task<IReadOnlyList<IPAddress>> TryResolve(CancellationToken cancellationToken)
     {
-        if (!vpnAdapter.CanProtectSocket) {
-            VhLogger.Instance.LogDebug("The adapter cannot protect a socket, so the server's name is not asked.");
-            return [];
-        }
-
         var dnsServers = TryGetDnsServers();
         foreach (var dnsServer in dnsServers) {
             var addresses = await TryResolveByDnsServer(dnsServer, cancellationToken).Vhc();

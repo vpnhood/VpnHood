@@ -9,17 +9,17 @@ using VpnHood.AppLib.Api.Updaters;
 namespace VpnHood.App.StoreScreenshots;
 
 // The app's own API, answered from the fixture: the configuration and the state are the document,
-// the settings are whatever the page last saved, and the installed apps are the fixture's. What a
-// screenshot page never calls is not answered (UnmockedCalls); the calls that leave no trace on a
-// screen are accepted and dropped.
-internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> installedApps) : IAppApi
+// the settings are whatever the page last saved, and the installed apps and split lists are the
+// fixture's. What a screenshot page never calls is not answered (UnmockedCalls); the calls that
+// leave no trace on a screen are accepted and dropped.
+internal sealed class FakeAppApi(StoreFixture fixture) : IAppApi
 {
-    public AppInfo Info { get; private set; } = info;
+    public AppInfo Info { get; private set; } = fixture.Info;
 
     public Task<AppInfo> Configure(ConfigParams configParams, CancellationToken cancellationToken) => Task.FromResult(Info);
     public Task<AppInfo> GetInfo(CancellationToken cancellationToken) => Task.FromResult(Info);
     public Task<AppState> GetState(CancellationToken cancellationToken) => Task.FromResult(Info.State);
-    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) => Task.FromResult(installedApps);
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) => Task.FromResult(fixture.InstalledApps);
     public Task<IReadOnlyList<string>> GetSupportedSplitCountries(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<string>>([]);
 
     // the settings a page saves come back as the app would report them: the same object, unchanged
@@ -46,12 +46,12 @@ internal sealed class FakeAppApi(AppInfo info, IReadOnlyList<DeviceAppInfo> inst
     public Task<bool> GetAutomaticUpdate(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetAutomaticUpdate");
     public Task SetAutomaticUpdate(bool value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetAutomaticUpdate");
 
-    // the split lists as a new install has them, empty, so their pages show the format hints
-    public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken) => Task.FromResult(new SplitIpsViaApp { Includes = "", Excludes = "", Blocks = "" });
+    // the split lists, empty as on a new install unless the fixture fills them (StoreFixture)
+    public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken) => Task.FromResult(fixture.SplitIpsViaApp);
     public Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitIpsViaApp");
-    public Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken) => Task.FromResult(new SplitIpsViaDevice { Includes = "", Excludes = "" });
+    public Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken) => Task.FromResult(fixture.SplitIpsViaDevice);
     public Task SetSplitIpsViaDevice(SplitIpsViaDevice value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitIpsViaDevice");
-    public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken) => Task.FromResult(new SplitDomains { Includes = "", Excludes = "", Blocks = "" });
+    public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken) => Task.FromResult(fixture.SplitDomains);
     public Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetSplitDomains");
     public Task Connect(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Connect");
     public Task Diagnose(Guid? vpnProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.Diagnose");

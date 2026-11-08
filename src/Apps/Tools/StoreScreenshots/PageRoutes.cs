@@ -1,4 +1,8 @@
+using Avalonia;
+using Avalonia.Layout;
+using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
+using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
 
 namespace VpnHood.App.StoreScreenshots;
 
@@ -8,6 +12,13 @@ namespace VpnHood.App.StoreScreenshots;
 internal static class PageRoutes
 {
     private static readonly Dictionary<string, Func<MainView, IPage>> Pages = new(StringComparer.OrdinalIgnoreCase) {
+        // the menu and a message are not pages; each is the app's own control shown as one
+        // (ControlPage), for a picture of it - a dialog over a page fails the run
+        ["/menu"] = host => new ControlPage(new DrawerView(host)),
+        ["/diagnose-finished"] = host => new ControlPage(new ErrorDialog(host,
+            new ErrorMessage.Dialog(Strings.Current.DiagnoseFinishedNoErrorMsg, ErrorAction.OpenReport)) {
+            VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(20, 0)
+        }),
         ["/servers"] = host => new LocationsView(host.ViewModel, host),
         ["/servers/extend-session"] = host => new ExtendSessionView(host),
         ["/protocols"] = host => new ProtocolsView(host),

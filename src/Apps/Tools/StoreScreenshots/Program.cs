@@ -76,7 +76,7 @@ internal static class Program
         if (fixture.ContractDrift != null)
             Console.WriteLine($"warning   the fixture is behind the API contract: {fixture.ContractDrift}");
 
-        var app = new FakeAppApi(fixture.Info, fixture.InstalledApps);
+        var app = new FakeAppApi(fixture);
         var api = new VpnHoodApi(app, new FakeVpnProfilesApi(app, fixture.PurchaseOptions), new FakeAccountApi(), new FakeBillingApi(), new FakeIntentsApi(), new FakeProxyEndPointsApi(fixture.ProxyEndPoints));
 
         // The UI's start, as every host runs it before Avalonia starts: the API, the content out of

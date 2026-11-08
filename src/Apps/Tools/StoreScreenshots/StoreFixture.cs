@@ -7,6 +7,7 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Device;
 using VpnHood.AppLib.Api.Premium;
 using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLib.Api.SplitTunneling;
 
 namespace VpnHood.App.StoreScreenshots;
 
@@ -30,6 +31,12 @@ internal sealed class StoreFixture
     // what the proxy list answers: none on a fresh install, and only a picture of the list (the
     // website's Smart Proxies screenshot) carries some, in its patch
     public IReadOnlyList<AppProxyEndPointInfo> ProxyEndPoints { get; init; } = [];
+
+    // what the split lists of IPs and domains hold: empty, as on a fresh install, unless a patch
+    // gives a filled list (the website's pictures of those pages)
+    public required SplitDomains SplitDomains { get; init; }
+    public required SplitIpsViaApp SplitIpsViaApp { get; init; }
+    public required SplitIpsViaDevice SplitIpsViaDevice { get; init; }
     public required IReadOnlyList<string> Filled { get; init; }
     public string? ContractDrift { get; init; }
 
@@ -62,6 +69,12 @@ internal sealed class StoreFixture
 
         return new StoreFixture {
             Info = info, InstalledApps = installedApps, PurchaseOptions = purchaseOptions, ProxyEndPoints = proxyEndPoints,
+            SplitDomains = root["splitDomains"]?.Deserialize<SplitDomains>(Options(strict: true))
+                           ?? new SplitDomains { Includes = "", Excludes = "", Blocks = "" },
+            SplitIpsViaApp = root["splitIpsViaApp"]?.Deserialize<SplitIpsViaApp>(Options(strict: true))
+                             ?? new SplitIpsViaApp { Includes = "", Excludes = "", Blocks = "" },
+            SplitIpsViaDevice = root["splitIpsViaDevice"]?.Deserialize<SplitIpsViaDevice>(Options(strict: true))
+                                ?? new SplitIpsViaDevice { Includes = "", Excludes = "" },
             Filled = filled, ContractDrift = drift
         };
     }

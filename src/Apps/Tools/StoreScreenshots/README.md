@@ -52,19 +52,25 @@ or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words o
 
 Beside the AppInfo, a fixture or a patch may carry `installedApps` (what Split Apps lists,
 written by `generate` from the configuration), `purchaseOptions` (the App Review picture) and
-`proxyEndPoints` (the Proxies page's list, `AppProxyEndPointInfo` items; no store set shows
-one, a fresh install has none). The split lists of IPs and domains always answer empty, as a
-fresh install's are.
+`proxyEndPoints` (the Proxies page's list, `AppProxyEndPointInfo` items), `splitDomains`,
+`splitIpsViaApp` and `splitIpsViaDevice` (the lists of those pages, each with all its fields).
+No store set gives the last four, so their pages show what a fresh install has: no proxies and
+empty lists.
+
+`/menu` and `/diagnose-finished` are no pages: each is the app's own control, the menu and the
+message a diagnosis ends with, shown as a page (`ControlPage`), for a picture of it alone.
 
 ## The website
 
-The website's feature pages show the app in each of the site's languages, drawn by this tool:
-`tools/make-app-shots.py` in the VpnHood.www repo writes a configuration of its own from
-CLIENT's `store/screenshots.json` (its languages, the Android phone's capabilities, its demo
+The website shows CLIENT and CONNECT in each of the site's languages, drawn by this tool:
+`tools/make-app-shots.py` in the VpnHood.www repo writes a configuration of its own from the
+product's `store/screenshots.json` (its languages, the Android phone's capabilities, its demo
 apps and the patch of any screen the Google Play set also shows), runs `generate` with a bare
-840-wide device per picture, and writes the pictures into that repo. A route, a fixture field
-or a fake answer the website needs is added here, as for a store; its screens are listed in
-that script, never here.
+device per picture, or the Android phone itself for a whole screen in it (`PhoneFrame`, whose
+geometry the script follows to cut the screen out), cuts each picture to what its page shows,
+and writes them into that repo.
+A route, a fixture field or a fake answer the website needs is added here, as for a store; its
+screens are listed in that script, never here.
 
 ## Invariants — do not break these
 

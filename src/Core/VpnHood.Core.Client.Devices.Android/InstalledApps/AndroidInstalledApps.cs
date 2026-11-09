@@ -25,6 +25,10 @@ internal sealed class AndroidInstalledApps
     // more gain nothing: Android's package and resource services serialize much of this work
     private const int MaxLoadThreads = 4;
 
+    // What the update times miss, such as a theme that restyles other apps' icons, is put right within
+    // this time; each lifetime costs one load of every app
+    private static readonly TimeSpan CacheLifetime = TimeSpan.FromDays(28);
+
     private readonly AsyncLock _buildLock = new();
     private readonly string _cacheFilePath = Path.Combine(
         Application.Context.CacheDir?.AbsolutePath ??
@@ -45,7 +49,8 @@ internal sealed class AndroidInstalledApps
         var packageManager = Application.Context.PackageManager ??
                              throw new InvalidOperationException("Could not acquire PackageManager.");
         var configuration = GetConfiguration();
-        var cachedItems = await ReadCache(configuration, cancellationToken).Vhc();
+        var cache = await ReadCache(configuration, cancellationToken).Vhc();
+        var cachedItems = cache?.Items.ToDictionary(x => x.AppId) ?? new Dictionary<string, InstalledAppsCacheItem>();
         var currentAppId = Application.Context.PackageName;
         var packages = packageManager.GetInstalledPackages(0)
             .Where(x => x.PackageName != currentAppId)
@@ -67,9 +72,13 @@ internal sealed class AndroidInstalledApps
             .OrderBy(x => x.AppName)
             .ToArray();
 
+        // a file that is kept keeps its date, so the lifetime counts from the load of every app
         if (IsChanged(newItems, cachedItems))
-            await WriteCache(new InstalledAppsCache { Configuration = configuration, Items = newItems },
-                cancellationToken).Vhc();
+            await WriteCache(new InstalledAppsCache {
+                Configuration = configuration,
+                CreatedTime = cache?.CreatedTime ?? DateTime.UtcNow,
+                Items = newItems
+            }, cancellationToken).Vhc();
 
         return newItems
             .Select(x => new DeviceAppInfo { AppId = x.AppId, AppName = x.AppName, IconPng = x.IconPng })
@@ -158,26 +167,28 @@ internal sealed class AndroidInstalledApps
                               cachedItem.UpdateTime != x.UpdateTime);
     }
 
-    // an unreadable file costs only a full build, which writes it again
-    private async Task<IReadOnlyDictionary<string, InstalledAppsCacheItem>> ReadCache(string configuration,
-        CancellationToken cancellationToken)
+    // Null when there is no file to use: none yet, an unreadable one, one made under another
+    // configuration or past its lifetime; every app is then loaded again and the file written anew. A
+    // date ahead of the clock means the clock went back, and the file starts over too.
+    private async Task<InstalledAppsCache?> ReadCache(string configuration, CancellationToken cancellationToken)
     {
         if (!File.Exists(_cacheFilePath))
-            return new Dictionary<string, InstalledAppsCacheItem>();
+            return null;
 
         try {
             var json = await File.ReadAllTextAsync(_cacheFilePath, cancellationToken).Vhc();
             var cache = JsonUtils.Deserialize<InstalledAppsCache>(json);
-            return cache.Configuration == configuration
-                ? cache.Items.ToDictionary(x => x.AppId)
-                : new Dictionary<string, InstalledAppsCacheItem>();
+            var age = DateTime.UtcNow - cache.CreatedTime;
+            return cache.Configuration == configuration && age >= TimeSpan.Zero && age < CacheLifetime
+                ? cache
+                : null;
         }
         catch (OperationCanceledException) {
             throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not read the installed apps' file. Every app is loaded again.");
-            return new Dictionary<string, InstalledAppsCacheItem>();
+            return null;
         }
     }
 

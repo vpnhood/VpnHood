@@ -1,5 +1,6 @@
 # Latest
 
+* Feature: TimeoutDictionary.GetOrAdd (VpnHood.Net.Toolkit) can say whether it added the value (out bool added). Only the call whose value the dictionary keeps says so, where a flag set in the factory is set by a call that lost a race too, and a factory that captures nothing makes no object on a call that finds the key.
 * Feature: IpAddressValue (VpnHood.Net.Toolkit), an IP address as a value with no object on the heap, for code that runs per packet: equal as IPAddress is, the scope id (ScopeId) included, ordered with every IPv4 address first, and converted both ways (ToValue(), ToIPAddress()). IPAddressUtil.Compare, IpRange.IsInRange, IpNetwork.Contains and IpRangeOrderedList.Contains take one, and IpRangeOrderedList.Contains makes no object for an IPAddress either; IpPacket reads and writes its addresses as values (SourceAddressValue, DestinationAddressValue), and PacketBuilder.BuildIp builds from them.
 * Breaking: IpEndPointValue holds its address as an IpAddressValue, AddressValue, and Address makes an IPAddress on each read, so code that runs per packet reads AddressValue. A default endpoint's Address throws InvalidOperationException, and a null address ArgumentNullException, where the endpoint held a null.
 * Breaking: SessionManager.GetSessionByVirtualIp takes an IpAddressValue.

@@ -125,14 +125,11 @@ public class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
         var sourceEndPoint = new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort);
         var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
         var addressFamily = sourceEndPoint.AddressFamily;
-        var isNewRemoteEndPoint = false;
         var isNewLocalEndPoint = false;
 
         // add the remote endpoint
-        _remoteEndPoints.GetOrAdd(destinationEndPoint, _ => {
-            isNewRemoteEndPoint = true;
-            return new TimeoutItem<bool>(true);
-        });
+        _remoteEndPoints.GetOrAdd(destinationEndPoint, static _ => new TimeoutItem<bool>(true),
+            out var isNewRemoteEndPoint);
         if (isNewRemoteEndPoint)
             _packetForwarderCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint.ToValue());
 

@@ -74,6 +74,29 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
     public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
     {
+        return GetOrAdd(key, valueFactory, out _);
+    }
+
+    /// <summary>
+    /// Gets a key's live value, refreshing its last-used time, or adds the value a factory creates, in place of an
+    /// expired one, which is disposed; says which it did.
+    /// </summary>
+    /// <remarks>
+    /// Under contention the factory may run more than once; it must return a new instance each time, and the instances
+    /// that lose are disposed. Code that acts once per new key reads <paramref name="added"/>: a flag set in the
+    /// factory is set by a losing instance too, and a factory that captures one makes an object on every call.
+    /// </remarks>
+    /// <param name="key">The key.</param>
+    /// <param name="valueFactory">Creates the value to add.</param>
+    /// <param name="added">
+    /// <see langword="true"/> if this call added the value, in place of an expired one too; <see langword="false"/> if
+    /// the key had a live value.
+    /// </param>
+    /// <returns>The key's value, which the dictionary owns.</returns>
+    /// <exception cref="ObjectDisposedException">The dictionary is disposed.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory, out bool added)
+    {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         AutoCleanupInternal();
 
@@ -81,6 +104,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
             if (_items.TryGetValue(key, out var entry)) {
                 if (!IsExpired(entry.Value)) {
                     Touch(entry.Value);
+                    added = false;
                     return entry.Value;
                 }
 
@@ -93,6 +117,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                     // guard the same-instance case; the factory may have returned the mapped value
                     if (!ReferenceEquals(entry.Value, created))
                         entry.Value.Dispose();
+                    added = true;
                     return FinishPublish(key, newEntry);
                 }
 
@@ -104,8 +129,10 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 var created = valueFactory(key);
                 created.LastUsedTime = FastDateTime.UtcNow;
                 var newEntry = new Entry(created);
-                if (_items.TryAdd(key, newEntry))
+                if (_items.TryAdd(key, newEntry)) {
+                    added = true;
                     return FinishPublish(key, newEntry);
+                }
 
                 // lost the insert race; drop the orphan and re-observe the current state
                 created.Dispose();

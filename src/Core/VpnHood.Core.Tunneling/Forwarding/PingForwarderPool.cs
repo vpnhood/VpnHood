@@ -78,13 +78,10 @@ public class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderPoo
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketLogger.Format(ipPacket)}.");
 
         var destinationEndPoint = new IpEndPointValue(ipPacket.DestinationAddressValue, 0);
-        var isNewRemoteEndPoint = false;
 
         // add the endpoint
-        _remoteEndPoints.GetOrAdd(destinationEndPoint, _ => {
-            isNewRemoteEndPoint = true;
-            return new TimeoutItem<bool>(true);
-        });
+        _remoteEndPoints.GetOrAdd(destinationEndPoint, static _ => new TimeoutItem<bool>(true),
+            out var isNewRemoteEndPoint);
         if (isNewRemoteEndPoint)
             _packetForwarderCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint);
 

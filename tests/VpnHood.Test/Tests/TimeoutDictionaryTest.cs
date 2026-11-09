@@ -58,6 +58,41 @@ public class TimeoutDictionaryTest
     }
 
     [TestMethod]
+    public void GetOrAdd_should_say_whether_it_added()
+    {
+        using var dictionary = new TimeoutDictionary<int, TrackedItem>(LongTimeout) { AutoCleanup = false };
+        var item = dictionary.GetOrAdd(1, _ => new TrackedItem(), out var added);
+        Assert.IsTrue(added);
+
+        var again = dictionary.GetOrAdd(1, _ => throw new AssertFailedException("factory must not run for a live item"),
+            out added);
+        Assert.IsFalse(added);
+        Assert.AreSame(item, again);
+
+        // an expired value's replacement is an add
+        item.Backdate();
+        var replaced = dictionary.GetOrAdd(1, _ => new TrackedItem(), out added);
+        Assert.IsTrue(added);
+        Assert.AreNotSame(item, replaced);
+    }
+
+    [TestMethod]
+    public void Stress_only_the_call_whose_value_is_kept_should_say_it_added()
+    {
+        // the threads walk the same new keys at once, so factories race: exactly one call per key adds it
+        const int keyCount = 20_000;
+        using var dictionary = new TimeoutDictionary<int, TrackedItem>(LongTimeout);
+        var addCounts = new int[keyCount];
+        Task.WaitAll(RunThreadsAsync(threadCount: 8, iterations: keyCount, key => {
+            dictionary.GetOrAdd(key, _ => new TrackedItem(), out var added);
+            if (added)
+                Interlocked.Increment(ref addCounts[key]);
+        }));
+
+        Assert.AreEqual(0, addCounts.Count(x => x != 1), "some keys were added by no call or by more than one");
+    }
+
+    [TestMethod]
     public void GetOrAdd_should_replace_expired_item_and_dispose_old_exactly_once()
     {
         using var dictionary = new TimeoutDictionary<int, TrackedItem>(LongTimeout) { AutoCleanup = false };

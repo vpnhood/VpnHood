@@ -1,7 +1,7 @@
 {
-  "Version": "9.1.871",
-  "BumpTime": "2026-11-06T00:35:02.0994659Z",
-  "Prerelease": true,
+  "Version": "9.1.872",
+  "BumpTime": "2026-11-09T04:18:06.5807043Z",
+  "Prerelease": false,
   "DeprecatedVersion": "7.0.0",
   "NotificationDelay": "03:00:00"
 }

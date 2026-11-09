@@ -4,6 +4,7 @@
 * Improve: A new VpnHoodServer makes up its certificate's name in no fixed shape: of any length, on a host such as `cdn.`, under a common ending, so new servers' names no longer follow one pattern a network could match. A server already installed keeps its certificate.
 * Fix: On Alpine and other Linux systems built on musl, the installer stops and says to run VpnHoodServer in Docker, where it said it had installed a server that cannot start
 * Fix: On Linux, the installer for the wrong CPU stops and says which one to download, instead of installing a server that cannot start
+* Fix: On Windows 10 and 11, running the installer again stops VpnHoodServer by its stop command, instead of ending it by force and printing a warning
 * Improve: The install commands work without wget, as on Arch and the base systems of Fedora and its family: they download with curl, and the Linux installer adds wget
 
 # v9.1.866

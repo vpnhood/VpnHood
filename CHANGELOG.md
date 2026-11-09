@@ -1,5 +1,7 @@
 # Latest
 
+* Feature: The app runs on Android TV, made for its remote, and Remote Access lets you change its settings from the browser of a phone or computer on the same network #android #store
+* Feature: The app runs on Apple TV, made for its remote, and Remote Access lets you change its settings from the browser of a phone or computer on the same network #ios
 * Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android #store
 * Improve: The Split Apps page opens much faster on phones with many apps, and the app no longer freezes while it loads #android
@@ -13,7 +15,6 @@
 * Fix: On Linux, a Docker container no longer asks a DNS server on the local network while the VPN is connected, where that server saw the names it looked up: its DNS goes through the VPN #linux
 * Fix: On Linux, the installer stops on Alpine and other systems built on musl, where the app cannot run, instead of saying it is installed #linux
 * Fix: On Linux, the installer for the wrong CPU stops and says which one to download, instead of installing an app that cannot start #linux
-* Fix: On Windows 10 and 11, running the server's installer again stops the server by its stop command, instead of ending it by force and printing a warning #windows
 * Improve: On Linux, the installer adds systemd-resolved where the system has no way to set the VPN's DNS, and turns it on where it comes installed and off, as on Arch, as the app cannot connect without one, and keeps the machine's own DNS server; when the app cannot set its DNS, running the install command again fixes it, as its error now says #linux
 * Improve: On Linux, the install command works without wget, as on Arch and the base systems of Fedora and its family: it downloads with curl, and the installer adds wget #linux
 * Improve: On Linux, the installer adds the libraries the window needs on Fedora, openSUSE, Arch and the distributions built on them too, where it only named what was missing #linux

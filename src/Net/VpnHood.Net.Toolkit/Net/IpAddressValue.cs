@@ -11,6 +11,12 @@ namespace VpnHood.Net.Toolkit.Net;
 /// IPv6 scope id. So 10.0.0.2, ::10.0.0.2 and ::ffff:10.0.0.2 are three addresses, and fe80::1%3 is not fe80::1. The
 /// default value holds no address: it is neither IPv4 nor IPv6, it is written as an empty string, and converting it
 /// throws.
+/// <para>
+/// A value is 24 bytes, which a field takes in more than one write, where an <see cref="IPAddress"/> field takes one
+/// reference: a thread that reads a field while another replaces it can get half of each address. So a field that
+/// several threads read is set before its object is shared and never replaced, or its values sit in an object that is
+/// replaced as one reference.
+/// </para>
 /// </remarks>
 public readonly struct IpAddressValue : IEquatable<IpAddressValue>, IComparable<IpAddressValue>
 {

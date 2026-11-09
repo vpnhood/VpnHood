@@ -11,11 +11,14 @@ param(
 	# An app with no updater (the Samsung head, or a head's VhAppNoUpdate): no feed goes with its APK, as it
 	# reads none, and the publish fails if the APK still asks to install apps.
 	[switch]$noUpdate,
+	# An app with no updater that still reads its own feed for the notice (IzzyOnDroid's, whose client updates
+	# it): the feed goes with its APK after all, holding the notice back this long after the release.
+	[String]$feedNotificationDelay = "",
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
 
-# store: google distribution -> google; web, web-arm64 and webnoupdate-arm64 share the web key/id (same as
+# store: google distribution -> google; web, web-arm64 and fdroid-arm64 share the web key/id (same as
 # the keystore).
 # samsung, the Galaxy Store's APK, is the Play build's app - its id, and its key, which Play signs CLIENT
 # with too (checked 2026-10-31 on Play's own APK) - so either store's install takes the other's update.
@@ -158,10 +161,10 @@ try {
 			InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
 			ReleaseDate = "$releaseDate";
 			DeprecatedVersion = "$deprecatedVersion";
-			NotificationDelay = "$versionNotificationDelay";
+			NotificationDelay = if ($feedNotificationDelay) { $feedNotificationDelay } else { "$versionNotificationDelay" };
 		};
 
-		if (-not $noUpdate) { $json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII; }
+		if (-not $noUpdate -or $feedNotificationDelay) { $json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII; }
 
 		# Same payload under the distribution's retired file name, while a rename's grace period is open
 		# (pub/lib/LegacyAssetAliases.ps1 — it returns $null once that lapses, or when this distribution

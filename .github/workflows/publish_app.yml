@@ -471,8 +471,8 @@ jobs:
       - uses: actions/download-artifact@v8
         if: needs.build-android.result == 'success' && inputs.app == 'client'
         with:
-          name: ${{ inputs.app }}-android-webnoupdate-arm64
-          path: ${{ env.MODULE_DIR }}/android-webnoupdate-arm64
+          name: ${{ inputs.app }}-android-fdroid-arm64
+          path: ${{ env.MODULE_DIR }}/android-fdroid-arm64
       # The one that may be absent: with no Play key its job succeeds and makes no file. A pattern may find
       # nothing, where a name is an error.
       - uses: actions/download-artifact@v8

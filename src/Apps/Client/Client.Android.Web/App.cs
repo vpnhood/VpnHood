@@ -3,8 +3,8 @@ using VpnHood.AppLib.App;
 using VpnHood.AppUi.Presentation.Classic.Avalonia;
 using VpnHood.AppUi.Hosting.Avalonia.Android;
 using VpnHood.AppLib.App.Android.Constants;
-#if !VH_APP_NO_UPDATE
 using VpnHood.AppLib.App.Services.Updaters;
+#if !VH_APP_NO_UPDATE
 using VpnHood.AppLib.Stores.AndroidWeb;
 #endif
 
@@ -40,14 +40,19 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var appConfigs = ClientAppConfigs.Load();
         var options = ClientAppOptions.Create(context, appConfigs);
 
-        // with no options there is no updater: no feed is read, no notice shows, and the drawer has no
-        // "Check for update". The repository's own client keeps that build updated.
 #if !VH_APP_NO_UPDATE
         options.UpdaterOptions = new AppUpdaterOptions {
             UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, AndroidWebAppUpdaterProvider.FeedDistribution),
             // the notice downloads the APK and installs it, rather than opening the site; not over a
             // store's install, whose notice keeps the site's link
             UpdaterProvider = AndroidWebAppUpdaterProvider.Create()
+        };
+#else
+        // A repository's build, with no updater of its own: the repository's client keeps it updated. Its own
+        // feed holds the notice back 10 days after a release (NotificationDelay, Publish-AndroidApp.ps1), then
+        // the notice opens this APK's download in the browser, as the builds before the updater did.
+        options.UpdaterOptions = new AppUpdaterOptions {
+            UpdateInfoUrl = appConfigs.GetUpdateInfoUrl(AppConstants.PackageTitle, "android-fdroid-arm64")
         };
 #endif
         return options;

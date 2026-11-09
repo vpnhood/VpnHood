@@ -140,10 +140,11 @@ else {
 		$assets += "$packageDir/android-web-arm64/$legacyArm64InfoFileName";
 	}
 
-	# CLIENT's website APK with no updater, which IzzyOnDroid takes from here (issue 803). It has no feed,
-	# as it reads none. Only where it was built: Connect has none.
-	if (Test-Path "$packageDir/android-webnoupdate-arm64") {
-		$assets += "$packageDir/android-webnoupdate-arm64/$packageFileTitle-android-webnoupdate-arm64.apk";
+	# CLIENT's website APK with no updater, which IzzyOnDroid takes from here (issue 803). Its own feed
+	# holds the notice back 10 days, for that repository's client. Only where it was built: Connect has none.
+	if (Test-Path "$packageDir/android-fdroid-arm64") {
+		$assets += "$packageDir/android-fdroid-arm64/$packageFileTitle-android-fdroid-arm64.apk";
+		$assets += "$packageDir/android-fdroid-arm64/$packageFileTitle-android-fdroid-arm64.json";
 	}
 }
 

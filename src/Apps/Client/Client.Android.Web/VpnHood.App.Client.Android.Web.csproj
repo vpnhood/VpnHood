@@ -31,7 +31,8 @@
 	<!-- -p:VhAppNoUpdate=true: the same app with no updater, for a repository whose own client keeps it
 	     updated. IzzyOnDroid refuses an app that asks for REQUEST_INSTALL_PACKAGES (issue 803). Only the
 	     updater goes, in this head rather than one of its own, so the id, the key and the Java names
-	     stay, and the people already on that repository's builds update as before. -->
+	     stay, and the people already on that repository's builds update as before. The feed's notice
+	     stays, from a feed of its own that holds it back 10 days (App.cs). -->
 	<PropertyGroup Condition="'$(VhAppNoUpdate)'=='true'">
 		<DefineConstants>$(DefineConstants);VH_APP_NO_UPDATE</DefineConstants>
 	</PropertyGroup>

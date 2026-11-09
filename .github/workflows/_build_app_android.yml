@@ -186,15 +186,15 @@ jobs:
       # CLIENT's website APK with no updater, for IzzyOnDroid (issue 803), in the web arm64 leg: it is the
       # same head with the same key, this leg is the shortest, and only CLIENT has it, which a leg of its
       # own in the shared matrix could not say.
-      - name: Build Android (Web arm64 APK with no updater)
+      - name: Build Android (F-Droid arm64 APK, no updater)
         if: matrix.id == 'web-arm64' && inputs.app == 'client'
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Web/_publish-webnoupdate-arm64.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Web/_publish-fdroid-arm64.ps1"
       - uses: actions/upload-artifact@v7
         if: matrix.id == 'web-arm64' && inputs.app == 'client'
         with:
-          name: ${{ inputs.app }}-android-webnoupdate-arm64
+          name: ${{ inputs.app }}-android-fdroid-arm64
           if-no-files-found: error
           retention-days: 1
-          path: ${{ env.MODULE_DIR }}/android-webnoupdate-arm64/**
+          path: ${{ env.MODULE_DIR }}/android-fdroid-arm64/**

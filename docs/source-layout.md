@@ -153,9 +153,12 @@ folder, and a head's folder is `<Product>.<Platform>.<Channel>` without the `Vpn
 Store, `Web` is our own site. Every head names its channel, so
 a second one on the same platform is a sibling rather than a rename.
 
-`Client.Android.Web` also builds the APK IzzyOnDroid takes, `VpnHoodClient-android-webnoupdate-arm64.apk`:
+`Client.Android.Web` also builds the APK IzzyOnDroid takes, `VpnHoodClient-android-fdroid-arm64.apk`:
 the same app with no updater (`-p:VhAppNoUpdate=true`), as that repository's rules refuse an app that
 updates itself. It keeps the website APK's id and key, so it is a build of that head, not a head of its own.
+It still reads a feed, its own (`VpnHoodClient-android-fdroid-arm64.json`), as the builds before the
+updater did: if the repository's client has not updated it 10 days after a release, the notice opens its
+download in the browser.
 
 Some folders are not heads and do not follow that rule. `*.Ios.Extension` is the Network Extension
 the iOS app bundles, `*.Windows.VpnPlugin` the VPN host a Windows package carries, and

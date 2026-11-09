@@ -47,7 +47,8 @@ public class TestDevice(
     // the VPN permission's ask, where a test plays the person: the answer may come late, past the start's cancel
     public Func<CancellationToken, Task>? RequestVpnServiceHandler { get; init; }
 
-    public IReadOnlyList<DeviceAppInfo> InstalledApps => throw new NotSupportedException();
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
 
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {

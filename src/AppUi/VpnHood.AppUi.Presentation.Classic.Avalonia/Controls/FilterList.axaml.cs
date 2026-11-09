@@ -1,6 +1,9 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Presentation.Classic.Avalonia.Helpers;
@@ -22,6 +25,10 @@ public partial class FilterList : UserControl
         SearchBox.IsVisible = !VhApp.IsTvUi;
         SearchButton.IsVisible = VhApp.IsTvUi;
         SearchBox.PlaceholderText = Strings.Current.Search;
+        // Up and Down walk the rows by their place in the list: XY focus finds only the rows built, and
+        // the list builds only those in sight. At either end they fall through to XY focus, which walks
+        // on to the page's other controls.
+        List.AddHandler(KeyDownEvent, OnRowKeyDown, RoutingStrategies.Tunnel);
     }
 
     public IReadOnlyList<FilterItem> Items {
@@ -67,6 +74,25 @@ public partial class FilterList : UserControl
         List.ItemsSource = string.IsNullOrEmpty(search)
             ? _items
             : _items.Where(x => x.Name.Contains(search, StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
+
+    private void OnRowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Up or Key.Down) ||
+            (e.Source as Visual)?.FindAncestorOfType<SwitchRow>(includeSelf: true) is not { } row ||
+            row.GetVisualParent() is not Control container)
+            return;
+
+        var index = List.IndexFromContainer(container) + (e.Key == Key.Down ? 1 : -1);
+        if (index < 0 || index >= List.ItemCount)
+            return;
+
+        List.ScrollIntoView(index);
+        if ((List.ContainerFromIndex(index) as ContentPresenter)?.Child is not { } next)
+            return;
+
+        next.Focus(NavigationMethod.Directional);
+        e.Handled = true;
     }
 
     private void OnSearchChanged(object? sender, TextChangedEventArgs e)

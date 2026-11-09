@@ -46,7 +46,12 @@ public class WindowsDevice(string storageFolder, bool isDebugMode, string? servi
         }
     }
 
-    public IReadOnlyList<DeviceAppInfo> InstalledApps {
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(InstalledApps);
+    }
+
+    private IReadOnlyList<DeviceAppInfo> InstalledApps {
         get {
             if (!isDebugMode)
                 throw new NotSupportedException();

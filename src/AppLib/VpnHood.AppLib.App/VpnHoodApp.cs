@@ -85,7 +85,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CancellationTokenSource _connectTimeoutCts = new();
     private CultureInfo? _systemUiCulture;
     private string? _osCultureCode; // as last read from the OS: a setting that differs was changed in the app
-    private IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>? _installedApps;
+    private Task<IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>>? _installedApps;
+    private readonly Lock _installedAppsLock = new();
     private bool _isConnecting;
     private int _connectNumber; // the latest connect's: an older one, which it cancelled, leaves the app to it
     private bool _isReconfiguredWhileConnecting; // after the connect read the settings: its start writes those over it
@@ -115,12 +116,24 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public IAssetProvider? UiAssetProvider { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
-    // Building this list is expensive (on Android it loads and png encodes an icon for every
-    // installed app), so it is cached until the app returns to the foreground, which is the only
-    // moment the user could have installed or removed an app.
-    public IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo> InstalledApps =>
-        _installedApps ??= _device.InstalledApps;
+    // Every caller shares one build, the app's page and a paired browser's alike, until the app returns
+    // to the foreground, the only moment the user could have installed or removed an app; a build that
+    // failed is tried again. A caller's cancel ends only its own wait.
+    public Task<IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>> GetInstalledApps(
+        CancellationToken cancellationToken)
+    {
+        return GetInstalledAppsBuild().WaitAsync(cancellationToken);
+    }
 
+    private Task<IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>> GetInstalledAppsBuild()
+    {
+        lock (_installedAppsLock) {
+            // the build outlives its first caller: it serves every caller after it
+            if (_installedApps is not { IsFaulted: false, IsCanceled: false })
+                _installedApps = _device.GetInstalledApps(CancellationToken.None);
+            return _installedApps;
+        }
+    }
 
     public AppAdManager AdManager { get; }
 
@@ -575,7 +588,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // the user may have installed or removed an app while we were in the background. this runs
         // on the platform resume hook, so it must stay cheap and never block
-        _installedApps = null;
+        lock (_installedAppsLock)
+            _installedApps = null;
 
         // the app's language may have been changed in the OS's settings, which Android does with the
         // process running: the words follow on the UI's next beat

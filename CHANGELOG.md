@@ -2,6 +2,7 @@
 
 * Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android #store
+* Improve: The Split Apps page opens much faster on phones with many apps, and the app no longer freezes while it loads #android
 * Improve: The app draws its screens itself rather than as a web page, and text is easier to read, with more contrast
 * Improve: The app no longer needs Android System WebView #android
 * Feature: VpnHood! CONNECT works on a computer with no desktop: `sign-in` signs in to your account, asking for your password or reading it from standard input, `sign-out` signs out, and `premium-code` sets a premium code; `connect` then says what is missing rather than the server's refusal #connect #windows #linux

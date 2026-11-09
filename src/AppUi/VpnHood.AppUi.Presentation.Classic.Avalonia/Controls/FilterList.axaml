@@ -36,7 +36,13 @@
         <TextBlock Classes="body-small disabled" Text="{Binding PleaseWait, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
       </StackPanel>
 
+      <!-- only the rows in sight are built: a phone's few hundred apps took most of a second -->
       <ItemsControl x:Name="List" Classes="filter-list" Margin="0,4,0,0">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <VirtualizingStackPanel />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:FilterItem">
             <controls:SwitchRow Classes="list-item" Click="OnRowClick">

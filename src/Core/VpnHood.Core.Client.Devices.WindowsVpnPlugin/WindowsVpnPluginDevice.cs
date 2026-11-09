@@ -88,7 +88,7 @@ public sealed class WindowsVpnPluginDevice : IDevice
         }
     }
 
-    public IReadOnlyList<DeviceAppInfo> InstalledApps =>
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported by the Windows VPN plug-in.");
 
     public async Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)

@@ -1,10 +1,10 @@
 ﻿using Android.Content;
-using Android.Content.PM;
 using Android.Net;
 using Android.OS;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
+using VpnHood.Core.Client.Devices.Android.InstalledApps;
 using VpnHood.Core.Client.Devices.Android.Messaging;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.Devices.Abstractions;
@@ -30,10 +30,7 @@ public class AndroidDevice : IDevice
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
     private volatile bool _isWaitingForVpnPermission;
-
-    // the app list renders the icons at 30 css pixels, so this keeps them crisp on high density
-    // screens while bounding the encoded payload, as the list may contain hundreds of apps
-    private const int IconSize = 64;
+    private readonly AndroidInstalledApps _installedApps = new();
 
     public bool IsBindProcessToVpnSupported => true;
     public bool IsExcludeAppsSupported => true;
@@ -82,75 +79,10 @@ public class AndroidDevice : IDevice
         return new Intent(action).SetComponent(VpnServiceComponent);
     }
 
-    public IReadOnlyList<DeviceAppInfo> InstalledApps {
-        get {
-            var deviceAppInfos = new List<DeviceAppInfo>();
-            var packageManager = Application.Context.PackageManager ??
-                                 throw new Exception("Could not acquire PackageManager!");
-
-            // Get all apps
-            var applications = packageManager.GetInstalledApplications(PackageInfoFlags.MetaData);
-            var currentAppId = Application.Context.PackageName;
-
-            foreach (var appInfo in applications) {
-                if (appInfo.PackageName == currentAppId)
-                    continue;
-
-                if (!IsVisibleApp(packageManager, appInfo))
-                    continue;
-
-                var appName = appInfo.LoadLabel(packageManager);
-                if (string.IsNullOrWhiteSpace(appName) || appName == appInfo.PackageName)
-                    continue;
-
-                // Load icon
-                var icon = appInfo.LoadIcon(packageManager);
-                if (icon is null)
-                    continue;
-
-                deviceAppInfos.Add(new DeviceAppInfo {
-                    AppId = appInfo.PackageName!,
-                    AppName = appName,
-                    IconPng = icon.DrawableEncodeToBase64(IconSize)
-                });
-            }
-
-            var result = deviceAppInfos
-                .OrderBy(a => a.AppName)
-                .DistinctBy(x => x.AppId)
-                .ToArray();
-
-            return result;
-        }
-    }
-
-    private static bool IsVisibleApp(PackageManager packageManager, ApplicationInfo appInfo)
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
     {
-        var appId = appInfo.PackageName;
-
-        // do not use IsEnabled as app may just suspend by the system
-
-        if (string.IsNullOrWhiteSpace(appId))
-            return false;
-
-        // Does it have a Launcher icon? (Most user apps)
-        if (packageManager.GetLaunchIntentForPackage(appId) != null)
-            return true;
-
-        // Is it an updated system app? (e.g., Chrome, Maps, YouTube)
-        if ((appInfo.Flags & ApplicationInfoFlags.UpdatedSystemApp) != 0)
-            return true;
-
-        // Is it a known "Core" tool ?
-        if (appId == "com.google.android.projection.gearhead" || // Android Auto
-            appId == "com.google.android.embedded.projection") // Embedded Projection
-            return true;
-
-        // Is it a non-system app?
-        if ((appInfo.Flags & ApplicationInfoFlags.System) == 0)
-            return true;
-
-        return false;
+        return _installedApps.GetInstalledApps(cancellationToken);
     }
 
     private async Task PrepareVpnService(IActivityEvent? activityEvent, TimeSpan userIntentTimeout,

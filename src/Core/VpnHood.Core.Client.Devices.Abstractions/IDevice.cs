@@ -29,7 +29,13 @@ public interface IDevice : IDisposable
     string OsInfo { get; }
     DeviceUserAgentInfo UserAgentInfo { get; }
     DeviceMemInfo? MemInfo { get; }
-    IReadOnlyList<DeviceAppInfo> InstalledApps { get; }
+
+    /// <summary>Gets the installed apps a split by app can pick from, each with its name and icon.</summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the apps, by name.</returns>
+    /// <exception cref="NotSupportedException">The device cannot split by app.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken);
 
     // True while RequestVpnService waits on the OS's own prompt for the person's yes, so a UI elsewhere
     // - a browser driving a TV - can say where the connect waits.

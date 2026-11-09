@@ -37,7 +37,8 @@ public class LinuxDevice(string storageFolder, string vpnHostPath) : IDevice
         }
     }
 
-    public IReadOnlyList<DeviceAppInfo> InstalledApps => throw new NotSupportedException();
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
 
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {

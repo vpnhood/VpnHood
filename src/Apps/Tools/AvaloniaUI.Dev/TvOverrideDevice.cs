@@ -22,8 +22,12 @@ internal sealed class TvOverrideDevice(IDevice inner, bool isTv) : IDevice
     public string OsInfo => inner.OsInfo;
     public DeviceUserAgentInfo UserAgentInfo => inner.UserAgentInfo;
     public DeviceMemInfo? MemInfo => inner.MemInfo;
-    public IReadOnlyList<DeviceAppInfo> InstalledApps => inner.InstalledApps;
     public bool IsWaitingForVpnPermission => inner.IsWaitingForVpnPermission;
+
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
+    {
+        return inner.GetInstalledApps(cancellationToken);
+    }
 
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {

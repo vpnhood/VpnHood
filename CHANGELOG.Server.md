@@ -1,3 +1,7 @@
+# Latest
+
+* Fix: On Linux, the installer stops on an x64 machine without SSE4.2 and POPCNT, such as a VPS on a basic virtual processor, and says so, instead of installing a server that cannot start
+
 # v9.1.872
 
 * Improve: VpnHoodServer logs a warning while advanced probe resistance is off, that is, while `MinClientProtocolVersion` is below 15. Protocol 14 and older are supported until April 2027, so update all apps and servers by then

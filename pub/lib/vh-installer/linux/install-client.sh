@@ -168,6 +168,20 @@ if [ "$machineCpu" != "$packageCpu" ]; then
 	exit 1;
 fi
 
+# The x64 build's .NET needs SSE3, SSSE3, SSE4.1, SSE4.2 and POPCNT (x86-64-v2), and without them stops as the app
+# starts, before any of its code runs: an old processor, or a virtual machine's basic one, which Linux names "Common
+# KVM processor", lacks them. So nothing goes in, and an installed version keeps running. By the flags the kernel
+# lists: a machine that cannot list them is not refused.
+cpuFlags=$(grep -m1 '^flags' /proc/cpuinfo 2>/dev/null);
+if [ "$machineCpu" = "x64" ] && [ -n "$cpuFlags" ]; then
+	for flag in pni ssse3 sse4_1 sse4_2 popcnt; do
+		if ! grep -qw "$flag" <<< "$cpuFlags"; then
+			echo "$productName cannot run on this machine: it needs a processor with SSE4.2 and POPCNT, and this one does not have them.";
+			exit 1;
+		fi
+	done
+fi
+
 # Root, said here. Everything below writes to /opt, /etc and /usr, and a run that discovers that
 # one directory at a time leaves half an install behind.
 if [ "$(id -u)" != "0" ]; then

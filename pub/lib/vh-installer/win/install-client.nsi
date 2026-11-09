@@ -135,6 +135,44 @@ Function TakeSetupMutex
 	${Loop}
 FunctionEnd
 
+; The processor the app's .NET needs, or nothing goes in: SSE3, SSSE3, SSE4.1, SSE4.2 and POPCNT (x86-64-v2). Without
+; them .NET stops as the app starts, before any of its code runs, which this setup would learn only at the service's
+; registration, with the version before already replaced. CPUID lists them, run by a few bytes of code here: Windows
+; has no flag for POPCNT. Only on an x64 machine: ARM64 runs the app emulated, on what its emulator offers x64 apps,
+; which this x86 setup's own CPUID does not show.
+Function RequireProcessor
+	${IfNot} ${IsNativeAMD64}
+		Return
+	${EndIf}
+
+	; push ebx; mov eax, 1; cpuid; mov eax, ecx; pop ebx; ret - leaf 1's ECX, and EBX, which CPUID writes, kept for the
+	; caller. Written first, then made executable: never both at once.
+	StrCpy $2 0
+	System::Call 'kernel32::VirtualAlloc(p 0, p 12, i 0x3000, i 0x04) p .r0 ?e' ; MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE
+	Pop $3
+	${If} $0 <> 0
+		System::Call '*$0(&i1 0x53, &i1 0xB8, &i1 1, &i1 0, &i1 0, &i1 0, &i1 0x0F, &i1 0xA2, &i1 0x89, &i1 0xC8, &i1 0x5B, &i1 0xC3)'
+		System::Call 'kernel32::VirtualProtect(p r0, p 12, i 0x20, *i .r1) i .r2 ?e' ; PAGE_EXECUTE_READ
+		Pop $3
+	${EndIf}
+	${If} $2 = 0
+		MessageBox MB_ICONSTOP "${PRODUCT_NAME} could not check this computer's processor (error $3)." /SD IDOK
+		SetErrorLevel 1
+		Abort
+	${EndIf}
+	System::Call 'kernel32::FlushInstructionCache(p -1, p r0, p 12)'
+	System::Call '::$0() i .r1'
+	System::Call 'kernel32::VirtualFree(p r0, p 0, i 0x8000)' ; MEM_RELEASE
+
+	; SSE3 is ECX's bit 0, SSSE3 9, SSE4.1 19, SSE4.2 20 and POPCNT 23
+	IntOp $1 $1 & 0x980201
+	${If} $1 <> 0x980201
+		MessageBox MB_ICONSTOP "${PRODUCT_NAME} needs a processor with SSE4.2 and POPCNT, which this computer's processor does not have." /SD IDOK
+		SetErrorLevel 1
+		Abort
+	${EndIf}
+FunctionEnd
+
 Function .onInit
 	SetShellVarContext all
 	SetRegView 64
@@ -149,6 +187,7 @@ Function .onInit
 		SetErrorLevel 1
 		Abort
 	${EndIf}
+	Call RequireProcessor
 	Call TakeSetupMutex
 
 	; the updater's task: as told, else as an earlier install left it, else on (install-client-task.ps1)

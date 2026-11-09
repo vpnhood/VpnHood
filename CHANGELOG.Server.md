@@ -1,4 +1,4 @@
-# Latest
+# v9.1.872
 
 * Improve: VpnHoodServer logs a warning while advanced probe resistance is off, that is, while `MinClientProtocolVersion` is below 15. Protocol 14 and older are supported until April 2027, so update all apps and servers by then
 * Improve: A new VpnHoodServer makes up its certificate's name in no fixed shape: of any length, on a host such as `cdn.`, under a common ending, so new servers' names no longer follow one pattern a network could match. A server already installed keeps its certificate.

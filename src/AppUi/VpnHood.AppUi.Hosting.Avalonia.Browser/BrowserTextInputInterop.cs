@@ -28,8 +28,15 @@ internal static partial class BrowserTextInputInterop
     [JSImport("setWords", ModuleName)]
     public static partial void SetWords(JSObject input, string placeholder, string? label);
 
+    [JSImport("setOptions", ModuleName)]
+    public static partial void SetOptions(JSObject input, bool isPassword, string inputMode, string autoComplete,
+        bool suggestions, bool capitalize, string enterKeyHint, int maxLength);
+
+    [JSImport("setClip", ModuleName)]
+    public static partial void SetClip(JSObject input, double top, double right, double bottom, double left);
+
     [JSImport("focus", ModuleName)]
-    public static partial void Focus(JSObject input);
+    public static partial void Focus(JSObject input, bool selectAll);
 
     [JSImport("release", ModuleName)]
     public static partial void Release(JSObject input);

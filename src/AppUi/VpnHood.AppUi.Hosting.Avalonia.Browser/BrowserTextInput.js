@@ -23,12 +23,6 @@ export function create(multiline, acceptsReturn, onInput, onKey, onFocus) {
     if (!multiline)
         input.type = 'text';
     input.className = 'vh-text-input';
-    // a key or a code is taken as typed: no capitals, corrections or suggestions of a phone's keyboard
-    input.autocomplete = 'off';
-    input.spellcheck = false;
-    input.setAttribute('autocapitalize', 'off');
-    input.setAttribute('autocorrect', 'off');
-    input.enterKeyHint = 'go';
     Object.assign(input.style, {
         boxSizing: 'border-box', margin: '0', padding: '0', border: '0', outline: 'none', background: 'transparent',
         userSelect: 'text', webkitUserSelect: 'text', touchAction: 'manipulation', resize: 'none',
@@ -81,9 +75,35 @@ export function setWords(input, placeholder, label) {
         input.removeAttribute('aria-label');
 }
 
-export function focus(input) {
-    if (document.activeElement !== input)
-        input.focus({ preventScroll: true });
+// What the box takes (BrowserTextInput.SetOptions): the phone's keyboard for it, what the phone may fill
+// it with, and whether its keyboard capitalizes, corrects and suggests.
+export function setOptions(input, isPassword, inputMode, autoComplete, suggestions, capitalize, enterKeyHint, maxLength) {
+    if (isPassword && input instanceof HTMLInputElement)
+        input.type = 'password';
+    input.inputMode = inputMode;
+    input.autocomplete = autoComplete;
+    input.spellcheck = suggestions;
+    input.setAttribute('autocorrect', suggestions ? 'on' : 'off');
+    input.setAttribute('autocapitalize', capitalize ? 'sentences' : 'off');
+    input.enterKeyHint = enterKeyHint;
+    if (maxLength > 0)
+        input.maxLength = maxLength;
+}
+
+// The part of the box the app shows (BrowserTextInput.UpdateClip), in the input's own pixels from each edge: the
+// rest is cut, for the eye and for a tap alike.
+export function setClip(input, top, right, bottom, left) {
+    input.style.clipPath = top > 0 || right > 0 || bottom > 0 || left > 0
+        ? `inset(${top}px ${right}px ${bottom}px ${left}px)` : '';
+}
+
+// Only when it moves here: a tap in the input has placed its own caret by then.
+export function focus(input, selectAll) {
+    if (document.activeElement === input)
+        return;
+    input.focus({ preventScroll: true });
+    if (selectAll)
+        input.select();
 }
 
 // The keys back to Avalonia, whose handlers are on the page's container: once Avalonia's focus has

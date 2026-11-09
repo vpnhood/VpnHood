@@ -3,6 +3,7 @@
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.UserReviewDialog">
   <!-- Three faces to pick from; the sad ones open a box for the
        words, the happy one thanks and hands over to the store's own prompt. -->
@@ -38,7 +39,10 @@
       <StackPanel x:Name="TextStep" Spacing="12" IsVisible="False">
         <controls:RateFace x:Name="PickedFace" IsPicked="True" Width="88" Height="88" HorizontalAlignment="Center" />
         <TextBlock Classes="label-large" Text="{Binding UserReviewSorryMsg, Source={x:Static res:Strings.Current}}" TextWrapping="Wrap" />
-        <TextBox x:Name="ReviewBox" Classes="outlined multiline" MaxLength="500" MinHeight="90" />
+        <!-- sentences in the user's own language: capitals and corrections, and on a paired phone its own fonts -->
+        <TextBox x:Name="ReviewBox" Classes="outlined multiline" MaxLength="500" MinHeight="90"
+                 TextInputOptions.AutoCapitalization="True" TextInputOptions.ShowSuggestions="True"
+                 hosting:NativeTextInput.IsPreferred="True" />
       </StackPanel>
 
       <!-- step 3: the thanks -->

@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.SignInDialog">
   <!-- The store's sign-in as the one prominent button, the portal's own
        email and password beneath it - which a TV offers to type on the phone - then the second
@@ -42,10 +43,12 @@
         <TextBlock Classes="dialog-title" Text="{Binding SignInWithEmail, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="dialog-text" Text="{Binding SignInWithEmailDesc, Source={x:Static res:Strings.Current}}" />
         <!-- told to the on-screen keyboard: an email layout, and a password it neither suggests
-             nor learns -->
-        <TextBox x:Name="EmailBox" Classes="outlined" TextInputOptions.ContentType="Email" TextChanged="OnFieldChanged" />
+             nor learns; on a paired phone, the phone's own boxes, which its password manager fills -->
+        <TextBox x:Name="EmailBox" Classes="outlined" TextInputOptions.ContentType="Email" TextChanged="OnFieldChanged"
+                 hosting:NativeTextInput.IsPreferred="True" hosting:NativeTextInput.AutoComplete="username" />
         <TextBox x:Name="PasswordBox" Classes="outlined" PasswordChar="•" TextInputOptions.ContentType="Password"
-                 TextChanged="OnFieldChanged" KeyDown="OnPasswordKeyDown" />
+                 TextChanged="OnFieldChanged" KeyDown="OnPasswordKeyDown"
+                 hosting:NativeTextInput.IsPreferred="True" hosting:NativeTextInput.AutoComplete="current-password" />
         <Button x:Name="SubmitPasswordButton" Classes="btn-main block" Height="44" IsEnabled="False"
                 Click="OnSubmitPasswordClick" Content="{Binding SignIn, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="PasswordError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />
@@ -64,7 +67,9 @@
       <StackPanel x:Name="ChallengeStep" Spacing="10" IsVisible="False">
         <TextBlock Classes="dialog-title" Text="{Binding TwoFactorTitle, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="dialog-text" Text="{Binding TwoFactorDesc, Source={x:Static res:Strings.Current}}" />
-        <TextBox x:Name="CodeBox" Classes="outlined" TextChanged="OnFieldChanged" KeyDown="OnCodeKeyDown" />
+        <!-- a code from an authenticator app or a backup code, either pasted on a phone -->
+        <TextBox x:Name="CodeBox" Classes="outlined" TextChanged="OnFieldChanged" KeyDown="OnCodeKeyDown"
+                 hosting:NativeTextInput.IsPreferred="True" hosting:NativeTextInput.AutoComplete="one-time-code" />
         <Button x:Name="SubmitCodeButton" Classes="btn-main block" Height="44" IsEnabled="False"
                 Click="OnSubmitCodeClick" Content="{Binding Confirm, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="CodeError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />

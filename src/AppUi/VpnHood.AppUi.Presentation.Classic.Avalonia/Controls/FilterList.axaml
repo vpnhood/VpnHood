@@ -3,6 +3,7 @@
              xmlns:vm="using:VpnHood.AppUi.Presentation.Classic.Avalonia.ViewModels"
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
+             xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.FilterList">
   <!-- Select all, Clear all and Search over a list of rows, each an icon
        or a flag, a name and a switch. A row is a button and its press flips its switch; on a TV
@@ -29,7 +30,8 @@
           </StackPanel>
         </Button>
       </StackPanel>
-      <TextBox x:Name="SearchBox" Classes="outlined" Margin="16,4,16,8" CornerRadius="18" IsVisible="False" TextChanged="OnSearchChanged" />
+      <TextBox x:Name="SearchBox" Classes="outlined" Margin="16,4,16,8" CornerRadius="18" IsVisible="False" TextChanged="OnSearchChanged"
+               TextInputOptions.ContentType="Search" hosting:NativeTextInput.IsPreferred="True" />
 
       <StackPanel x:Name="LoadingPanel" Orientation="Horizontal" Spacing="10" Margin="16,24" IsVisible="False">
         <TextBlock Classes="spinner" FontSize="22" Text="{x:Static res:Mdi.Loading}" />

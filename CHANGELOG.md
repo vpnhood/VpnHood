@@ -2,6 +2,7 @@
 
 * Feature: The app runs on Android TV, and Remote Access lets you set it up from a phone or computer on the same network #android #store
 * Feature: The app runs on Apple TV, and Remote Access lets you set it up from a phone or computer on the same network #ios
+* Improve: On Remote Access, you can paste into the sign-in, search, review and rename boxes, a password manager can fill in your sign-in, and any character you type shows
 * Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android #store
 * Improve: The Split Apps page opens much faster on phones with many apps, and the app no longer freezes while it loads #android

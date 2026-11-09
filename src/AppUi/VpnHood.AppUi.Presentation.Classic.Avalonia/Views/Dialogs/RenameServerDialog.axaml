@@ -2,12 +2,15 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
+                    xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
                     x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs.RenameServerDialog">
   <!-- The name, with the word that an empty one restores the default. -->
   <Border Classes="dialog" MaxWidth="480">
     <StackPanel Spacing="12">
       <TextBlock Classes="dialog-title" Text="{Binding Rename, Source={x:Static res:Strings.Current}}" />
-      <TextBox x:Name="NameBox" AutomationProperties.Name="{Binding Rename, Source={x:Static res:Strings.Current}}" Classes="outlined" KeyDown="OnNameKeyDown" />
+      <!-- a name in the user's own language, taken as typed but for its first capital -->
+      <TextBox x:Name="NameBox" AutomationProperties.Name="{Binding Rename, Source={x:Static res:Strings.Current}}" Classes="outlined" KeyDown="OnNameKeyDown"
+               TextInputOptions.AutoCapitalization="True" hosting:NativeTextInput.IsPreferred="True" />
       <TextBlock Classes="body-small disabled" TextWrapping="Wrap" Text="{Binding SaveEmptyToDisplayDefaultName, Source={x:Static res:Strings.Current}}" />
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button Classes="btn-text" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />

@@ -8,6 +8,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.TextInput;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Threading;
@@ -15,18 +16,21 @@ using Avalonia.VisualTree;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Browser;
 
-// The page's own <input> over the text of a box a key or a code is pasted into
-// (NativeTextInput.IsPreferred), where the page cannot read the clipboard (plain http on a LAN
-// address) and Avalonia 12 cannot paste: its read throws on the missing API, and its fallback reads
-// the paste event's items after the browser has locked them. The box keeps its frame, its focus and
-// its Text; Enter, Tab and Escape reach it as its own keys.
-// TODO Drop it once Avalonia pastes on such a page (AvaloniaUI/Avalonia#22655).
+// The page's own <input> over the text of a box a person types words or pastes into
+// (NativeTextInput.IsPreferred), where the page cannot read the clipboard: plain http on a LAN address,
+// the paired phone's page. The browser draws what is typed in the phone's own fonts, where Avalonia has
+// only the faces the page ships, which leave a rare character a box; and it takes the phone's paste and
+// autofill, where Avalonia 12 cannot paste: its read throws on the missing API, and its fallback reads
+// the paste event's items after the browser has locked them (AvaloniaUI/Avalonia#22655); the fonts keep
+// it after that fix. The box keeps its frame, its focus and its Text; Enter, Tab and Escape reach it as
+// its own keys.
 internal sealed class BrowserTextInput : NativeControlHost
 {
     private readonly TextBox _textBox;
     private readonly Control _textArea;
     private readonly TextBlock? _placeholder;
     private JSObject? _input;
+    private Rect _viewport = new(0, 0, double.PositiveInfinity, double.PositiveInfinity);
 
     private BrowserTextInput(TextBox textBox, Control textArea, TextBlock? placeholder)
     {
@@ -87,6 +91,7 @@ internal sealed class BrowserTextInput : NativeControlHost
         _textBox.GotFocus += OnTextBoxGotFocus;
         _textBox.LostFocus += OnTextBoxLostFocus;
         _textBox.PropertyChanged += OnTextBoxPropertyChanged;
+        EffectiveViewportChanged += OnEffectiveViewportChanged;
         UpdateShown();
         base.OnAttachedToVisualTree(e);
     }
@@ -96,7 +101,36 @@ internal sealed class BrowserTextInput : NativeControlHost
         _textBox.GotFocus -= OnTextBoxGotFocus;
         _textBox.LostFocus -= OnTextBoxLostFocus;
         _textBox.PropertyChanged -= OnTextBoxPropertyChanged;
+        EffectiveViewportChanged -= OnEffectiveViewportChanged;
         base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == BoundsProperty)
+            UpdateClip();
+    }
+
+    // The part of the box its scrolling page shows. The page's input, drawn over everything Avalonia draws,
+    // is cut to it: else a box scrolled under the page's header shows over it and takes its taps.
+    private void OnEffectiveViewportChanged(object? sender, EffectiveViewportChangedEventArgs e)
+    {
+        _viewport = e.EffectiveViewport;
+        UpdateClip();
+    }
+
+    private void UpdateClip()
+    {
+        var size = Bounds.Size;
+        if (_input == null || size.Width <= 0 || size.Height <= 0)
+            return;
+
+        var shown = _viewport.Intersect(new Rect(size));
+        if (shown.Width <= 0 || shown.Height <= 0)
+            shown = new Rect(0, size.Height, size.Width, 0); // none of it: cut from the top down
+        BrowserTextInputInterop.SetClip(_input, top: shown.Top, right: size.Width - shown.Right,
+            bottom: size.Height - shown.Bottom, left: shown.Left);
     }
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
@@ -108,8 +142,48 @@ internal sealed class BrowserTextInput : NativeControlHost
             CssColor(_textBox.PlaceholderForeground, _placeholder?.Opacity ?? 1), CssColor(_textBox.SelectionBrush),
             CssAlign(_textBox.TextAlignment), _textBox.FlowDirection == FlowDirection.RightToLeft ? "rtl" : "ltr");
         BrowserTextInputInterop.SetWords(input, _textBox.PlaceholderText ?? "", AutomationProperties.GetName(_textBox));
+        SetOptions(input);
         _input = input;
+        UpdateClip();
+        // A box focused before its input was made - a dialog's first box, focused as it shows - hands its
+        // focus on once the input is on the page; else the keys would reach neither.
+        if (_textBox.IsFocused)
+            Dispatcher.UIThread.Post(FocusInput, DispatcherPriority.Background);
         return new JSObjectControlHandle(input);
+    }
+
+    // What the box takes, told to the phone's keyboard and autofill the way the box tells a platform's own
+    // keyboard (TextInputOptions). A box that asks for nothing takes its text as typed, as a key or a code
+    // is: no capitals, corrections or suggestions, and nothing filled in.
+    private void SetOptions(JSObject input)
+    {
+        var contentType = TextInputOptions.GetContentType(_textBox);
+        var enterKeyHint = TextInputOptions.GetReturnKeyType(_textBox) switch {
+            TextInputReturnKeyType.Return => "enter",
+            TextInputReturnKeyType.Done => "done",
+            TextInputReturnKeyType.Go => "go",
+            TextInputReturnKeyType.Send => "send",
+            TextInputReturnKeyType.Search => "search",
+            TextInputReturnKeyType.Next => "next",
+            TextInputReturnKeyType.Previous => "previous",
+            _ when _textBox.AcceptsReturn => "enter",
+            _ when contentType == TextInputContentType.Search => "search",
+            _ => "go" // Enter is the box's action: Add server's Add, a code's Activate
+        };
+        var inputMode = contentType switch {
+            TextInputContentType.Email => "email",
+            TextInputContentType.Url => "url",
+            TextInputContentType.Search => "search",
+            TextInputContentType.Digits or TextInputContentType.Pin => "numeric",
+            TextInputContentType.Number => "decimal",
+            _ => "text"
+        };
+
+        // masked as the box masks its own text
+        BrowserTextInputInterop.SetOptions(input, isPassword: _textBox.PasswordChar != default, inputMode,
+            NativeTextInput.GetAutoComplete(_textBox) ?? "off",
+            suggestions: TextInputOptions.GetShowSuggestions(_textBox) == true,
+            capitalize: TextInputOptions.GetAutoCapitalization(_textBox), enterKeyHint, _textBox.MaxLength);
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
@@ -138,10 +212,20 @@ internal sealed class BrowserTextInput : NativeControlHost
     // the page's container.
     private void OnTextBoxGotFocus(object? sender, RoutedEventArgs e)
     {
-        Dispatcher.UIThread.Post(() => {
-            if (_input != null && _textBox.IsFocused && IsVisible)
-                BrowserTextInputInterop.Focus(_input);
-        });
+        Dispatcher.UIThread.Post(FocusInput);
+    }
+
+    // A box whose code selects its whole text as it lands there (Rename's name, so typing replaces it) has it
+    // selected in the page's input too.
+    private void FocusInput()
+    {
+        if (_input == null || !_textBox.IsFocused || !IsVisible)
+            return;
+
+        var length = _textBox.Text?.Length ?? 0;
+        var isAllSelected = length > 0 && Math.Min(_textBox.SelectionStart, _textBox.SelectionEnd) == 0 &&
+                            Math.Max(_textBox.SelectionStart, _textBox.SelectionEnd) == length;
+        BrowserTextInputInterop.Focus(_input, isAllSelected);
     }
 
     private void OnTextBoxLostFocus(object? sender, RoutedEventArgs e)

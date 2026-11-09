@@ -202,6 +202,31 @@ else {
 	if (-not (Test-Path "$stagingDir/$versionTag/$assemblyName.exe")) {
 		throw "The package holds no $versionTag/$assemblyName.exe: $packageFile";
 	}
+
+	# The new version runs once, by --version, before it goes into bin and anything changes: .NET 11 stops
+	# as the process starts, before any of the server's code, on an x64 processor without SSE3, SSSE3,
+	# SSE4.1, SSE4.2 and POPCNT (x86-64-v2), with exit code 0x80131506, and the running server would be
+	# replaced by one that cannot start. Windows PowerShell cannot ask the processor itself: Windows has no
+	# flag for POPCNT. Run from the staging folder, the server finds no publish.json two folders up, so the
+	# storage it makes is in the staging folder, which goes.
+	$probeOptions = @{
+		FilePath               = "$stagingDir/$versionTag/$assemblyName.exe";
+		ArgumentList           = "--version";
+		WorkingDirectory       = $stagingDir;
+		RedirectStandardOutput = "$stagingDir/probe.out";
+		RedirectStandardError  = "$stagingDir/probe.err";
+	};
+	$probe = Start-Process @probeOptions -NoNewWindow -Wait -PassThru;
+	if ($probe.ExitCode -eq -2146233082) {
+		Remove-Item -Path $stagingDir -Recurse -Force -ErrorAction Continue;
+		if ("$downloadedPackageFile" -ne "") { Remove-Item -Path "$downloadedPackageFile" -Force -ErrorAction Continue; }
+		# and the folders a new install made: Directory.Delete takes a folder only when it is empty
+		foreach ($folder in @("$destinationPath/bin", $destinationPath, (Split-Path -Parent $destinationPath))) {
+			try { [IO.Directory]::Delete($folder); } catch {}
+		}
+		throw "$productName cannot run on this machine: it needs a processor with SSE4.2 and POPCNT, and this one does not have them.";
+	}
+
 	# the package keeps the build's times; the cleanup below goes by when a version was installed
 	(Get-Item "$stagingDir/$versionTag").LastWriteTime = Get-Date;
 	Move-Item -Path "$stagingDir/$versionTag" -Destination $binDir;

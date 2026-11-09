@@ -1,6 +1,6 @@
 # Latest
 
-* Fix: On Linux, the installer stops on an x64 machine without SSE4.2 and POPCNT, such as a VPS on a basic virtual processor, and says so, instead of installing a server that cannot start
+* Fix: On Linux and Windows, the installer stops on a machine whose processor lacks SSE4.2 and POPCNT, such as a VPS on a basic virtual processor, and says so, instead of installing a server that cannot start; an installed server keeps running
 
 # v9.1.872
 

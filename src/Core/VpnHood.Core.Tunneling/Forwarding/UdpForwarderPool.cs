@@ -286,7 +286,11 @@ public class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
 
         public override bool Equals(object? obj) => obj is ConnectionKey other && Equals(other);
 
-        public override int GetHashCode() =>
-            HashCode.Combine(_srcLow, _srcHigh, _dstLow, _dstHigh, _ports, _version);
+        // Each 32-bit word goes in on its own: a ulong's own hash folds its two halves together before HashCode's
+        // seed, and a client could then pick destinations that collide in this table whatever the seed.
+        public override int GetHashCode() => unchecked(HashCode.Combine(
+            HashCode.Combine((uint)_srcLow, (uint)(_srcLow >> 32), (uint)_srcHigh, (uint)(_srcHigh >> 32),
+                (uint)_dstLow, (uint)(_dstLow >> 32), (uint)_dstHigh, (uint)(_dstHigh >> 32)),
+            _ports, _version));
     }
 }

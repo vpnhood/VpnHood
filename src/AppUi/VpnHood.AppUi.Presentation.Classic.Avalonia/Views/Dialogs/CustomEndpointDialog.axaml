@@ -1,5 +1,6 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
@@ -15,7 +16,7 @@
           <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" />
         </Grid>
       </controls:SwitchRow>
-      <TextBox x:Name="EndpointBox" Classes="outlined" TextChanged="OnEndpointChanged" KeyDown="OnEndpointKeyDown" FlowDirection="LeftToRight" />
+      <TextBox x:Name="EndpointBox" Classes="outlined" TextChanged="OnEndpointChanged" KeyDown="OnEndpointKeyDown" FlowDirection="LeftToRight" hosting:NativeTextInput.IsPreferred="True" />
       <TextBlock x:Name="ErrorText" AutomationProperties.LiveSetting="Assertive" Classes="body-small error-text" TextWrapping="Wrap" IsVisible="False" />
       <TextBlock Classes="body-small dialog-text" TextWrapping="Wrap" Text="{Binding CustomEndpointDesc, Source={x:Static res:Strings.Current}}" />
       <WrapPanel Orientation="Horizontal">

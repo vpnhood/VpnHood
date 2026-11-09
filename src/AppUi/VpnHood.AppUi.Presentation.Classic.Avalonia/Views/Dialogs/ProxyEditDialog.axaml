@@ -1,5 +1,6 @@
 ﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
                     xmlns:res="using:VpnHood.AppUi.Common"
                     xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
                     xmlns:dialogs="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs"
@@ -14,7 +15,7 @@
         <!-- a list to import -->
         <StackPanel x:Name="ListPanel" Spacing="8" IsVisible="False">
           <TextBlock Classes="body-small disabled" TextWrapping="Wrap" Text="{Binding ProxyImportDesc, Source={x:Static res:Strings.Current}}" />
-          <TextBox x:Name="ListBox" Classes="outlined multiline" MinHeight="150" TextChanged="OnFieldChanged" />
+          <TextBox x:Name="ListBox" Classes="outlined multiline" MinHeight="150" TextChanged="OnFieldChanged" hosting:NativeTextInput.IsPreferred="True" />
         </StackPanel>
 
         <!-- ProxyFields: one proxy -->
@@ -25,9 +26,9 @@
               <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" />
             </Grid>
           </controls:SwitchRow>
-          <TextBox x:Name="HostBox" Classes="outlined" TextChanged="OnFieldChanged" LostFocus="OnHostLostFocus" />
+          <TextBox x:Name="HostBox" Classes="outlined" TextChanged="OnFieldChanged" LostFocus="OnHostLostFocus" hosting:NativeTextInput.IsPreferred="True" />
           <TextBlock x:Name="HostError" Classes="body-small error-text" IsVisible="False" />
-          <TextBox x:Name="PortBox" Classes="outlined" TextChanged="OnFieldChanged" />
+          <TextBox x:Name="PortBox" Classes="outlined" TextChanged="OnFieldChanged" hosting:NativeTextInput.IsPreferred="True" />
           <TextBlock x:Name="PortError" Classes="body-small error-text" IsVisible="False" />
           <Button x:Name="ProtocolButton" Classes="combo-field" HorizontalAlignment="Stretch" Click="OnMenuButtonClick">
             <Grid ColumnDefinitions="*,Auto">
@@ -50,8 +51,8 @@
             </Grid>
           </controls:SwitchRow>
           <StackPanel x:Name="AuthPanel" Spacing="10" IsVisible="False">
-            <TextBox x:Name="UsernameBox" Classes="outlined" />
-            <TextBox x:Name="PasswordBox" Classes="outlined" />
+            <TextBox x:Name="UsernameBox" Classes="outlined" hosting:NativeTextInput.IsPreferred="True" />
+            <TextBox x:Name="PasswordBox" Classes="outlined" hosting:NativeTextInput.IsPreferred="True" />
           </StackPanel>
         </StackPanel>
 

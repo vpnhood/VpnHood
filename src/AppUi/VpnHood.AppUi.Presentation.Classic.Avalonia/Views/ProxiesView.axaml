@@ -1,5 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:ui="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Resources"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
@@ -55,7 +56,7 @@
               </controls:SwitchRow>
               <StackPanel x:Name="UrlPanel" Spacing="12" IsVisible="False">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBox x:Name="UrlBox" Classes="outlined" LostFocus="OnUrlLostFocus" TextChanged="OnUrlChanged" />
+                  <TextBox x:Name="UrlBox" Classes="outlined" LostFocus="OnUrlLostFocus" TextChanged="OnUrlChanged" hosting:NativeTextInput.IsPreferred="True" />
                   <Button x:Name="ReloadButton" Grid.Column="1" Classes="tonal-highlight icon" Margin="8,0,0,0" Click="OnReloadClick"
                           AutomationProperties.Name="{Binding Refresh, Source={x:Static res:Strings.Current}}">
                     <TextBlock x:Name="ReloadIcon" Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.Refresh}" />

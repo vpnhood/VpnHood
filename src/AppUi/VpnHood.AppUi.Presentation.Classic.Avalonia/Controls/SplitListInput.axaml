@@ -1,5 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Controls.SplitListInput">
   <!-- A card of format hints with a sample chip
        each, then a card per list - exclude, include and, where the split has one, block - each a
@@ -12,19 +13,19 @@
       <StackPanel Spacing="8">
         <TextBlock x:Name="ExcludeTitle" Classes="body-medium" />
         <!-- the lists read left to right in every language -->
-        <TextBox x:Name="ExcludeBox" AutomationProperties.LabeledBy="{Binding #ExcludeTitle}" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
+        <TextBox x:Name="ExcludeBox" AutomationProperties.LabeledBy="{Binding #ExcludeTitle}" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" hosting:NativeTextInput.IsPreferred="True" />
       </StackPanel>
     </Border>
     <Border Classes="config-card" Padding="16,12,16,12">
       <StackPanel Spacing="8">
         <TextBlock x:Name="IncludeTitle" Classes="body-medium" />
-        <TextBox x:Name="IncludeBox" AutomationProperties.LabeledBy="{Binding #IncludeTitle}" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
+        <TextBox x:Name="IncludeBox" AutomationProperties.LabeledBy="{Binding #IncludeTitle}" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" hosting:NativeTextInput.IsPreferred="True" />
       </StackPanel>
     </Border>
     <Border x:Name="BlockCard" Classes="config-card" Padding="16,12,16,12">
       <StackPanel Spacing="8">
         <TextBlock x:Name="BlockTitle" Classes="body-medium" />
-        <TextBox x:Name="BlockBox" AutomationProperties.LabeledBy="{Binding #BlockTitle}" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
+        <TextBox x:Name="BlockBox" AutomationProperties.LabeledBy="{Binding #BlockTitle}" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" hosting:NativeTextInput.IsPreferred="True" />
       </StackPanel>
     </Border>
   </StackPanel>

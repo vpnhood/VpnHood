@@ -138,9 +138,7 @@ internal sealed class BrowserTextInput : NativeControlHost
         var input = BrowserTextInputInterop.Create(_textBox.TextWrapping != TextWrapping.NoWrap, _textBox.AcceptsReturn,
             OnInput, OnKey, OnFocus);
         BrowserTextInputInterop.SetText(input, _textBox.Text ?? "");
-        BrowserTextInputInterop.SetLook(input, CssFont(), CssColor(_textBox.Foreground), CssColor(_textBox.CaretBrush),
-            CssColor(_textBox.PlaceholderForeground, _placeholder?.Opacity ?? 1), CssColor(_textBox.SelectionBrush),
-            CssAlign(_textBox.TextAlignment), _textBox.FlowDirection == FlowDirection.RightToLeft ? "rtl" : "ltr");
+        SetLook(input);
         BrowserTextInputInterop.SetWords(input, _textBox.PlaceholderText ?? "", AutomationProperties.GetName(_textBox));
         SetOptions(input);
         _input = input;
@@ -150,6 +148,24 @@ internal sealed class BrowserTextInput : NativeControlHost
         if (_textBox.IsFocused)
             Dispatcher.UIThread.Post(FocusInput, DispatcherPriority.Background);
         return new JSObjectControlHandle(input);
+    }
+
+    // The box's look as it is now. Set again as it changes: a box made while disabled - a list whose switch
+    // is off - would otherwise keep its disabled grey once enabled.
+    private void SetLook(JSObject input)
+    {
+        BrowserTextInputInterop.SetLook(input, CssFont(), CssColor(_textBox.Foreground), CssColor(_textBox.CaretBrush),
+            CssColor(_textBox.PlaceholderForeground, _placeholder?.Opacity ?? 1), CssColor(_textBox.SelectionBrush),
+            CssAlign(_textBox.TextAlignment), _textBox.FlowDirection == FlowDirection.RightToLeft ? "rtl" : "ltr");
+    }
+
+    private static bool IsLookProperty(AvaloniaProperty property)
+    {
+        return property == TextBox.ForegroundProperty || property == TextBox.CaretBrushProperty ||
+               property == TextBox.PlaceholderForegroundProperty || property == TextBox.SelectionBrushProperty ||
+               property == TextBox.FontFamilyProperty || property == TextBox.FontSizeProperty ||
+               property == TextBox.FontWeightProperty || property == TextBox.FontStyleProperty ||
+               property == TextBox.TextAlignmentProperty || property == FlowDirectionProperty;
     }
 
     // What the box takes, told to the phone's keyboard and autofill the way the box tells a platform's own
@@ -206,6 +222,8 @@ internal sealed class BrowserTextInput : NativeControlHost
             BrowserTextInputInterop.SetText(_input, _textBox.Text ?? "");
         else if (e.Property == IsEffectivelyEnabledProperty)
             UpdateShown();
+        else if (_input != null && IsLookProperty(e.Property))
+            SetLook(_input);
     }
 
     // Posted: Avalonia finishes moving its own focus first, and leaving one of its text boxes focuses

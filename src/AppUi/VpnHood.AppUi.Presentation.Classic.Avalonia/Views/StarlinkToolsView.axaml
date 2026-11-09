@@ -1,5 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:hosting="using:VpnHood.AppUi.Hosting.Avalonia"
              xmlns:res="using:VpnHood.AppUi.Common"
              xmlns:controls="using:VpnHood.AppUi.Presentation.Classic.Avalonia.Controls"
              x:Class="VpnHood.AppUi.Presentation.Classic.Avalonia.Views.StarlinkToolsView">
@@ -19,12 +20,12 @@
           <StackPanel Spacing="4">
             <controls:OptionRow x:Name="DisabledRow" Clicked="OnDisabledClick" />
             <controls:OptionRow x:Name="RemoteRow" Clicked="OnRemoteClick" />
-            <TextBox x:Name="RemoteBox" AutomationProperties.Name="{Binding StarlinkModeRemote, Source={x:Static res:Strings.Current}}" Classes="outlined" PlaceholderText="192.0.2.1" Margin="44,0,12,8" IsVisible="False" FlowDirection="LeftToRight" />
+            <TextBox x:Name="RemoteBox" AutomationProperties.Name="{Binding StarlinkModeRemote, Source={x:Static res:Strings.Current}}" Classes="outlined" PlaceholderText="192.0.2.1" Margin="44,0,12,8" IsVisible="False" FlowDirection="LeftToRight" hosting:NativeTextInput.IsPreferred="True" />
             <controls:OptionRow x:Name="LocalRow" Clicked="OnLocalClick" />
             <StackPanel x:Name="LocalPanel" Spacing="8" Margin="44,0,12,8" IsVisible="False">
               <!-- the address and its Find button read left to right in every language -->
               <Grid ColumnDefinitions="*,Auto" FlowDirection="LeftToRight">
-                <TextBox x:Name="LocalBox" AutomationProperties.Name="{Binding StarlinkModeLocal, Source={x:Static res:Strings.Current}}" Classes="outlined" PlaceholderText="192.0.2.1" />
+                <TextBox x:Name="LocalBox" AutomationProperties.Name="{Binding StarlinkModeLocal, Source={x:Static res:Strings.Current}}" Classes="outlined" PlaceholderText="192.0.2.1" hosting:NativeTextInput.IsPreferred="True" />
                 <Button Grid.Column="1" Classes="btn2 small pill" Margin="8,0,0,0" Click="OnFindClick"
                         Content="{Binding StarlinkFind, Source={x:Static res:Strings.Current}}" />
               </Grid>

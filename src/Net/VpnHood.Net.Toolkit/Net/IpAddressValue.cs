@@ -79,7 +79,7 @@ public readonly struct IpAddressValue : IEquatable<IpAddressValue>, IComparable<
     /// <exception cref="InvalidOperationException">The value holds no address.</exception>
     public IpAddressValue MapToIPv4() => _version switch {
         IpVersion.IPv4 => this,
-        IpVersion.IPv6 => new IpAddressValue(0, (uint)_low, 0, IpVersion.IPv4),
+        IpVersion.IPv6 => new IpAddressValue(0, unchecked((uint)_low), 0, IpVersion.IPv4),
         _ => throw new InvalidOperationException(NoAddressMessage)
     };
 
@@ -162,10 +162,11 @@ public readonly struct IpAddressValue : IEquatable<IpAddressValue>, IComparable<
     [Obsolete("Convert the address to a value once, with ToValue(), and compare the two values.", error: true)]
     public bool Equals(IPAddress? other) => throw new NotSupportedException("Compare two IpAddressValue values.");
 
-    // HashCode is seeded per process, as IPAddress's hash is: a fixed formula would let a client choose destination
-    // addresses that collide in the server's tables.
+    // Each 32-bit word goes in on its own: a ulong's own hash folds its two halves together before HashCode's seed, and
+    // a client could then pick destinations that collide in the server's tables whatever the seed.
     /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(_high, _low, _version);
+    public override int GetHashCode() => unchecked(HashCode.Combine(
+        (uint)(_high >> 32), (uint)_high, (uint)(_low >> 32), (uint)_low, _version));
 
     /// <inheritdoc/>
     /// <remarks>

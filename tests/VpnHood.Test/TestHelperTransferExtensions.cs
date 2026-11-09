@@ -40,11 +40,11 @@ public static class TestHelperTransferExtensions
         public async Task Test_UdpEcho(IPEndPoint? udpEndPoint = null, TimeSpan? timeout = null)
         {
             udpEndPoint ??= testHelper.WebServer.MockEps.UdpV4EndPoint1;
-            if (udpEndPoint.IsV4()) {
+            if (udpEndPoint.IsV4) {
                 using var udpClient = new UdpClient(AddressFamily.InterNetwork);
                 await testHelper.Test_UdpEcho(udpClient, udpEndPoint, timeout);
             }
-            else if (udpEndPoint.IsV6()) {
+            else if (udpEndPoint.IsV6) {
                 using var udpClient = new UdpClient(AddressFamily.InterNetworkV6);
                 await testHelper.Test_UdpEcho(udpClient, udpEndPoint, timeout);
             }

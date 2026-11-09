@@ -110,7 +110,7 @@ public class ServerFinder(
         var results = resolved.SelectMany(x => x)
             .Where(x =>
                 includeIpV6 || // accept any IPv6 if allowed
-                x.TcpEndPoint.IsV4() ||
+                x.TcpEndPoint.IsV4 ||
                 x.TcpEndPoint.Address.IsLoopback()) // loopback addresses are for tests
             .ToArray();
 

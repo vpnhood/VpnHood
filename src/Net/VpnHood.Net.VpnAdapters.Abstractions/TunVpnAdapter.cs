@@ -546,9 +546,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             VhLogger.Instance.LogDebug("Setting DNS servers...");
             var dnsServers = options.DnsServers;
             if (adapterIpNetworkV4 == null)
-                dnsServers = dnsServers.Where(x => !x.IsV4()).ToArray();
+                dnsServers = dnsServers.Where(x => !x.IsV4).ToArray();
             if (adapterIpNetworkV6 == null)
-                dnsServers = dnsServers.Where(x => !x.IsV6()).ToArray();
+                dnsServers = dnsServers.Where(x => !x.IsV6).ToArray();
             await SetDnsServers(dnsServers, cancellationToken).Vhc();
 
             // exclude dead networks
@@ -642,11 +642,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             var sortedIpNetworks = ipNetworks.Sort();
 
             // ReSharper disable once PossibleMultipleEnumeration
-            if (addressFamily.IsV4() && sortedIpNetworks.IsAllV4())
+            if (addressFamily.IsV4 && sortedIpNetworks.IsAllV4())
                 ipNetworks = VpnAdapterOptions.AllVRoutesIpV4;
 
             // ReSharper disable once PossibleMultipleEnumeration
-            if (addressFamily.IsV6() && sortedIpNetworks.IsAllV6())
+            if (addressFamily.IsV6 && sortedIpNetworks.IsAllV6())
                 ipNetworks = VpnAdapterOptions.AllVRoutesIpV6;
         }
 
@@ -903,7 +903,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // in IPV6, the local ip may be some random ip for another virtual adapter.
             // valid one should be global unicast and assigned to local interfaces
-            if (addressFamily.IsV6() && !IpNetwork.AllGlobalUnicastV6.Contains(localEndPoint.Address))
+            if (addressFamily.IsV6 && !IpNetwork.AllGlobalUnicastV6.Contains(localEndPoint.Address))
                 throw new Exception("The discovered primary adapter IP is not assigned to any local interface.");
 
             // log the discovered primary adapter IP
@@ -1304,7 +1304,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private static HashSet<IpNetwork> GetNetworks(IEnumerable<IPAddress> addresses)
     {
         return addresses
-            .Select(address => new IpNetwork(address, address.IsV6() ? 64 : 32))
+            .Select(address => new IpNetwork(address, address.IsV6 ? 64 : 32))
             .ToHashSet();
     }
 

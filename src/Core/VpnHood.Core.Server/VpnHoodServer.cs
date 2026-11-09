@@ -261,7 +261,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
             var ipFilter = ConfigIpFilter(_netFilter.IpFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps,
-                isIpV6Supported: serverInfo.PublicIpAddresses.Any(x => x.IsV6()),
+                isIpV6Supported: serverInfo.PublicIpAddresses.Any(x => x.IsV6),
                 dnsServers: serverConfig.DnsServersValue,
                 virtualIpNetworkV4: SessionManager.VirtualIpNetworkV4,
                 virtualIpNetworkV6: SessionManager.VirtualIpNetworkV6);

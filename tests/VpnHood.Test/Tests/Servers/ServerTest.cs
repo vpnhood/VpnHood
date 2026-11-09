@@ -39,7 +39,7 @@ public class ServerTest : TestBase
         Assert.IsNotNull(accessManager.LastServerInfo);
         Assert.IsGreaterThan(0, accessManager.LastServerInfo.FreeUdpPortV4);
         Assert.IsTrue(
-            accessManager.LastServerInfo.PrivateIpAddresses.All(x => x.IsV4()) ||
+            accessManager.LastServerInfo.PrivateIpAddresses.All(x => x.IsV4) ||
             accessManager.LastServerInfo?.FreeUdpPortV6 > 0);
     }
 

@@ -27,10 +27,10 @@ public static class IPAddressUtil
     ];
 
     public static IReadOnlyList<IPAddress> ReliableDnsServers => field ??= [
-        GoogleDnsServers.First(x => x.IsV4()),
-        GoogleDnsServers.First(x => x.IsV6()),
-        KidsSafeCloudflareDnsServers.First(x => x.IsV4()),
-        KidsSafeCloudflareDnsServers.First(x => x.IsV6())
+        GoogleDnsServers.First(x => x.IsV4),
+        GoogleDnsServers.First(x => x.IsV6),
+        KidsSafeCloudflareDnsServers.First(x => x.IsV4),
+        KidsSafeCloudflareDnsServers.First(x => x.IsV6)
     ];
 
     public static IPAddress GenerateUlaAddress(ushort lastValue)
@@ -74,7 +74,7 @@ public static class IPAddressUtil
         try {
             // filter IPv6 addresses
             var dnsServersV6 = ReliableDnsServers
-                .Where(x => x.IsV6())
+                .Where(x => x.IsV6)
                 .ToArray();
 
             // check with binding to the address family
@@ -378,10 +378,10 @@ public static class IPAddressUtil
         if (ipAddress1.IsIPv4MappedToIPv6) ipAddress1 = ipAddress1.MapToIPv4();
         if (ipAddress2.IsIPv4MappedToIPv6) ipAddress2 = ipAddress2.MapToIPv4();
 
-        if (ipAddress1.IsV4() && ipAddress2.IsV6())
+        if (ipAddress1.IsV4 && ipAddress2.IsV6)
             return -1;
 
-        if (ipAddress1.IsV6() && ipAddress2.IsV4())
+        if (ipAddress1.IsV6 && ipAddress2.IsV4)
             return +1;
 
         var span1 = ipAddress1.GetAddressBytesFast(stackalloc byte[16]);
@@ -412,7 +412,7 @@ public static class IPAddressUtil
 
     public static long ToLong(IPAddress ipAddress)
     {
-        if (!ipAddress.IsV4())
+        if (!ipAddress.IsV4)
             throw new InvalidOperationException(
                 $"Only {AddressFamily.InterNetwork} family can be converted into long!");
 

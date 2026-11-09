@@ -206,7 +206,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     public override bool ProtectSocket(Socket socket)
     {
         // must works with loopback
-        var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;
+        var ipAddress = socket.AddressFamily.IsV4 ? IPAddress.Any : IPAddress.IPv6Any;
         socket.Bind(new IPEndPoint(ipAddress, 0));
         socket.Ttl = ProtectedTtl;
         return true;

@@ -43,7 +43,7 @@ public readonly struct IpAddressValue : IEquatable<IpAddressValue>, IComparable<
     public IpAddressValue(IPAddress ipAddress)
     {
         ArgumentNullException.ThrowIfNull(ipAddress);
-        var scopeId = ipAddress.IsV6() ? (uint)ipAddress.ScopeId : 0;
+        var scopeId = ipAddress.IsV6 ? (uint)ipAddress.ScopeId : 0;
         this = FromBytes(ipAddress.GetAddressBytesFast(stackalloc byte[16]), scopeId);
     }
 

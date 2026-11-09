@@ -11,13 +11,13 @@ namespace VpnHood.AppLib.App.Diagnosing;
 public class Diagnoser
 {
     public IPAddress[] TestPingIpAddresses { get; set; } = [
-        IPAddressUtil.KidsSafeCloudflareDnsServers.First(x => x.IsV4()),
-        IPAddressUtil.GoogleDnsServers.First(x => x.IsV4())
+        IPAddressUtil.KidsSafeCloudflareDnsServers.First(x => x.IsV4),
+        IPAddressUtil.GoogleDnsServers.First(x => x.IsV4)
     ];
 
     public IPEndPoint[] TestNsIpEndPoints { get; set; } = [
-        new(IPAddressUtil.KidsSafeCloudflareDnsServers.First(x => x.IsV4()), 53),
-        new(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4()), 53)
+        new(IPAddressUtil.KidsSafeCloudflareDnsServers.First(x => x.IsV4), 53),
+        new(IPAddressUtil.GoogleDnsServers.First(x => x.IsV4), 53)
     ];
 
     public Uri[] TestHttpUris { get; set; } =
@@ -48,9 +48,9 @@ public class Diagnoser
 
         // ping server
         VhLogger.Instance.LogInformation("Checking the endpoints via ping...");
-        if (!await IPAddressUtil.IsIpv6Supported().Vhc() && ipEndPoints.Any(x => x.IsV6())) {
+        if (!await IPAddressUtil.IsIpv6Supported().Vhc() && ipEndPoints.Any(x => x.IsV6)) {
             VhLogger.Instance.LogInformation("IpV6 is not supported. Excluding IpV6 addresses");
-            ipEndPoints = ipEndPoints.Where(x => !x.Address.IsV6()).ToArray();
+            ipEndPoints = ipEndPoints.Where(x => !x.Address.IsV6).ToArray();
         }
 
         // check ping

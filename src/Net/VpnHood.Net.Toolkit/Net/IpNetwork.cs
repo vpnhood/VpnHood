@@ -23,7 +23,7 @@ public class IpNetwork
         Prefix = prefix;
         PrefixLength = prefixLength;
         var addressFamily = prefix.AddressFamily;
-        var bits = addressFamily.IsV6() ? 128 : 32;
+        var bits = addressFamily.IsV6 ? 128 : 32;
         var mask = ((BigInteger.One << prefixLength) - 1) << (bits - prefixLength);
         var maskNot = (BigInteger.One << (bits - prefixLength)) - 1;
         _firstIpAddressValue = IPAddressUtil.ToBigInteger(Prefix) & mask;

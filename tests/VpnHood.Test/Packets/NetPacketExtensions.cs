@@ -44,17 +44,18 @@ public static class NetPacketExtensions
                    throw new InvalidDataException($"Invalid TCP packet. It is: {ipPacket.Protocol}");
         }
 
-        public bool IsMulticast()
-        {
-            // only UDP and ICMPv6 packets can use multicast
-            if (ipPacket.Protocol != ProtocolType.Udp && ipPacket.Protocol != ProtocolType.IcmpV6)
-                return false;
+        public bool IsMulticast {
+            get {
+                // only UDP and ICMPv6 packets can use multicast
+                if (ipPacket.Protocol != ProtocolType.Udp && ipPacket.Protocol != ProtocolType.IcmpV6)
+                    return false;
 
-            return
-                (ipPacket.Version == IPVersion.IPv4 &&
-                 IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress)) ||
-                (ipPacket.Version == IPVersion.IPv6 &&
-                 IpNetwork.MulticastNetworkV6.Contains(ipPacket.DestinationAddress));
+                return
+                    (ipPacket.Version == IPVersion.IPv4 &&
+                     IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress)) ||
+                    (ipPacket.Version == IPVersion.IPv6 &&
+                     IpNetwork.MulticastNetworkV6.Contains(ipPacket.DestinationAddress));
+            }
         }
 
         public IPEndPointPair GetEndPoints()

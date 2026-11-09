@@ -73,7 +73,7 @@ internal class ServerIpFilter : IIpFilter
     /// </summary>
     public bool CanServerRoute(IPAddress ipAddress)
     {
-        if (ipAddress.IsV6() && !IsIpV6SupportedByServer)
+        if (ipAddress.IsV6 && !IsIpV6SupportedByServer)
             return false;
 
         return IncludeRanges.Contains(ipAddress);
@@ -89,7 +89,7 @@ internal class ServerIpFilter : IIpFilter
         // the server's word: a member passes unchanged (Default, or a preserved inner Include from an
         // override lane) and a non-member takes the mode's action — except a refused Include, which is
         // blocked under either mode: it promised to travel inside, so letting it out would leak it
-        var isFamilyUnsupported = !IsIpV6SupportedByServer && endPoint.IsV6();
+        var isFamilyUnsupported = !IsIpV6SupportedByServer && endPoint.IsV6;
         if (isFamilyUnsupported || !IncludeRanges.Contains(endPoint.Address)) {
             // the same two steps as BuildIncludeIpRangesByDevice: an unrouted destination takes the
             // general mode and an unsupported family takes its own...

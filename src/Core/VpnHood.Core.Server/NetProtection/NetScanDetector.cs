@@ -17,7 +17,7 @@ public class NetScanDetector(int itemLimit, TimeSpan itemTimeout) : IDisposable
 
     public bool Verify(IpEndPointValue ipEndPoint)
     {
-        if (ipEndPoint.IsV6())
+        if (ipEndPoint.IsV6)
             return true;
 
         var item = _networkIpAddresses.GetOrAdd(GetNetworkIpAddress(ipEndPoint),

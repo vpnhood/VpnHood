@@ -155,7 +155,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         var routes = _routes.ToList();
         routes.AddRange(_dnsServers
             .Where(x => routes.Any(route => route.Contains(x)))
-            .Select(x => new IpNetwork(x, x.IsV4() ? 32 : 128))
+            .Select(x => new IpNetwork(x, x.IsV4 ? 32 : 128))
             .Where(x => !routes.Contains(x)));
 
         var routeAssignment = new VpnRouteAssignment();

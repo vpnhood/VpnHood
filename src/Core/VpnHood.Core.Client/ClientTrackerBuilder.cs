@@ -52,7 +52,7 @@ public static class ClientTrackerBuilder
             Parameters = new Dictionary<string, object?> {
                 { "ep", vpnEndPoint.TcpEndPoint },
                 { "domain", vpnEndPoint.HostName },
-                { "ip_v6", vpnEndPoint.TcpEndPoint.Address.IsV6() },
+                { "ip_v6", vpnEndPoint.TcpEndPoint.Address.IsV6 },
                 { "available", available }
             }
         };

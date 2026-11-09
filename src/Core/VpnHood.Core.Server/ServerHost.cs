@@ -482,8 +482,8 @@ public class ServerHost : IAsyncDisposable
     private static int? FindMatchingPort(IEnumerable<IPEndPoint> endPoints, IStreamConnection streamConnection, string connectionType)
     {
         var endPoint = endPoints.FirstOrDefault(x =>
-            (x.Address.Equals(IPAddress.Any) && streamConnection.LocalEndPoint.IsV4()) ||
-            (x.Address.Equals(IPAddress.IPv6Any) && streamConnection.LocalEndPoint.IsV6()) ||
+            (x.Address.Equals(IPAddress.Any) && streamConnection.LocalEndPoint.IsV4) ||
+            (x.Address.Equals(IPAddress.IPv6Any) && streamConnection.LocalEndPoint.IsV6) ||
             x.Address.Equals(streamConnection.LocalEndPoint.Address));
 
         if (endPoint != null && streamConnection is ServerStreamConnection { IsReverseProxy: true }) {

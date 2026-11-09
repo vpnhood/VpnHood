@@ -175,28 +175,30 @@ public static class IpPacketExtensions
         }
 
         /// <summary>
-        /// Determines whether the packet goes to a multicast address with a protocol that can: UDP, ICMPv4 or
-        /// ICMPv6.
+        /// Gets whether the packet goes to a multicast address, 224.0.0.0/4 or ff00::/8, with a protocol that can:
+        /// UDP, ICMPv4 or ICMPv6.
         /// </summary>
-        /// <returns><see langword="true"/> if it does; otherwise, <see langword="false"/>.</returns>
-        public bool IsMulticast()
-        {
-            // only UDP and ICMP packets can use multicast
-            return ipPacket.Protocol is IpProtocol.Udp or IpProtocol.IcmpV4 or IpProtocol.IcmpV6 &&
-                   ipPacket.DestinationAddress.IsMulticast();
+        /// <value><see langword="true"/> if it does; otherwise, <see langword="false"/>.</value>
+        public bool IsMulticast {
+            get {
+                // only UDP and ICMP packets can use multicast
+                if (ipPacket.Protocol is not (IpProtocol.Udp or IpProtocol.IcmpV4 or IpProtocol.IcmpV6))
+                    return false;
+
+                // the header's first byte, as DestinationAddress would make an IPAddress for the packet
+                var destination = ipPacket.DestinationAddressSpan;
+                return ipPacket.IsV4 ? (destination[0] & 0xF0) == 0xE0 : destination[0] == 0xFF;
+            }
         }
 
         /// <summary>
-        /// Determines whether the packet goes to the IPv4 limited broadcast address, 255.255.255.255.
+        /// Gets whether the packet goes to the IPv4 limited broadcast address, 255.255.255.255.
         /// </summary>
+        /// <value><see langword="true"/> if it does; otherwise, <see langword="false"/>.</value>
         /// <remarks>
         /// A subnet's directed broadcast address is not recognized, and an IPv6 packet is never a broadcast.
         /// </remarks>
-        /// <returns><see langword="true"/> if it does; otherwise, <see langword="false"/>.</returns>
-        public bool IsBroadcast()
-        {
-            return IPAddress.Broadcast.SpanEquals(ipPacket.DestinationAddressSpan);
-        }
+        public bool IsBroadcast => IPAddress.Broadcast.SpanEquals(ipPacket.DestinationAddressSpan);
 
         /// <summary>
         /// Gets the packet's source address with the port of its TCP or UDP payload.
@@ -382,29 +384,11 @@ public static class IpPacketExtensions
     }
 
     /// <summary>
-    /// Provides the version, the echo test and the raw buffer of an IP packet.
+    /// Provides the echo test and the raw buffer of an IP packet.
     /// </summary>
     /// <param name="ipPacket">The IP packet.</param>
     extension(IpPacket ipPacket)
     {
-        /// <summary>
-        /// Determines whether the packet is IPv4.
-        /// </summary>
-        /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>.</returns>
-        public bool IsV4()
-        {
-            return ipPacket.Version == IpVersion.IPv4;
-        }
-
-        /// <summary>
-        /// Determines whether the packet is IPv6.
-        /// </summary>
-        /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>.</returns>
-        public bool IsV6()
-        {
-            return ipPacket.Version == IpVersion.IPv6;
-        }
-
         /// <summary>
         /// Determines whether the packet is a whole ICMPv4 or ICMPv6 echo request or reply.
         /// </summary>

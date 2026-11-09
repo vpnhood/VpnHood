@@ -95,7 +95,7 @@ internal class ClientStreamHandler(
             hostEndPoint = newEndPoint.ToIPEndPoint();
 
         // check IPv6 support
-        if (hostEndPoint.IsV6() && !session.Status.IsIpV6SupportedByClient)
+        if (hostEndPoint.IsV6 && !session.Status.IsIpV6SupportedByClient)
             throw new Exception("IPv6 is not supported by client.");
 
         //log
@@ -133,7 +133,7 @@ internal class ClientStreamHandler(
     private async Task AddTunnelChannel(
         IStreamConnection streamConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
-        if (hostEndPoint.IsV6() && !session.Status.IsIpV6SupportedByServer)
+        if (hostEndPoint.IsV6 && !session.Status.IsIpV6SupportedByServer)
             throw new Exception("IPv6 is not supported by server.");
 
         //log

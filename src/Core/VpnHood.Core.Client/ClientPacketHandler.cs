@@ -108,7 +108,7 @@ internal class ClientPacketHandler(
     private void ProcessOutgoingPacketInclude(IpPacket ipPacket)
     {
         // Tcp, by the version's own forwarding choice; a branch per version, so no packet pays a check more
-        if (ipPacket.IsV6()) {
+        if (ipPacket.IsV6) {
             if (!IsIpV6SupportedByServer)
                 throw new PacketDropException("A protected IPv6 packet is dropped because server can not handle it.");
 
@@ -157,7 +157,7 @@ internal class ClientPacketHandler(
             ipPacket.UpdateAllChecksums();
         }
 
-        if (ipPacket.IsV6() && !IsIpV6SupportedByClient)
+        if (ipPacket.IsV6 && !IsIpV6SupportedByClient)
             throw new PacketDropException("An unprotected IPv6 packet is dropped because client can not handle it.");
 
         // Tcp

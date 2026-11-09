@@ -87,7 +87,7 @@ public class ForwardingManager : PassthroughPacketTransport
 
     protected override void SendPacket(IpPacket ipPacket)
     {
-        if (ipPacket.IsV6() && !IsIpV6Supported)
+        if (ipPacket.IsV6 && !IsIpV6Supported)
             throw new PacketDropException("IPv6 is not supported.");
 
         switch (ipPacket.Protocol) {

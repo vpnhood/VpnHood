@@ -95,7 +95,7 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
     {
         ValidateInterfaceName(interfaceName);
 
-        var subnet = ipAddress.IsV4() ? 32 : 128;
+        var subnet = ipAddress.IsV4 ? 32 : 128;
         var command = $"ip addr add {ipAddress}/{subnet} dev {interfaceName}";
         return ExecuteCommandAsync(command, cancellationToken);
     }
@@ -104,7 +104,7 @@ public class LinuxNetConfigurationProvider(ILogger logger) : INetConfigurationPr
     {
         ValidateInterfaceName(interfaceName);
 
-        var subnet = ipAddress.IsV4() ? 32 : 128;
+        var subnet = ipAddress.IsV4 ? 32 : 128;
         var command = $"ip addr del {ipAddress}/{subnet} dev {interfaceName}";
         OsUtils.ExecuteShellCommand(command);
     }

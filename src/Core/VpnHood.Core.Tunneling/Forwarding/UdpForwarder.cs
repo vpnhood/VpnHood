@@ -60,7 +60,7 @@ internal class UdpForwarder : SinglePacketTransport, ITimeoutItem
 
             // IpV4 fragmentation. DontFragment is a setsockopt syscall, so set it only when it changes.
             // Never call this for IPv6, it will throw exception for any value
-            if (AddressFamily.IsV4() && ipPacket is IpV4Packet ipV4Packet && _dontFragment != ipV4Packet.DontFragment) {
+            if (AddressFamily.IsV4 && ipPacket is IpV4Packet ipV4Packet && _dontFragment != ipV4Packet.DontFragment) {
                 _socket.DontFragment = ipV4Packet.DontFragment;
                 _dontFragment = ipV4Packet.DontFragment;
             }
@@ -93,7 +93,7 @@ internal class UdpForwarder : SinglePacketTransport, ITimeoutItem
 
     private async Task StartReceivingAsync()
     {
-        var anyEndPoint = new IPEndPoint(AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any, 0);
+        var anyEndPoint = new IPEndPoint(AddressFamily.IsV4 ? IPAddress.Any : IPAddress.IPv6Any, 0);
         var consecutiveErrors = 0;
         while (!IsDisposed) {
             try {

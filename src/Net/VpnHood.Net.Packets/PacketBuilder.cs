@@ -383,7 +383,7 @@ public static class PacketBuilder
     public static IpPacket BuildIcmpV4EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        if (!sourceAddress.IsV4() || !destinationAddress.IsV4())
+        if (!sourceAddress.IsV4 || !destinationAddress.IsV4)
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv4 addresses.");
 
         // ICMP echo request
@@ -413,7 +413,7 @@ public static class PacketBuilder
     public static IpPacket BuildIcmpV6EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        if (!sourceAddress.IsV6() || !destinationAddress.IsV6())
+        if (!sourceAddress.IsV6 || !destinationAddress.IsV6)
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv6 addresses.");
 
         // ICMP echo request
@@ -472,7 +472,7 @@ public static class PacketBuilder
         IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        if (!sourceAddress.IsV4() || !destinationAddress.IsV4())
+        if (!sourceAddress.IsV4 || !destinationAddress.IsV4)
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv4 addresses.");
 
         var ipPacket = BuildIcmpV4(sourceAddress, destinationAddress, payload);
@@ -502,7 +502,7 @@ public static class PacketBuilder
         IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
-        if (!sourceAddress.IsV6() || !destinationAddress.IsV6())
+        if (!sourceAddress.IsV6 || !destinationAddress.IsV6)
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv6 addresses.");
 
         var ipPacket = BuildIcmpV6(sourceAddress, destinationAddress, payload);

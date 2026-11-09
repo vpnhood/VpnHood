@@ -78,6 +78,18 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
         private protected set => Buffer.Span[0] = (byte)(((byte)value << 4) | (Buffer.Span[0] & 0x0F));
     }
 
+    /// <summary>
+    /// Gets whether the packet is an IPv4 packet.
+    /// </summary>
+    /// <value><see langword="true"/> if the packet is IPv4; otherwise, <see langword="false"/>.</value>
+    public bool IsV4 => Version == IpVersion.IPv4;
+
+    /// <summary>
+    /// Gets whether the packet is an IPv6 packet.
+    /// </summary>
+    /// <value><see langword="true"/> if the packet is IPv6; otherwise, <see langword="false"/>.</value>
+    public bool IsV6 => Version == IpVersion.IPv6;
+
     // the addresses in the buffer; a set copies the value in and drops the cached IPAddress
     private protected abstract Span<byte> SourceAddressBuffer { get; set; }
     private protected abstract Span<byte> DestinationAddressBuffer { get; set; }

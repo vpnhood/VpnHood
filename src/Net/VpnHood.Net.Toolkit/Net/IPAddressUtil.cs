@@ -355,6 +355,20 @@ public static class IPAddressUtil
         Verify(ipAddress.AddressFamily);
     }
 
+    /// <summary>
+    /// Compares two addresses: an IPv4-mapped IPv6 address as its IPv4 address, every IPv4 address before every IPv6
+    /// address, then by number, with no regard to the scope id.
+    /// </summary>
+    /// <param name="ipAddress1">The first address, or <see langword="null"/>.</param>
+    /// <param name="ipAddress2">The second address, or <see langword="null"/>.</param>
+    /// <returns>
+    /// A negative number if <paramref name="ipAddress1"/> comes first, zero if the two compare as the same address, and
+    /// a positive number if it comes after. A <see langword="null"/> address comes first.
+    /// </returns>
+    /// <remarks>
+    /// So 10.0.0.2 and ::ffff:10.0.0.2 compare as the same address, as do fe80::1 and fe80::1%3, though
+    /// <see cref="IPAddress.Equals(object)"/> tells each pair apart.
+    /// </remarks>
     public static int Compare(IPAddress? ipAddress1, IPAddress? ipAddress2)
     {
         if (ipAddress1 == null && ipAddress2 == null) return 0;
@@ -373,6 +387,27 @@ public static class IPAddressUtil
         var span1 = ipAddress1.GetAddressBytesFast(stackalloc byte[16]);
         var span2 = ipAddress2.GetAddressBytesFast(stackalloc byte[16]);
         return span1.SequenceCompareTo(span2);
+    }
+
+    /// <summary>
+    /// Compares two addresses as <see cref="Compare(IPAddress, IPAddress)"/> does: an IPv4-mapped IPv6 address as its
+    /// IPv4 address, every IPv4 address before every IPv6 address, then by number, with no regard to the scope id.
+    /// </summary>
+    /// <param name="ipAddress1">The first address.</param>
+    /// <param name="ipAddress2">The second address.</param>
+    /// <returns>
+    /// A negative number if <paramref name="ipAddress1"/> comes first, zero if the two compare as the same address, and
+    /// a positive number if it comes after.
+    /// </returns>
+    /// <remarks>
+    /// The default value, which holds no address, comes first, as a <see langword="null"/> address does.
+    /// <see cref="IpAddressValue.CompareTo"/> keeps an IPv4-mapped address with the IPv6 addresses instead.
+    /// </remarks>
+    public static int Compare(IpAddressValue ipAddress1, IpAddressValue ipAddress2)
+    {
+        var value1 = ipAddress1.IsIPv4MappedToIPv6 ? ipAddress1.MapToIPv4() : ipAddress1;
+        var value2 = ipAddress2.IsIPv4MappedToIPv6 ? ipAddress2.MapToIPv4() : ipAddress2;
+        return value1.CompareAddress(value2);
     }
 
     public static long ToLong(IPAddress ipAddress)

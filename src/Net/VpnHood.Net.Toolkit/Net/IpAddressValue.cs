@@ -12,7 +12,7 @@ namespace VpnHood.Net.Toolkit.Net;
 /// default value holds no address: it is neither IPv4 nor IPv6, it is written as an empty string, and converting it
 /// throws.
 /// </remarks>
-public readonly struct IpAddressValue : IEquatable<IpAddressValue>
+public readonly struct IpAddressValue : IEquatable<IpAddressValue>, IComparable<IpAddressValue>
 {
     private const string NoAddressMessage = "The value holds no IP address.";
 
@@ -63,13 +63,13 @@ public readonly struct IpAddressValue : IEquatable<IpAddressValue>
     /// </value>
     public bool IsIPv4MappedToIPv6 => _version == IpVersion.IPv6 && _high == 0 && (_low >> 32) == 0xFFFF;
 
-    /// <summary>Determines whether the address is an IPv4 address.</summary>
-    /// <returns><see langword="true"/> if the address is IPv4; otherwise, <see langword="false"/>.</returns>
-    public bool IsV4() => _version == IpVersion.IPv4;
+    /// <summary>Gets whether the address is an IPv4 address.</summary>
+    /// <value><see langword="true"/> if the address is IPv4; otherwise, <see langword="false"/>.</value>
+    public bool IsV4 => _version == IpVersion.IPv4;
 
-    /// <summary>Determines whether the address is an IPv6 address.</summary>
-    /// <returns><see langword="true"/> if the address is IPv6; otherwise, <see langword="false"/>.</returns>
-    public bool IsV6() => _version == IpVersion.IPv6;
+    /// <summary>Gets whether the address is an IPv6 address.</summary>
+    /// <value><see langword="true"/> if the address is IPv6; otherwise, <see langword="false"/>.</value>
+    public bool IsV6 => _version == IpVersion.IPv6;
 
     /// <summary>
     /// Maps the address to IPv4, as <see cref="IPAddress.MapToIPv4"/> does: an IPv4 address stays as it is, and an
@@ -167,6 +167,19 @@ public readonly struct IpAddressValue : IEquatable<IpAddressValue>
     /// <inheritdoc/>
     public override int GetHashCode() => HashCode.Combine(_high, _low, _version);
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Every IPv4 address comes before every IPv6 address; then addresses go by number, and equal numbers by scope id,
+    /// so the result is zero only for equal values. An IPv4-mapped address is IPv6 here, so ::ffff:10.0.0.2 comes after
+    /// 255.255.255.255; <see cref="IPAddressUtil.Compare(IpAddressValue, IpAddressValue)"/> compares it as its IPv4
+    /// address. The default value comes first.
+    /// </remarks>
+    public int CompareTo(IpAddressValue other)
+    {
+        var result = CompareAddress(other);
+        return result != 0 ? result : _scopeId.CompareTo(other._scopeId);
+    }
+
     /// <summary>Determines whether two values hold the same address.</summary>
     /// <param name="left">The first value to compare.</param>
     /// <param name="right">The second value to compare.</param>
@@ -178,6 +191,58 @@ public readonly struct IpAddressValue : IEquatable<IpAddressValue>
     /// <param name="right">The second value to compare.</param>
     /// <returns><see langword="true"/> if the values differ; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(IpAddressValue left, IpAddressValue right) => !left.Equals(right);
+
+    /// <summary>Determines whether one value comes before another, in the order <see cref="CompareTo"/> gives.</summary>
+    /// <param name="left">The first value to compare.</param>
+    /// <param name="right">The second value to compare.</param>
+    /// <returns>
+    /// <see langword="true"/> if <paramref name="left"/> comes before <paramref name="right"/>; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
+    public static bool operator <(IpAddressValue left, IpAddressValue right) => left.CompareTo(right) < 0;
+
+    /// <summary>Determines whether one value comes after another, in the order <see cref="CompareTo"/> gives.</summary>
+    /// <param name="left">The first value to compare.</param>
+    /// <param name="right">The second value to compare.</param>
+    /// <returns>
+    /// <see langword="true"/> if <paramref name="left"/> comes after <paramref name="right"/>; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
+    public static bool operator >(IpAddressValue left, IpAddressValue right) => left.CompareTo(right) > 0;
+
+    /// <summary>
+    /// Determines whether one value comes before another or equals it, in the order <see cref="CompareTo"/> gives.
+    /// </summary>
+    /// <param name="left">The first value to compare.</param>
+    /// <param name="right">The second value to compare.</param>
+    /// <returns>
+    /// <see langword="true"/> if <paramref name="left"/> comes before <paramref name="right"/> or equals it; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
+    public static bool operator <=(IpAddressValue left, IpAddressValue right) => left.CompareTo(right) <= 0;
+
+    /// <summary>
+    /// Determines whether one value comes after another or equals it, in the order <see cref="CompareTo"/> gives.
+    /// </summary>
+    /// <param name="left">The first value to compare.</param>
+    /// <param name="right">The second value to compare.</param>
+    /// <returns>
+    /// <see langword="true"/> if <paramref name="left"/> comes after <paramref name="right"/> or equals it; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
+    public static bool operator >=(IpAddressValue left, IpAddressValue right) => left.CompareTo(right) >= 0;
+
+    // The order without the scope id, which IPAddressUtil.Compare leaves out.
+    internal int CompareAddress(IpAddressValue other)
+    {
+        if (_version != other._version)
+            return _version < other._version ? -1 : 1;
+
+        if (_high != other._high)
+            return _high < other._high ? -1 : 1;
+
+        return _low.CompareTo(other._low);
+    }
 
     private static IpAddressValue FromBytes(ReadOnlySpan<byte> address, uint scopeId) => address.Length switch {
         4 => new IpAddressValue(0, BinaryPrimitives.ReadUInt32BigEndian(address), 0, IpVersion.IPv4),

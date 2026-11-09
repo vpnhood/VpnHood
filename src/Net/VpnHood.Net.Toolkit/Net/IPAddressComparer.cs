@@ -4,7 +4,7 @@ namespace VpnHood.Net.Toolkit.Net;
 
 // ReSharper disable once InconsistentNaming
 /// <summary>
-/// Provides the order of IP addresses that <see cref="IPAddressUtil.Compare"/> gives.
+/// Provides the order of IP addresses that <see cref="IPAddressUtil.Compare(IPAddress, IPAddress)"/> gives.
 /// </summary>
 /// <remarks>
 /// A null comes first; an IPv4-mapped IPv6 address counts as its IPv4 address; IPv4 addresses come before IPv6 ones; and

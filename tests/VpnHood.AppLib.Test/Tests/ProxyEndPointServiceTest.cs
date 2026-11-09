@@ -350,8 +350,11 @@ public class ProxyEndPointServiceTest : TestAppBase
         });
         socks5ProxyServer.Start();
 
-        // create app
-        await using var dom = await AppClientServerDom.Create(TestAppHelper);
+        // create app; its connect first waits about 2 seconds for Windows to refuse the unreachable endpoint below,
+        // which leaves too little of the tests' 5 seconds for the connect itself on a busy machine
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.ConnectTimeout = TimeSpan.FromSeconds(30);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper, appOptions: appOptions);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };

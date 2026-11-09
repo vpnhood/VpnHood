@@ -590,9 +590,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // start reading packets; the task is published before it runs, so a stop from here waits
             // for this run's reader, not the last one's. Under the stop lock: a stop that overtook this
-            // start has retired its run, and no reader may start after it. On the default scheduler, as
-            // Task.Run: never on a caller's own scheduler, which the blocking reader would hold
-            var readerTask = new Task(RunReader, TaskCreationOptions.DenyChildAttach);
+            // start has retired its run, and no reader may start after it. On a thread of its own
+            // (LongRunning): the reader blocks for as long as the adapter runs, and a pool thread held that long
+            // is taken from the async work, which adapters running side by side starved for seconds. On the
+            // default scheduler: never on a caller's own scheduler, which the blocking reader would hold
+            var readerTask = new Task(RunReader, TaskCreationOptions.DenyChildAttach | TaskCreationOptions.LongRunning);
             lock (_stopLock) {
                 if (!IsStarted)
                     throw new OperationCanceledException("The VPN adapter has been stopped while starting.");

@@ -68,11 +68,13 @@ public class AccessTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager(managerOptions);
         await using var server = await TestHelper.CreateServer(accessManager);
 
-        // create a short expiring token
-        var accessToken = await TestHelper.CreateAccessToken(server, expirationTime: DateTime.UtcNow.AddSeconds(1));
-
-        // connect and download
+        // the token expires once the client is connected, not a set time after it is made, which a slow connect can
+        // pass; the service hands out the token it keeps, so its next usage check reads the expiry, while the server
+        // keeps the one it got at the connect and does not end the session itself (SessionExpired)
+        var accessToken = await TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(accessToken);
+        var accessTokenData = await accessManager.AccessTokenService.Get(accessToken.TokenId, TestCt);
+        accessTokenData.AccessToken.ExpirationTime = DateTime.UtcNow.AddSeconds(-1);
 
         // test expiration
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {

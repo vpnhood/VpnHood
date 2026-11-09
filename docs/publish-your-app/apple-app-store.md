@@ -366,5 +366,13 @@ one unit. Build the basket, then send it.
    together: the manifest reaches Apple only in a new build.
 5. **Submit**, and wait.
 
+**The Apple TV version is a submission of its own.** With tvOS on the record, each platform has its own
+version, its own build and its own review notes, and a submission holds one platform: build a basket for
+each and send both. The upload leaves the build unpicked on both versions, so step 1 is done on each.
+The first Apple TV version carries no "What's New", like any first version. Write its review notes for a
+TV: a reviewer holds only the Siri Remote, so if your app needs an access key, say how one gets onto the
+TV without typing it there, such as through the app's Remote Access page from a phone or computer on the
+same network.
+
 If you are rejected, read the message literally: first rejections are usually about the paperwork
 above, not about your app. Fixing metadata and resubmitting does not need a new build.

@@ -269,7 +269,10 @@ public class ConfigErrorTrackerTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfigureException = new Exception("temporary failure");
 
-        await using var server = CreateServer(accessManager, retryInterval: TimeSpan.FromMilliseconds(50));
+        // no periodic run of the server's own: one under way when the test retries makes that call return at once,
+        // with the state still Configuring
+        await using var server = CreateServer(accessManager, configureInterval: TimeSpan.FromHours(1),
+            retryInterval: TimeSpan.FromMilliseconds(50));
 
         // Act: start fails
         await server.Start(TestCt);

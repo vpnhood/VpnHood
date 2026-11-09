@@ -546,18 +546,18 @@ public class ServerTest : TestBase
 
         // an idle removal has stopped the session, still open, and its IPs went back with it; it is still listed
         server.SessionManager.DisposeSession(removedSession);
-        Assert.IsNull(server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4));
+        Assert.IsNull(server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4.ToValue()));
 
         // the client comes back now: the session is recovered, with its IPs, rather than reported closed
         await client.UpdateSessionStatus(TestCt);
         var recoveredSession = server.GetSession(client);
         Assert.AreNotSame(removedSession, recoveredSession);
-        Assert.AreSame(recoveredSession, server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4));
+        Assert.AreSame(recoveredSession, server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4.ToValue()));
 
         // the removal then finishes and leaves the recovered session alone
         await server.SessionManager.RemoveSession(removedSession, TestCt);
         Assert.AreSame(recoveredSession, server.GetSession(client));
-        Assert.AreSame(recoveredSession, server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4));
+        Assert.AreSame(recoveredSession, server.SessionManager.GetSessionByVirtualIp(removedSession.VirtualIps.IpV4.ToValue()));
     }
 
     [TestMethod]
@@ -578,20 +578,20 @@ public class ServerTest : TestBase
         virtualIpManager.Add(virtualIps, session1);
         Assert.ThrowsExactly<SessionException>(() => virtualIpManager.Add(virtualIps, session2));
         virtualIpManager.Release(virtualIps, session1);
-        Assert.IsNull(virtualIpManager.FindSession(virtualIps.IpV4));
+        Assert.IsNull(virtualIpManager.FindSession(virtualIps.IpV4.ToValue()));
 
         // once another session holds them, a late release by the first leaves them alone
         virtualIpManager.Add(virtualIps, session2);
         virtualIpManager.Release(virtualIps, session1);
-        Assert.AreSame(session2, virtualIpManager.FindSession(virtualIps.IpV4));
-        Assert.AreSame(session2, virtualIpManager.FindSession(virtualIps.IpV6));
+        Assert.AreSame(session2, virtualIpManager.FindSession(virtualIps.IpV4.ToValue()));
+        Assert.AreSame(session2, virtualIpManager.FindSession(virtualIps.IpV6.ToValue()));
 
         // a failed add leaves nothing behind: an IPv4 taken before its IPv6 is refused goes back
         var conflictingIps = new VirtualIpBundle {
             IpV4 = (await virtualIpManager.Allocate(TestCt)).IpV4, IpV6 = virtualIps.IpV6
         };
         Assert.ThrowsExactly<SessionException>(() => virtualIpManager.Add(conflictingIps, session1));
-        Assert.IsNull(virtualIpManager.FindSession(conflictingIps.IpV4));
+        Assert.IsNull(virtualIpManager.FindSession(conflictingIps.IpV4.ToValue()));
     }
 
     [TestMethod]

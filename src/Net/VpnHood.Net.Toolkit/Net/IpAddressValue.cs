@@ -71,6 +71,10 @@ public readonly struct IpAddressValue : IEquatable<IpAddressValue>, IComparable<
     /// <value><see langword="true"/> if the address is IPv6; otherwise, <see langword="false"/>.</value>
     public bool IsV6 => _version == IpVersion.IPv6;
 
+    /// <summary>Gets the address's IPv6 scope id, the interface a link-local address belongs to.</summary>
+    /// <value>The scope id; 0 for an IPv4 address, an IPv6 address without one, and the default value.</value>
+    public uint ScopeId => _scopeId;
+
     /// <summary>
     /// Maps the address to IPv4, as <see cref="IPAddress.MapToIPv4"/> does: an IPv4 address stays as it is, and an
     /// IPv6 address gives its last 4 bytes.

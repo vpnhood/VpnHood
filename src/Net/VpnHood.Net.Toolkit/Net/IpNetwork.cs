@@ -161,6 +161,18 @@ public class IpNetwork
                IPAddressUtil.Compare(ipAddress, LastIpAddress) <= 0;
     }
 
+    /// <summary>Determines whether an address is in the network, with no object made.</summary>
+    /// <param name="ipAddress">
+    /// The address. An IPv4-mapped IPv6 address is compared as its IPv4 address, and a scope id is ignored, as
+    /// <see cref="IPAddressUtil.Compare(IpAddressValue, IpAddressValue)"/> orders addresses.
+    /// </param>
+    /// <returns><see langword="true"/> if the network holds the address; otherwise, <see langword="false"/>.</returns>
+    public bool Contains(IpAddressValue ipAddress)
+    {
+        return IPAddressUtil.Compare(ipAddress, FirstIpAddress.ToValue()) >= 0 &&
+               IPAddressUtil.Compare(ipAddress, LastIpAddress.ToValue()) <= 0;
+    }
+
     public static IpNetwork Parse(string value)
     {
         try {

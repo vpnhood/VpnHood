@@ -22,6 +22,9 @@ internal class ClientPacketHandler(
     SplitDnsMode splitDnsMode,
     PassthroughState passthroughState)
 {
+    // the DNS servers as values, for the check of each packet
+    private readonly IpAddressValue[] _dnsServers = dnsServers.Select(x => x.ToValue()).ToArray();
+
     public bool IsSecureDnsDetected { get; private set; }
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }
@@ -212,7 +215,7 @@ internal class ClientPacketHandler(
         // DNS on ANY transport (udp/tcp 53, DoT, DoQ) is exempt, and so is any packet to a configured resolver.
         var isDnsPacket =
             DnsPorts.IsDnsPort(ipPacket.GetDestinationEndPoint().Port) ||
-            dnsServers.Contains(ipPacket.DestinationAddress);
+            _dnsServers.Contains(ipPacket.DestinationAddressValue);
 
         return !isDnsPacket;
     }

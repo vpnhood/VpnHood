@@ -1,5 +1,4 @@
-﻿using System.Net;
-using VpnHood.Net.Packets;
+﻿using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.PacketTransports;
@@ -15,7 +14,7 @@ public class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderPoo
     private readonly IPacketForwarderCallbacks? _packetForwarderCallbacks;
     private readonly List<PingForwarder> _pingForwarders = [];
     private readonly EventReporter _maxWorkerEventReporter;
-    private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
+    private readonly TimeoutDictionary<IpEndPointValue, TimeoutItem<bool>> _remoteEndPoints;
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
     private readonly int _maxClientCount;
     private readonly Job _cleanupJob;
@@ -27,7 +26,7 @@ public class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderPoo
     {
         _maxClientCount = options.MaxClientCount;
         _packetForwarderCallbacks = options.PacketForwarderCallbacks;
-        _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.IcmpTimeout);
+        _remoteEndPoints = new TimeoutDictionary<IpEndPointValue, TimeoutItem<bool>>(options.IcmpTimeout);
         _maxWorkerEventReporter =
             new EventReporter("Session has reached to the maximum ping workers.", logScope: options.LogScope);
         _cleanupJob = new Job(Cleanup, nameof(PingForwarderPool));
@@ -78,7 +77,7 @@ public class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderPoo
         if (ipPacket.Version == IpVersion.IPv6 && ipPacket.ExtractIcmpV6().Type != IcmpV6Type.EchoRequest)
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketLogger.Format(ipPacket)}.");
 
-        var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, 0);
+        var destinationEndPoint = new IpEndPointValue(ipPacket.DestinationAddressValue, 0);
         var isNewRemoteEndPoint = false;
 
         // add the endpoint
@@ -87,14 +86,14 @@ public class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderPoo
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            _packetForwarderCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint.ToValue());
+            _packetForwarderCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint);
 
         // raise new endpoint event before the packet goes: once handed on, it is the forwarder's, which may have sent and
         // disposed it already
         var pingForwarder = GetFreePingForwarder(out var isNewLocalEndPoint);
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
             _packetForwarderCallbacks?.OnConnectionEstablished(ipPacket.Protocol,
-                new IpEndPointValue(ipPacket.SourceAddress, 0), new IpEndPointValue(ipPacket.DestinationAddress, 0),
+                new IpEndPointValue(ipPacket.SourceAddressValue, 0), destinationEndPoint,
                 isNewLocalEndPoint, isNewRemoteEndPoint);
 
         // send to a ping forwarder

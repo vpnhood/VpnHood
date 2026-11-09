@@ -66,7 +66,7 @@ public sealed class SqliteIpFilter : IIpFilter
         if (result != FilterAction.Default)
             return result;
 
-        var address = endPoint.Address;
+        var address = endPoint.AddressValue;
         if (address.IsIPv4MappedToIPv6)
             address = address.MapToIPv4();
 
@@ -82,7 +82,7 @@ public sealed class SqliteIpFilter : IIpFilter
         return FilterAction.Default;
     }
 
-    private bool Contains(FilterAction action, IPAddress address)
+    private bool Contains(FilterAction action, IpAddressValue address)
     {
         lock (_readerLock) {
             // teardown race: a lookup that loses the race to Dispose answers "not a member" instead of
@@ -91,7 +91,7 @@ public sealed class SqliteIpFilter : IIpFilter
                 return false;
 
             var reader = _sharedReader;
-            if (address.AddressFamily == AddressFamily.InterNetwork) {
+            if (address.IsV4) {
                 Span<byte> bytes = stackalloc byte[4];
                 address.TryWriteBytes(bytes, out _);
                 var key = SplitIpDb.ToV4Key(bytes);
@@ -101,7 +101,8 @@ public sealed class SqliteIpFilter : IIpFilter
                 return row.Read() && row.GetInt64(0) >= key; // start_ip <= key already; check end_ip
             }
             else {
-                var bytes = address.GetAddressBytes(); // 16-byte big-endian
+                var bytes = new byte[16]; // 16-byte big-endian, an array as the command's parameter takes one
+                address.TryWriteBytes(bytes, out _);
                 var command = reader.GetCommand(action, isV4: false);
                 command.Parameters[0].Value = bytes;
                 using var row = command.ExecuteReader();

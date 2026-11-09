@@ -42,7 +42,7 @@ public class TcpSniFilteringService(
         if (tcpPacket.Payload.Length == 0)
             return false;
 
-        flowKey = new IpEndPointValue(ipPacket.SourceAddress, tcpPacket.SourcePort);
+        flowKey = new IpEndPointValue(ipPacket.SourceAddressValue, tcpPacket.SourcePort);
         payload = tcpPacket.Payload.Span;
         return true;
     }

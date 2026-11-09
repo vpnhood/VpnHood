@@ -57,7 +57,7 @@ public class StaticIpFilter : IIpFilter
             return result;
 
         // blocked IP ranges
-        if (BlockedRanges.Count > 0 && BlockedRanges.Contains(endPoint.Address))
+        if (BlockedRanges.Count > 0 && BlockedRanges.Contains(endPoint.AddressValue))
             return FilterAction.Block;
 
         // blocked ports
@@ -65,13 +65,13 @@ public class StaticIpFilter : IIpFilter
             return FilterAction.Block;
 
         // excluded IP ranges
-        if (ExcludeRanges.Count > 0 && ExcludeRanges.Contains(endPoint.Address))
+        if (ExcludeRanges.Count > 0 && ExcludeRanges.Contains(endPoint.AddressValue))
             return FilterAction.Exclude;
 
         // included IP ranges: a veto gate like every stage — a non-empty include set excludes non-members
         // and members pass as Default ("no objection"). Include is never returned by IP gates; it is an
         // explicit override lane (domain force-list, ICMP force).
-        if (IncludeRanges.Count > 0 && !IncludeRanges.Contains(endPoint.Address))
+        if (IncludeRanges.Count > 0 && !IncludeRanges.Contains(endPoint.AddressValue))
             return FilterAction.Exclude;
 
         return FilterAction.Default;

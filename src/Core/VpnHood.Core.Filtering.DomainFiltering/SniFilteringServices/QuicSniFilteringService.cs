@@ -33,7 +33,7 @@ public class QuicSniFilteringService(
             return false;
 
         var udpPacket = ipPacket.ExtractUdp();
-        flowKey = new IpEndPointValue(ipPacket.SourceAddress, udpPacket.SourcePort);
+        flowKey = new IpEndPointValue(ipPacket.SourceAddressValue, udpPacket.SourcePort);
         payload = udpPacket.Payload.Span;
         return true;
     }

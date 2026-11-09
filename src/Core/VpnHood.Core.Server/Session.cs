@@ -46,6 +46,10 @@ public class Session : IDisposable
     private readonly TransferBufferSize? _tcpKernelBufferSize;
     private readonly TrackingOptions _trackingOptions;
 
+    // the client's virtual IPs as values, for the source check of each packet; set before the session is shared
+    private readonly IpAddressValue _virtualIpV4;
+    private readonly IpAddressValue _virtualIpV6;
+
     private readonly EventReporter _maxTcpChannelExceptionReporter = new(
         "Maximum TcpChannel has been reached.", GeneralEventId.NetProtect);
 
@@ -144,6 +148,8 @@ public class Session : IDisposable
         AllowUdpPacket = AllowTcpPacket || options.AllowUdpPacketValue;
         ExtraData = extraData;
         VirtualIps = virtualIps;
+        _virtualIpV4 = virtualIps.IpV4.ToValue();
+        _virtualIpV6 = virtualIps.IpV6.ToValue();
         Response = sessionResponseEx;
         ProtocolVersion = sessionResponseEx.ProtocolVersion;
         SessionId = sessionResponseEx.SessionId;
@@ -257,9 +263,9 @@ public class Session : IDisposable
         }
     }
 
-    private IPAddress GetClientVirtualIp(IpVersion ipVersion)
+    private IpAddressValue GetClientVirtualIp(IpVersion ipVersion)
     {
-        return ipVersion == IpVersion.IPv4 ? VirtualIps.IpV4 : VirtualIps.IpV6;
+        return ipVersion == IpVersion.IPv4 ? _virtualIpV4 : _virtualIpV6;
     }
 
     private void Forwarder_PacketsReceived(object? sender, IpPacket ipPacket)
@@ -298,7 +304,7 @@ public class Session : IDisposable
         var virtualIp = GetClientVirtualIp(ipVersion);
 
         // reject if packet source does not match client internal ip
-        if (!ipPacket.SourceAddress.Equals(virtualIp)) {
+        if (ipPacket.SourceAddressValue != virtualIp) {
             var ipeEndPointPair = ipPacket.GetEndPoints();
             LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint.ToValue(), false, true, "NetFilter");
             _filterBadSourceReporter.Raise();

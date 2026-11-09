@@ -161,4 +161,93 @@ public class IpNetworkTest : TestBase
         Assert.AreEqual("AA::FFF5-AA::FFF6", ranges[i++].ToString().ToUpper());
         Assert.AreEqual(i, ranges.Count);
     }
+
+    [TestMethod]
+    public void IpRangeOrderedList_Contains_searches_mapped_and_mixed_ranges()
+    {
+        // an IPv4-mapped range is not merged into the IPv4 range it overlaps, yet both are searched as IPv4, and a
+        // range may run from a mapped address to a plain IPv6 one
+        var list = new[] {
+            IpRange.Parse("10.0.0.0 - 10.0.0.255"),
+            IpRange.Parse("::ffff:10.0.0.10 - ::ffff:10.0.0.20"),
+            IpRange.Parse("10.0.1.0 - 10.0.1.255"),
+            IpRange.Parse("::ffff:10.0.2.0 - ::ffff:10.0.2.255"),
+            IpRange.Parse("::ffff:192.168.0.0 - 2001::1"),
+            IpRange.Parse("2001:db8:: - 2001:db8::ffff")
+        }.ToOrderedList();
+
+        string[] inside = [
+            "10.0.0.0", "10.0.0.15", "10.0.0.100", "10.0.0.255", "::ffff:10.0.0.100", "10.0.1.7", "10.0.2.1",
+            "::ffff:10.0.2.1", "192.168.0.1", "255.255.255.255", "::1", "2001::1", "2001:db8::1", "2001:db8::ffff",
+            "2001:db8::1%3"
+        ];
+        string[] outside = [
+            "9.255.255.255", "::ffff:9.255.255.255", "10.0.3.0", "192.167.255.255", "2001::2", "2001:db8::1:0", "fe80::1"
+        ];
+
+        foreach (var text in inside)
+            AssertContains(list, IPAddress.Parse(text), true);
+
+        foreach (var text in outside)
+            AssertContains(list, IPAddress.Parse(text), false);
+    }
+
+    [TestMethod]
+    public void IpRangeOrderedList_Contains_agrees_with_its_ranges()
+    {
+        // random ranges that overlap across IPv4, IPv4-mapped and IPv6, and random addresses near them
+        var random = new Random(7);
+        for (var round = 0; round < 300; round++) {
+            var list = Enumerable.Range(0, random.Next(1, 12)).Select(_ => RandomRange(random)).ToOrderedList();
+            for (var i = 0; i < 50; i++) {
+                var ipAddress = RandomAddress(random);
+                AssertContains(list, ipAddress, list.Any(x => x.IsInRange(ipAddress)));
+            }
+        }
+    }
+
+    // Every way to ask, against the expected answer.
+    private static void AssertContains(IpRangeOrderedList list, IPAddress ipAddress, bool expected)
+    {
+        Assert.AreEqual(expected, list.Any(x => x.IsInRange(ipAddress)), $"a range of the list holds {ipAddress}");
+        Assert.AreEqual(expected, list.Any(x => x.IsInRange(ipAddress.ToValue())), $"IsInRange of {ipAddress}'s value");
+        Assert.AreEqual(expected, list.Contains(ipAddress), $"Contains({ipAddress})");
+        Assert.AreEqual(expected, list.Contains(ipAddress.ToValue()), $"Contains of {ipAddress}'s value");
+    }
+
+    // A range of IPv4, IPv4-mapped or IPv6 addresses, or from a mapped address to a plain IPv6 one.
+    private static IpRange RandomRange(Random random)
+    {
+        var kind = random.Next(4);
+        var first = RandomAddress(random, kind == 3 ? 1 : kind);
+        var last = RandomAddress(random, kind == 3 ? 2 : kind);
+        return IPAddressUtil.Compare(first, last) <= 0 ? new IpRange(first, last) : new IpRange(last, first);
+    }
+
+    private static IPAddress RandomAddress(Random random) => RandomAddress(random, random.Next(3));
+
+    // 0: IPv4 in 10.0.0.0/16, 1: the same as IPv4-mapped, 2: IPv6 in 2001:db8::/112.
+    private static IPAddress RandomAddress(Random random, int kind)
+    {
+        var bytes = new byte[16];
+        bytes[14] = (byte)random.Next(256);
+        bytes[15] = (byte)random.Next(256);
+        switch (kind) {
+            case 0:
+                return new IPAddress([10, 0, bytes[14], bytes[15]]);
+
+            case 1:
+                bytes[10] = 0xFF;
+                bytes[11] = 0xFF;
+                bytes[12] = 10;
+                return new IPAddress(bytes);
+
+            default:
+                bytes[0] = 0x20;
+                bytes[1] = 0x01;
+                bytes[2] = 0x0d;
+                bytes[3] = 0xb8;
+                return new IPAddress(bytes);
+        }
+    }
 }

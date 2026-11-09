@@ -215,8 +215,8 @@ public sealed class LocalTcpStack : ITcpStack
         // IPv4 fragments are not checked for: the kernel's TCP sets DF and fits the TUN's MTU, so only a crafted packet
         // is one, and the check would cost every packet a header read.
         var tcpPacket = ipPacket.ExtractTcp();
-        // The table's key, read from the packet's bytes: a segment of a known connection costs no IPAddress; the SYN
-        // and the RST below build their endpoints.
+        // The table's key and the endpoints of the SYN and the RST below are values read from the packet's bytes: no
+        // segment makes an IPAddress.
         var key = ConnectionKey.From(ipPacket, tcpPacket);
 
         // A tracked tuple's segment, a SYN too: its connection answers it
@@ -240,8 +240,8 @@ public sealed class LocalTcpStack : ITcpStack
     }
 
     private static IPEndPointPairValue GetEndPointPair(IpPacket ipPacket, TcpPacket tcpPacket) => new(
-        new IpEndPointValue(ipPacket.SourceAddress, tcpPacket.SourcePort),
-        new IpEndPointValue(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
+        new IpEndPointValue(ipPacket.SourceAddressValue, tcpPacket.SourcePort),
+        new IpEndPointValue(ipPacket.DestinationAddressValue, tcpPacket.DestinationPort));
 
     private void HandleSynPacket(ConnectionKey key, IPEndPointPairValue ipEndPointPair, TcpPacket tcpPacket)
     {

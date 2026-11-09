@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
@@ -245,52 +244,29 @@ public class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
     }
 
     /// <summary>
-    /// Allocation-free connection identity (family + source/destination address bytes + both ports),
-    /// packed straight from the packet spans so the hot path never builds strings or endpoints.
+    /// Allocation-free connection identity: the source and destination addresses as values, which carry their IP
+    /// version, and both ports, read straight from the packet so the hot path never builds strings or endpoints.
     /// </summary>
-    private readonly struct ConnectionKey(ulong srcLow, ulong srcHigh, ulong dstLow, ulong dstHigh,
-        uint ports, byte version) : IEquatable<ConnectionKey>
+    private readonly struct ConnectionKey(IpAddressValue source, IpAddressValue destination, uint ports)
+        : IEquatable<ConnectionKey>
     {
-        private readonly ulong _srcLow = srcLow;
-        private readonly ulong _srcHigh = srcHigh;
-        private readonly ulong _dstLow = dstLow;
-        private readonly ulong _dstHigh = dstHigh;
+        private readonly IpAddressValue _source = source;
+        private readonly IpAddressValue _destination = destination;
         private readonly uint _ports = ports;
-        private readonly byte _version = version;
 
-        public static ConnectionKey FromPacket(IpPacket ipPacket, UdpPacket udpPacket)
-        {
-            var src = ipPacket.SourceAddressSpan;
-            var dst = ipPacket.DestinationAddressSpan;
-            var ports = ((uint)udpPacket.SourcePort << 16) | udpPacket.DestinationPort;
-            return src.Length == 4
-                ? new ConnectionKey(
-                    BinaryPrimitives.ReadUInt32LittleEndian(src), 0,
-                    BinaryPrimitives.ReadUInt32LittleEndian(dst), 0,
-                    ports, 4)
-                : new ConnectionKey(
-                    BinaryPrimitives.ReadUInt64LittleEndian(src),
-                    BinaryPrimitives.ReadUInt64LittleEndian(src[8..]),
-                    BinaryPrimitives.ReadUInt64LittleEndian(dst),
-                    BinaryPrimitives.ReadUInt64LittleEndian(dst[8..]),
-                    ports, 6);
-        }
+        public static ConnectionKey FromPacket(IpPacket ipPacket, UdpPacket udpPacket) => new(
+            ipPacket.SourceAddressValue, ipPacket.DestinationAddressValue,
+            ((uint)udpPacket.SourcePort << 16) | udpPacket.DestinationPort);
 
         public bool Equals(ConnectionKey other) =>
             _ports == other._ports &&
-            _dstLow == other._dstLow &&
-            _srcLow == other._srcLow &&
-            _srcHigh == other._srcHigh &&
-            _dstHigh == other._dstHigh &&
-            _version == other._version;
+            _destination == other._destination &&
+            _source == other._source;
 
         public override bool Equals(object? obj) => obj is ConnectionKey other && Equals(other);
 
-        // Each 32-bit word goes in on its own: a ulong's own hash folds its two halves together before HashCode's
-        // seed, and a client could then pick destinations that collide in this table whatever the seed.
-        public override int GetHashCode() => unchecked(HashCode.Combine(
-            HashCode.Combine((uint)_srcLow, (uint)(_srcLow >> 32), (uint)_srcHigh, (uint)(_srcHigh >> 32),
-                (uint)_dstLow, (uint)(_dstLow >> 32), (uint)_dstHigh, (uint)(_dstHigh >> 32)),
-            _ports, _version));
+        // a value's own hash takes each 32-bit word on its own, so a client cannot pick destinations that collide in
+        // this table whatever the seed
+        public override int GetHashCode() => HashCode.Combine(_source, _destination, _ports);
     }
 }

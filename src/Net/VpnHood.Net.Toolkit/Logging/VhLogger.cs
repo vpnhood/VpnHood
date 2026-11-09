@@ -106,7 +106,7 @@ public static class VhLogger
     /// </remarks>
     /// <param name="endPoint">The endpoint, or <see langword="null"/>.</param>
     /// <returns>A wrapper that formats on each <c>ToString</c>, with the redactor captured by this call.</returns>
-    /// <exception cref="ArgumentNullException">The endpoint's address is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The endpoint is the default value, which holds no address.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The endpoint's port is out of range.</exception>
     public static Redactor.RedactedValue<EndPoint> Format(IpEndPointValue? endPoint)
     {

@@ -47,11 +47,11 @@ public static class IPAddressExtensions
     {
         /// <summary>Gets whether the endpoint's address is an IPv4 address.</summary>
         /// <value><see langword="true"/> if the address is IPv4; otherwise, <see langword="false"/>.</value>
-        public bool IsV4 => ipEndPoint.Address.AddressFamily == AddressFamily.InterNetwork;
+        public bool IsV4 => ipEndPoint.AddressValue.IsV4;
 
         /// <summary>Gets whether the endpoint's address is an IPv6 address.</summary>
         /// <value><see langword="true"/> if the address is IPv6; otherwise, <see langword="false"/>.</value>
-        public bool IsV6 => ipEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6;
+        public bool IsV6 => ipEndPoint.AddressValue.IsV6;
     }
 
     /// <summary>Provides the version checks of an address family.</summary>

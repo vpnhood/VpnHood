@@ -11,7 +11,8 @@ namespace VpnHood.Core.Server;
 
 internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, string lastVirtualIpFilePath)
 {
-    private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
+    // keyed by value, as the adapter looks up each packet's destination
+    private readonly ConcurrentDictionary<IpAddressValue, Session> _virtualIps = new();
     private readonly AsyncLock _allocateLock = new();
 
     // read at the first allocation, its only use
@@ -57,7 +58,7 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
             if (ipAddress.Equals(ipNetwork.LastIpAddress))
                 ipAddress = firstValidIpAddress;
 
-            if (!_virtualIps.ContainsKey(ipAddress))
+            if (!_virtualIps.ContainsKey(ipAddress.ToValue()))
                 return ipAddress;
 
             ipAddress = IPAddressUtil.Increment(ipAddress);
@@ -70,12 +71,12 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
     // leaves nothing behind
     public void Add(VirtualIpBundle virtualIpBundle, Session session)
     {
-        if (!_virtualIps.TryAdd(virtualIpBundle.IpV4, session))
+        if (!_virtualIps.TryAdd(virtualIpBundle.IpV4.ToValue(), session))
             throw new SessionException(SessionErrorCode.SessionError,
                 $"Could not add virtual IPv4 to collection. IpAddress: {virtualIpBundle.IpV4}");
 
-        if (!_virtualIps.TryAdd(virtualIpBundle.IpV6, session)) {
-            _virtualIps.TryRemove(KeyValuePair.Create(virtualIpBundle.IpV4, session));
+        if (!_virtualIps.TryAdd(virtualIpBundle.IpV6.ToValue(), session)) {
+            _virtualIps.TryRemove(KeyValuePair.Create(virtualIpBundle.IpV4.ToValue(), session));
             throw new SessionException(SessionErrorCode.SessionError,
                 $"Could not add virtual IPv6 to collection. IpAddress: {virtualIpBundle.IpV6}");
         }
@@ -84,11 +85,11 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
     // frees only the IPs the session still holds: a session that took them since keeps them
     public void Release(VirtualIpBundle virtualIps, Session session)
     {
-        _virtualIps.TryRemove(KeyValuePair.Create(virtualIps.IpV4, session));
-        _virtualIps.TryRemove(KeyValuePair.Create(virtualIps.IpV6, session));
+        _virtualIps.TryRemove(KeyValuePair.Create(virtualIps.IpV4.ToValue(), session));
+        _virtualIps.TryRemove(KeyValuePair.Create(virtualIps.IpV6.ToValue(), session));
     }
 
-    public Session? FindSession(IPAddress virtualIpAddress)
+    public Session? FindSession(IpAddressValue virtualIpAddress)
     {
         return _virtualIps.GetValueOrDefault(virtualIpAddress);
     }

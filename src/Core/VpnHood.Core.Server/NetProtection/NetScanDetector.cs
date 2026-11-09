@@ -1,18 +1,18 @@
-﻿using System.Net;
-using VpnHood.Net.Toolkit.Collections;
+﻿using VpnHood.Net.Toolkit.Collections;
 using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Server.NetProtection;
 
 public class NetScanDetector(int itemLimit, TimeSpan itemTimeout) : IDisposable
 {
-    private readonly TimeoutDictionary<IPAddress, NetworkIpAddressItem> _networkIpAddresses = new(itemTimeout);
+    private readonly TimeoutDictionary<IpAddressValue, NetworkIpAddressItem> _networkIpAddresses = new(itemTimeout);
 
-    private static IPAddress GetNetworkIpAddress(IpEndPointValue ipEndPoint)
+    private static IpAddressValue GetNetworkIpAddress(IpEndPointValue ipEndPoint)
     {
-        var bytes = ipEndPoint.Address.GetAddressBytesFast(stackalloc byte[16]);
-        bytes[3] = 0; // ipV4 only
-        return new IPAddress(bytes);
+        Span<byte> buffer = stackalloc byte[16];
+        ipEndPoint.AddressValue.TryWriteBytes(buffer, out var length);
+        buffer[3] = 0; // ipV4 only
+        return new IpAddressValue(buffer[..length]);
     }
 
     public bool Verify(IpEndPointValue ipEndPoint)

@@ -209,9 +209,9 @@ public static class IpPacketExtensions
         public IpEndPointValue GetSourceEndPoint()
         {
             return ipPacket.Protocol switch {
-                IpProtocol.Tcp => new IpEndPointValue(ipPacket.SourceAddress, ipPacket.ExtractTcp().SourcePort),
-                IpProtocol.Udp => new IpEndPointValue(ipPacket.SourceAddress, ipPacket.ExtractUdp().SourcePort),
-                _ => new IpEndPointValue(ipPacket.SourceAddress, 0)
+                IpProtocol.Tcp => new IpEndPointValue(ipPacket.SourceAddressValue, ipPacket.ExtractTcp().SourcePort),
+                IpProtocol.Udp => new IpEndPointValue(ipPacket.SourceAddressValue, ipPacket.ExtractUdp().SourcePort),
+                _ => new IpEndPointValue(ipPacket.SourceAddressValue, 0)
             };
         }
 
@@ -223,9 +223,11 @@ public static class IpPacketExtensions
         /// <exception cref="ArgumentException">The TCP or UDP payload is invalid.</exception>
         public IpEndPointValue GetDestinationEndPoint() {
             return ipPacket.Protocol switch {
-                IpProtocol.Tcp => new IpEndPointValue(ipPacket.DestinationAddress, ipPacket.ExtractTcp().DestinationPort),
-                IpProtocol.Udp => new IpEndPointValue(ipPacket.DestinationAddress, ipPacket.ExtractUdp().DestinationPort),
-                _ => new IpEndPointValue(ipPacket.DestinationAddress, 0)
+                IpProtocol.Tcp => new IpEndPointValue(ipPacket.DestinationAddressValue,
+                    ipPacket.ExtractTcp().DestinationPort),
+                IpProtocol.Udp => new IpEndPointValue(ipPacket.DestinationAddressValue,
+                    ipPacket.ExtractUdp().DestinationPort),
+                _ => new IpEndPointValue(ipPacket.DestinationAddressValue, 0)
             };
         }
 
@@ -243,7 +245,7 @@ public static class IpPacketExtensions
         /// <exception cref="InvalidDataException">The packet is a TCP or UDP fragment.</exception>
         public void SetSourceEndPoint(IpEndPointValue value)
         {
-            ipPacket.SourceAddress = value.Address;
+            ipPacket.SourceAddressValue = value.AddressValue;
 
             switch (ipPacket.Protocol) {
                 case IpProtocol.Tcp:
@@ -276,7 +278,7 @@ public static class IpPacketExtensions
         /// <exception cref="InvalidDataException">The packet is a TCP or UDP fragment.</exception>
         public void SetDestinationEndPoint(IpEndPointValue value)
         {
-            ipPacket.DestinationAddress = value.Address;
+            ipPacket.DestinationAddressValue = value.AddressValue;
 
             switch (ipPacket.Protocol) {
                 case IpProtocol.Tcp:

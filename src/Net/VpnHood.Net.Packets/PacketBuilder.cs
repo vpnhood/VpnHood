@@ -146,6 +146,38 @@ public static class PacketBuilder
     }
 
     /// <summary>
+    /// Builds an IP packet with an empty payload of a given length, for the caller to fill, from address values.
+    /// </summary>
+    /// <param name="sourceAddress">The source address.</param>
+    /// <param name="destinationAddress">The destination address, of the same IP version.</param>
+    /// <param name="protocol">The protocol of the payload.</param>
+    /// <param name="payloadLength">The payload's length in bytes; at most 65515 for IPv4 and 65535 for IPv6.</param>
+    /// <param name="memoryPool">The pool to rent the packet's memory from, or <see langword="null"/> for <see cref="MemoryPool{T}.Shared"/>.</param>
+    /// <returns>The packet, with its payload zero; dispose it to return its memory.</returns>
+    /// <exception cref="ArgumentException">
+    /// The addresses are of different IP versions, or an IPv4 packet would exceed 65535 bytes.
+    /// </exception>
+    /// <exception cref="NotSupportedException">The addresses hold no address.</exception>
+    public static IpPacket BuildIp(IpAddressValue sourceAddress, IpAddressValue destinationAddress,
+        IpProtocol protocol, int payloadLength, MemoryPool<byte>? memoryPool = null)
+    {
+        if (sourceAddress.IsV4 != destinationAddress.IsV4 || sourceAddress.IsV6 != destinationAddress.IsV6)
+            throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
+
+        memoryPool ??= MemoryPool<byte>.Shared;
+        IpPacket ipPacket = sourceAddress switch {
+            { IsV4: true } => new IpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength, protocol, 0),
+            { IsV6: true } => new IpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength, protocol),
+            _ => throw new NotSupportedException("The addresses hold no IP address.")
+        };
+
+        ipPacket.SourceAddressValue = sourceAddress;
+        ipPacket.DestinationAddressValue = destinationAddress;
+        ipPacket.TimeToLive = 64;
+        return ipPacket;
+    }
+
+    /// <summary>
     /// Builds an IP packet with an empty payload of a given length, for the caller to fill, from raw address bytes.
     /// </summary>
     /// <param name="sourceAddress">The source address: 4 bytes for IPv4, 16 for IPv6.</param>
@@ -244,10 +276,9 @@ public static class PacketBuilder
     public static IpPacket BuildTcp(IpEndPointValue sourceEndPoint, IpEndPointValue destinationEndPoint,
         ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {
-        return BuildTcp(
-            sourceEndPoint.Address, destinationEndPoint.Address,
-            sourceEndPoint.Port, destinationEndPoint.Port,
-            options, payload);
+        var ipPacket = BuildIp(sourceEndPoint.AddressValue, destinationEndPoint.AddressValue, IpProtocol.Tcp,
+            20 + options.Length + payload.Length);
+        return FillTcp(ipPacket, sourceEndPoint.Port, destinationEndPoint.Port, options, payload);
     }
 
     /// <summary>
@@ -293,12 +324,7 @@ public static class PacketBuilder
         int sourcePort, int destinationPort, ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {
         var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.Tcp, 20 + options.Length + payload.Length);
-        var tcpPacket = ipPacket.BuildTcp(options.Length);
-        tcpPacket.SourcePort = (ushort)sourcePort;
-        tcpPacket.DestinationPort = (ushort)destinationPort;
-        payload.CopyTo(tcpPacket.Payload.Span);
-        options.CopyTo(tcpPacket.Options.Span);
-        return ipPacket;
+        return FillTcp(ipPacket, sourcePort, destinationPort, options, payload);
     }
 
     /// <summary>
@@ -742,5 +768,17 @@ public static class PacketBuilder
             icmpIpPacket.UpdateAllChecksums();
 
         return icmpIpPacket;
+    }
+
+    // Writes the TCP segment into a packet built to carry it.
+    private static IpPacket FillTcp(IpPacket ipPacket, int sourcePort, int destinationPort,
+        ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
+    {
+        var tcpPacket = ipPacket.BuildTcp(options.Length);
+        tcpPacket.SourcePort = (ushort)sourcePort;
+        tcpPacket.DestinationPort = (ushort)destinationPort;
+        payload.CopyTo(tcpPacket.Payload.Span);
+        options.CopyTo(tcpPacket.Options.Span);
+        return ipPacket;
     }
 }

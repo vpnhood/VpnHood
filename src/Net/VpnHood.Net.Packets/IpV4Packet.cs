@@ -262,21 +262,9 @@ public class IpV4Packet : IpPacket
         set => BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(10, 2), value);
     }
 
-    private protected override Span<byte> SourceAddressBuffer {
-        get => Span.Slice(12, 4);
-        set {
-            value.CopyTo(Span.Slice(12, 4));
-            SourceAddressField = null;
-        }
-    }
+    private protected override Span<byte> SourceAddressBuffer => Span.Slice(12, 4);
 
-    private protected override Span<byte> DestinationAddressBuffer {
-        get => Span.Slice(16, 4);
-        set {
-            value.CopyTo(Span.Slice(16, 4));
-            DestinationAddressField = null;
-        }
-    }
+    private protected override Span<byte> DestinationAddressBuffer => Span.Slice(16, 4);
 
     /// <summary>
     /// Gets the header options: the bytes between the 20-byte fixed header and the payload.

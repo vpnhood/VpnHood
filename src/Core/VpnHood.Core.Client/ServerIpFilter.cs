@@ -90,7 +90,7 @@ internal class ServerIpFilter : IIpFilter
         // override lane) and a non-member takes the mode's action — except a refused Include, which is
         // blocked under either mode: it promised to travel inside, so letting it out would leak it
         var isFamilyUnsupported = !IsIpV6SupportedByServer && endPoint.IsV6;
-        if (isFamilyUnsupported || !IncludeRanges.Contains(endPoint.Address)) {
+        if (isFamilyUnsupported || !IncludeRanges.Contains(endPoint.AddressValue)) {
             // the same two steps as BuildIncludeIpRangesByDevice: an unrouted destination takes the
             // general mode and an unsupported family takes its own...
             var missMode = isFamilyUnsupported ? UnsupportedIpV6Mode : UnroutedIpMode;

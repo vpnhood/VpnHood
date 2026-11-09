@@ -612,14 +612,17 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
-        var session = GetSessionByVirtualIp(ipPacket.DestinationAddress);
+        var session = GetSessionByVirtualIp(ipPacket.DestinationAddressValue);
         if (session == null)
             throw new Exception("SessionManager could not find the session for the packet.");
 
         session.Adapter_PacketReceived(this, ipPacket);
     }
 
-    public Session? GetSessionByVirtualIp(IPAddress virtualIpAddress)
+    /// <summary>Gets the session that holds a virtual IP.</summary>
+    /// <param name="virtualIpAddress">The virtual IP, as a packet from the internet names its destination.</param>
+    /// <returns>The session, or <see langword="null"/> when no session holds the IP.</returns>
+    public Session? GetSessionByVirtualIp(IpAddressValue virtualIpAddress)
     {
         return _virtualIpManager.FindSession(virtualIpAddress);
     }

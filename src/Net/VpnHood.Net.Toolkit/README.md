@@ -10,8 +10,9 @@ dotnet add package VpnHood.Net.Toolkit
 
 ## What it holds
 
-- **Net**: `IpNetwork`, `IpRange` and `IpRangeOrderedList` for address sets and their lookups, `IpEndPointValue`
-  and `IPEndPointPairValue` endpoint values, `PortRange`, and address and socket helpers.
+- **Net**: `IpAddressValue`, an IP address as a value with no object on the heap, for code that runs per packet;
+  `IpNetwork`, `IpRange` and `IpRangeOrderedList` for address sets and their lookups, by `IPAddress` or by value;
+  `IpEndPointValue` and `IPEndPointPairValue` endpoint values; `PortRange`, and address and socket helpers.
 - **Streams**: `AsyncStream` and stream decorators, and stream helpers.
 - **Logging**: `VhLogger`, the process's one log, whose `Format` methods redact addresses and IDs in anonymous mode;
   console, trace, file and text loggers; `LogService`, which applies the user's log settings.

@@ -53,6 +53,103 @@ public class PacketTest : TestBase
     }
 
     [TestMethod]
+    [DataRow(IpVersion.IPv4)]
+    [DataRow(IpVersion.IPv6)]
+    public void IP_Address_values(IpVersion ipVersion)
+    {
+        var sourceAddress = GetRandomIp(ipVersion);
+        var destinationAddress = GetRandomIp(ipVersion);
+        using var ipPacket = PacketBuilder.BuildIp(
+            sourceAddress.ToValue(), destinationAddress.ToValue(), IpProtocol.Raw, 0);
+        Assert.AreEqual(sourceAddress.ToValue(), ipPacket.SourceAddressValue);
+        Assert.AreEqual(destinationAddress.ToValue(), ipPacket.DestinationAddressValue);
+        Assert.AreEqual(sourceAddress, ipPacket.SourceAddress);
+        Assert.AreEqual(destinationAddress, ipPacket.DestinationAddress);
+
+        // a set writes the header and drops the IPAddress the packet kept
+        var keptSource = ipPacket.SourceAddress;
+        var keptDestination = ipPacket.DestinationAddress;
+        sourceAddress = GetRandomIp(ipVersion);
+        destinationAddress = GetRandomIp(ipVersion);
+        ipPacket.SourceAddressValue = sourceAddress.ToValue();
+        ipPacket.DestinationAddressValue = destinationAddress.ToValue();
+        CollectionAssert.AreEqual(sourceAddress.GetAddressBytes(), ipPacket.SourceAddressSpan.ToArray());
+        CollectionAssert.AreEqual(destinationAddress.GetAddressBytes(), ipPacket.DestinationAddressSpan.ToArray());
+        Assert.AreNotSame(keptSource, ipPacket.SourceAddress);
+        Assert.AreNotSame(keptDestination, ipPacket.DestinationAddress);
+        Assert.AreEqual(sourceAddress, ipPacket.SourceAddress);
+        Assert.AreEqual(destinationAddress, ipPacket.DestinationAddress);
+
+        // a header has no room for a scope id: the packet keeps it with the address, as its IPAddress setter does
+        if (ipVersion == IpVersion.IPv6) {
+            var scoped = IPAddress.Parse("fe80::1%3");
+            ipPacket.DestinationAddressValue = scoped.ToValue();
+            CollectionAssert.AreEqual(IPAddress.Parse("fe80::1").GetAddressBytes(),
+                ipPacket.DestinationAddressSpan.ToArray());
+            Assert.AreEqual(scoped, ipPacket.DestinationAddress);
+            Assert.AreEqual(scoped.ToValue(), ipPacket.DestinationAddressValue);
+
+            // an address without a scope drops the scoped one
+            ipPacket.DestinationAddressValue = IPAddress.Parse("fe80::1").ToValue();
+            Assert.AreEqual(IPAddress.Parse("fe80::1"), ipPacket.DestinationAddress);
+        }
+    }
+
+    [TestMethod]
+    public void Endpoints_keep_their_scope_id()
+    {
+        var source = new IpEndPointValue(IPAddress.Parse("fe80::2%3"), 5353);
+        var destination = new IpEndPointValue(IPAddress.Parse("fe80::1%3"), 53);
+
+        // set on a packet, read back as an endpoint and as the IPAddress a socket would take
+        using var udpPacket = PacketBuilder.BuildUdp(IPAddress.Parse("fe80::9"), IPAddress.Parse("fe80::8"), 1, 2,
+            new byte[8]);
+        udpPacket.SetSourceEndPoint(source);
+        udpPacket.SetDestinationEndPoint(destination);
+        Assert.AreEqual(source, udpPacket.GetSourceEndPoint());
+        Assert.AreEqual(destination, udpPacket.GetDestinationEndPoint());
+        Assert.AreEqual(3L, udpPacket.DestinationAddress.ScopeId);
+
+        // built from them, as the TCP stack builds a segment
+        using var tcpPacket = PacketBuilder.BuildTcp(source, destination, [], []);
+        Assert.AreEqual(source, tcpPacket.GetSourceEndPoint());
+        Assert.AreEqual(destination, tcpPacket.GetDestinationEndPoint());
+        Assert.AreEqual(3L, tcpPacket.SourceAddress.ScopeId);
+    }
+
+    [TestMethod]
+    [DataRow(IpVersion.IPv4)]
+    [DataRow(IpVersion.IPv6)]
+    public void IP_Address_of_the_other_version_changes_nothing(IpVersion ipVersion)
+    {
+        using var ipPacket = PacketBuilder.BuildIp(GetRandomIp(ipVersion), GetRandomIp(ipVersion), IpProtocol.Raw, 0);
+        var keptSource = ipPacket.SourceAddress;
+        var keptDestination = ipPacket.DestinationAddress;
+        var header = ipPacket.Header.ToArray();
+        var other = GetRandomIp(ipVersion == IpVersion.IPv4 ? IpVersion.IPv6 : IpVersion.IPv4);
+
+        Assert.ThrowsExactly<ArgumentException>(() => ipPacket.SourceAddress = other);
+        Assert.ThrowsExactly<ArgumentException>(() => ipPacket.DestinationAddress = other);
+        Assert.ThrowsExactly<ArgumentException>(() => ipPacket.SourceAddressValue = other.ToValue());
+        Assert.ThrowsExactly<ArgumentException>(() => ipPacket.DestinationAddressValue = other.ToValue());
+        Assert.ThrowsExactly<ArgumentException>(() => ipPacket.DestinationAddressValue = default);
+        Assert.ThrowsExactly<ArgumentException>(() => { ipPacket.SourceAddressSpan = other.GetAddressBytes(); });
+        Assert.ThrowsExactly<ArgumentException>(() => { ipPacket.DestinationAddressSpan = other.GetAddressBytes(); });
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            ipPacket.SetDestinationEndPoint(new IpEndPointValue(other, 0)));
+
+        // a span of no address's length, which a shorter one would have written over the start of the address
+        foreach (var length in new[] { 0, 3, 5, 15, 17 }) {
+            Assert.ThrowsExactly<ArgumentException>(() => { ipPacket.SourceAddressSpan = new byte[length]; });
+            Assert.ThrowsExactly<ArgumentException>(() => { ipPacket.DestinationAddressSpan = new byte[length]; });
+        }
+
+        CollectionAssert.AreEqual(header, ipPacket.Header.ToArray());
+        Assert.AreSame(keptSource, ipPacket.SourceAddress);
+        Assert.AreSame(keptDestination, ipPacket.DestinationAddress);
+    }
+
+    [TestMethod]
     public void Disposed_packet_is_named_without_its_buffer()
     {
         // error paths log a packet another owner has disposed

@@ -10,6 +10,10 @@ public class IpRangeOrderedList :
 {
     private readonly List<IpRange> _orderedList;
 
+    // the ranges' ends as values, for a search that makes no object (see BuildSearchRanges)
+    private readonly IpAddressValue[] _searchFirsts;
+    private readonly IpAddressValue[] _searchLasts;
+
     public IOrderedEnumerable<IpRange> CreateOrderedEnumerable<TKey>(
         Func<IpRange, TKey> keySelector,
         IComparer<TKey>? comparer, bool descending) =>
@@ -25,19 +29,20 @@ public class IpRangeOrderedList :
     public IpRange this[int index] => _orderedList[index];
 
     public IpRangeOrderedList()
+        : this(new List<IpRange>())
     {
-        _orderedList = [];
     }
 
     public IpRangeOrderedList(IEnumerable<IpRange> ipRanges)
+        : this(Sort(ipRanges))
     {
-        _orderedList = Sort(ipRanges);
     }
 
     // orderedList must be sorted so this constructor is private
     private IpRangeOrderedList(List<IpRange> orderedList)
     {
         _orderedList = orderedList;
+        BuildSearchRanges(orderedList, out _searchFirsts, out _searchLasts);
     }
 
     public void Serialize(Stream stream)
@@ -115,11 +120,36 @@ public class IpRangeOrderedList :
             .SequenceEqual(this);
     }
 
-    public bool Contains(IPAddress ipAddress)
+    /// <summary>Determines whether an address is in one of the ranges.</summary>
+    /// <param name="ipAddress">
+    /// The address. An IPv4-mapped IPv6 address is looked up as its IPv4 address, and a scope id is ignored, as
+    /// <see cref="IPAddressUtil.Compare(IPAddress, IPAddress)"/> orders addresses.
+    /// </param>
+    /// <returns><see langword="true"/> if a range holds the address; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="ipAddress"/> is <see langword="null"/>.</exception>
+    public bool Contains(IPAddress ipAddress) => Contains(ipAddress.ToValue());
+
+    /// <summary>Determines whether an address is in one of the ranges, with no object made.</summary>
+    /// <param name="ipAddress">
+    /// The address. An IPv4-mapped IPv6 address is looked up as its IPv4 address, and a scope id is ignored, as
+    /// <see cref="IPAddressUtil.Compare(IpAddressValue, IpAddressValue)"/> orders addresses; the default value is in
+    /// no range.
+    /// </param>
+    /// <returns><see langword="true"/> if a range holds the address; otherwise, <see langword="false"/>.</returns>
+    public bool Contains(IpAddressValue ipAddress)
     {
-        if (ipAddress.IsIPv4MappedToIPv6) ipAddress = ipAddress.MapToIPv4();
-        var res = _orderedList.BinarySearch(new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
-        return res >= 0;
+        // the last range that starts at or before the address is the only one that may hold it
+        var low = 0;
+        var high = _searchFirsts.Length - 1;
+        while (low <= high) {
+            var middle = low + (high - low) / 2;
+            if (IPAddressUtil.Compare(_searchFirsts[middle], ipAddress) <= 0)
+                low = middle + 1;
+            else
+                high = middle - 1;
+        }
+
+        return high >= 0 && IPAddressUtil.Compare(ipAddress, _searchLasts[high]) <= 0;
     }
 
     public bool IsNone()
@@ -319,22 +349,29 @@ public class IpRangeOrderedList :
         return res;
     }
 
-    private class IpRangeSearchComparer : IComparer<IpRange>
+    // The list is in IPAddressUtil.Compare's order, which the search uses too, but Unify merges ranges only within an
+    // address family: an IPv4-mapped range may overlap an IPv4 one, as Compare takes a mapped address as IPv4. Ranges
+    // that overlap are merged here, so the last range that starts at or before an address is the only one that may
+    // hold it.
+    private static void BuildSearchRanges(List<IpRange> orderedList,
+        out IpAddressValue[] firsts, out IpAddressValue[] lasts)
     {
-        public int Compare(IpRange? x, IpRange? y)
-        {
-            if (x is null && y is null) return 0;
-            if (x is null) return -1; // x is less than y
-            if (y is null) return +1; // x is greater than y
-
-            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) <= 0 &&
-                IPAddressUtil.Compare(x.LastIpAddress, y.LastIpAddress) >= 0)
-                return 0;
-
-            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) < 0)
-                return -1;
-
-            return +1;
+        var firstList = new List<IpAddressValue>(orderedList.Count);
+        var lastList = new List<IpAddressValue>(orderedList.Count);
+        foreach (var ipRange in orderedList) {
+            var first = ipRange.FirstIpAddress.ToValue();
+            var last = ipRange.LastIpAddress.ToValue();
+            if (lastList.Count > 0 && IPAddressUtil.Compare(first, lastList[^1]) <= 0) {
+                if (IPAddressUtil.Compare(last, lastList[^1]) > 0)
+                    lastList[^1] = last;
+            }
+            else {
+                firstList.Add(first);
+                lastList.Add(last);
+            }
         }
+
+        firsts = firstList.ToArray();
+        lasts = lastList.ToArray();
     }
 }

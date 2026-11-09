@@ -174,21 +174,9 @@ public class IpV6Packet : IpPacket
         set => Span[7] = value;
     }
 
-    private protected override Span<byte> SourceAddressBuffer {
-        get => Span.Slice(8, 16);
-        set {
-            value.CopyTo(Span.Slice(8, 16));
-            SourceAddressField = null;
-        }
-    }
+    private protected override Span<byte> SourceAddressBuffer => Span.Slice(8, 16);
 
-    private protected override Span<byte> DestinationAddressBuffer {
-        get => Span.Slice(24, 16);
-        set {
-            value.CopyTo(Span.Slice(24, 16));
-            DestinationAddressField = null;
-        }
-    }
+    private protected override Span<byte> DestinationAddressBuffer => Span.Slice(24, 16);
 
     /// <summary>
     /// Gets or sets the 20-bit flow label, from 0 to 1048575.

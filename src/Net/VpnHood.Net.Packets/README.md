@@ -13,6 +13,9 @@ dotnet add package VpnHood.Net.Packets
 
 - A packet is a view over its bytes: `IpV4Packet`, `IpV6Packet`, `TcpPacket`, `UdpPacket` and the ICMP packets
   read and write the buffer in place, with no copy.
+- `SourceAddressValue` and `DestinationAddressValue` read a packet's addresses as `IpAddressValue`s, with no object
+  made, for code that runs per packet; `SourceAddress` and `DestinationAddress` make an `IPAddress` on first read and
+  keep it.
 - `PacketBuilder` parses packets and builds new ones in memory rented from a pool. Dispose a packet to return
   its memory.
 - `BuildIp`, `BuildUdp`, `BuildTcp`, `BuildIcmpV4`, `BuildIcmpV6` and `BuildDns` compute no checksum: call

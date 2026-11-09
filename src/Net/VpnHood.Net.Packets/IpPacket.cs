@@ -29,8 +29,8 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     private bool _disposed;
 
     // the addresses as IPAddress, made once from the buffer and dropped when the buffer's address changes
-    private protected IPAddress? SourceAddressField;
-    private protected IPAddress? DestinationAddressField;
+    private IPAddress? _sourceAddress;
+    private IPAddress? _destinationAddress;
 
     /// <summary>
     /// Gets the packet's bytes, header and payload.
@@ -90,9 +90,9 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     /// <value><see langword="true"/> if the packet is IPv6; otherwise, <see langword="false"/>.</value>
     public bool IsV6 => Version == IpVersion.IPv6;
 
-    // the addresses in the buffer; a set copies the value in and drops the cached IPAddress
-    private protected abstract Span<byte> SourceAddressBuffer { get; set; }
-    private protected abstract Span<byte> DestinationAddressBuffer { get; set; }
+    // the addresses in the header
+    private protected abstract Span<byte> SourceAddressBuffer { get; }
+    private protected abstract Span<byte> DestinationAddressBuffer { get; }
 
     /// <summary>
     /// Gets or sets the source address as the header's bytes: 4 for IPv4, 16 for IPv6.
@@ -100,13 +100,14 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     /// <remarks>
     /// The getter returns a view of the header, not a copy.
     /// </remarks>
-    /// <exception cref="ArgumentException">The value is longer than the header's address.</exception>
+    /// <exception cref="ArgumentException">The value's length is not that of the packet's IP version.</exception>
     public ReadOnlySpan<byte> SourceAddressSpan {
         get => SourceAddressBuffer;
         set {
-            if (!value.TryCopyTo(SourceAddressBuffer))
-                throw new ArgumentException("Invalid IP address format.");
-            SourceAddressBuffer = null;
+            var buffer = SourceAddressBuffer;
+            ThrowIfOtherVersion(value.Length == 4, value.Length == 16, buffer.Length, nameof(value));
+            value.CopyTo(buffer);
+            _sourceAddress = null;
         }
     }
 
@@ -116,13 +117,14 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     /// <remarks>
     /// The getter returns a view of the header, not a copy.
     /// </remarks>
-    /// <exception cref="ArgumentException">The value is longer than the header's address.</exception>
+    /// <exception cref="ArgumentException">The value's length is not that of the packet's IP version.</exception>
     public ReadOnlySpan<byte> DestinationAddressSpan {
         get => DestinationAddressBuffer;
         set {
-            if (!value.TryCopyTo(DestinationAddressBuffer))
-                throw new ArgumentException("Invalid IP address format.");
-            DestinationAddressBuffer = null;
+            var buffer = DestinationAddressBuffer;
+            ThrowIfOtherVersion(value.Length == 4, value.Length == 16, buffer.Length, nameof(value));
+            value.CopyTo(buffer);
+            _destinationAddress = null;
         }
     }
 
@@ -131,15 +133,19 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     /// </summary>
     /// <remarks>
     /// The getter makes the <see cref="IPAddress"/> once and returns the same instance until the address
-    /// changes through this packet.
+    /// changes through this packet. Code that runs per packet reads <see cref="SourceAddressValue"/>, which makes no
+    /// object.
     /// </remarks>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">The value is not of the packet's IP version.</exception>
     public IPAddress SourceAddress {
-        get => SourceAddressField ??= new IPAddress(SourceAddressSpan);
+        get => _sourceAddress ??= new IPAddress(SourceAddressSpan);
         set {
-            if (!value.TryWriteBytes(SourceAddressBuffer, out var written) || written != SourceAddressSpan.Length)
-                throw new ArgumentException("Invalid IP address format.");
-            SourceAddressField = value;
+            ArgumentNullException.ThrowIfNull(value);
+            var buffer = SourceAddressBuffer;
+            ThrowIfOtherVersion(value.IsV4, value.IsV6, buffer.Length, nameof(value));
+            value.GetAddressBytesFast(buffer);
+            _sourceAddress = value;
         }
     }
 
@@ -148,16 +154,59 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     /// </summary>
     /// <remarks>
     /// The getter makes the <see cref="IPAddress"/> once and returns the same instance until the address
-    /// changes through this packet.
+    /// changes through this packet. Code that runs per packet reads <see cref="DestinationAddressValue"/>, which makes
+    /// no object.
     /// </remarks>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">The value is not of the packet's IP version.</exception>
     public IPAddress DestinationAddress {
-        get => DestinationAddressField ??= new IPAddress(DestinationAddressSpan);
+        get => _destinationAddress ??= new IPAddress(DestinationAddressSpan);
         set {
-            if (!value.TryWriteBytes(DestinationAddressBuffer, out var written) ||
-                written != DestinationAddressSpan.Length)
-                throw new ArgumentException("Invalid IP address format.");
-            DestinationAddressField = value;
+            ArgumentNullException.ThrowIfNull(value);
+            var buffer = DestinationAddressBuffer;
+            ThrowIfOtherVersion(value.IsV4, value.IsV6, buffer.Length, nameof(value));
+            value.GetAddressBytesFast(buffer);
+            _destinationAddress = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the source address as a value.
+    /// </summary>
+    /// <remarks>
+    /// The getter makes no object: it reads the header, or the <see cref="IPAddress"/> the packet keeps for
+    /// <see cref="SourceAddress"/>, which carries the scope id a set gave it. A set writes the address's bytes; a
+    /// header has no room for a scope id, so a scoped address is kept as that <see cref="IPAddress"/>, as the
+    /// <see cref="SourceAddress"/> setter keeps its value, and an address without one drops the kept address.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The value is not of the packet's IP version, or holds no address.</exception>
+    public IpAddressValue SourceAddressValue {
+        get => _sourceAddress?.ToValue() ?? new IpAddressValue(SourceAddressBuffer);
+        set {
+            var buffer = SourceAddressBuffer;
+            ThrowIfOtherVersion(value.IsV4, value.IsV6, buffer.Length, nameof(value));
+            _ = value.TryWriteBytes(buffer, out _);
+            _sourceAddress = value.ScopeId == 0 ? null : value.ToIPAddress();
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the destination address as a value.
+    /// </summary>
+    /// <remarks>
+    /// The getter makes no object: it reads the header, or the <see cref="IPAddress"/> the packet keeps for
+    /// <see cref="DestinationAddress"/>, which carries the scope id a set gave it. A set writes the address's bytes; a
+    /// header has no room for a scope id, so a scoped address is kept as that <see cref="IPAddress"/>, as the
+    /// <see cref="DestinationAddress"/> setter keeps its value, and an address without one drops the kept address.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The value is not of the packet's IP version, or holds no address.</exception>
+    public IpAddressValue DestinationAddressValue {
+        get => _destinationAddress?.ToValue() ?? new IpAddressValue(DestinationAddressBuffer);
+        set {
+            var buffer = DestinationAddressBuffer;
+            ThrowIfOtherVersion(value.IsV4, value.IsV6, buffer.Length, nameof(value));
+            _ = value.TryWriteBytes(buffer, out _);
+            _destinationAddress = value.ScopeId == 0 ? null : value.ToIPAddress();
         }
     }
 
@@ -210,6 +259,15 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
             builder.Append($", PayloadPacket: {PayloadPacket.GetType().Name}, {PayloadPacket}");
 
         return builder.ToString();
+    }
+
+    // An address of the other version, or none, would be written over part of the header's address and leave the
+    // packet's kept IPAddress stale; it is refused before anything is written. The length of the header's address tells
+    // the packet's version: reading Version instead would read the buffer once more on each set.
+    private static void ThrowIfOtherVersion(bool isV4, bool isV6, int headerAddressLength, string paramName)
+    {
+        if (headerAddressLength != (isV4 ? 4 : isV6 ? 16 : 0))
+            throw new ArgumentException("The address is not of the packet's IP version.", paramName);
     }
 
     /// <summary>

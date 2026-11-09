@@ -6,6 +6,15 @@ namespace VpnHood.Net.Toolkit.Net;
 // ReSharper disable once InconsistentNaming
 public static class IPAddressExtensions
 {
+    /// <summary>Provides the conversion of an address.</summary>
+    /// <param name="ipAddress">The address.</param>
+    extension(IPAddress ipAddress)
+    {
+        /// <summary>Converts the address to a value with the same version, bytes and scope id.</summary>
+        /// <returns>The value.</returns>
+        public IpAddressValue ToValue() => new(ipAddress);
+    }
+
     extension(IPAddress ipAddress)
     {
         public bool IsV4()

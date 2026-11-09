@@ -42,6 +42,12 @@
       <StackPanel x:Name="PasswordStep" Spacing="10" IsVisible="False">
         <TextBlock Classes="dialog-title" Text="{Binding SignInWithEmail, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="dialog-text" Text="{Binding SignInWithEmailDesc, Source={x:Static res:Strings.Current}}" />
+        <!-- a TV's phone way first: the form opens on it (FocusDefault), so the TV's keyboard comes up only
+             once the remote moves down into a box. Under the boxes the keyboard covered it, and Up from it
+             went to the password, past the email. -->
+        <Button x:Name="PhoneLink" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnPhoneClick" IsVisible="False">
+          <TextBlock Classes="body-small highlight" TextWrapping="Wrap" Text="{Binding SignInTypeOnYourPhone, Source={x:Static res:Strings.Current}}" />
+        </Button>
         <!-- told to the on-screen keyboard: an email layout, and a password it neither suggests
              nor learns; on a paired phone, the phone's own boxes, which its password manager fills -->
         <TextBox x:Name="EmailBox" Classes="outlined" TextInputOptions.ContentType="Email" TextChanged="OnFieldChanged"
@@ -52,14 +58,11 @@
         <Button x:Name="SubmitPasswordButton" Classes="btn-main block" Height="44" IsEnabled="False"
                 Click="OnSubmitPasswordClick" Content="{Binding SignIn, Source={x:Static res:Strings.Current}}" />
         <TextBlock x:Name="PasswordError" Classes="body-medium error-text" TextWrapping="Wrap" IsVisible="False" />
-        <Button x:Name="PhoneLink" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnPhoneClick" IsVisible="False">
-          <TextBlock Classes="body-small highlight" TextWrapping="Wrap" Text="{Binding SignInTypeOnYourPhone, Source={x:Static res:Strings.Current}}" />
-        </Button>
         <Button x:Name="ForgotButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnForgotClick" IsVisible="False">
           <TextBlock Classes="body-small highlight" TextWrapping="Wrap" Text="{Binding ForgotPassword, Source={x:Static res:Strings.Current}}" />
         </Button>
-        <!-- a remote's Up from Cancel goes to the password, past the two links: Avalonia's XY focus
-             prefers what spans Cancel's column. Down from the password reaches them. -->
+        <!-- a remote's Up from Cancel goes to the password, past the Forgot link: Avalonia's XY focus
+             prefers what spans Cancel's column. Down from the password reaches it. -->
         <Button Classes="btn-text" HorizontalAlignment="Right" Click="OnCancelClick" Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
       </StackPanel>
 

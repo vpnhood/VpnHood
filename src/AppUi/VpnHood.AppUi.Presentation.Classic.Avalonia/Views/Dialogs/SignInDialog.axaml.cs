@@ -108,7 +108,11 @@ public partial class SignInDialog : DialogBase
             else if (EmailButton.IsVisible) EmailButton.LandFocus();
             else StartCancelButton.LandFocus();
         }
-        else if (PasswordStep.IsVisible) EmailBox.LandFocus();
+        else if (PasswordStep.IsVisible) {
+            // a TV's empty form opens on its phone link: a box would bring the TV's keyboard up at once
+            if (PhoneLink.IsVisible && string.IsNullOrEmpty(EmailBox.Text)) PhoneLink.LandFocus();
+            else EmailBox.LandFocus();
+        }
         else if (ChallengeStep.IsVisible) CodeBox.LandFocus();
         else SavedButton.LandFocus();
     }

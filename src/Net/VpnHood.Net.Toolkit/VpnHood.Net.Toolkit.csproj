@@ -8,9 +8,7 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.14" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Net.Quic.Abstractions\VpnHood.Net.Quic.Abstractions.csproj" />
-	</ItemGroup>
+	<!-- No project reference: every other project builds on this one (docs/implementation-rules.md, rule 26). -->
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="VpnHood.Test" />

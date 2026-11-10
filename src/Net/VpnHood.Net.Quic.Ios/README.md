@@ -30,7 +30,7 @@ throughput. See the shared record in the app repo's
 | `IosQuicTls.cs` | Configures `SecProtocolOptions`: ALPN + the pinned-certificate verify callback bridge. |
 | `NWConnectionExtensions.cs`, `NWConnectionGroupExtensions.cs` | Best-effort teardown of a stream and of the group: each call is attempted and logged, never masking the failure that led to it. |
 | `IosQuicDiagnostics.cs`, `IosQuicEventIds.cs` | The stream counters and `[VHQUIC]` log lines (see Diagnostics), and their log event id. |
-| `IosSocketFactory.cs` | Small factory glue. |
+| `IosQuicClientFactory.cs` | The platform's `IQuicClientFactory`: the clients with the flow-control credits below. |
 
 ## Connection & stream model
 
@@ -49,7 +49,7 @@ throughput. See the shared record in the app repo's
 
 ## Flow control (the load-bearing numbers)
 
-`IosSocketFactory.CreateQuicClient` picks them, times its memory scale (at least 1), and
+`IosQuicClientFactory.CreateClient` picks them, times its memory scale (at least 1), and
 `IosQuicClient.ConnectAsync` sets them on the QUIC options block; an `IosQuicClient` made directly
 keeps Network.framework's defaults:
 

@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.MsQuic;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.LinuxTun;
 
@@ -22,7 +23,7 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
             configFolder: configFolder,
             dataFolder: configFolder,
             vpnServiceHandler: this,
-            socketFactory: new MsQuicSocketFactory(),
+            socketFactory: new ClientSocketFactory(new SystemSocketFactory(), new MsQuicClientFactory()),
             messageListener: new TcpMessageListener(configFolder),
             withLogger: withLogger,
             tunnelLock: new LinuxVpnTunnelLock(),

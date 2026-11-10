@@ -11,6 +11,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Net.Quic.Android;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.AndroidTun;
 using VpnHood.Core.Client.Devices.Android;
@@ -102,7 +103,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                     configFolder: AndroidDevice.GetVpnServiceConfigFolder(),
                     dataFolder: AndroidDevice.GetVpnServiceDataFolder(),
                     vpnServiceHandler: this,
-                    socketFactory: new AndroidSocketFactory(),
+                    socketFactory: new ClientSocketFactory(new SystemSocketFactory(), new AndroidQuicClientFactory()),
                     messageListener: _messageListener,
                     withLogger: AndroidDevice.IsVpnServiceProcess);
 

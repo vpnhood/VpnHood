@@ -25,5 +25,5 @@ internal sealed class QuicRecoverySocketFactory : TestSocketFactory
 
     public void RecordQuicStreamOpen() => Interlocked.Increment(ref _quicStreamCount);
 
-    public override IQuicClient CreateQuicClient() => new QuicRecoveryClient(base.CreateQuicClient(), this);
+    public override IQuicClient CreateClient() => new QuicRecoveryClient(base.CreateClient(), this);
 }

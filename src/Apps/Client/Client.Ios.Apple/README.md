@@ -26,7 +26,7 @@ The Apple libraries target tvOS beside iOS, so a build of the Apple projects nee
 
 ```bash
 ~/.dotnet/dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
-  -f net11.0-tvos -c Debug -r tvossimulator-arm64 -p:ValidateXcodeVersion=false \
+  -f net11.0-tvos -c Debug -r tvossimulator-arm64 \
   -p:AutomaticProvisioning=false -p:CodesignKey=-
 xcrun simctl install <udid> src/Apps/Client/Client.Ios.Apple/bin/Debug/net11.0-tvos/tvossimulator-arm64/VpnHoodClient.app
 xcrun simctl launch <udid> com.vpnhood.client.ios
@@ -50,7 +50,7 @@ simulator runs no Network Extension, so Connect ends with `NEVPNErrorDomain Code
 ```bash
 ~/.dotnet/dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
   -f net11.0-tvos -r tvos-arm64 -c Release -p:ArchiveOnBuild=false -p:_DeviceName=:v2:udid=<udid> \
-  -p:SolutionDir="$(pwd)/" -p:ValidateXcodeVersion=false
+  -p:SolutionDir="$(pwd)/"
 xcrun devicectl device install app --device <udid> src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-tvos/tvos-arm64/VpnHoodClient.app
 xcrun devicectl device capture screenshot --device <udid> --destination tv.png
 ```

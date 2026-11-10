@@ -21,13 +21,12 @@ dotnet add package VpnHood.Net.Toolkit
 - **Collections**: `TimeoutDictionary`, whose values expire after a time of no use and are disposed.
 - **Converters**: JSON converters for addresses, endpoints, versions, time spans, arrays, and enums that fall back on a
   name they do not know.
-- **Sockets**: `ISocketFactory`, the seam a platform uses to make its sockets and QUIC clients.
+- **Sockets**: `ISocketFactory`, the seam a platform uses to make its sockets.
 - **ApiClients**, **Trackers**, **Storages** and **Utils**: an HTTP API client base with error mapping, Google
   Analytics 4 trackers, a storage of small text files, and helpers.
 
 ## Packages
 
-- `VpnHood.Net.Toolkit` — this toolkit
-- `VpnHood.Net.Quic.Abstractions` — the QUIC contract its socket factory names
+- `VpnHood.Net.Toolkit` — this toolkit; it references no other VpnHood package
 
 Requires .NET 10.

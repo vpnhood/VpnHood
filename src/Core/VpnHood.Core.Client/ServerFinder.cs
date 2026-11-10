@@ -435,7 +435,7 @@ public class ServerFinder(
         var connectorService = new ConnectorServiceOptions {
             VpnEndPoint = vpnEndPoint,
             ProxyConnector = proxyConnector,
-            SocketFactory = socketFactory,
+            SocketFactory = new ClientSocketFactory(socketFactory, quicClientFactory: null), // a status query goes over TCP alone
             RequestTimeout = serverQueryTimeout,
             AllowChannelReuse = false
         };

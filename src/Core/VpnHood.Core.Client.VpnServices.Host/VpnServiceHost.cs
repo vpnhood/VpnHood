@@ -11,7 +11,6 @@ using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
-using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -22,7 +21,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 {
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
-    private readonly ISocketFactory _socketFactory;
+    private readonly IClientSocketFactory _socketFactory;
     private readonly IVpnTunnelLock? _tunnelLock;
     private readonly IVpnKillSwitch? _killSwitch;
     private readonly AsyncLock _killSwitchLock = new();
@@ -69,7 +68,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     public VpnServiceHost(string configFolder,
         string dataFolder,
         IVpnServiceHandler vpnServiceHandler,
-        ISocketFactory socketFactory,
+        IClientSocketFactory socketFactory,
         IMessageListener messageListener,
         bool withLogger = true,
         IVpnTunnelLock? tunnelLock = null,

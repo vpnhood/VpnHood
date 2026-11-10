@@ -15,7 +15,7 @@ dotnet add package VpnHood.Net.Quic.MsQuic
 - `MsQuicServer` listens; it takes its certificate from the listener options' `ServerCertificateSelector`. Its
   connections implement `IQuicServerConnection`, and their streams `IQuicStream`. `MsQuicServer.IsSupported`
   tells whether the platform can listen.
-- `MsQuicSocketFactory` is a `SystemSocketFactory` that adds the QUIC client.
+- `MsQuicClientFactory` is the platform's `IQuicClientFactory`, which makes `MsQuicClient`s.
 - The package references `Microsoft.Native.Quic.MsQuic.OpenSSL`, which brings a native MsQuic library.
 
 ## Packages

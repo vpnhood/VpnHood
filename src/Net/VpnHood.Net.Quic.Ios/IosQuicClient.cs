@@ -25,7 +25,7 @@ namespace VpnHood.Net.Quic.Ios;
 /// server opens advertises, or <see langword="null"/> for Network.framework's default.</param>
 /// <param name="initialMaxData">The initial QUIC flow-control credit, in bytes, the whole connection advertises, or
 /// <see langword="null"/> for Network.framework's default. Network.framework grants more credit as it buffers data,
-/// not as the app reads it, so these credits bound no memory. <see cref="IosSocketFactory"/> sets small ones.</param>
+/// not as the app reads it, so these credits bound no memory. <see cref="IosQuicClientFactory"/> sets small ones.</param>
 public sealed class IosQuicClient(
     ulong? initialMaxStreamDataBidirectionalLocal = null,
     ulong? initialMaxStreamDataBidirectionalRemote = null,
@@ -75,7 +75,7 @@ public sealed class IosQuicClient(
             // QUIC receive-window flow control (backpressure). Each window is applied only when the caller
             // configured it; leaving one null keeps Network.framework's (large) OS default for that window.
             // On iOS these are set to tight caps by the factory as the ~52 MB jetsam fix — without them the
-            // server floods each stream and native receive buffering blows the limit. See IosSocketFactory.
+            // server floods each stream and native receive buffering blows the limit. See IosQuicClientFactory.
             if (initialMaxStreamDataBidirectionalLocal.HasValue)
                 quic.InitialMaxStreamDataBidirectionalLocal = initialMaxStreamDataBidirectionalLocal.Value;
             if (initialMaxStreamDataBidirectionalRemote.HasValue)

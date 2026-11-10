@@ -10,6 +10,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
+using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
@@ -171,7 +172,7 @@ public class MaintenanceTest : TestBase
         var serverEndPoint = serverToken.HostEndPoints?.FirstOrDefault() ??
                              throw new InvalidOperationException("The token has no server endpoint.");
         var connectorService = new ConnectorService(new ConnectorServiceOptions {
-            SocketFactory = TestHelper.CreateTestSocketFactory(),
+            SocketFactory = new ClientSocketFactory(TestHelper.CreateTestSocketFactory(), new MsQuicClientFactory()),
             ProxyConnector = null,
             VpnEndPoint = new VpnEndPoint(serverEndPoint, serverToken.HostName,
                 serverToken.CertificateHash, serverToken.PathBase),

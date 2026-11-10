@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 
@@ -53,7 +52,4 @@ public class BindingSocketFactory(ISocketFactory socketFactory) : ISocketFactory
         socket.Bind(localEndPoint);
         return socket;
     }
-
-    public bool IsQuicSupported => socketFactory.IsQuicSupported;
-    public IQuicClient CreateQuicClient() => socketFactory.CreateQuicClient();
 }

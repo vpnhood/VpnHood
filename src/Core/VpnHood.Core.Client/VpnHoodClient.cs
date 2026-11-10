@@ -12,7 +12,6 @@ using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Monitoring;
 using VpnHood.Net.Toolkit.Net;
-using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -26,7 +25,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _disposed; // the release has run
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly IVpnAdapter _vpnAdapter;
-    private readonly ISocketFactory _socketFactory;
+    private readonly IClientSocketFactory _socketFactory;
     private ClientState _lastState = ClientState.None;
     private readonly Lock _stateEventLock = new();
     private readonly ServerFinder _serverFinder;
@@ -79,7 +78,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     // (HostNameAddresses)
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
-        ISocketFactory socketFactory,
+        IClientSocketFactory socketFactory,
         NetFilter? netFilter,
         IProxyConnector? proxyConnector,
         ITracker? tracker,

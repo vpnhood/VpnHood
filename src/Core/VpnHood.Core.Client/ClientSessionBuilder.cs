@@ -17,7 +17,6 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
-using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -31,7 +30,7 @@ namespace VpnHood.Core.Client;
 
 internal class ClientSessionBuilder(
     IVpnAdapter vpnAdapter,
-    ISocketFactory socketFactory,
+    IClientSocketFactory socketFactory,
     Token token,
     VpnHoodClientConfig config,
     ITracker? tracker,
@@ -276,8 +275,9 @@ internal class ClientSessionBuilder(
                 IsTcpForwardingSupported = helloResponse.IsTcpForwardingSupported,
                 IsQuicPacketSupported = helloResponse.IsQuicPacketSupported,
                 IsUdpPacketSupported = helloResponse.IsUdpPacketSupported,
-                IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.IsQuicSupported,
-                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse, socketFactory.IsQuicSupported),
+                IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.QuicClientFactory?.IsSupported == true,
+                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse,
+                    socketFactory.QuicClientFactory?.IsSupported == true),
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)
                     : null

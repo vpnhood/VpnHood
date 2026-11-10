@@ -7,7 +7,6 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
-using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
@@ -70,7 +69,7 @@ internal class ClientServerDom : IAsyncDisposable
         ClientOptions? clientOptions = null,
         Traffic? maxSpeedMbps = null,
         ProxyOptions? proxyOptions = null,
-        ISocketFactory? clientSocketFactory = null)
+        IClientSocketFactory? clientSocketFactory = null)
     {
         TestAccessManager? accessManager = null;
         VpnHoodServer? server = null;

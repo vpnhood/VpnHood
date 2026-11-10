@@ -16,21 +16,25 @@ namespace VpnHood.Core.Client;
 internal static class ClientHelper
 {
     /// <summary>
-    /// Wraps the caller's factory into the one the client and its services must use. Protecting the socket
+    /// Wraps the caller's sockets into the ones the client and its services must use, keeping its QUIC. Protecting the socket
     /// is mandatory: an unprotected socket is captured by our own adapter, so traffic to the server or to
     /// the proxies would loop back into the tunnel it is trying to establish.
     /// </summary>
-    public static ConfiguringSocketFactory CreateSocketFactory(ISocketFactory socketFactory,
+    public static IClientSocketFactory CreateSocketFactory(IClientSocketFactory socketFactory,
         IVpnAdapter vpnAdapter, ClientOptions options)
     {
+        ISocketFactory sockets = socketFactory;
         if (vpnAdapter.CanProtectSocket)
-            socketFactory = new AdapterSocketFactory(socketFactory, vpnAdapter);
+            sockets = new AdapterSocketFactory(sockets, vpnAdapter);
 
-        return new ConfiguringSocketFactory(new BindingSocketFactory(socketFactory)) {
+        var configuringSocketFactory = new ConfiguringSocketFactory(new BindingSocketFactory(sockets)) {
             KeepAlive = true,
             NoDelay = true,
             TcpKernelBufferSize = options.Transport.TcpKernelBufferSize
         };
+
+        // QUIC opens its own sockets, which these wrappers never see; the server's address leaves the routes instead
+        return new ClientSocketFactory(configuringSocketFactory, socketFactory.QuicClientFactory);
     }
 
     private static bool IsIncluded(IIpFilter clientIpFilter, IPAddress ipAddress)

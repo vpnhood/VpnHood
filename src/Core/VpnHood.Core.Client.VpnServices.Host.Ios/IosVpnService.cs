@@ -8,6 +8,7 @@ using VpnHood.Net.Quic.Ios;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.IosTun;
 using VpnHood.Core.Client.Devices.Ios;
@@ -147,10 +148,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                 // the packet channel (few QUIC streams), so the windows can be doubled under the same
                 // memory bound. Read lazily from the host so it reflects the status at each QUIC-client
                 // creation (session build), not the state at factory construction.
-                var sf = new IosSocketFactory(memoryScale: () => _vpnServiceHost?.IsTcpForwarding == true ? 1 : 2);
+                var quicClientFactory = new IosQuicClientFactory(memoryScale: () => _vpnServiceHost?.IsTcpForwarding == true ? 1 : 2);
                 // withLogger: true - the extension is a process of its own, so the host keeps its own log
                 // file, with the settings the app's LogServiceOptions carry
-                _vpnServiceHost = new VpnServiceHost(configFolder, dataFolder, this, sf,
+                _vpnServiceHost = new VpnServiceHost(configFolder, dataFolder, this,
+                    new ClientSocketFactory(new SystemSocketFactory(), quicClientFactory),
                     withLogger: true, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);
             }

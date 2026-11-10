@@ -1,21 +1,19 @@
 using VpnHood.Net.Quic.Abstractions;
-using VpnHood.Net.Toolkit.Sockets;
 
 namespace VpnHood.Net.Quic.Ios;
 
 /// <summary>
-/// Provides a <see cref="SystemSocketFactory"/> that adds the iOS QUIC client, <see cref="IosQuicClient"/>; it makes
-/// TCP and UDP sockets as its base does.
+/// Provides the iOS QUIC client, <see cref="IosQuicClient"/>.
 /// </summary>
 /// <param name="memoryScale">Returns the factor the QUIC flow-control credits are multiplied by, read each time a QUIC
 /// client is made: 1, or less, for the small baseline; more trades memory for throughput, as the iOS service does with 2
 /// while TCP forwarding is off.</param>
-public class IosSocketFactory(Func<int> memoryScale) : SystemSocketFactory
+public class IosQuicClientFactory(Func<int> memoryScale) : IQuicClientFactory
 {
     /// <summary>
     /// Gets a value indicating whether Network.framework QUIC is supported: on iOS 15 or later.
     /// </summary>
-    public override bool IsQuicSupported => IosQuicClient.IsSupported;
+    public bool IsSupported => IosQuicClient.IsSupported;
 
     /// <summary>
     /// Creates a QUIC client on Network.framework that advertises small initial flow-control credits: 4 KB per stream
@@ -24,7 +22,7 @@ public class IosSocketFactory(Func<int> memoryScale) : SystemSocketFactory
     /// </summary>
     /// <returns>A new <see cref="IosQuicClient"/>.</returns>
     /// <exception cref="NotSupportedException">QUIC is not supported on this platform.</exception>
-    public override IQuicClient CreateQuicClient()
+    public IQuicClient CreateClient()
     {
         if (!IosQuicClient.IsSupported)
             throw new NotSupportedException("QUIC is not supported on this platform.");

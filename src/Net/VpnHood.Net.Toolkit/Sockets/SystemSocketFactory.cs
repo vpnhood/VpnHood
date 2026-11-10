@@ -1,11 +1,10 @@
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.Net.Quic.Abstractions;
 
 namespace VpnHood.Net.Toolkit.Sockets;
 
 /// <summary>
-/// Provides the system's plain sockets, with no QUIC: the base of the platform factories.
+/// Provides the system's plain sockets: the base of the platform factories.
 /// </summary>
 public class SystemSocketFactory : ISocketFactory
 {
@@ -39,13 +38,4 @@ public class SystemSocketFactory : ISocketFactory
     {
         return new Socket(addressFamily, SocketType.Dgram, ProtocolType.Udp);
     }
-
-    /// <inheritdoc/>
-    /// <remarks>It is <see langword="false"/> here; a platform factory overrides it.</remarks>
-    public virtual bool IsQuicSupported => false;
-
-    /// <inheritdoc/>
-    /// <remarks>It always throws here; a platform factory overrides it.</remarks>
-    public virtual IQuicClient CreateQuicClient() =>
-        throw new NotSupportedException("QUIC is not supported by this socket factory.");
 }

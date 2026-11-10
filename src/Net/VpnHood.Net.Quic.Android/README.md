@@ -105,11 +105,11 @@ links its own OpenSSL, so no `libcrypto`/`libssl`/.NET-OpenSSL-shim is needed.
   (`lib/<abi>/libmsquic.so`), through this project and on to the app.
 - **arm64-v8a**, **armeabi-v7a** and **x86_64** are produced (armeabi-v7a since package 8.0.7 —
   many Android TVs run a 32-bit userland), covering every ABI the apps publish. Should the lib ever
-  be missing for an ABI, `IsQuicSupported` is `false` there and `CreateQuicClient()` throws
-  `NotSupportedException`; VpnHood's client checks `IsQuicSupported` first and uses TCP instead.
+  be missing for an ABI, `IsSupported` is `false` there and `CreateClient()` throws
+  `NotSupportedException`; VpnHood's client checks `IsSupported` first and uses TCP instead.
 
-Wiring: `AndroidSocketFactory` (which `AndroidVpnService` hands the client) exposes `IsQuicSupported` /
-`CreateQuicClient()` → `AndroidQuicClient`. QUIC engages only when the client's `ChannelProtocol`
+Wiring: `AndroidQuicClientFactory` (which `AndroidVpnService` hands the client in its `ClientSocketFactory`)
+exposes `IsSupported` / `CreateClient()` → `AndroidQuicClient`. QUIC engages only when the client's `ChannelProtocol`
 is `Quic` and the server advertises a `QuicPort` (otherwise TCP).
 
 ---

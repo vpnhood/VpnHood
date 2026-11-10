@@ -4,6 +4,7 @@ using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
+using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -21,7 +22,7 @@ public class TestDevice(
     public int BindProcessToVpnFalseCount { get; private set; }
     public int BindProcessToVpnTrueCount { get; private set; }
     public bool LastBindProcessToVpnValue { get; private set; }
-    public bool IsQuicSupported => SocketFactory.IsQuicSupported;
+    public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsBindProcessToVpnSupported => true;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public DeviceUserAgentInfo UserAgentInfo { get; init; } = new() {

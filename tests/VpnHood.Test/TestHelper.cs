@@ -376,7 +376,7 @@ public class TestHelper : IDisposable
         IVpnAdapter? vpnAdapter = null,
         bool autoConnect = true,
         ProxyOptions? proxyOptions = null,
-        ISocketFactory? socketFactory = null,
+        IClientSocketFactory? socketFactory = null,
         string? workingFolder = null,
         NetFilter? netFilter = null)
     {

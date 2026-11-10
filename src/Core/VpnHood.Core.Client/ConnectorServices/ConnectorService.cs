@@ -46,7 +46,7 @@ internal class ConnectorService : IAsyncDisposable
     private readonly TcpStreamConnectionFactory _tcpConnectionFactory;
     private readonly ClientRequestSigner _requestSigner;
     private readonly QuicRequestRecovery _quicRequestRecovery;
-    private readonly QuicStreamConnectionFactory? _quicConnectionFactory; // null when the socket factory has no QUIC support
+    private readonly QuicStreamConnectionFactory? _quicConnectionFactory; // null with no QUIC client factory or support
     private TimeSpan _idleConnectionTimeout;
     private readonly Job _cleanupJob;
     private readonly AsyncLock _disposeLock = new();
@@ -97,9 +97,9 @@ internal class ConnectorService : IAsyncDisposable
         _quicRequestRecovery = new QuicRequestRecovery(
             _tcpConnectionFactory, requestSigner, options.VpnEndPoint, TimeProvider.System);
 
-        _quicConnectionFactory = options.SocketFactory.IsQuicSupported
+        _quicConnectionFactory = options.SocketFactory.QuicClientFactory is { IsSupported: true } quicClientFactory
             ? new QuicStreamConnectionFactory(
-                options.SocketFactory.CreateQuicClient(),
+                quicClientFactory.CreateClient(),
                 options.VpnEndPoint,
                 UserCertificateValidationCallback)
             : null;

@@ -13,7 +13,7 @@ public class QuicCloseHoldingSocketFactory : TestSocketFactory
 
     public void ReleaseCloses() => _closesReleased.TrySetResult();
 
-    public override IQuicClient CreateQuicClient() => new HoldingQuicClient(base.CreateQuicClient(), this);
+    public override IQuicClient CreateClient() => new HoldingQuicClient(base.CreateClient(), this);
 
     private sealed class HoldingQuicClient(IQuicClient quicClient, QuicCloseHoldingSocketFactory owner)
         : IQuicClient

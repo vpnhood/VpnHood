@@ -1,7 +1,6 @@
 using VpnHood.Net.Toolkit.Net;
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.Net.Quic.Abstractions;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 
@@ -46,7 +45,4 @@ public class ConfiguringSocketFactory(ISocketFactory inner) : ISocketFactory
     {
         return inner.CreateUdpSocket(addressFamily);
     }
-
-    public bool IsQuicSupported => inner.IsQuicSupported;
-    public IQuicClient CreateQuicClient() => inner.CreateQuicClient();
 }

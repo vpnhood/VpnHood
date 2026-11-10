@@ -29,7 +29,7 @@ The Apple libraries target tvOS beside iOS, so a build of the Apple projects nee
 
 ```bash
 ~/.dotnet/dotnet build src/Apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj \
-  -f net11.0-tvos -c Debug -r tvossimulator-arm64 -p:ValidateXcodeVersion=false \
+  -f net11.0-tvos -c Debug -r tvossimulator-arm64 \
   -p:AutomaticProvisioning=false -p:CodesignKey=-
 xcrun simctl install <udid> src/Apps/Connect/Connect.Ios.Apple/bin/Debug/net11.0-tvos/tvossimulator-arm64/VpnHoodConnect.app
 xcrun simctl launch <udid> com.vpnhood.connect.ios

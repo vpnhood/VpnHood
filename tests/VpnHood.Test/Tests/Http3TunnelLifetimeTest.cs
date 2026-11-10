@@ -177,7 +177,7 @@ public class Http3TunnelLifetimeTest : TestBase
         public int StreamCount => Volatile.Read(ref _streamCount);
         public int DisposedConnectionCount => Volatile.Read(ref _disposedConnectionCount);
 
-        public override IQuicClient CreateQuicClient() => new TrackingClient(base.CreateQuicClient(), this);
+        public override IQuicClient CreateClient() => new TrackingClient(base.CreateClient(), this);
 
         private sealed class TrackingClient(IQuicClient client, TrackingSocketFactory owner) : IQuicClient
         {

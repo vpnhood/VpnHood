@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.Net.Quic.Abstractions;
 
 namespace VpnHood.Net.Toolkit.Sockets;
 
@@ -33,13 +32,4 @@ public interface ISocketFactory
     /// <returns>The socket, which the caller owns and disposes.</returns>
     // the discarded UdpClient wrapper has no finalizer, so the socket outlives it safely
     public Socket CreateUdpSocket(AddressFamily addressFamily) => CreateUdpClient(addressFamily).Client;
-
-    /// <summary>Gets a value indicating whether the factory can create QUIC clients.</summary>
-    /// <remarks>A decorator forwards it, and <see cref="CreateQuicClient"/>, to its inner factory.</remarks>
-    public bool IsQuicSupported { get; }
-
-    /// <summary>Creates a QUIC client.</summary>
-    /// <returns>A new QUIC client.</returns>
-    /// <exception cref="NotSupportedException">The factory cannot create QUIC clients.</exception>
-    public IQuicClient CreateQuicClient();
 }

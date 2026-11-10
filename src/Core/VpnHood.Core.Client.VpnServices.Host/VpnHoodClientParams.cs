@@ -1,6 +1,5 @@
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
@@ -14,7 +13,7 @@ public class VpnHoodClientParams
 {
     public required VpnServiceOptions ServiceOptions { get; init; }
     public required IVpnAdapter VpnAdapter { get; init; }
-    public required ISocketFactory SocketFactory { get; init; }
+    public required IClientSocketFactory SocketFactory { get; init; }
     public required string ConfigFolder { get; init; }
 
     // the proxies' folder, which travels with a backup (VpnServiceFolders)

@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.Toolkit.Sockets;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Device;
 
-public class TestDeviceSocketFactory(TestDevice testDevice) : MsQuicSocketFactory
+public class TestDeviceSocketFactory(TestDevice testDevice) : TestSocketFactory
 {
     public override TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {

@@ -4,6 +4,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.WindowsVpnPlugin;
 using Windows.ApplicationModel.AppService;
@@ -335,7 +336,7 @@ internal sealed class WindowsVpnPluginService : IVpnServiceHandler
                 configFolder: folder,
                 dataFolder: folder,
                 vpnServiceHandler: this,
-                socketFactory: new MsQuicSocketFactory(),
+                socketFactory: new ClientSocketFactory(new SystemSocketFactory(), new MsQuicClientFactory()),
                 messageListener: appServiceListener,
                 withLogger: true);
             _appServiceListener = appServiceListener;

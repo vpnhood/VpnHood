@@ -9,7 +9,7 @@ public class QuicConnectHoldingSocketFactory : TestSocketFactory
     public volatile bool HoldConnects; // connects begun from now on hang until cancelled
     public int HeldConnectCount;
 
-    public override IQuicClient CreateQuicClient() => new HoldingQuicClient(base.CreateQuicClient(), this);
+    public override IQuicClient CreateClient() => new HoldingQuicClient(base.CreateClient(), this);
 
     private sealed class HoldingQuicClient(IQuicClient quicClient, QuicConnectHoldingSocketFactory owner)
         : IQuicClient

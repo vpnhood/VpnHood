@@ -11,9 +11,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- VpnHood.Net.Toolkit provides SystemSocketFactory and transitively references
-		     VpnHood.Net.Quic.Abstractions -->
 		<ProjectReference Include="..\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
+		<ProjectReference Include="..\VpnHood.Net.Quic.Abstractions\VpnHood.Net.Quic.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

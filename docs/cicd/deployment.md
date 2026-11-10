@@ -267,7 +267,7 @@ dispatches the run. Like every store leg it is **skip-with-warning** when its se
 prerequisites:
 
 - **Runner.** The project targets `net11.0-ios` and needs the .NET 11 SDK + `ios` workload and **the exact
-  Xcode that workload names** (27.0 for RC3). `build-ios` runs on GitHub's hosted **`xcode-27`** image and
+  Xcode that workload names** (27.2 for .NET 11's 27.2.11039). `build-ios` runs on GitHub's hosted **`xcode-27`** image and
   installs .NET 11 itself; `publish-appstore-ios` only uploads the `.ipa`, on the same image — no
   self-hosted mac required.
 - **Signing can't self-sign.** An App Store `.ipa` requires an **Apple Distribution** certificate and

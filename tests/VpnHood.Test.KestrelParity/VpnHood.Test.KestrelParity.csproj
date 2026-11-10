@@ -10,7 +10,7 @@
 		<!-- The reference runs in this process: Kestrel behind a JWT bearer check. Its version is what the
 		     replies were measured on; another ASP.NET Core may answer some probes differently. -->
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0-rc.3.26522.148" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

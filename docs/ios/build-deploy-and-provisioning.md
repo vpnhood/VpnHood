@@ -3,8 +3,8 @@
 How to build the App + Network Extension, install/run on device, stream logs, and fix signing/provisioning.
 
 > **Framework note:** the target is **`net11.0-ios` / CoreCLR** — this is what fixed the jetsam crash and
-> TCP forwarding throughput. Build with **`~/.dotnet11/dotnet`** (the system `dotnet` can't target `net11.0-ios`).
-> .NET 11 is still a **preview SDK** (11.0.100-rc.3) — a shippable/App-Store build needs .NET 11 GA. See
+> TCP forwarding throughput. Build with the .NET 11 SDK that `global.json` names, with its `ios` and `tvos` workloads.
+> See
 > [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md) for the runtime/memory rationale.
 
 ## Project layout (in this monorepo)
@@ -23,8 +23,8 @@ The host references the extension as an `IsAppExtension` `ProjectReference`, so 
 and bundles the appex**. All iOS build settings are inlined per-csproj (no shared props file).
 
 ## Prerequisites
-- macOS + Xcode matching the workload's recommended version (currently Xcode 27.0 with RC3). The check is
-  exact — a newer Xcode such as 27.1 fails it too; pass `-p:ValidateXcodeVersion=false` as a temporary
+- macOS + Xcode matching the workload's recommended version (currently Xcode 27.2 for 27.2.11039). The check
+  is exact — a newer Xcode fails it too; pass `-p:ValidateXcodeVersion=false` as a temporary
   bridge for a local build.
 - Physical iPhone registered in the Apple Developer account (team `6KKW3MKLR7`, OmegaHood LLC) with, for **both**
   bundle IDs of the app you're building: its App Group enabled + the Network Extension capability enabled.
@@ -40,7 +40,7 @@ Debug AOT emits ~51 MB and hits the 52 MB jetsam limit — **always build Releas
 # Client (swap Client.Ios.Apple -> Connect.Ios.Apple for the Connect app)
 rm -rf src/Apps/Client/Client.Ios.Apple/bin src/Apps/Client/Client.Ios.Apple/obj \
        src/Apps/Client/Client.Ios.Extension/bin src/Apps/Client/Client.Ios.Extension/obj   # clean: avoid stale AOT
-~/.dotnet11/dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
+dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
   -f net11.0-ios -r ios-arm64 -c Release \
   -p:ArchiveOnBuild=false \
   -p:_DeviceName=:v2:udid=$DEVICE \

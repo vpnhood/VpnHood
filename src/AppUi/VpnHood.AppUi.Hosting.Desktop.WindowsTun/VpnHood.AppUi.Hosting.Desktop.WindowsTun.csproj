@@ -6,7 +6,7 @@
 
 	<ItemGroup>
 		<!-- ServiceBase, for the service control manager's start and stop, and ServiceController. -->
-		<PackageReference Include="System.ServiceProcess.ServiceController" Version="11.0.0-rc.3.26522.148" />
+		<PackageReference Include="System.ServiceProcess.ServiceController" Version="11.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

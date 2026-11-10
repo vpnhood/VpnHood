@@ -6,7 +6,7 @@
 
 	<ItemGroup>
 		<!-- EventLog, for a service's warnings and errors in the Application log. -->
-		<PackageReference Include="System.Diagnostics.EventLog" Version="11.0.0-rc.3.26522.148" />
+		<PackageReference Include="System.Diagnostics.EventLog" Version="11.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

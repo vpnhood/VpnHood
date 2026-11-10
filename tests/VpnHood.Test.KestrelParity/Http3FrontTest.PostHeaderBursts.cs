@@ -63,8 +63,8 @@ public partial class Http3FrontTest
     {
         IReadOnlyList<(string Name, string Value)> trailerFields = Enumerable.Repeat(("x", ""), 8).ToArray();
         var trailers = BuildLiteralRequest(trailerFields);
-        // RC3 Http3Stream checks DATA length, FIN, frame order, trailer callbacks and QPACK separately.
-        // https://github.com/dotnet/aspnetcore/blob/v11.0.0-rc.3.26522.148/src/Servers/Kestrel/Core/src/Internal/Http3/Http3Stream.cs
+        // Http3Stream checks DATA length, FIN, frame order, trailer callbacks and QPACK separately.
+        // https://github.com/dotnet/aspnetcore/blob/v11.0.0/src/Servers/Kestrel/Core/src/Internal/Http3/Http3Stream.cs
         return layout switch {
             "long-body" => [.. BuildBodyHeaders("2"), .. Frame(0, [1, 2, 3])],
             "short-body-fin" => [.. BuildBodyHeaders("4"), .. Frame(0, [1, 2, 3])],

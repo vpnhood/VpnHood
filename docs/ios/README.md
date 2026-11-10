@@ -17,9 +17,7 @@ ids and name come from its product's identity (`src/Apps/Connect/Directory.Build
 
 ## Always-on iOS rules
 - **Build Release for the device** (Debug AOT ≈51 MB hits the ~52 MB jetsam limit).
-- **Built with .NET 11 / CoreCLR** (TFM `net11.0-ios`, via `~/.dotnet11/dotnet` — the system `dotnet` can't
-  target it). This is what fixed the jetsam crash — see the memory doc. net11 is still a preview SDK; a
-  shippable App-Store build needs net11 GA.
+- **Built with .NET 11 / CoreCLR** (TFM `net11.0-ios`). This is what fixed the jetsam crash — see the memory doc.
 - **Diagnostic logs → `.working/` (or `logs/`), never the repo root.**
 - **Don't commit a test access key** in any head — production has none in code (Connect's comes from its
   embedded key file, Client's is added via the UI).

@@ -1,10 +1,10 @@
 # iOS Network Extension — Memory & Throughput (consolidated)
 
-**Status:** TCP forwarding working on iOS with good throughput + bounded memory (on .NET 11 preview).
+**Status:** TCP forwarding working on iOS with good throughput + bounded memory (measured on a .NET 11 preview).
 **Investigation:** 2026-06-16 → 2026-06-19 • **Device:** iPhone 11 (A13, 16 KB pages, iOS 26.5),
-hardware UDID `00008030-001544500A38802E` • **Builds with:** `~/.dotnet11/dotnet`
+hardware UDID `00008030-001544500A38802E` • **Builds with:** the .NET 11 SDK
 (the measurements below were taken on SDK 11.0.100-preview.5, iOS workload `26.5.11546-net11-p5`; the
-repo now builds on **RC3** / `27.0.12212-net11-rc.2` — the numbers have not been re-measured since,
+repo now builds on **.NET 11** / `27.2.11039` — the numbers have not been re-measured since,
 so treat them as the preview.5 baseline).
 
 > This file merges the three working docs (`ios-memory-jetsam-investigation`, `ios-net11-coreclr-proxy-speed`,

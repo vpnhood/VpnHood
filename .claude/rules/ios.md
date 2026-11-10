@@ -16,8 +16,8 @@ paths:
 - **Read [`docs/ios/`](docs/ios/) before working on anything iOS** — especially
   `ios-extension-memory-and-throughput.md` before touching memory/throughput/TCP-stack code (the extension
   runs under a ~52 MB jetsam limit).
-- Build **Release** for device with `~/.dotnet11/dotnet` (TFM `net11.0-ios` / CoreCLR — the system `dotnet`
-  can't target it). Don't commit a test access key in a head (production has none in code).
+- Build **Release** for device (TFM `net11.0-ios` / CoreCLR, with the .NET 11 SDK `global.json` names).
+  Don't commit a test access key in a head (production has none in code).
 - When asked to build/run/launch an app without naming the product, use the **Client** app
   (`src/Apps/Client/Client.Ios.Apple`), not Connect.
 - Updates come from the **App Store only**: wire `AppStoreAppUpdaterProvider` and name **no

@@ -3,7 +3,7 @@
     "tfm": "net11.0",
     "framework": {
       "name": "Microsoft.NETCore.App",
-      "version": "11.0.0-rc.3"
+      "version": "11.0.0"
     },
     "rollForward": "LatestPatch"
   }

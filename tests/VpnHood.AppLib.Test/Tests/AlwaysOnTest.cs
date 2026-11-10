@@ -521,6 +521,28 @@ public class AlwaysOnTest : TestAppBase
             await Task.Delay(20, TestCt);
         }
 
-        throw new TimeoutException("Always on did not wait to try again.");
+        // What always on was doing as the time ran out, as a failure that comes once in a full run keeps only its
+        // message: On with a connection on its way is a connect that never ended, Waiting past its retry time a
+        // wait that never ended, and Stopped a failure it did not try again.
+        throw new TimeoutException($"Always on did not wait to try again. {Describe(app.State, previousRetryTime)}");
+    }
+
+    private static string Describe(AppState state, DateTime? previousRetryTime)
+    {
+        var alwaysOnState = state.AlwaysOnState;
+        return $"At {DateTime.UtcNow:HH:mm:ss.fff} UTC, AlwaysOn: {alwaysOnState?.Status.ToString() ?? "none"}, " +
+               $"RetryTime: {Format(alwaysOnState?.RetryTime)}, PreviousRetryTime: {Format(previousRetryTime)}, " +
+               $"Error: {Format(alwaysOnState?.Error)}, " +
+               $"ConnectionState: {state.ConnectionState}, LastError: {Format(state.LastError)}.";
+    }
+
+    private static string Format(DateTime? time)
+    {
+        return time?.ToString("HH:mm:ss.fff") ?? "none";
+    }
+
+    private static string Format(ApiError? error)
+    {
+        return error == null ? "none" : $"{error.TypeName} (\"{error.Message}\")";
     }
 }

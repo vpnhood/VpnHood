@@ -19,9 +19,12 @@ public static class CrossProcessCounter
         }
 
         try {
-            // in the shared temp root, not an assembly's working folder: an assembly cleanup must
-            // not reset a counter another test host is still walking
-            var folderPath = Path.Combine(Path.GetTempPath(), "vh");
+            // In the user's folder, which TMP does not move: a run that points TMP at a folder of its own, to keep
+            // its working folders from another run's cleanup, would otherwise walk a counter of its own, and its
+            // test hosts would take the ports and IP blocks of the runs beside it. Not an assembly's working
+            // folder either: an assembly cleanup must not reset a counter another test host is still walking.
+            var userFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var folderPath = Path.Combine(userFolderPath.Length > 0 ? userFolderPath : Path.GetTempPath(), "VpnHood.Test");
             Directory.CreateDirectory(folderPath);
             var filePath = Path.Combine(folderPath, $"VpnHood.Test.Counter.{name}.txt");
             var value = first;

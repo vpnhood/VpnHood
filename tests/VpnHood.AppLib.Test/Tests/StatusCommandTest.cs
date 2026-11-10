@@ -1,3 +1,4 @@
+using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.Api.Updaters;
 using VpnHood.AppUi.Hosting.Desktop.Daemon.Commands;
 
@@ -24,6 +25,26 @@ public class StatusCommandTest
         Assert.AreEqual("installing 9.0.950", Describe(AppUpdateStage.Installing));
         Assert.AreEqual("updating to 9.0.950 failed: No space left.",
             Describe(AppUpdateStage.Failed, errorMessage: "No space left."));
+    }
+
+    [TestMethod]
+    public void The_state_line_says_the_windows_words()
+    {
+        Assert.AreEqual("Disconnected", StatusCommand.StateText(AppConnectionState.None));
+        Assert.AreEqual("Connected", StatusCommand.StateText(AppConnectionState.Connected));
+        Assert.AreEqual("Finding best server", StatusCommand.StateText(AppConnectionState.FindingBestServer));
+        Assert.AreEqual("Finding network", StatusCommand.StateText(AppConnectionState.FindingReachableServer));
+        Assert.AreEqual("Loading ad", StatusCommand.StateText(AppConnectionState.WaitingForAd));
+    }
+
+    // a state added without words would print its code name, run together
+    [TestMethod]
+    public void Every_state_has_words()
+    {
+        foreach (var state in Enum.GetValues<AppConnectionState>()) {
+            var text = StatusCommand.StateText(state);
+            Assert.IsFalse(text.Skip(1).Any(char.IsUpper), $"{state} prints \"{text}\"");
+        }
     }
 
     [TestMethod]

@@ -63,7 +63,7 @@ internal static class StatusCommand
     private static IReadOnlyList<(string, string)> Describe(AppState state, bool isAutomaticUpdateOn)
     {
         var fields = new List<(string, string)> {
-            ("State", state.ConnectionState.ToString()),
+            ("State", StateText(state.ConnectionState)),
             ("Profile", state.VpnProfile?.VpnProfileName ?? "-"),
             ("Location", state.ServerLocationInfo?.ServerLocation ?? "-"),
             ("Protocol", state.ChannelProtocol.ToString())
@@ -94,6 +94,29 @@ internal static class StatusCommand
             fields.Add(("Update", update));
 
         return fields;
+    }
+
+    // The window's words for each state (Strings.ConnectionStateText), in English as every line here is: the
+    // command reads no word files. --json keeps the app's own names, which the updaters compare with "None".
+    internal static string StateText(AppConnectionState connectionState)
+    {
+        return connectionState switch {
+            AppConnectionState.None => "Disconnected",
+            AppConnectionState.Initializing => "Initializing",
+            AppConnectionState.WaitingForVpnPermission => "Initializing", // the window's word: the OS's prompt covers it
+            AppConnectionState.Waiting => "Waiting",
+            AppConnectionState.WaitingForAd => "Loading ad",
+            AppConnectionState.Diagnosing => "Diagnosing",
+            AppConnectionState.ValidatingProxies => "Validating proxies",
+            AppConnectionState.FindingReachableServer => "Finding network",
+            AppConnectionState.FindingBestServer => "Finding best server",
+            AppConnectionState.Connecting => "Connecting",
+            AppConnectionState.Connected => "Connected",
+            AppConnectionState.Unstable => "Unstable",
+            AppConnectionState.Disconnecting => "Disconnecting",
+            AppConnectionState.Updating => "Updating",
+            _ => connectionState.ToString()
+        };
     }
 
     // The newer version and how far its update has come, as the window's notice shows it; null with none. The install

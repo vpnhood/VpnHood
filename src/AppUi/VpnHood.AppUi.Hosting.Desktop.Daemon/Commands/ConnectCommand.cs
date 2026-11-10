@@ -81,7 +81,7 @@ internal static class ConnectCommand
             default:
                 // the app's own account of it, which is what the window would be showing
                 await PrintFailure(api, commandName, isAddAccessKeySupported, vpnProfileId,
-                    state.LastError?.Message ?? $"Not connected. State: {state.ConnectionState}",
+                    state.LastError?.Message ?? $"Not connected. State: {StatusCommand.StateText(state.ConnectionState)}",
                     cancellationToken).Vhc();
                 return 1;
         }

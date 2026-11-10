@@ -110,3 +110,6 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     keep working across versions. A settings file must still load: a renamed setting is migrated as
     its file loads, through the `Storage`, since tvOS keeps the app's files in its defaults. And the
     client and the server must still understand each other; for the access manager, see rule 19.
+26. VpnHood.Net.Toolkit is the base every other project builds on, so it references no other project
+    of ours. A reference it seems to need is a design question for the owner before it is added; a
+    type it would need lives in the project that needs it, or behind an interface of its own there.

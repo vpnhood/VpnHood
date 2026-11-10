@@ -32,20 +32,20 @@ public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
             throw new InvalidOperationException(
                 $"Packet size exceeds the maximum allowed limit. PacketLength: {packetLength}");
 
-        var memoryOwner = MemoryPool<byte>.Shared.Rent(packetLength);
+        var rentedArray = ArrayPool<byte>.Shared.Rent(packetLength);
         try {
-            // copy the minimum header to the memory owner
-            _minHeader.CopyTo(memoryOwner.Memory);
+            // copy the minimum header to the array
+            _minHeader.CopyTo(rentedArray);
 
             // read the rest of the packet
-            await _stream.ReadExactlyAsync(memoryOwner.Memory[_minHeader.Length..packetLength], cancellationToken).Vhc();
+            await _stream.ReadExactlyAsync(rentedArray.AsMemory(_minHeader.Length..packetLength), cancellationToken)
+                .Vhc();
 
-            // build the packet
-            var ipPacket = PacketBuilder.Attach(memoryOwner);
-            return ipPacket;
+            // build the packet, which returns the array when disposed
+            return PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray));
         }
         catch {
-            memoryOwner.Dispose();
+            ArrayPool<byte>.Shared.Return(rentedArray);
             throw;
         }
     }

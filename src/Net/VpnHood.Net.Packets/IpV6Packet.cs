@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.Packets;
@@ -9,8 +8,7 @@ namespace VpnHood.Net.Packets;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A constructor that takes a <see cref="Memory{T}"/> leaves the memory to the caller; one that takes an
-/// <see cref="IMemoryOwner{T}"/> owns it and disposes it with the packet.
+/// The <see cref="PacketMemory"/> a packet is made on says whether the packet owns its memory.
 /// </para>
 /// <para>
 /// A parsed packet reads through its Hop-by-Hop Options, Destination Options, Fragment and Authentication
@@ -25,60 +23,40 @@ namespace VpnHood.Net.Packets;
 /// </remarks>
 public class IpV6Packet : IpPacket
 {
-    private bool _disposed;
-    private readonly IMemoryOwner<byte>? _memoryOwner;
-
     // set by the extension headers a parsed packet reads through, if it has any
     private readonly IpProtocol? _upperLayerProtocol;
     private readonly int _headerLength = 40;
     private readonly bool _isFragment;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="IpV6Packet"/> class by parsing the packet at the start of
-    /// rented memory, which the packet then owns.
-    /// </summary>
-    /// <param name="memoryOwner">
-    /// The memory, which holds the packet from its first byte and may be longer. The packet disposes it; when
-    /// parsing fails, it stays the caller's.
-    /// </param>
-    /// <exception cref="ArgumentException">The bytes are no valid IPv6 packet, or the memory is shorter than the packet.</exception>
-    /// <exception cref="IndexOutOfRangeException">The memory is empty.</exception>
-    public IpV6Packet(IMemoryOwner<byte> memoryOwner)
-        : this(memoryOwner.Memory)
-    {
-        _memoryOwner = memoryOwner;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="IpV6Packet"/> class by building a new packet in rented
-    /// memory, which the packet then owns.
-    /// </summary>
-    /// <param name="memoryOwner">The memory, at least <paramref name="packetLength"/> bytes. The packet disposes it.</param>
-    /// <param name="packetLength">The packet's total length in bytes, from 40 to 65575.</param>
-    /// <param name="protocol">The Next Header: the protocol that follows the fixed header.</param>
-    /// <exception cref="ArgumentException"><paramref name="packetLength"/> is below 40.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="packetLength"/> exceeds the memory.</exception>
-    public IpV6Packet(IMemoryOwner<byte> memoryOwner, int packetLength, IpProtocol protocol)
-        : this(memoryOwner.Memory[..packetLength], protocol)
-    {
-        _memoryOwner = memoryOwner;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="IpV6Packet"/> class by building a new packet in a buffer.
+    /// Initializes a new instance of the <see cref="IpV6Packet"/> class by building a new packet at the start of some
+    /// memory.
     /// </summary>
     /// <remarks>
-    /// The whole buffer is cleared, then the version, the Next Header and the payload length are written. The
+    /// The packet's bytes are cleared, then the version, the Next Header and the payload length are written. The
     /// addresses and the hop limit are left zero.
     /// </remarks>
-    /// <param name="buffer">The buffer, exactly as long as the packet: from 40 to 65575 bytes.</param>
+    /// <param name="memory">
+    /// The memory, at least <paramref name="packetLength"/> bytes: a <see cref="Memory{T}"/> or an array the caller
+    /// keeps, or memory given to the packet (see <see cref="PacketMemory"/>), which stays the caller's when building
+    /// fails.
+    /// </param>
+    /// <param name="packetLength">The packet's total length in bytes, from 40 to 65575.</param>
     /// <param name="protocol">The Next Header: the protocol that follows the fixed header.</param>
-    /// <exception cref="ArgumentException"><paramref name="buffer"/> is shorter than 40 bytes.</exception>
-    public IpV6Packet(Memory<byte> buffer, IpProtocol protocol) : base(buffer)
+    /// <exception cref="ArgumentException"><paramref name="packetLength"/> is below 40 or above 65575.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="packetLength"/> is negative or exceeds the memory.</exception>
+    public IpV6Packet(PacketMemory memory, int packetLength, IpProtocol protocol)
+        : base(memory.Slice(packetLength))
     {
+        var buffer = Buffer;
+
         // Check if the buffer is large enough for the IP header
         if (buffer.Length < 40)
-            throw new ArgumentException("Buffer too small for IPv6 header.");
+            throw new ArgumentException("Buffer too small for IPv6 header.", nameof(packetLength));
+
+        // the payload length field holds at most 65535: a longer packet would say it is shorter
+        if (buffer.Length > 40 + 0xFFFF)
+            throw new ArgumentException("Packet too long for the IPv6 payload length field.", nameof(packetLength));
 
         // clean buffer
         buffer.Span.Clear();
@@ -94,31 +72,35 @@ public class IpV6Packet : IpPacket
         BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(4, 2), payloadLength);
     }
 
-    private static Memory<byte> AdjustBuffer(Memory<byte> buffer)
+    private static PacketMemory AdjustBuffer(PacketMemory memory)
     {
-        var packetLength = GetPacketLength(buffer.Span);
+        var packetLength = GetPacketLength(memory.Memory.Span);
         if (packetLength < 40)
-            throw new ArgumentException("Invalid IPv6 packet length.", nameof(buffer));
+            throw new ArgumentException("Invalid IPv6 packet length.", nameof(memory));
 
-        if (packetLength > buffer.Length)
-            throw new ArgumentException("Buffer too small for IPv6 packet.", nameof(buffer));
-        return buffer[..packetLength];
+        if (packetLength > memory.Memory.Length)
+            throw new ArgumentException("Buffer too small for IPv6 packet.", nameof(memory));
+        return memory.Slice(packetLength);
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="IpV6Packet"/> class by parsing the packet at the start of a
-    /// buffer.
+    /// Initializes a new instance of the <see cref="IpV6Packet"/> class by parsing the packet at the start of some
+    /// memory.
     /// </summary>
     /// <remarks>
-    /// The packet takes the buffer's first 40 + payload-length bytes and leaves the rest.
+    /// The packet takes the memory's first 40 + payload-length bytes and leaves the rest.
     /// </remarks>
-    /// <param name="buffer">The buffer, which holds the packet from its first byte and may be longer.</param>
-    /// <exception cref="ArgumentException">The bytes are no IPv6 packet, or the buffer is shorter than the packet.</exception>
-    /// <exception cref="IndexOutOfRangeException"><paramref name="buffer"/> is empty.</exception>
-    public IpV6Packet(Memory<byte> buffer)
-        : base(AdjustBuffer(buffer))
+    /// <param name="memory">
+    /// The memory, which holds the packet from its first byte and may be longer: a <see cref="Memory{T}"/> or an array
+    /// the caller keeps, or memory given to the packet (see <see cref="PacketMemory"/>), which stays the caller's when
+    /// parsing fails.
+    /// </param>
+    /// <exception cref="ArgumentException">The bytes are no IPv6 packet, or the memory is shorter than the packet.</exception>
+    /// <exception cref="IndexOutOfRangeException"><paramref name="memory"/> is empty.</exception>
+    public IpV6Packet(PacketMemory memory)
+        : base(AdjustBuffer(memory))
     {
-        buffer = Buffer;
+        var buffer = Buffer;
 
         // Check if the payment length is valid
         var payloadLength = BinaryPrimitives.ReadUInt16BigEndian(buffer.Span.Slice(4, 2));
@@ -233,24 +215,5 @@ public class IpV6Packet : IpPacket
 
         var payloadLength = (ushort)((buffer[4] << 8) | buffer[5]);
         return 40 + payloadLength;
-    }
-
-    /// <summary>
-    /// Disposes the memory the packet owns, if any, and marks the packet disposed.
-    /// </summary>
-    /// <param name="disposing">
-    /// <see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release
-    /// only unmanaged resources.
-    /// </param>
-    protected override void Dispose(bool disposing)
-    {
-        if (_disposed)
-            return;
-
-        if (disposing)
-            _memoryOwner?.Dispose();
-
-        base.Dispose(disposing);
-        _disposed = true;
     }
 }

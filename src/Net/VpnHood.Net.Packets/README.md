@@ -18,6 +18,9 @@ dotnet add package VpnHood.Net.Packets
   keep it.
 - `PacketBuilder` parses packets and builds new ones in memory rented from a pool. Dispose a packet to return
   its memory.
+- A packet is made on a `PacketMemory`. A `Memory<byte>`, an array or an `ArraySegment<byte>` converts to one you
+  keep; one made from an `IMemoryOwner<byte>`, or with `PacketMemory.FromRentedArray`, gives the packet that
+  memory, which it returns when disposed. A rented array needs no owner object.
 - `BuildIp`, `BuildUdp`, `BuildTcp`, `BuildIcmpV4`, `BuildIcmpV6` and `BuildDns` compute no checksum: call
   `UpdateAllChecksums()` before sending. The echo, reset and ICMP error builders compute them unless told not to.
 - An IPv6 packet reads through its Hop-by-Hop, Destination Options, Fragment and Authentication headers to the

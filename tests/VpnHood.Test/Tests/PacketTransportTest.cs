@@ -57,7 +57,7 @@ public class PacketTransportTest : TestBase
         Assert.IsTrue(transport.SendPacketQueued(BuildPacket(1)));
         await AssertEqualsWait(true, () => transport.IsBatchHeld);
         var oldestMemory = BuildPacketMemory(2);
-        var oldestPacket = PacketBuilder.Attach(oldestMemory);
+        var oldestPacket = PacketBuilder.Attach(new PacketMemory(oldestMemory));
         Assert.IsTrue(transport.SendPacketQueued(oldestPacket));
         Assert.IsTrue(transport.SendPacketQueued(BuildPacket(3)));
 
@@ -98,10 +98,10 @@ public class PacketTransportTest : TestBase
         Assert.IsTrue(transport.SendPacketQueued(BuildPacket(1)));
         await AssertEqualsWait(true, () => transport.IsBatchHeld);
         var queuedMemory = BuildPacketMemory(2);
-        var queuedPacket = PacketBuilder.Attach(queuedMemory);
+        var queuedPacket = PacketBuilder.Attach(new PacketMemory(queuedMemory));
         Assert.IsTrue(transport.SendPacketQueued(queuedPacket));
         var waitingMemory = BuildPacketMemory(3);
-        var waitingPacket = PacketBuilder.Attach(waitingMemory);
+        var waitingPacket = PacketBuilder.Attach(new PacketMemory(waitingMemory));
         var sendTask = Task.Run(() => transport.SendPacketQueued(waitingPacket), TestCt);
         await AssertEqualsWait(3, () => transport.SendsStarted);
 
@@ -139,7 +139,7 @@ public class PacketTransportTest : TestBase
 
         // the queue does not move: the send gives up once its timeout is out, and drops its packet
         var memory = BuildPacketMemory(3);
-        var ipPacket = PacketBuilder.Attach(memory);
+        var ipPacket = PacketBuilder.Attach(new PacketMemory(memory));
         var stopwatch = Stopwatch.StartNew();
         Assert.IsFalse(await Task.Run(() => transport.SendPacketQueued(ipPacket), TestCt)
             .WaitAsync(TimeSpan.FromSeconds(5), TestCt));
@@ -162,7 +162,7 @@ public class PacketTransportTest : TestBase
 
         // the queue does not move: the send gives up once its timeout is out, drops its packet and completes
         var memory = BuildPacketMemory(3);
-        var ipPacket = PacketBuilder.Attach(memory);
+        var ipPacket = PacketBuilder.Attach(new PacketMemory(memory));
         var stopwatch = Stopwatch.StartNew();
         await transport.SendPacketQueuedAsync(ipPacket).AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt);
         Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(150), stopwatch.Elapsed);
@@ -191,7 +191,7 @@ public class PacketTransportTest : TestBase
         var transport = new TestHeldPacketTransport(queueCapacity: 1, blocking: true);
         await FillHeldQueue(transport);
         var waitingMemory = BuildPacketMemory(3);
-        var waitingPacket = PacketBuilder.Attach(waitingMemory);
+        var waitingPacket = PacketBuilder.Attach(new PacketMemory(waitingMemory));
         var sendTask = transport.SendPacketQueuedAsync(waitingPacket).AsTask();
 
         transport.Dispose();
@@ -214,7 +214,7 @@ public class PacketTransportTest : TestBase
 
         // a send held past its disposed check, and the transport disposed under it
         var memory = BuildPacketMemory(1);
-        var ipPacket = PacketBuilder.Attach(memory);
+        var ipPacket = PacketBuilder.Attach(new PacketMemory(memory));
         var sendTask = Task.Run(() => SendPacket(transport, ipPacket, isAsync), TestCt);
         await AssertEqualsWait(1, () => transport.SendsStarted);
         transport.Dispose();
@@ -232,12 +232,12 @@ public class PacketTransportTest : TestBase
         transport.Dispose();
 
         var memory = BuildPacketMemory(1);
-        var ipPacket = PacketBuilder.Attach(memory);
+        var ipPacket = PacketBuilder.Attach(new PacketMemory(memory));
         Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(ipPacket));
         Assert.IsTrue(memory.IsDisposed);
 
         var asyncMemory = BuildPacketMemory(2);
-        var asyncPacket = PacketBuilder.Attach(asyncMemory);
+        var asyncPacket = PacketBuilder.Attach(new PacketMemory(asyncMemory));
         await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() =>
             transport.SendPacketQueuedAsync(asyncPacket).AsTask());
         Assert.IsTrue(asyncMemory.IsDisposed);
@@ -251,14 +251,14 @@ public class PacketTransportTest : TestBase
         // delivered: the one held in its batch; dropped: the oldest waiting when the queue is full; left: the
         // last one queued when the transport is disposed
         var deliveredMemory = BuildPacketMemory(1);
-        var deliveredPacket = PacketBuilder.Attach(deliveredMemory);
+        var deliveredPacket = PacketBuilder.Attach(new PacketMemory(deliveredMemory));
         Assert.IsTrue(transport.SendPacketQueued(deliveredPacket));
         await AssertEqualsWait(true, () => transport.IsBatchHeld);
         var droppedMemory = BuildPacketMemory(2);
-        var droppedPacket = PacketBuilder.Attach(droppedMemory);
+        var droppedPacket = PacketBuilder.Attach(new PacketMemory(droppedMemory));
         Assert.IsTrue(transport.SendPacketQueued(droppedPacket));
         var leftMemory = BuildPacketMemory(3);
-        var leftPacket = PacketBuilder.Attach(leftMemory);
+        var leftPacket = PacketBuilder.Attach(new PacketMemory(leftMemory));
         Assert.IsTrue(transport.SendPacketQueued(leftPacket));
         Assert.IsTrue(droppedMemory.IsDisposed);
 
@@ -282,7 +282,7 @@ public class PacketTransportTest : TestBase
         var senders = Enumerable.Range(0, 8).Select(_ => Task.Run(() => {
             for (var i = 0; ; i++) {
                 var memory = BuildPacketMemory(1 + i % 60_000);
-                var ipPacket = PacketBuilder.Attach(memory);
+                var ipPacket = PacketBuilder.Attach(new PacketMemory(memory));
                 memories.Enqueue(memory);
                 try {
                     transport.SendPacketQueued(ipPacket);
@@ -374,14 +374,14 @@ public class PacketTransportTest : TestBase
 
         // the error comes at once, with no wait for the send
         var delayedMemory = BuildPacketMemory(1);
-        var delayedPacket = PacketBuilder.Attach(delayedMemory);
+        var delayedPacket = PacketBuilder.Attach(new PacketMemory(delayedMemory));
         var sendTask = Task.Run(() => transport.SendPacketQueued(delayedPacket), TestCt);
         await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
             sendTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
 
         // the next sender's packet goes, and is disposed, by its own send
         var nextMemory = BuildPacketMemory(2);
-        var nextPacket = PacketBuilder.Attach(nextMemory);
+        var nextPacket = PacketBuilder.Attach(new PacketMemory(nextMemory));
         Assert.IsTrue(transport.SendPacketQueued(nextPacket));
         Assert.IsTrue(nextMemory.IsDisposed);
 
@@ -400,7 +400,7 @@ public class PacketTransportTest : TestBase
 
         // a send past its disposed check, held while the transport is disposed
         var memory = BuildPacketMemory(1);
-        var ipPacket = PacketBuilder.Attach(memory);
+        var ipPacket = PacketBuilder.Attach(new PacketMemory(memory));
         var sendTask = Task.Run(() => transport.SendPacketQueued(ipPacket), TestCt);
         await AssertEqualsWait(1, () => transport.SendsStarted);
         transport.Dispose();
@@ -419,20 +419,20 @@ public class PacketTransportTest : TestBase
 
         // one no one takes
         var refusedMemory = BuildPacketMemory(1);
-        var refusedPacket = PacketBuilder.Attach(refusedMemory);
+        var refusedPacket = PacketBuilder.Attach(new PacketMemory(refusedMemory));
         Assert.IsFalse(transport.SendPacketQueued(refusedPacket));
         Assert.IsTrue(refusedMemory.IsDisposed);
 
         // one handed on is no longer the transport's
         var sentMemory = BuildPacketMemory(2);
-        var sentPacket = PacketBuilder.Attach(sentMemory);
+        var sentPacket = PacketBuilder.Attach(new PacketMemory(sentMemory));
         Assert.IsTrue(transport.SendPacketQueued(sentPacket));
         Assert.IsFalse(sentMemory.IsDisposed);
 
         // one sent to it once disposed
         transport.Dispose();
         var lateMemory = BuildPacketMemory(3);
-        var latePacket = PacketBuilder.Attach(lateMemory);
+        var latePacket = PacketBuilder.Attach(new PacketMemory(lateMemory));
         Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(latePacket));
         Assert.IsTrue(lateMemory.IsDisposed);
         Assert.AreEqual(2, transport.PacketStat.DroppedPackets);
@@ -446,7 +446,7 @@ public class PacketTransportTest : TestBase
 
         // with no handler
         var unhandledMemory = BuildPacketMemory(1);
-        var unhandledPacket = PacketBuilder.Attach(unhandledMemory);
+        var unhandledPacket = PacketBuilder.Attach(new PacketMemory(unhandledMemory));
         transport.Receive(unhandledPacket);
         Assert.IsTrue(unhandledMemory.IsDisposed);
 
@@ -457,18 +457,18 @@ public class PacketTransportTest : TestBase
                 throw new InvalidOperationException("Test: the handler failed.");
         };
         var givenBackMemory = BuildPacketMemory(2);
-        var givenBackPacket = PacketBuilder.Attach(givenBackMemory);
+        var givenBackPacket = PacketBuilder.Attach(new PacketMemory(givenBackMemory));
         transport.Receive(givenBackPacket);
         Assert.IsTrue(givenBackMemory.IsDisposed);
         var takenMemory = BuildPacketMemory(3);
-        var takenPacket = PacketBuilder.Attach(takenMemory);
+        var takenPacket = PacketBuilder.Attach(new PacketMemory(takenMemory));
         transport.Receive(takenPacket);
         Assert.IsFalse(takenMemory.IsDisposed);
 
         // refused once the transport is disposed
         transport.Dispose();
         var refusedMemory = BuildPacketMemory(4);
-        var refusedPacket = PacketBuilder.Attach(refusedMemory);
+        var refusedPacket = PacketBuilder.Attach(new PacketMemory(refusedMemory));
         transport.Receive(refusedPacket);
         Assert.IsTrue(refusedMemory.IsDisposed);
     }
@@ -480,7 +480,7 @@ public class PacketTransportTest : TestBase
         transport.Release();
 
         var failedMemory = BuildPacketMemory(1);
-        var failedPacket = PacketBuilder.Attach(failedMemory);
+        var failedPacket = PacketBuilder.Attach(new PacketMemory(failedMemory));
         Assert.IsTrue(transport.SendPacketQueued(failedPacket));
         await AssertEqualsWait(1L, () => transport.PacketStat.DroppedPackets);
         Assert.IsTrue(failedMemory.IsDisposed);

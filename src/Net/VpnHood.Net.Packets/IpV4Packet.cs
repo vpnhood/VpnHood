@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.Packets;
@@ -8,69 +7,41 @@ namespace VpnHood.Net.Packets;
 /// Represents an IPv4 packet (RFC 791) over a buffer, which it reads and writes in place.
 /// </summary>
 /// <remarks>
-/// A constructor that takes a <see cref="Memory{T}"/> leaves the memory to the caller; one that takes an
-/// <see cref="IMemoryOwner{T}"/> owns it and disposes it with the packet. Changing a header field does not
-/// update the header checksum: call <see cref="UpdateHeaderChecksum"/> or
+/// The <see cref="PacketMemory"/> a packet is made on says whether the packet owns its memory. Changing a header
+/// field does not update the header checksum: call <see cref="UpdateHeaderChecksum"/> or
 /// <see cref="Extensions.IpPacketExtensions.UpdateAllChecksums(IpPacket)"/> before sending.
 /// </remarks>
 public class IpV4Packet : IpPacket
 {
-    private bool _disposed;
-    private readonly IMemoryOwner<byte>? _memoryOwner;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="IpV4Packet"/> class by parsing the packet at the start of
-    /// rented memory, which the packet then owns.
+    /// Initializes a new instance of the <see cref="IpV4Packet"/> class by building a new packet at the start of some
+    /// memory.
     /// </summary>
-    /// <param name="memoryOwner">
-    /// The memory, which holds the packet from its first byte and may be longer. The packet disposes it; when
-    /// parsing fails, it stays the caller's.
+    /// <remarks>
+    /// The packet's bytes are cleared, then the version, the header length, the protocol and the total length are
+    /// written. The addresses, the time to live and the checksum are left zero.
+    /// </remarks>
+    /// <param name="memory">
+    /// The memory, at least <paramref name="packetLength"/> bytes: a <see cref="Memory{T}"/> or an array the caller
+    /// keeps, or memory given to the packet (see <see cref="PacketMemory"/>), which stays the caller's when building
+    /// fails.
     /// </param>
-    /// <exception cref="ArgumentException">The bytes are no valid IPv4 packet, or the memory is shorter than the packet.</exception>
-    /// <exception cref="IndexOutOfRangeException">The memory is empty.</exception>
-    public IpV4Packet(IMemoryOwner<byte> memoryOwner)
-        : this(memoryOwner.Memory)
-    {
-        _memoryOwner = memoryOwner;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="IpV4Packet"/> class by building a new packet in rented
-    /// memory, which the packet then owns.
-    /// </summary>
-    /// <param name="memoryOwner">The memory, at least <paramref name="packetLength"/> bytes. The packet disposes it.</param>
     /// <param name="packetLength">The packet's total length in bytes, from 20 to 65535.</param>
     /// <param name="protocol">The protocol of the payload.</param>
     /// <param name="optionsLength">The length of the header options, a multiple of 4 from 0 to 40.</param>
     /// <exception cref="ArgumentException"><paramref name="packetLength"/> is below 20 or above 65535.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// <paramref name="optionsLength"/> is out of range or not a multiple of 4, or <paramref name="packetLength"/>
-    /// exceeds the memory.
+    /// <paramref name="optionsLength"/> is out of range or not a multiple of 4, or <paramref name="packetLength"/> is
+    /// negative or exceeds the memory.
     /// </exception>
-    public IpV4Packet(IMemoryOwner<byte> memoryOwner, int packetLength, IpProtocol protocol, int optionsLength)
-        : this(memoryOwner.Memory[..packetLength], protocol, optionsLength)
+    public IpV4Packet(PacketMemory memory, int packetLength, IpProtocol protocol, int optionsLength)
+        : base(memory.Slice(packetLength))
     {
-        _memoryOwner = memoryOwner;
-    }
+        var buffer = Buffer;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="IpV4Packet"/> class by building a new packet in a buffer.
-    /// </summary>
-    /// <remarks>
-    /// The whole buffer is cleared, then the version, the header length, the protocol and the total length are
-    /// written. The addresses, the time to live and the checksum are left zero.
-    /// </remarks>
-    /// <param name="buffer">The buffer, exactly as long as the packet: from 20 to 65535 bytes.</param>
-    /// <param name="protocol">The protocol of the payload.</param>
-    /// <param name="optionsLength">The length of the header options, a multiple of 4 from 0 to 40.</param>
-    /// <exception cref="ArgumentException"><paramref name="buffer"/> is shorter than 20 or longer than 65535 bytes.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="optionsLength"/> is out of range or not a multiple of 4.</exception>
-    public IpV4Packet(Memory<byte> buffer, IpProtocol protocol, int optionsLength)
-        : base(buffer)
-    {
         // validate buffer length
         if (buffer.Length is < 20 or > 0xFFFF)
-            throw new ArgumentException("Buffer too small for IP header.", nameof(buffer));
+            throw new ArgumentException("Buffer too small for IP header.", nameof(packetLength));
 
         // clean buffer
         buffer.Span.Clear();
@@ -98,36 +69,40 @@ public class IpV4Packet : IpPacket
         BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(2, 2), (ushort)buffer.Length);
     }
 
-    private static Memory<byte> AdjustBuffer(Memory<byte> buffer)
+    private static PacketMemory AdjustBuffer(PacketMemory memory)
     {
-        var packetLength = GetPacketLength(buffer.Span);
+        var packetLength = GetPacketLength(memory.Memory.Span);
         if (packetLength < 20)
-            throw new ArgumentException("Invalid IPv4 packet length.", nameof(buffer));
+            throw new ArgumentException("Invalid IPv4 packet length.", nameof(memory));
 
-        if (packetLength > buffer.Length)
-            throw new ArgumentException("Buffer too small for IPv4 packet.", nameof(buffer));
+        if (packetLength > memory.Memory.Length)
+            throw new ArgumentException("Buffer too small for IPv4 packet.", nameof(memory));
 
-        return buffer[..packetLength];
+        return memory.Slice(packetLength);
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="IpV4Packet"/> class by parsing the packet at the start of a
-    /// buffer.
+    /// Initializes a new instance of the <see cref="IpV4Packet"/> class by parsing the packet at the start of some
+    /// memory.
     /// </summary>
     /// <remarks>
-    /// The packet takes the buffer's first total-length bytes and leaves the rest. It checks the header's
+    /// The packet takes the memory's first total-length bytes and leaves the rest. It checks the header's
     /// version and lengths, not its checksum.
     /// </remarks>
-    /// <param name="buffer">The buffer, which holds the packet from its first byte and may be longer.</param>
+    /// <param name="memory">
+    /// The memory, which holds the packet from its first byte and may be longer: a <see cref="Memory{T}"/> or an array
+    /// the caller keeps, or memory given to the packet (see <see cref="PacketMemory"/>), which stays the caller's when
+    /// parsing fails.
+    /// </param>
     /// <exception cref="ArgumentException">
-    /// The bytes are no IPv4 packet, their header length or total length is invalid, or the buffer is shorter
+    /// The bytes are no IPv4 packet, their header length or total length is invalid, or the memory is shorter
     /// than the packet.
     /// </exception>
-    /// <exception cref="IndexOutOfRangeException"><paramref name="buffer"/> is empty.</exception>
-    public IpV4Packet(Memory<byte> buffer)
-        : base(AdjustBuffer(buffer))
+    /// <exception cref="IndexOutOfRangeException"><paramref name="memory"/> is empty.</exception>
+    public IpV4Packet(PacketMemory memory)
+        : base(AdjustBuffer(memory))
     {
-        buffer = Buffer;
+        var buffer = Buffer;
 
         // Check if the header length is valid
         var ihl = Span[0] & 0x0F;
@@ -308,24 +283,5 @@ public class IpV4Packet : IpPacket
                 nameof(buffer));
 
         return (ushort)((buffer[2] << 8) | buffer[3]);
-    }
-
-    /// <summary>
-    /// Disposes the memory the packet owns, if any, and marks the packet disposed.
-    /// </summary>
-    /// <param name="disposing">
-    /// <see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release
-    /// only unmanaged resources.
-    /// </param>
-    protected override void Dispose(bool disposing)
-    {
-        if (_disposed)
-            return;
-
-        if (disposing)
-            _memoryOwner?.Dispose();
-
-        base.Dispose(disposing);
-        _disposed = true;
     }
 }

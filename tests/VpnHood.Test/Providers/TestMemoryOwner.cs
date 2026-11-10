@@ -7,6 +7,7 @@ public class TestMemoryOwner(byte[] buffer) : IMemoryOwner<byte>
 {
     private int _disposeCount;
     public bool IsDisposed => Volatile.Read(ref _disposeCount) > 0;
+    public int DisposeCount => Volatile.Read(ref _disposeCount);
     public Memory<byte> Memory => buffer;
 
     // set, its first disposal throws, as no memory should: a fault where none is expected

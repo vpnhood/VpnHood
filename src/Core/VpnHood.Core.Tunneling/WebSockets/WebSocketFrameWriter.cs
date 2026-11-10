@@ -106,10 +106,15 @@ internal sealed class WebSocketFrameWriter(Stream sourceStream, bool isServer, b
     private async ValueTask WriteBinary(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
     {
         var length = MaximumHeaderLength + data.Length;
-        using var memoryOwner = MemoryPool<byte>.Shared.Rent(length);
-        var buffer = memoryOwner.Memory[..length];
-        data.CopyTo(buffer[MaximumHeaderLength..]);
-        await WriteBinaryPreserved(buffer, cancellationToken).Vhc();
+        var rented = ArrayPool<byte>.Shared.Rent(length);
+        try {
+            var buffer = rented.AsMemory(0, length);
+            data.CopyTo(buffer[MaximumHeaderLength..]);
+            await WriteBinaryPreserved(buffer, cancellationToken).Vhc();
+        }
+        finally {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
     }
 
     // Combining both frames into one source write lets padding change the outer TLS record containing

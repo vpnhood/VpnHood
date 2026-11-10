@@ -4,7 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
@@ -1140,39 +1139,27 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     }
 
     /// <summary>
-    /// Reads one packet into memory rented from <see cref="MemoryPool{T}.Shared"/>, with
+    /// Reads one packet into an array rented from <see cref="ArrayPool{T}.Shared"/>, with
     /// <see cref="ReadPacket(byte[])"/>.
     /// </summary>
-    /// <param name="mtu">The size of the memory to rent: the run's MTU.</param>
-    /// <returns>The packet, which owns the memory, or <see langword="null"/> if none is ready.</returns>
+    /// <param name="mtu">The size of the array to rent: the run's MTU.</param>
+    /// <returns>The packet, which owns the array, or <see langword="null"/> if none is ready.</returns>
     /// <exception cref="ArgumentException">The bytes read are no valid IP packet.</exception>
-    /// <exception cref="InvalidOperationException">The rented memory has no array behind it.</exception>
     protected virtual IpPacket? ReadPacket(int mtu)
     {
-        // Allocate a memory block for the packet
-        var memoryOwner = MemoryPool<byte>.Shared.Rent(mtu);
-
-        // Get the underlying array from the memory owner
-        if (!MemoryMarshal.TryGetArray<byte>(memoryOwner.Memory, out var segment))
-            throw new InvalidOperationException("Could not get array from memory owner.");
-
+        var rentedArray = ArrayPool<byte>.Shared.Rent(mtu);
         try {
-            if (segment.Array == null)
-                throw new InvalidOperationException("Memory owner's segment returned a null array.");
-
-            // read packet
-            var success = ReadPacket(segment.Array);
-            if (success)
-                return PacketBuilder.Attach(memoryOwner);
-
-            // no more packet
-            memoryOwner.Dispose();
-            return null;
+            if (ReadPacket(rentedArray))
+                return PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray));
         }
         catch {
-            memoryOwner.Dispose();
+            ArrayPool<byte>.Shared.Return(rentedArray);
             throw;
         }
+
+        // no packet ready
+        ArrayPool<byte>.Shared.Return(rentedArray);
+        return null;
     }
 
     private void NetworkChange_NetworkAddressChanged(object? sender, EventArgs e)

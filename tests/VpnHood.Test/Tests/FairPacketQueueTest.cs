@@ -38,7 +38,7 @@ public class FairPacketQueueTest : TestBase
 
         // a flood that fills the queue and has had its turns
         var oldestMemory = BuildPacketMemory(1192);
-        var oldestPacket = PacketBuilder.Attach(oldestMemory);
+        var oldestPacket = PacketBuilder.Attach(new PacketMemory(oldestMemory));
         Assert.IsTrue(queue.SendPacketQueued(BuildPacket(1064)));
         Assert.IsTrue(queue.SendPacketQueued(BuildPacket(1128)));
         Assert.IsTrue(queue.SendPacketQueued(oldestPacket));
@@ -107,7 +107,7 @@ public class FairPacketQueueTest : TestBase
         using var queue = new TestHeldFairPacketQueue(capacity: 2);
         await HoldTurn(queue, 5000);
         var tiedMemory = BuildPacketMemory(2000);
-        var tiedPacket = PacketBuilder.Attach(tiedMemory);
+        var tiedPacket = PacketBuilder.Attach(new PacketMemory(tiedMemory));
         Assert.IsTrue(queue.SendPacketQueued(tiedPacket));
         Assert.IsTrue(queue.SendPacketQueued(BuildPacket(1064)));
 
@@ -128,7 +128,7 @@ public class FairPacketQueueTest : TestBase
 
         // fragments of different ports, which their ports would spread over three lanes
         var fragmentMemories = new[] { 1000, 1001, 1002 }.Select(BuildPacketMemory).ToArray();
-        var fragments = fragmentMemories.Select(memory => (IpV4Packet)PacketBuilder.Attach(memory)).ToArray();
+        var fragments = fragmentMemories.Select(memory => (IpV4Packet)PacketBuilder.Attach(new PacketMemory(memory))).ToArray();
         foreach (var fragment in fragments) {
             fragment.MoreFragments = true;
             Assert.IsTrue(queue.SendPacketQueued(fragment));
@@ -164,7 +164,7 @@ public class FairPacketQueueTest : TestBase
         queue.Release();
 
         var failedMemory = BuildPacketMemory(1000);
-        var failedPacket = PacketBuilder.Attach(failedMemory);
+        var failedPacket = PacketBuilder.Attach(new PacketMemory(failedMemory));
         Assert.IsTrue(queue.SendPacketQueued(failedPacket));
         await AssertEqualsWait(1L, () => queue.DroppedPackets);
         Assert.IsTrue(failedMemory.IsDisposed);
@@ -181,11 +181,11 @@ public class FairPacketQueueTest : TestBase
         using var queue = new TestHeldFairPacketQueue(capacity: 4) { FailSendPort = 1000 };
         var faultyMemory = BuildPacketMemory(1000);
         faultyMemory.FailsFirstDispose = true;
-        var faultyPacket = PacketBuilder.Attach(faultyMemory);
+        var faultyPacket = PacketBuilder.Attach(new PacketMemory(faultyMemory));
         Assert.IsTrue(queue.SendPacketQueued(faultyPacket));
         await AssertEqualsWait(1, () => queue.TurnsStarted);
         var heldMemory = BuildPacketMemory(2000);
-        var heldPacket = PacketBuilder.Attach(heldMemory);
+        var heldPacket = PacketBuilder.Attach(new PacketMemory(heldMemory));
         Assert.IsTrue(queue.SendPacketQueued(heldPacket));
 
         // the packet held goes too, and the queue goes on
@@ -204,7 +204,7 @@ public class FairPacketQueueTest : TestBase
         var queue = new TestHeldFairPacketQueue(capacity: 4);
         await HoldTurn(queue, 1000);
         var queuedMemory = BuildPacketMemory(2000);
-        var queuedPacket = PacketBuilder.Attach(queuedMemory);
+        var queuedPacket = PacketBuilder.Attach(new PacketMemory(queuedMemory));
         Assert.IsTrue(queue.SendPacketQueued(queuedPacket));
 
         queue.Dispose();
@@ -212,7 +212,7 @@ public class FairPacketQueueTest : TestBase
         Assert.AreEqual(0, queue.QueueLength);
 
         var refusedMemory = BuildPacketMemory(3000);
-        var refusedPacket = PacketBuilder.Attach(refusedMemory);
+        var refusedPacket = PacketBuilder.Attach(new PacketMemory(refusedMemory));
         Assert.IsFalse(queue.SendPacketQueued(refusedPacket));
         Assert.IsTrue(refusedMemory.IsDisposed);
         Assert.AreEqual(2, queue.DroppedPackets);
@@ -233,7 +233,7 @@ public class FairPacketQueueTest : TestBase
         var senders = Enumerable.Range(0, 8).Select(_ => Task.Run(() => {
             for (var i = 0; ; i++) {
                 var memory = BuildPacketMemory(1 + i % 60_000);
-                var ipPacket = PacketBuilder.Attach(memory);
+                var ipPacket = PacketBuilder.Attach(new PacketMemory(memory));
                 memories.Enqueue(memory);
                 if (!queue.SendPacketQueued(ipPacket))
                     return;

@@ -16,15 +16,17 @@ namespace VpnHood.Net.Packets;
 /// <see cref="PacketBuilder"/>, or with the <see cref="IpV4Packet"/> and <see cref="IpV6Packet"/> constructors.
 /// </para>
 /// <para>
-/// A packet made with an <see cref="System.Buffers.IMemoryOwner{T}"/> owns that memory, and <see cref="Dispose()"/>
-/// returns it; then <see cref="Buffer"/> throws <see cref="ObjectDisposedException"/>, and every view taken from
+/// A packet made on a <see cref="PacketMemory"/> that gives it the memory, from an
+/// <see cref="System.Buffers.IMemoryOwner{T}"/> or an array rented from an <see cref="System.Buffers.ArrayPool{T}"/>,
+/// owns that memory, and <see cref="Dispose()"/> returns it once; then <see cref="Buffer"/> throws
+/// <see cref="ObjectDisposedException"/>, and every view taken from
 /// the packet before, such as its <see cref="Payload"/> or a <see cref="TcpPacket"/>, must no longer be used. A
 /// packet never disposed never returns its memory, which is left to the garbage collector. A packet made on a
-/// <see cref="Memory{T}"/> leaves it to the caller. An instance is not thread-safe.
+/// <see cref="Memory{T}"/> or an array leaves it to the caller. An instance is not thread-safe.
 /// </para>
 /// </remarks>
-/// <param name="buffer">The packet's bytes, exactly as long as the packet.</param>
-public abstract class IpPacket(Memory<byte> buffer) : IDisposable
+/// <param name="memory">The packet's bytes, exactly as long as the packet, and who takes them back when it is disposed.</param>
+public abstract class IpPacket(PacketMemory memory) : IDisposable
 {
     private bool _disposed;
 
@@ -36,12 +38,12 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     /// Gets the packet's bytes, header and payload.
     /// </summary>
     /// <exception cref="ObjectDisposedException">The packet is disposed.</exception>
-    public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(IpPacket)) : buffer;
+    public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(IpPacket)) : memory.Memory;
 
     /// <summary>
     /// Gets the packet's length in bytes, header included. It can be read after the packet is disposed.
     /// </summary>
-    public int PacketLength => buffer.Length;
+    public int PacketLength => memory.Memory.Length;
 
     /// <summary>
     /// Gets or sets the parsed form of the packet's payload, such as a <see cref="TcpPacket"/>, or
@@ -271,7 +273,7 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     }
 
     /// <summary>
-    /// Marks the packet disposed. A derived class returns the memory it owns here.
+    /// Returns the memory the packet owns, if any, and marks the packet disposed. A second call does nothing.
     /// </summary>
     /// <param name="disposing">
     /// <see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release
@@ -279,8 +281,13 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     /// </param>
     protected virtual void Dispose(bool disposing)
     {
-        _ = disposing;
+        // once: an array returned twice would be lent to two renters at the same time
+        if (_disposed)
+            return;
+
         _disposed = true;
+        if (disposing)
+            memory.Return();
     }
 
     // Add no finalizer: every packet would pay for it as it is made, and it could return an array a view of the

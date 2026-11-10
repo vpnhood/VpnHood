@@ -43,7 +43,7 @@ public class PacketChannelTest : TestBase
 
         // a message of a version this one does not know, as a newer peer's may be
         var memory = ToMemory(PacketBuilder.BuildUdp(IPAddress.Any, IPAddress.Any, 0, 0, [2, 0]));
-        var message = PacketBuilder.Attach(memory);
+        var message = PacketBuilder.Attach(new PacketMemory(memory));
         channel.Receive(message);
         Assert.IsTrue(memory.IsDisposed);
 
@@ -72,7 +72,7 @@ public class PacketChannelTest : TestBase
         channel.Start();
 
         var memory = ToMemory(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
-        var close = PacketBuilder.Attach(memory);
+        var close = PacketBuilder.Attach(new PacketMemory(memory));
         channel.Receive(close);
         Assert.IsTrue(memory.IsDisposed);
         Assert.AreEqual(PacketChannelState.Disconnecting, channel.State);

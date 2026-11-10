@@ -296,6 +296,18 @@ public class PacketTest : TestBase
     }
 
     [TestMethod]
+    public void IPv6_build_refuses_a_packet_longer_than_its_payload_length_field_holds()
+    {
+        // 40 + 65535 bytes: the longest a payload length field can say, which a parse reads back
+        using var longest = new IpV6Packet(new byte[40 + 0xFFFF], 40 + 0xFFFF, IpProtocol.Udp);
+        using var parsed = PacketBuilder.Attach(longest.Buffer);
+        Assert.AreEqual(40 + 0xFFFF, parsed.PacketLength);
+
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            new IpV6Packet(new byte[40 + 0x10000], 40 + 0x10000, IpProtocol.Udp));
+    }
+
+    [TestMethod]
     public void IPv6_reads_through_extension_headers()
     {
         using var tcpPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("[2001:db8::1]:1000"),

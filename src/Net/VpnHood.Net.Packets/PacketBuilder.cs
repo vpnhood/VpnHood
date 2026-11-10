@@ -12,8 +12,8 @@ namespace VpnHood.Net.Packets;
 /// host sends.
 /// </summary>
 /// <remarks>
-/// A built packet owns memory rented from a <see cref="MemoryPool{T}"/>, <see cref="MemoryPool{T}.Shared"/> unless
-/// another is given: dispose it to return the memory. Its time to live is 64. A method with an
+/// A built packet owns the memory it is built in: an array rented from <see cref="ArrayPool{T}.Shared"/>, or memory
+/// from the <see cref="MemoryPool{T}"/> given. Dispose it to return the memory. Its time to live is 64. A method with an
 /// <c>updateChecksum</c> parameter computes the checksums when it is <see langword="true"/>; the others compute
 /// none, so call <see cref="IpPacketExtensions.UpdateAllChecksums(IpPacket)"/> before sending.
 /// </remarks>
@@ -34,7 +34,7 @@ public static class PacketBuilder
     /// Parses the IP packet at the start of some bytes into a copy that the returned packet owns.
     /// </summary>
     /// <param name="buffer">The bytes, which hold the packet from the first byte and may be longer.</param>
-    /// <param name="memoryPool">The pool to rent the copy's memory from, or <see langword="null"/> for <see cref="MemoryPool{T}.Shared"/>.</param>
+    /// <param name="memoryPool">The pool to rent the copy's memory from, or <see langword="null"/> for an array of <see cref="ArrayPool{T}.Shared"/>.</param>
     /// <returns>An <see cref="IpV4Packet"/> or <see cref="IpV6Packet"/>; dispose it to return its memory.</returns>
     /// <exception cref="ArgumentException">The bytes are no valid IP packet.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="buffer"/> is shorter than the packet's length field says.</exception>
@@ -59,50 +59,37 @@ public static class PacketBuilder
         var packetLength = PacketUtil.ReadPacketLength(buffer);
         buffer = buffer[..packetLength];
 
-        // copy buffer to memory pool
-        memoryPool ??= MemoryPool<byte>.Shared;
-        var memoryOwner = memoryPool.Rent(buffer.Length);
-        buffer.CopyTo(memoryOwner.Memory.Span);
-
-        return Attach(memoryOwner);
+        // copy the packet into rented memory
+        var memory = PacketMemory.Rent(buffer.Length, memoryPool);
+        try {
+            buffer.CopyTo(memory.Memory.Span);
+            return Attach(memory);
+        }
+        catch {
+            // no packet took it
+            memory.Return();
+            throw;
+        }
     }
 
     /// <summary>
-    /// Parses the IP packet at the start of a buffer, without copying it: the packet reads and writes the buffer.
+    /// Parses the IP packet at the start of some memory, without copying it: the packet reads and writes the memory.
     /// </summary>
-    /// <param name="buffer">The buffer, which holds the packet from its first byte and may be longer. It stays the caller's.</param>
-    /// <returns>An <see cref="IpV4Packet"/> or <see cref="IpV6Packet"/> over the buffer.</returns>
-    /// <exception cref="NotSupportedException">The version is neither 4 nor 6.</exception>
-    /// <exception cref="ArgumentException">The bytes are no valid IP packet.</exception>
-    /// <exception cref="IndexOutOfRangeException">The buffer is empty.</exception>
-    public static IpPacket Attach(Memory<byte> buffer)
-    {
-        // find packet length by reading the first byte
-        var version = IpPacket.GetPacketVersion(buffer.Span);
-        return version switch {
-            IpVersion.IPv4 => new IpV4Packet(buffer),
-            IpVersion.IPv6 => new IpV6Packet(buffer),
-            _ => throw new NotSupportedException($"IP version {version} not supported.")
-        };
-    }
-
-    /// <summary>
-    /// Parses the IP packet at the start of rented memory, without copying it, and gives the packet that memory.
-    /// </summary>
-    /// <param name="memoryOwner">
-    /// The memory, which holds the packet from its first byte and may be longer. The packet disposes it; when
-    /// parsing fails, it stays the caller's.
+    /// <param name="memory">
+    /// The memory, which holds the packet from its first byte and may be longer: a <see cref="Memory{T}"/> or an array
+    /// the caller keeps, or memory given to the packet (see <see cref="PacketMemory"/>), which stays the caller's when
+    /// parsing fails.
     /// </param>
-    /// <returns>An <see cref="IpV4Packet"/> or <see cref="IpV6Packet"/>; dispose it to return the memory.</returns>
+    /// <returns>An <see cref="IpV4Packet"/> or <see cref="IpV6Packet"/>; dispose it to return the memory it was given.</returns>
     /// <exception cref="NotSupportedException">The version is neither 4 nor 6.</exception>
     /// <exception cref="ArgumentException">The bytes are no valid IP packet.</exception>
-    /// <exception cref="IndexOutOfRangeException">The buffer is empty.</exception>
-    public static IpPacket Attach(IMemoryOwner<byte> memoryOwner)
+    /// <exception cref="IndexOutOfRangeException">The memory is empty.</exception>
+    public static IpPacket Attach(PacketMemory memory)
     {
-        var version = IpPacket.GetPacketVersion(memoryOwner.Memory.Span);
+        var version = IpPacket.GetPacketVersion(memory.Memory.Span);
         return version switch {
-            IpVersion.IPv4 => new IpV4Packet(memoryOwner),
-            IpVersion.IPv6 => new IpV6Packet(memoryOwner),
+            IpVersion.IPv4 => new IpV4Packet(memory),
+            IpVersion.IPv6 => new IpV6Packet(memory),
             _ => throw new NotSupportedException($"IP version {version} not supported.")
         };
     }
@@ -114,10 +101,10 @@ public static class PacketBuilder
     /// <param name="destinationAddress">The destination address, of the same IP version.</param>
     /// <param name="protocol">The protocol of the payload.</param>
     /// <param name="payloadLength">The payload's length in bytes; at most 65515 for IPv4 and 65535 for IPv6.</param>
-    /// <param name="memoryPool">The pool to rent the packet's memory from, or <see langword="null"/> for <see cref="MemoryPool{T}.Shared"/>.</param>
+    /// <param name="memoryPool">The pool to rent the packet's memory from, or <see langword="null"/> for an array of <see cref="ArrayPool{T}.Shared"/>.</param>
     /// <returns>The packet, with its payload zero; dispose it to return its memory.</returns>
     /// <exception cref="ArgumentException">
-    /// The addresses are of different IP versions, or an IPv4 packet would exceed 65535 bytes.
+    /// The addresses are of different IP versions, or the payload is longer than their IP version allows.
     /// </exception>
     /// <exception cref="NotSupportedException">The addresses are neither IPv4 nor IPv6.</exception>
     public static IpPacket BuildIp(IPAddress sourceAddress, IPAddress destinationAddress,
@@ -127,15 +114,10 @@ public static class PacketBuilder
         if (sourceAddress.AddressFamily != destinationAddress.AddressFamily)
             throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
 
-        // validate payload length
-        memoryPool ??= MemoryPool<byte>.Shared;
-
         // create IP packet
         IpPacket ipPacket = sourceAddress.AddressFamily switch {
-            AddressFamily.InterNetwork => new IpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength,
-                protocol, 0),
-            AddressFamily.InterNetworkV6 => new IpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength,
-                protocol),
+            AddressFamily.InterNetwork => NewIpV4Packet(20 + payloadLength, protocol, memoryPool),
+            AddressFamily.InterNetworkV6 => NewIpV6Packet(40 + payloadLength, protocol, memoryPool),
             _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} not supported.")
         };
 
@@ -152,10 +134,10 @@ public static class PacketBuilder
     /// <param name="destinationAddress">The destination address, of the same IP version.</param>
     /// <param name="protocol">The protocol of the payload.</param>
     /// <param name="payloadLength">The payload's length in bytes; at most 65515 for IPv4 and 65535 for IPv6.</param>
-    /// <param name="memoryPool">The pool to rent the packet's memory from, or <see langword="null"/> for <see cref="MemoryPool{T}.Shared"/>.</param>
+    /// <param name="memoryPool">The pool to rent the packet's memory from, or <see langword="null"/> for an array of <see cref="ArrayPool{T}.Shared"/>.</param>
     /// <returns>The packet, with its payload zero; dispose it to return its memory.</returns>
     /// <exception cref="ArgumentException">
-    /// The addresses are of different IP versions, or an IPv4 packet would exceed 65535 bytes.
+    /// The addresses are of different IP versions, or the payload is longer than their IP version allows.
     /// </exception>
     /// <exception cref="NotSupportedException">The addresses hold no address.</exception>
     public static IpPacket BuildIp(IpAddressValue sourceAddress, IpAddressValue destinationAddress,
@@ -164,10 +146,9 @@ public static class PacketBuilder
         if (sourceAddress.IsV4 != destinationAddress.IsV4 || sourceAddress.IsV6 != destinationAddress.IsV6)
             throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
 
-        memoryPool ??= MemoryPool<byte>.Shared;
         IpPacket ipPacket = sourceAddress switch {
-            { IsV4: true } => new IpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength, protocol, 0),
-            { IsV6: true } => new IpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength, protocol),
+            { IsV4: true } => NewIpV4Packet(20 + payloadLength, protocol, memoryPool),
+            { IsV6: true } => NewIpV6Packet(40 + payloadLength, protocol, memoryPool),
             _ => throw new NotSupportedException("The addresses hold no IP address.")
         };
 
@@ -184,10 +165,10 @@ public static class PacketBuilder
     /// <param name="destinationAddress">The destination address, of the same length.</param>
     /// <param name="protocol">The protocol of the payload.</param>
     /// <param name="payloadLength">The payload's length in bytes; at most 65515 for IPv4 and 65535 for IPv6.</param>
-    /// <param name="memoryPool">The pool to rent the packet's memory from, or <see langword="null"/> for <see cref="MemoryPool{T}.Shared"/>.</param>
+    /// <param name="memoryPool">The pool to rent the packet's memory from, or <see langword="null"/> for an array of <see cref="ArrayPool{T}.Shared"/>.</param>
     /// <returns>The packet, with its payload zero; dispose it to return its memory.</returns>
     /// <exception cref="ArgumentException">
-    /// The addresses differ in length, or an IPv4 packet would exceed 65535 bytes.
+    /// The addresses differ in length, or the payload is longer than their IP version allows.
     /// </exception>
     /// <exception cref="NotSupportedException">The addresses are neither 4 nor 16 bytes long.</exception>
     public static IpPacket BuildIp(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
@@ -197,13 +178,10 @@ public static class PacketBuilder
         if (sourceAddress.Length != destinationAddress.Length)
             throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
 
-        // validate payload length
-        memoryPool ??= MemoryPool<byte>.Shared;
-
         // create IP packet
         IpPacket ipPacket = sourceAddress.Length switch {
-            4 => new IpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength, protocol, 0),
-            16 => new IpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength, protocol),
+            4 => NewIpV4Packet(20 + payloadLength, protocol, memoryPool),
+            16 => NewIpV6Packet(40 + payloadLength, protocol, memoryPool),
             _ => throw new NotSupportedException($"IP version {sourceAddress.Length} not supported.")
         };
 
@@ -211,6 +189,32 @@ public static class PacketBuilder
         ipPacket.DestinationAddressSpan = destinationAddress;
         ipPacket.TimeToLive = 64;
         return ipPacket;
+    }
+
+    private static IpV4Packet NewIpV4Packet(int packetLength, IpProtocol protocol, MemoryPool<byte>? memoryPool)
+    {
+        var memory = PacketMemory.Rent(packetLength, memoryPool);
+        try {
+            return new IpV4Packet(memory, packetLength, protocol, optionsLength: 0);
+        }
+        catch {
+            // no packet took it
+            memory.Return();
+            throw;
+        }
+    }
+
+    private static IpV6Packet NewIpV6Packet(int packetLength, IpProtocol protocol, MemoryPool<byte>? memoryPool)
+    {
+        var memory = PacketMemory.Rent(packetLength, memoryPool);
+        try {
+            return new IpV6Packet(memory, packetLength, protocol);
+        }
+        catch {
+            // no packet took it
+            memory.Return();
+            throw;
+        }
     }
 
     /// <summary>
@@ -774,11 +778,18 @@ public static class PacketBuilder
     private static IpPacket FillTcp(IpPacket ipPacket, int sourcePort, int destinationPort,
         ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {
-        var tcpPacket = ipPacket.BuildTcp(options.Length);
-        tcpPacket.SourcePort = (ushort)sourcePort;
-        tcpPacket.DestinationPort = (ushort)destinationPort;
-        payload.CopyTo(tcpPacket.Payload.Span);
-        options.CopyTo(tcpPacket.Options.Span);
-        return ipPacket;
+        try {
+            var tcpPacket = ipPacket.BuildTcp(options.Length);
+            tcpPacket.SourcePort = (ushort)sourcePort;
+            tcpPacket.DestinationPort = (ushort)destinationPort;
+            payload.CopyTo(tcpPacket.Payload.Span);
+            options.CopyTo(tcpPacket.Options.Span);
+            return ipPacket;
+        }
+        catch {
+            // no caller gets the packet to dispose
+            ipPacket.Dispose();
+            throw;
+        }
     }
 }

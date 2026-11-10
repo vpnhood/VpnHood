@@ -25,7 +25,7 @@ public static class IpPacketExtensions
     extension(IpPacket ipPacket)
     {
         /// <summary>
-        /// Creates a copy of the packet in memory rented from <see cref="System.Buffers.MemoryPool{T}.Shared"/>.
+        /// Creates a copy of the packet in an array rented from <see cref="System.Buffers.ArrayPool{T}.Shared"/>.
         /// </summary>
         /// <returns>The copy, which owns its memory: dispose it to return the memory.</returns>
         /// <exception cref="ObjectDisposedException">The packet is disposed.</exception>

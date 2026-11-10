@@ -59,7 +59,7 @@ public class ForwardingManagerTest
         // the payload goes out on the forwarder's socket, and the packet to no one
         var memory = CopyToTestMemory(PacketBuilder.BuildUdp(IPEndPoint.Parse("10.0.0.2:2000"),
             peer.Client.GetLocalEndPoint(), new byte[16]));
-        var ipPacket = PacketBuilder.Attach(memory);
+        var ipPacket = PacketBuilder.Attach(new PacketMemory(memory));
         forwardingManager.SendPacketQueued(ipPacket);
         await peer.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
         await WaitFor(() => memory.IsDisposed, "The UDP forwarder should dispose the packet it sent.");
@@ -79,7 +79,7 @@ public class ForwardingManagerTest
         // refuses one to a process without raw sockets
         var memory = CopyToTestMemory(PacketBuilder.BuildIcmpV4EchoRequest(IPAddress.Parse("10.0.0.2"),
             IPAddress.Loopback, []));
-        var request = PacketBuilder.Attach(memory);
+        var request = PacketBuilder.Attach(new PacketMemory(memory));
         forwardingManager.SendPacketQueued(request);
         await replied.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitFor(() => memory.IsDisposed, "The ping forwarder should dispose the request it sent.");

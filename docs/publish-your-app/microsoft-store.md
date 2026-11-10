@@ -132,6 +132,13 @@ handle cards to PCI DSS.
    product's page (**View report**). The draft stays: fix what the report names and **Resubmit for
    certification**; a fix outside the package needs no new build. A refused capability is reconsidered
    only on new or expanded information in its reason: the same text is refused again.
+   A resubmission with a restricted capability can sit in certification well past the three days:
+   VpnHood! CLIENT's did. Partner Center sends no mail about it, so check the product's page. To ask,
+   open a support request: the product page's **Contact Support** goes to Microsoft's support site.
+   There, choose **Windows Developer Center** › **App Management**, and in the request name the product
+   and its Store ID, say when it was resubmitted, and give the earlier report's id. The free
+   **Professional No Charge** plan is enough. It offers only the lowest severity and answers by email
+   during business hours.
 2. **The publish waits for you** (step 5, Submission options): once certified, **Publish now** on the
    product's page releases it.
 3. **Usage data asks first.** Microsoft wants the person's opt-in, in the app, before personal

@@ -374,5 +374,34 @@ TV: a reviewer holds only the Siri Remote, so if your app needs an access key, s
 TV without typing it there, such as through the app's Remote Access page from a phone or computer on the
 same network.
 
+**Each platform's first review asks a VPN app the same three questions.** An automated check finds the VPN
+and stops the review under 2.1.0, *App Completeness*, until you answer: what user information the app
+collects using the VPN, for what purposes, and whether it is shared with third parties, and where it is
+stored. Apple wants the answers as a reply in App Store Connect and in the version's App Review
+Information. VpnHood! CLIENT's iPhone version got these questions in August 2026, and its first Apple TV
+version got them again in November, under the same app record. Each platform's version is reviewed on its
+own, and an answer given for one does not carry over. Put the answers in each version's review notes
+before you submit. For an app built on this code, which sends no analytics on Apple devices, the answers
+follow from [App Store privacy](../legal/developer/APP_STORE_PRIVACY.md). The notes hold 4,000
+characters, and a VpnHood access key can take 3,000 of them. If the answers and the key don't fit
+together, link the key from a page the reviewer can open; don't shorten the answers.
+
+**An app that takes access keys gets business-model questions.** After the VPN questions, the iPhone
+version was held under 3.1.1, read as "the app uses a server key to unlock a feature". Then came 2.1(b),
+with questions about who pays, where, and what the website's premium unlocks. What cleared it:
+
+- an access key is a server's connection configuration, made by whoever runs that server, like a VPN
+  profile in any other VPN client;
+- the app sells nothing and has nothing to unlock;
+- the codes VpnHood's paid app sells don't work in it.
+
+If your fork also sells a service, say which app sells it and how (In-App Purchase on Apple devices),
+and that its codes don't work in the app that takes keys. Saying this in the notes from the start can
+save those rounds.
+
 If you are rejected, read the message literally: first rejections are usually about the paperwork
-above, not about your app. Fixing metadata and resubmitting does not need a new build.
+above, not about your app. Fixing metadata and resubmitting does not need a new build. After the fix,
+the submission page's **Resubmit to App Review** stays greyed out while the item says *Rejected*: open
+the item's version (its **Edit**), press **Update Review** there, and the item turns *Ready for Review*
+and the button works. Reply to App Review's message as well when it asks for one; the reply alone does
+not resubmit.

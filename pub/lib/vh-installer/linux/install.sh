@@ -30,6 +30,8 @@ function show_help() {
 	echo "                        and a new install starts at boot and updates itself";
 	echo "  -noautostart          do not start the server at boot";
 	echo "  -noautoupdate         do not update the server by itself";
+	echo "  -osupdate             keep the operating system patched: its security fixes every night, and a";
+	echo "                        restart then when one needs it (Debian, Ubuntu, the Red Hat family from 9)";
 	echo "  -httpBaseUrl <url>    the access server; with -httpAuthorization <value>";
 	echo "  -managementSecret <secret>";
 	echo "  -minClientProtocolVersion <n>";
@@ -44,6 +46,7 @@ function show_help() {
 # -container in a container.
 autostart="";
 autoupdate="";
+osupdate="";
 for i;
 do
 arg=$i;
@@ -58,6 +61,10 @@ if [ "$arg" = "-noautostart" ]; then
 
 elif [ "$arg" = "-noautoupdate" ]; then
 	autoupdate="n";
+	lastArg=""; continue;
+
+elif [ "$arg" = "-osupdate" ]; then
+	osupdate="y";
 	lastArg=""; continue;
 
 elif [ "$arg" = "-q" ]; then
@@ -216,6 +223,53 @@ if [ "$container" != "y" ]; then
 	fi
 	autostart=${autostart:-$defaultAutostart};
 	autoupdate=${autoupdate:-$defaultAutoupdate};
+fi
+
+# The operating system's own security updates and night restarts: off unless the person says yes, to the question
+# or by -osupdate, as other installers leave them. install-os-updates.sh from this release sets them up, in a bash
+# of its own, so nothing in it can stop this install, and a failed download only leaves them as they are. Without
+# a yes or the question nothing is downloaded, so an update run (-q) never touches them.
+osUpdatesUrl="$releaseUrl/$assemblyName-linux-os-updates.sh";
+osUpdatesScript="";
+osUpdatesState="";
+# A script of this release, for a part the server can run without, as MsQuic and these updates: by wget, or by curl
+# where there is no wget yet - the command that brought this script here takes either, and wget is installed only
+# below - and within a time limit, so a host that never answers holds up no install for long.
+function download_script() {
+	if command -v wget >/dev/null 2>&1; then
+		wget -q --timeout=30 --tries=2 -O- "$1";
+	else
+		curl -fsSL --connect-timeout 30 --max-time 60 "$1" 2>/dev/null;
+	fi
+}
+# Its status proves the download whole: one cut short, or an error page, answers none
+function get_os_updates_script() {
+	local script;
+	script=$(download_script "$osUpdatesUrl") || return 1;
+	osUpdatesState=$(bash <(printf '%s' "$script") status "$assemblyName" "$productName" 2>/dev/null </dev/null);
+	case "$osUpdatesState" in
+		on|off|unsupported:*) osUpdatesScript="$script";;
+		*) return 1;;
+	esac
+}
+# Asked only where they can be set up. Enter keeps what the machine has, so it is no answer at all: only a yes
+# or a no changes anything, and a typo keeps it too, as a no would take away what the machine has.
+function ask_os_updates() {
+	local answer hint="y/N";
+	if [ "$1" = "on" ]; then hint="Y/n"; fi
+	read -r -p "Keep the operating system patched, restarting at night when a fix needs it ($hint)? " answer;
+	case "${answer,,}" in
+		y|yes) echo "y";;
+		n|no) echo "n";;
+		*) echo "";;
+	esac
+}
+if [ "$container" != "y" ] && { [ "$osupdate" = "y" ] || [ "$quiet" != "y" ]; }; then
+	if ! get_os_updates_script; then
+		echo "WARNING: Could not download $osUpdatesUrl, so the operating system updates stay as they are.";
+	elif [ -z "$osupdate" ] && [[ "$osUpdatesState" =~ ^(on|off)$ ]]; then
+		osupdate=$(ask_os_updates "$osUpdatesState");
+	fi
 fi
 
 # The minimum client protocol, for a server that keeps its own access keys: a managed one takes it from
@@ -409,9 +463,9 @@ fi
 # install ms-quic, once the package is in: a run that fails before changes nothing else. Where the
 # distribution has no package for it, it goes in the version folder.
 msquic_url="$releaseUrl/$assemblyName-linux-msquic.sh"
-if ! msquic_script=$(wget -qO- "$msquic_url"); then
+if ! msquic_script=$(download_script "$msquic_url"); then
 	echo "WARNING: Could not download MsQuic installer from: $msquic_url"
-	echo "WARNING: wget failed. Skipping MsQuic installation."
+	echo "WARNING: Skipping MsQuic installation."
 elif ! bash <(printf '%s' "$msquic_script") "$binDir"; then
 	echo "WARNING: MsQuic installation failed. Skipping."
 fi
@@ -619,5 +673,21 @@ fi
 if [ "$container" != "y" ] && [ -n "$firewall" ]; then
 	echo "NOTE: $firewall is active on this machine. Clients reach the server only through ports it";
 	echo "      allows: allow the ports the server listens on (TCP 443 by default).";
+fi
+
+# The operating system's updates, chosen above: last, once the server runs, and without the install lock, so a
+# slow package manager holds up no update. The script says what it could not do and exits 1 then; another exit
+# code means it stopped before it could say.
+if [ "$container" = "y" ] && [ "$osupdate" = "y" ]; then
+	echo "WARNING: Operating system updates were not turned on: a container's system is its host's to patch.";
+elif [ -n "$osUpdatesScript" ] && [ -n "$osupdate" ]; then
+	exec 9>&-;
+	osUpdatesAction="off";
+	[ "$osupdate" = "y" ] && osUpdatesAction="on";
+	bash <(printf '%s' "$osUpdatesScript") "$osUpdatesAction" "$assemblyName" "$productName" </dev/null;
+	osUpdatesExit=$?;
+	if [ "$osUpdatesExit" -gt 1 ]; then
+		echo "WARNING: The operating system updates' script stopped unexpectedly, with exit code $osUpdatesExit.";
+	fi
 fi
 } # the group opened at the top

@@ -28,8 +28,9 @@ release in itself.
 ## What a release ships
 
 - **Linux** (`linux-x64`, `linux-arm64`): `.tar.gz`, install `.sh`, update `.json`; from `linux-any`,
-  the install script that picks the architecture (`VpnHoodServer-linux.sh`) and the MsQuic installer
-  (`VpnHoodServer-linux-msquic.sh`).
+  the install script that picks the architecture (`VpnHoodServer-linux.sh`), the MsQuic installer
+  (`VpnHoodServer-linux-msquic.sh`) and the operating-system updates script
+  (`VpnHoodServer-linux-os-updates.sh`, which the install script downloads for `-osupdate` or its question).
 - **Windows** (`win-x64`): `.zip`, install `.ps1`, update `.json`. The server package is a
   self-contained `dotnet publish` + zip with no installer, so it **cross-builds on `ubuntu-latest`**
   alongside Linux — one build job, no Windows runner.

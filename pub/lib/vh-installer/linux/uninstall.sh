@@ -133,5 +133,26 @@ if [ -d "$destinationPath/storage" ]; then
 	echo "  Its settings and data are kept for a later install: $destinationPath/storage";
 	echo "  To remove them too: sudo rm -rf \"$destinationPath\"";
 fi
+
+# The operating system's updates the server's installer set up (-osupdate) stay, -purge or not: the person
+# chose them for the machine, not for the app. The names are install-os-updates.sh's.
+osUpdatesFiles=();
+for file in "/etc/apt/apt.conf.d/90$assemblyName-os-updates" \
+	"/etc/systemd/system/apt-daily-upgrade.timer.d/90-$assemblyName-os-updates.conf" \
+	"/etc/dnf/$assemblyName-os-updates.conf" "/etc/systemd/system/${assemblyName}OsUpdates.service" \
+	"/etc/systemd/system/${assemblyName}OsUpdates.timer"; do
+	if [ -f "$file" ]; then
+		osUpdatesFiles+=("\"$file\"");
+	fi
+done
+if [ ${#osUpdatesFiles[@]} -gt 0 ]; then
+	echo "  The operating system updates it set up stay on: security fixes every night, and a restart when";
+	echo "  one needs it. To stop them:";
+	if [ -f "/etc/systemd/system/${assemblyName}OsUpdates.timer" ]; then
+		echo "    sudo systemctl disable --now ${assemblyName}OsUpdates.timer";
+	fi
+	echo "    sudo rm -f ${osUpdatesFiles[*]}";
+	echo "    sudo systemctl daemon-reload";
+fi
 exit 0;
 } # the group opened at the top

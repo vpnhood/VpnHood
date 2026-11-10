@@ -80,6 +80,15 @@ $msquicDst = "$moduleDir/$assemblyName-$os-msquic.sh";
 New-Item -ItemType Directory -Path (Split-Path $msquicDst -Parent) -Force | Out-Null
 (Get-Content $msquicSrc -Raw) -replace "`r", "" | Out-File -FilePath $msquicDst -Encoding ASCII -Force -NoNewline
 
+# The server's operating-system updates script, the same way: its install script downloads
+# <app>-linux-os-updates.sh from its own release. The clients have no such option.
+if ($installTemplate -eq "install") {
+    Write-Host "Copying OS updates script..." -ForegroundColor Green
+    $osUpdatesSrc = "$solutionDir/src/Apps/Server/pub/Linux/install-os-updates.sh";
+    $osUpdatesDst = "$moduleDir/$assemblyName-$os-os-updates.sh";
+    (Get-Content $osUpdatesSrc -Raw) -replace "`r", "" | Out-File -FilePath $osUpdatesDst -Encoding ASCII -Force -NoNewline
+}
+
 # Copy the installer script to latest
 if ($isLatest)
 {

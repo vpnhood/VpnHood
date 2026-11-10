@@ -154,6 +154,10 @@ internal static class HttpRequestHeadReader
     // the target's form, by its method; an absolute target's authority, which the Host header must repeat
     private static Uri? CheckTarget(string method, string target)
     {
+        // a raw '#' in any form of target is refused as Kestrel 11 refuses it, after the version's check
+        if (target.Contains('#'))
+            throw new HttpRequestRejectedException(400);
+
         if (target[0] == '/')
             return null;
 

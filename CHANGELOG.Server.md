@@ -1,6 +1,7 @@
 # Latest
 
 * Fix: On Linux and Windows, the installer stops on a machine whose processor lacks SSE4.2 and POPCNT, such as a VPS on a basic virtual processor, and says so, instead of installing a server that cannot start; an installed server keeps running
+* Fix: An HTTP request whose target holds a raw `#` gets a 400 and its connection closes, as Kestrel answers it since .NET 11.0.0
 
 # v9.1.872
 

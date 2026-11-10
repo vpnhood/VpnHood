@@ -21,7 +21,8 @@
 		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
 		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
 		<PublishTrimmed>True</PublishTrimmed>
-		<!--<AndroidLinkTool>r8</AndroidLinkTool>-->
+		<!-- R8 shrinks and optimizes the Java code; proguard-rules.pro keeps every name. -->
+		<AndroidLinkTool>r8</AndroidLinkTool>
 	</PropertyGroup>
 
 	<PropertyGroup>

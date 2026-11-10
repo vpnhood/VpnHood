@@ -282,13 +282,13 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         }
     }
 
-    protected override bool ReadPacket(byte[] buffer)
+    protected override int ReadPacket(byte[] buffer)
     {
         while (true) {
             (byte[] Data, int Length) item;
             lock (_queueLock) {
                 if (!_readQueue.TryDequeue(out item))
-                    return false;
+                    return 0;
                 _readQueueCount--;
                 _ = _readSignal.Wait(0);
             }
@@ -305,7 +305,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
                 }
 
                 Buffer.BlockCopy(item.Data, 0, buffer, 0, item.Length);
-                return true;
+                return item.Length;
             }
             finally {
                 ArrayPool<byte>.Shared.Return(item.Data);

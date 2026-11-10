@@ -178,7 +178,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override bool ReadPacket(byte[] buffer)
+    protected override int ReadPacket(byte[] buffer)
     {
         throw new InvalidOperationException(
             "ReadPacket with buffer should not be called when ReadPacket has the override.");

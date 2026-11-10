@@ -63,17 +63,22 @@ public readonly struct PacketMemory
     }
 
     /// <summary>
-    /// Makes a <see cref="PacketMemory"/> over an array rented from an <see cref="ArrayPool{T}"/>, which the packet made
-    /// on it returns to that pool.
+    /// Makes a <see cref="PacketMemory"/> over the first bytes of an array rented from an <see cref="ArrayPool{T}"/>,
+    /// which the packet made on it returns to that pool.
     /// </summary>
     /// <param name="rentedArray">The array.</param>
+    /// <param name="length">
+    /// How many of the array's first bytes the memory takes, such as the bytes read into it: a pool lends an array
+    /// longer than asked for, and past them it holds what was written to it before.
+    /// </param>
     /// <param name="arrayPool">
     /// The pool the array was rented from, or <see langword="null"/> for <see cref="ArrayPool{T}.Shared"/>.
     /// </param>
-    /// <returns>The memory, over the whole array.</returns>
-    public static PacketMemory FromRentedArray(byte[] rentedArray, ArrayPool<byte>? arrayPool = null)
+    /// <returns>The memory, over the array's first <paramref name="length"/> bytes.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="length"/> is negative or exceeds the array.</exception>
+    public static PacketMemory FromRentedArray(byte[] rentedArray, int length, ArrayPool<byte>? arrayPool = null)
     {
-        return new PacketMemory(rentedArray, new Owner(arrayPool ?? ArrayPool<byte>.Shared));
+        return new PacketMemory(rentedArray.AsMemory(0, length), new Owner(arrayPool ?? ArrayPool<byte>.Shared));
     }
 
     /// <summary>
@@ -107,7 +112,7 @@ public readonly struct PacketMemory
     internal static PacketMemory Rent(int length, MemoryPool<byte>? memoryPool)
     {
         return memoryPool == null
-            ? FromRentedArray(ArrayPool<byte>.Shared.Rent(length))
+            ? FromRentedArray(ArrayPool<byte>.Shared.Rent(length), length)
             : new PacketMemory(memoryPool.Rent(length));
     }
 

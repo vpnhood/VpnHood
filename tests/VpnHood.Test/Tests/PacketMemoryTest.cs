@@ -53,7 +53,7 @@ public class PacketMemoryTest : TestBase
         var rentedArray = arrayPool.Rent(RentLength);
         source.Buffer.Span.CopyTo(rentedArray);
 
-        var ipPacket = PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, arrayPool));
+        var ipPacket = PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, source.PacketLength, arrayPool));
         Assert.AreEqual(source.PacketLength, ipPacket.PacketLength);
         CollectionAssert.AreEqual(source.Buffer.ToArray(), ipPacket.Buffer.ToArray());
 
@@ -73,7 +73,7 @@ public class PacketMemoryTest : TestBase
         Assert.IsLessThan(RentLength, AllocatedBytesPerCall(() => {
             var rentedArray = ArrayPool<byte>.Shared.Rent(RentLength);
             bytes.CopyTo(rentedArray, 0);
-            PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray)).Dispose();
+            PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, bytes.Length)).Dispose();
         }));
     }
 
@@ -104,8 +104,20 @@ public class PacketMemoryTest : TestBase
         rentedArray[3] = 0xFF;
 
         Assert.ThrowsExactly<ArgumentException>(() =>
-            PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, arrayPool)));
+            PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, rentedArray.Length, arrayPool)));
         Assert.IsEmpty(arrayPool.Returned);
+    }
+
+    [TestMethod]
+    public void A_header_that_claims_more_than_the_rented_length_is_refused()
+    {
+        // the header says 1400 bytes, and only the first 60 hold this packet: the rest are the array's from before
+        var arrayPool = new TestArrayPool();
+        var rentedArray = arrayPool.Rent(RentLength);
+        BuildPacketBytes(1400).CopyTo(rentedArray, 0);
+
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, 60, arrayPool)));
     }
 
     [TestMethod]
@@ -115,8 +127,8 @@ public class PacketMemoryTest : TestBase
         var rentedArray = arrayPool.Rent(64);
 
         // 10 bytes: shorter than an IPv4 header
-        Assert.ThrowsExactly<ArgumentException>(() =>
-            new IpV4Packet(PacketMemory.FromRentedArray(rentedArray, arrayPool), 10, IpProtocol.Udp, 0));
+        var memory = PacketMemory.FromRentedArray(rentedArray, rentedArray.Length, arrayPool);
+        Assert.ThrowsExactly<ArgumentException>(() => new IpV4Packet(memory, 10, IpProtocol.Udp, 0));
         Assert.IsEmpty(arrayPool.Returned);
     }
 
@@ -198,7 +210,7 @@ public class PacketMemoryTest : TestBase
         var arrayPool = new TestArrayPool { FailsFirstReturn = true };
         var rentedArray = arrayPool.Rent(RentLength);
         source.Buffer.Span.CopyTo(rentedArray);
-        var ipPacket = PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, arrayPool));
+        var ipPacket = PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, source.PacketLength, arrayPool));
 
         // the fault shows, and a second Dispose does not return the array again
         Assert.ThrowsExactly<InvalidOperationException>(ipPacket.Dispose);
@@ -234,10 +246,20 @@ public class PacketMemoryTest : TestBase
     [TestMethod]
     public void A_packet_read_from_a_tun_adapter_returns_its_array_to_the_pool()
     {
-        using var adapter = new OnePacketVpnAdapter(BuildPacketBytes(1400));
+        var bytes = BuildPacketBytes(1400);
+        using var adapter = new OnePacketVpnAdapter(bytes, bytes.Length);
 
         // never returned, each packet would cost a new array
         Assert.IsLessThan(RentLength, AllocatedBytesPerCall(() => adapter.ReadOnePacket(RentLength)?.Dispose()));
+    }
+
+    [TestMethod]
+    public void A_tun_read_whose_header_claims_more_than_was_read_is_refused()
+    {
+        // a 60-byte read whose header says 1400: the other 1340 bytes are what the array held before
+        using var adapter = new OnePacketVpnAdapter(BuildPacketBytes(1400), readLength: 60);
+
+        Assert.ThrowsExactly<ArgumentException>(() => adapter.ReadOnePacket(RentLength));
     }
 
     [TestMethod]
@@ -273,8 +295,8 @@ public class PacketMemoryTest : TestBase
         }
     }
 
-    // a TUN device that has the same packet to read each time
-    private sealed class OnePacketVpnAdapter(byte[] packet)
+    // a TUN device whose every read gives the first readLength of the same bytes, over the rest from before
+    private sealed class OnePacketVpnAdapter(byte[] bytes, int readLength)
         : NullVpnAdapter(autoDisposePackets: true, blocking: false)
     {
         public IpPacket? ReadOnePacket(int mtu)
@@ -282,10 +304,10 @@ public class PacketMemoryTest : TestBase
             return ReadPacket(mtu);
         }
 
-        protected override bool ReadPacket(byte[] buffer)
+        protected override int ReadPacket(byte[] buffer)
         {
-            packet.CopyTo(buffer, 0);
-            return true;
+            bytes.CopyTo(buffer, 0);
+            return readLength;
         }
     }
 }

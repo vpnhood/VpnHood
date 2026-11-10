@@ -160,10 +160,10 @@ public class NullVpnAdapter : TunVpnAdapter
     /// Reads no packet.
     /// </summary>
     /// <param name="buffer">Not used.</param>
-    /// <returns>Always <see langword="false"/>.</returns>
-    protected override bool ReadPacket(byte[] buffer)
+    /// <returns>Always 0.</returns>
+    protected override int ReadPacket(byte[] buffer)
     {
-        return false; // there is no packet
+        return 0; // there is no packet
     }
 
     /// <summary>

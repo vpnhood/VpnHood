@@ -535,7 +535,7 @@ public class IosVpnAdapter(
         _packetFlow?.ReadPackets(OnPacketsReceived);
     }
 
-    protected override bool ReadPacket(byte[] buffer)
+    protected override int ReadPacket(byte[] buffer)
     {
         throw new NotSupportedException("Use StartReadingPackets as iOS already handle it.");
     }

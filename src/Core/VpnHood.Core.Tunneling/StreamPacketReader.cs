@@ -42,7 +42,7 @@ public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
                 .Vhc();
 
             // build the packet, which returns the array when disposed
-            return PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray));
+            return PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, packetLength));
         }
         catch {
             ArrayPool<byte>.Shared.Return(rentedArray);

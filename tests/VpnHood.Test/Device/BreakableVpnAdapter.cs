@@ -18,9 +18,9 @@ public sealed class BreakableVpnAdapter() : NullVpnAdapter(autoDisposePackets: t
         _brokenEvent.Wait();
     }
 
-    protected override bool ReadPacket(byte[] buffer)
+    protected override int ReadPacket(byte[] buffer)
     {
-        return _brokenEvent.IsSet ? throw new IOException("The test broke the adapter.") : false;
+        return _brokenEvent.IsSet ? throw new IOException("The test broke the adapter.") : 0;
     }
 
     protected override void DisposeManaged()

@@ -917,7 +917,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         };
     }
 
-    protected override bool ReadPacket(byte[] buffer)
+    protected override int ReadPacket(byte[] buffer)
     {
         var fd = _tunAdapterFd;
         if (fd == InvalidFd)
@@ -925,17 +925,17 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
         var bytesRead = LinuxAPI.read(fd, buffer, (nuint)buffer.Length);
         if (bytesRead > 0)
-            return true;
+            return (int)bytesRead;
 
         // check for errors
         var errorCode = Marshal.GetLastWin32Error();
         return errorCode switch {
             // No data available; the parent read loop polls (WaitForTunRead) and retries.
-            OsConstants.Eagain => false,
+            OsConstants.Eagain => 0,
             // Interrupted before any byte was read. Report it as "no data" and let the parent drive the
             // retry (it re-checks liveness and polls) rather than spinning here — EINTR is normal, not an
             // error, so it must not throw or count toward the I/O error threshold.
-            OsConstants.Eintr => false,
+            OsConstants.Eintr => 0,
             _ => throw new PInvokeException("Could not read from TUN.", errorCode)
         };
     }

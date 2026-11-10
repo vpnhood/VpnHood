@@ -98,7 +98,7 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         Interlocked.Decrement(ref ReadingCount);
     }
 
-    protected override bool ReadPacket(byte[] buffer)
+    protected override int ReadPacket(byte[] buffer)
     {
         return FailRead
             ? throw new IOException("Test: the adapter could not be read.")

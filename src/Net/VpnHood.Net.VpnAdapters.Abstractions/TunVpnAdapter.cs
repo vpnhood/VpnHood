@@ -263,9 +263,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// <summary>
     /// Reads one packet from the interface into a buffer, without waiting for one.
     /// </summary>
+    /// <remarks>
+    /// Only the bytes read are parsed, and a packet whose header claims more is refused: the buffer is rented, so past
+    /// them it holds an earlier read's bytes.
+    /// </remarks>
     /// <param name="buffer">The buffer, at least the MTU long.</param>
-    /// <returns><see langword="true"/> if a packet was read; <see langword="false"/> if none is ready.</returns>
-    protected abstract bool ReadPacket(byte[] buffer);
+    /// <returns>The number of bytes read, from the buffer's start; 0 if no packet is ready.</returns>
+    protected abstract int ReadPacket(byte[] buffer);
 
     /// <summary>
     /// Writes one packet to the interface, without waiting for room.
@@ -1149,8 +1153,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     {
         var rentedArray = ArrayPool<byte>.Shared.Rent(mtu);
         try {
-            if (ReadPacket(rentedArray))
-                return PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray));
+            // the bytes read alone: past them the array holds an earlier read's
+            var length = ReadPacket(rentedArray);
+            if (length != 0)
+                return PacketBuilder.Attach(PacketMemory.FromRentedArray(rentedArray, length));
         }
         catch {
             ArrayPool<byte>.Shared.Return(rentedArray);

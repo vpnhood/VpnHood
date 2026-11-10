@@ -435,7 +435,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     }
 
 
-    protected override bool ReadPacket(byte[] buffer)
+    protected override int ReadPacket(byte[] buffer)
     {
         var session = _tunSession;
         if (session == IntPtr.Zero)
@@ -447,7 +447,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         if (tunReceivePacket != IntPtr.Zero) {
             try {
                 Marshal.Copy(tunReceivePacket, buffer, 0, size);
-                return true;
+                return size;
             }
             finally {
                 WinTunApi.WintunReleaseReceivePacket(session, tunReceivePacket);
@@ -457,7 +457,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // check for errors
         var lastError = (WintunReceivePacketError)Marshal.GetLastWin32Error();
         return lastError switch {
-            WintunReceivePacketError.NoMoreItems => false,
+            WintunReceivePacketError.NoMoreItems => 0,
             WintunReceivePacketError.HandleEof => throw new IOException("WinTun adapter has been closed."),
             WintunReceivePacketError.InvalidData => throw new InvalidOperationException(
                 "Invalid data received from WinTun adapter."),

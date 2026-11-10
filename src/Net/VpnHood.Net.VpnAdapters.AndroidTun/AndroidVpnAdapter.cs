@@ -315,7 +315,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
     }
 
-    protected override bool ReadPacket(byte[] buffer)
+    protected override int ReadPacket(byte[] buffer)
     {
         lock (_readLock) {
             var tunFd = _tunFd;
@@ -325,7 +325,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
             while (true) {
                 var bytesRead = AndroidAPI.read(tunFd, buffer, (nuint)buffer.Length);
                 if (bytesRead > 0)
-                    return true;
+                    return (int)bytesRead;
 
                 // 0 is EOF: the TUN fd has been closed
                 if (bytesRead == 0)
@@ -336,7 +336,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
                     continue; // interrupted before any data arrived, retry immediately
 
                 if (errorCode == OsConstants.Eagain)
-                    return false; // no packet available; the caller waits via WaitForTunRead and retries
+                    return 0; // no packet available; the caller waits via WaitForTunRead and retries
 
                 throw new PInvokeException("Could not read from TUN.", errorCode);
             }

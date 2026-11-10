@@ -341,7 +341,7 @@ that same server.
 plus the `wasm-tools` workload. SkiaSharp's WebAssembly libraries are built for that SDK's
 Emscripten; .NET 11's cannot link them, and Avalonia 12 stays on that SkiaSharp. So the page and every
 library it references stay on `net10.0`, which the .NET 11 apps reference too; every other project is
-on .NET 11 but VpnHood.Net.Quic.Abstractions and VpnHood.Net.Http3.
+on .NET 11.
 
 In CI the page is built **once**: the `build-browser` job in `publish_app.yml` runs on .NET 10,
 publishes it, and uploads it as the `browser-page` artifact, which all four platform build jobs

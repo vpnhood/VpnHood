@@ -29,4 +29,4 @@ dotnet add package VpnHood.Net.Http3
 - `VpnHood.Net.Quic.Abstractions` — the QUIC contract it serves; `VpnHood.Net.Quic.MsQuic` implements its
   server side
 
-Requires .NET 10.
+Requires .NET 11.

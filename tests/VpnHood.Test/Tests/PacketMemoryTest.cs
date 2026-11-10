@@ -263,6 +263,22 @@ public class PacketMemoryTest : TestBase
     }
 
     [TestMethod]
+    public void A_refused_tun_read_returns_its_array_to_the_pool()
+    {
+        using var adapter = new OnePacketVpnAdapter(BuildPacketBytes(1400), readLength: 60);
+        var mtu = 60_000; // a 64 KB array, which shows past the exception's cost if never returned
+
+        Assert.IsLessThan(mtu, AllocatedBytesPerCall(() => {
+            try {
+                adapter.ReadOnePacket(mtu);
+            }
+            catch (ArgumentException) {
+                // refused, as A_tun_read_whose_header_claims_more_than_was_read_is_refused checks
+            }
+        }));
+    }
+
+    [TestMethod]
     public void A_packet_parsed_or_built_without_a_pool_makes_no_owner_object()
     {
         using var source = BuildUdp(IpVersion.IPv4);

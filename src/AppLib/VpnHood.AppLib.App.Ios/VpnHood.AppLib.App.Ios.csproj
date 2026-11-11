@@ -15,6 +15,6 @@
 	<ItemGroup>
 		<!-- Draws the app's icons from its SVGs at build time (VpnHood.AppLib.App.targets): its targets reach
 		     every head that references this, and nothing of it ships in the app. -->
-		<PackageReference Include="Microsoft.Maui.Resizetizer" Version="11.0.0" />
+		<PackageReference Include="Microsoft.Maui.Resizetizer" Version="11.0.10" />
 	</ItemGroup>
 </Project>

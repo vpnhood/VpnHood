@@ -59,7 +59,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="9.0.866" />
+		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="9.0.868" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way

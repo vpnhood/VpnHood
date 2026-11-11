@@ -155,4 +155,15 @@ public interface IVpnAdapter : IPacketTransport
     /// <param name="ipVersion">The IP version.</param>
     /// <returns><see langword="true"/> if the host's network supports it; otherwise, <see langword="false"/>.</returns>
     bool IsIpVersionSupported(IpVersion ipVersion);
+
+    /// <summary>
+    /// Looks at the host's network again for its primary addresses, as a change of the host's addresses makes the
+    /// adapter do, and raises <see cref="PrimaryAdapterIpChanged"/> when they differ from the last ones.
+    /// </summary>
+    /// <remarks>
+    /// For a caller that needs <see cref="GetPrimaryAdapterAddress"/> and <see cref="IsIpVersionSupported"/> to
+    /// tell the network as it is now: the OS may move the host's traffic to another network without an address
+    /// change. An adapter that is stopped, starting or restarting is left alone: its start finds the addresses.
+    /// </remarks>
+    void RefreshPrimaryAdapterIps();
 }

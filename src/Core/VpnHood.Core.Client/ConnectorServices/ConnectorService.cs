@@ -11,6 +11,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Memory;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
@@ -45,6 +46,7 @@ internal class ConnectorService : IAsyncDisposable
     private readonly ConcurrentQueue<IdleConnectionItem> _idleConnectionItems = new();
     private readonly TcpStreamConnectionFactory _tcpConnectionFactory;
     private readonly ClientRequestSigner _requestSigner;
+    private readonly IProxyConnector? _proxyConnector;
     private readonly QuicRequestRecovery _quicRequestRecovery;
     private readonly QuicStreamConnectionFactory? _quicConnectionFactory; // null with no QUIC client factory or support
     private TimeSpan _idleConnectionTimeout;
@@ -67,6 +69,8 @@ internal class ConnectorService : IAsyncDisposable
     public int ProtocolVersion { get; private set; } = RequestProof.ProtocolVersion;
     public bool IsLegacyProtocol => ProtocolVersion < RequestProof.ProtocolVersion;
     public VpnEndPoint VpnEndPoint { get; init; }
+    // its connections reach the server through a user's proxy, which a managed connector may turn on or off
+    public bool IsProxyEnabled => _proxyConnector is { IsEnabled: true };
     public TimeSpan RequestTimeout { get; set; }
     public bool UseQuic { get; set; }
     public ClientInitialStreamPadding InitialPadding { get; } = new();
@@ -82,6 +86,7 @@ internal class ConnectorService : IAsyncDisposable
     public ConnectorService(ConnectorServiceOptions options, ClientRequestSigner requestSigner)
     {
         _requestSigner = requestSigner;
+        _proxyConnector = options.ProxyConnector;
         AllowChannelReuse = options.AllowChannelReuse;
         Stat = new ConnectorStat(() => _idleConnectionItems.Count);
         VpnEndPoint = options.VpnEndPoint;

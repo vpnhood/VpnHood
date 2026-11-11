@@ -290,10 +290,9 @@ public class IosVpnAdapter(
 
     // Nothing to do: the extension's own sockets go around its tunnel, as a DNS query and a web request
     // were seen to on an Apple TV with every route in the tunnel, so the server address check asks the
-    // network's DNS servers over a plain socket. KNOWN LIMITATION: the base-class primary-IP rediscovery
-    // (network change / restart) trusts this return and probes through the tunnel, so PrimaryAdapterIpV4
-    // can report the tunnel's own virtual IP while the tunnel is up. Fixing that needs a protect-independent
-    // discovery (e.g. NWPathMonitor).
+    // network's DNS servers over a plain socket. The base's look for the network's primary addresses goes
+    // around it too: on an iPhone it found the Wi-Fi's address, not the tunnel's, with its target inside the
+    // tunnel's routes, so the session's check of the network's IP versions holds here as well.
     public override bool ProtectSocket(System.Net.Sockets.Socket socket) => true;
 
     public override bool ProtectSocket(System.Net.Sockets.Socket socket, IPAddress ipAddress) => true;

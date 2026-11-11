@@ -37,8 +37,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     private bool _disposed;
     private bool _disconnectRequested;
 
-    // A stop against the service's own reconnect after a server's move: the stop's mark with the connect it cancels,
-    // and the reconnect's claim of the moved client with the connect it begins.
+    // A stop against the service's own reconnect after a session's end: the stop's mark with the connect it cancels,
+    // and the reconnect's claim of the ended client with the connect it begins.
     private readonly Lock _connectLock = new();
 
     internal VpnHoodClient? Client { get; private set; }
@@ -110,11 +110,11 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         if (client is null || Client != client)
             return; // the active client is changed, so ignore the event
 
-        // the server moved from the address the session was fixed to: an end the app does not see
-        // (UpdateConnectionInfo), as the service connects again at once, and the new connect looks the name up anew
-        if (IsServerMoveEnd(client)) {
+        // the session ended for a new connect: an end the app does not see (UpdateConnectionInfo), as the service
+        // connects again at once, and the new connect finds the server anew
+        if (IsReconnectEnd(client)) {
             if (client.State is ClientState.Disposed)
-                _ = ReconnectAfterServerMove(client);
+                _ = ReconnectAfterSessionEnd(client);
 
             return;
         }
@@ -125,8 +125,9 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             client.State, client.Session?.Status.Error);
         _ = UpdateConnectionInfo(client, _disconnectException, CancellationToken.None);
 
-        // a move noticed since the check above, or a reconnect that took the host: not this callback's to finish
-        if (Client != client || IsServerMoveEnd(client))
+        // an end for a new connect noticed since the check above, or a reconnect that took the host: not this
+        // callback's to finish
+        if (Client != client || IsReconnectEnd(client))
             return;
 
         // if client is not disposed, we can show notification
@@ -152,26 +153,30 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         });
     }
 
-    // a session the server's move ended, where this service may connect by itself and no stop is asked for
-    private bool IsServerMoveEnd(VpnHoodClient client)
+    // A session that ended for a new connect, where this service may connect by itself and no stop is asked for: the
+    // server moved from the address the session was fixed to, or the network lacks that address's IP version
+    private bool IsReconnectEnd(VpnHoodClient client)
     {
-        return client.LastException is ServerAddressChangedException && IsServerMoveReconnectable();
+        return client.LastException is ServerAddressChangedException or ServerIpVersionUnsupportedException &&
+               CanReconnectBySelf();
     }
 
-    private bool IsServerMoveEnd(ConnectionInfo connectionInfo)
+    private bool IsReconnectEnd(ConnectionInfo connectionInfo)
     {
-        return connectionInfo.Error?.Is<ServerAddressChangedException>() is true && IsServerMoveReconnectable();
+        return connectionInfo.Error is { } error &&
+               (error.Is<ServerAddressChangedException>() || error.Is<ServerIpVersionUnsupportedException>()) &&
+               CanReconnectBySelf();
     }
 
-    private bool IsServerMoveReconnectable()
+    private bool CanReconnectBySelf()
     {
         return _vpnServiceHandler.CanReconnect && !_disconnectRequested && !_disposed;
     }
 
-    // One reconnect per moved client, from whichever of its callbacks sees it disposed first, and none once a stop
-    // is asked for. It takes the name's new addresses the move's check found: asked now, the system's resolver may
-    // still go through the old VPN, which Android tears down a moment later.
-    private async Task ReconnectAfterServerMove(VpnHoodClient client)
+    // One reconnect per ended client, from whichever of its callbacks sees it disposed first, and none once a stop
+    // is asked for. After a move it takes the name's new addresses the move's check found: asked now, the system's
+    // resolver may still go through the old VPN, which Android tears down a moment later.
+    private async Task ReconnectAfterSessionEnd(VpnHoodClient client)
     {
         lock (_connectLock) {
             if (Client != client || _disconnectRequested || _disposed)
@@ -181,7 +186,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         }
 
         client.StateChanged -= VpnHoodClient_StateChanged;
-        VhLogger.Instance.LogInformation("The server has moved, so the VPN service connects again.");
+        VhLogger.Instance.LogInformation("The session has ended for a new connect, so the VPN service connects again. " +
+                                         "Reason: {Reason}", client.LastException?.Message);
         var newAddresses = (client.LastException as ServerAddressChangedException)?.NewAddresses;
         await TryConnect(forceReconnect: false, isAlwaysOn: false, isReconnect: true, newAddresses).Vhc();
     }
@@ -191,8 +197,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         return TryConnect(forceReconnect, isAlwaysOn, isReconnect: false, knownHostAddresses: null);
     }
 
-    // isReconnect: the service's own, after the server moved. Its log goes on, as it holds why the last session
-    // ended, and a stop asked for meanwhile ends it rather than being undone.
+    // isReconnect: the service's own, after a session ended for a new connect. Its log goes on, as it holds why the
+    // last session ended, and a stop asked for meanwhile ends it rather than being undone.
     private async Task<bool> TryConnect(bool forceReconnect, bool isAlwaysOn, bool isReconnect,
         HostNameAddresses? knownHostAddresses)
     {
@@ -431,10 +437,10 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         if (client != Client)
             return;
 
-        // the end of a session the server's move ended is not the app's to see, as the service connects again:
-        // judged by what would be written, as the move may be noticed meanwhile
+        // the end of a session that ended for a new connect is not the app's to see, as the service connects again:
+        // judged by what would be written, as the end may be noticed meanwhile
         var connectionInfo = CreateConnectionInfo(client, ex);
-        if (IsServerMoveEnd(connectionInfo))
+        if (IsReconnectEnd(connectionInfo))
             return;
 
         await Context.TryWriteConnectionInfo(sessionId, connectionInfo, cancellationToken).Vhc();

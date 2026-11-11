@@ -91,6 +91,11 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketForw
 
     public bool IsIpVersionSupported(IpVersion ipVersion) => true;
 
+    public void RefreshPrimaryAdapterIps()
+    {
+        // its addresses are the loopback's, which never move
+    }
+
     private void Forwarder_PacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);

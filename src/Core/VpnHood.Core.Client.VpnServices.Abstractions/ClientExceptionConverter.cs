@@ -50,6 +50,9 @@ public static class ClientExceptionConverter
         if (apiError.Is<ServerAddressChangedException>())
             exception = new ServerAddressChangedException(apiError.Message);
 
+        if (apiError.Is<ServerIpVersionUnsupportedException>())
+            exception = new ServerIpVersionUnsupportedException(apiError.Message);
+
         if (exception != null)
             apiError.ExportData(exception.Data);
 

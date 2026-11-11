@@ -432,9 +432,9 @@ public class AlwaysOnTest : TestAppBase
     }
 
     // What the cases above do not reach: the app's own VPN service out of reach, a broken connection or
-    // handshake, a connect its caller gave up on and one refused while the app installs its update are tried
-    // again, and so is an access error once the session was up, from a server that lost it; at a connect it is
-    // a refused key, as an HTTP 401 is.
+    // handshake, a connect its caller gave up on, one refused while the app installs its update and a network
+    // without the server's IP version are tried again, and so is an access error once the session was up, from a
+    // server that lost it; at a connect it is a refused key, as an HTTP 401 is.
     [TestMethod]
     public void What_is_tried_again()
     {
@@ -446,7 +446,8 @@ public class AlwaysOnTest : TestAppBase
             new AuthenticationException().ToApiError(),
             new OperationCanceledException().ToApiError(),
             new TaskCanceledException().ToApiError(),
-            new AppUpdatingException().ToApiError()
+            new AppUpdatingException().ToApiError(),
+            new ServerIpVersionUnsupportedException("no IPv6").ToApiError()
         ];
         foreach (var error in triedAgain)
             Assert.IsTrue(AppAlwaysOnService.IsTriedAgain(error, sessionWasUp: false), error.TypeName);

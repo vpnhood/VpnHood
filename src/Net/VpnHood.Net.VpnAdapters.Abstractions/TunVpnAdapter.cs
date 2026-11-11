@@ -858,6 +858,16 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             .ToArray();
     }
 
+    /// <inheritdoc/>
+    // Looks as an address change's look does: a socket protected by its bind cannot look past its own address
+    public void RefreshPrimaryAdapterIps()
+    {
+        if (!IsReady || _isStarting || _restartLock.IsLocked)
+            return;
+
+        DiscoverPrimaryAdapterIps(protect: !IsSocketProtectedByBind);
+    }
+
     private void DiscoverPrimaryAdapterIps(bool protect)
     {
         var primaryAdapterIpV4 = DiscoverPrimaryAdapterIpViaProtect(AddressFamily.InterNetwork, protect);

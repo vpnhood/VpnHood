@@ -639,9 +639,13 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             if (now - _lastConnectionErrorTime.Value > Config.Transport.SessionTimeout)
                 await DisposeAsync(ex).Vhc();
 
-            // pause after retry limit; a pause's start asks whether the server has moved
+            // pause after retry limit, unless the network lacks the server's IP version, where no wait would end; a
+            // pause's start asks whether the server has moved
             else if (now - _lastConnectionErrorTime.Value > Config.Transport.UnstableTimeout) {
                 var isPauseStart = _state != ClientState.Waiting;
+                if (isPauseStart && await EndIfServerIpVersionUnsupported().Vhc())
+                    throw;
+
                 _autoWaitTime = now;
                 _status.WaitingCount++;
                 State = ClientState.Waiting;
@@ -670,6 +674,31 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         }
 
         return default;
+    }
+
+    // A network with the other IP version alone never reaches the server's address: the session ends for a new
+    // connect, whose server finder takes an address the network has. Only by the network's versions, never by a
+    // failed connect: a network with neither version is not up yet, and a server that does not answer on a network
+    // with its version may come back, so both wait. Through a user's proxy, the proxy reaches the server. The adapter
+    // looks again first, as the OS may move the traffic to another network after the address change it saw: Android
+    // to a Wi-Fi once it has validated it.
+    internal async Task<bool> EndIfServerIpVersionUnsupported()
+    {
+        if (_requestSender.ConnectorService.IsProxyEnabled)
+            return false;
+
+        _vpnAdapter.RefreshPrimaryAdapterIps();
+        var serverIpVersion = VpnEndPoint.TcpEndPoint.IpVersion();
+        var otherIpVersion = serverIpVersion == IpVersion.IPv4 ? IpVersion.IPv6 : IpVersion.IPv4;
+        if (_vpnAdapter.IsIpVersionSupported(serverIpVersion) || !_vpnAdapter.IsIpVersionSupported(otherIpVersion))
+            return false;
+
+        VhLogger.Instance.LogWarning(
+            "The network has no {ServerIpVersion}, which the server's address needs, only {OtherIpVersion}. " +
+            "Ending the session for a new connect...", serverIpVersion, otherIpVersion);
+        await DisposeAsync(new ServerIpVersionUnsupportedException(
+            $"This network has no {serverIpVersion}, which the server's address needs. Please connect again.")).Vhc();
+        return true;
     }
 
     // A server that stopped answering may have moved, its name now giving other addresses: the session then ends with

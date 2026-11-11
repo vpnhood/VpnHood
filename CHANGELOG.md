@@ -46,6 +46,7 @@
 * Fix: Where Google Play works only through the VPN, the app's update now comes once you connect #android #store
 * Fix: "Check for update" always answers - you have the latest version, or it could not check - and shows the update's notice even after you chose Later #android #ios #windows
 * Fix: The app's language can be set in your device's settings as well as in the app, and each shows the other's choice; the app no longer puts back its own at the next start #android
+* Fix: The VPN no longer stays on Waiting after your device moves to a network that cannot reach the server's address, such as a Wi-Fi without IPv6 after mobile data: it connects again by itself within about a minute
 * Fix: The app's language can be set in your device's settings as well as in the app, and each shows the other's choice: the app's page in Settings has a Language row when the device has more than one language #ios
 * Fix: On Android 13 and older, the app connects to a server whose certificate is one of Let's Encrypt's new ones; its certificate check refused it #android
 * Fix: On Android 7.0 to 8.1, the app no longer closes at once every time it starts, and on 7.0 it can check for updates, and the app from our website can download them #android

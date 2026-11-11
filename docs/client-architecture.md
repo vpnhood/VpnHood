@@ -74,8 +74,9 @@ implementation in another language writes and reads the JSON they make.
    access key, the transport, the proxies - and the contract version it is written in. The app writes it
    at each connect and at each change of its settings; the VPN service reads it at each start, including
    one the OS makes on its own, and one it makes itself when a session's server has moved from the
-   address its name gave: that session's end is never written to the status, which goes on with the
-   new session's states.
+   address its name gave, or when the device has moved to a network without the IP version of the
+   server's address, such as an IPv4-only Wi-Fi after mobile data that gave an IPv6 one: that session's
+   end is never written to the status, which goes on with the new session's states.
 2. **The split-tunnel rules**: SQLite databases the app publishes in two folders beside the options,
    `ip-filters` and `domain-filters`, each with a `manifest.json` naming its databases in the order they
    apply (`{ "DbFiles": [ ... ] }`), which the VPN service reads again at each reconfigure.

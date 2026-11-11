@@ -1,8 +1,12 @@
 ﻿using System.Net.Quic;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.Dom;
@@ -165,6 +169,39 @@ public class ClientTunnelTest : TestBase
             cancellationToken: TestCt);
         await AssertValidUdp(clientServerDom);
         Assert.AreEqual(ClientState.Connected, clientServerDom.Client.State);
+    }
+
+    // A pause's start ends the session when the network has the other IP version alone: no wait would reach the
+    // server's address. A network with neither version, or with the server's, keeps it waiting: the server that
+    // does not answer may come back.
+    [TestMethod]
+    [DataRow(false, true, true)]
+    [DataRow(true, true, false)]
+    [DataRow(false, false, false)]
+    public async Task A_network_without_the_servers_ip_version_ends_the_session_at_its_pause(
+        bool networkHasServerIpVersion, bool networkHasOtherIpVersion, bool isEnded)
+    {
+        var clientOption = TestHelper.CreateClientOptions();
+        clientOption.Transport.UnstableTimeout = TimeSpan.FromSeconds(1);
+        await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
+        var client = clientServerDom.Client;
+
+        var serverIpVersion = ((ClientSession)client.RequiredSession).VpnEndPoint.TcpEndPoint.IpVersion();
+        var networkIpVersions = new List<IpVersion>();
+        if (networkHasServerIpVersion) networkIpVersions.Add(serverIpVersion);
+        if (networkHasOtherIpVersion) networkIpVersions.Add(serverIpVersion == IpVersion.IPv4 ? IpVersion.IPv6 : IpVersion.IPv4);
+        clientServerDom.ClientVpnAdapter.NetworkIpVersions = networkIpVersions;
+        await clientServerDom.Server.DisposeAsync();
+
+        // the session's requests fail until it pauses, a minute in real life
+        var expectedState = isEnded ? ClientState.Disposed : ClientState.Waiting;
+        await VhTestUtil.AssertEqualsWait(expectedState, async () => {
+            await VhInvoker.TryInvokeAsync("ask the server that is gone", LogLevel.Debug,
+                () => client.UpdateSessionStatus(TestCt));
+            return client.State;
+        }, timeout: 15_000, cancellationToken: TestCt);
+
+        Assert.AreEqual(isEnded, client.LastException is ServerIpVersionUnsupportedException);
     }
 
     // a sync dispose leaves the session's QUIC connections to close in the background: a close may wait for its peer

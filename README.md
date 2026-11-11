@@ -10,7 +10,7 @@ Undetectable VPN for ordinary users and experts. VpnHood! is a solution to bypas
 [![NuGet](https://img.shields.io/badge/NuGet-Packages-blue?logo=nuget)](https://www.nuget.org/profiles/VpnHood)
 
 ## Get VpnHood
-Available for Windows, Linux, Android and iOS.
+Available for Windows, Linux, Android, iOS and Apple TV.
 
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android">
 <img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" alt="Download for Google Play" width="200"/></a>
@@ -33,7 +33,7 @@ Available for Windows, Linux, Android and iOS.
 * Smart Proxies: SOCKS4, SOCKS5, HTTP & HTTPS relays, tested in parallel, rated, rotated and auto-updated from a list URL
 * Split tunneling (Apps & Countries)
 * Custom DNS
-* Platforms: Windows (10/11 x64), Android (Phone / TV), iOS (iPhone / iPad), Linux
+* Platforms: Windows (10/11 x64), Android (Phone / TV), iOS (iPhone / iPad), Apple TV, Linux
 * Multi-language
 * Screen reader support
 * IPv4 / IPv6

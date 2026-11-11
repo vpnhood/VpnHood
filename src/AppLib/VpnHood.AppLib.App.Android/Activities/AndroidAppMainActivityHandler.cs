@@ -49,7 +49,7 @@ public class AndroidAppMainActivityHandler
     {
         _ = savedInstanceState;
 
-        AppUiContext.Context = new AndroidUiContext(ActivityEvent);
+        TakeUiContext();
 
         // initialize the window
         VhInvoker.TryInvoke("configure the window insets", LogLevel.Warning, () =>
@@ -158,6 +158,14 @@ public class AndroidAppMainActivityHandler
     // second activity, which takes the context in its OnCreate; Back resumes the one beneath before
     // the second's OnDestroy, so the context comes back here and that OnDestroy leaves it.
     protected virtual void OnResume()
+    {
+        TakeUiContext();
+    }
+
+    // Makes this activity the app's UI context, unless it already is: a context made again would tell the
+    // app of a new window, and it would preload an ad and check for an update once more. An activity whose
+    // view asks for the context as it is built takes it before its own OnCreate builds that view.
+    public void TakeUiContext()
     {
         var appUiContext = (AndroidUiContext?)AppUiContext.Context;
         if (appUiContext?.ActivityEvent != ActivityEvent)

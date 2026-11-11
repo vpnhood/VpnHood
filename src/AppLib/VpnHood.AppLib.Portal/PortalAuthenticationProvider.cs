@@ -1,8 +1,10 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Storages;
@@ -26,6 +28,13 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// </summary>
     private const string RestoreCredentialMethodId = "restorecredential";
     private const string SessionFileName = "portalSession.json";
+
+    /// <summary>
+    /// Written once this install has had its final answer to zero-tap restoration. It must live where
+    /// a device restore never copies it, as the session does: a copied mark would skip the one check
+    /// that can find a key, on the restored device.
+    /// </summary>
+    private const string RestoreCheckedFileName = "restoreChecked.txt";
 
     private bool _disposed;
     private bool _restoreSignInAttempted;
@@ -312,9 +321,11 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
 
     /// <summary>
     /// The one automatic attempt at zero-tap sign-in restoration, made the first time anything asks
-    /// for a session while nobody is signed in. Once per process on purpose: a negative answer
-    /// (fresh install, no restored credential) will not change until the next restore, and a person
-    /// who signed out deliberately must stay signed out.
+    /// for a session while nobody is signed in. Once per install: a restore key reaches a device only
+    /// through the device's own restore, before the app's first start, so no later start can find one,
+    /// and asking on each would cost a portal call per start of every signed-out install. Only an
+    /// attempt that got no answer is made again, by the next process. A person who signed out
+    /// deliberately must stay signed out: the sign-out cleared the key.
     /// </summary>
     private async Task<PortalSession?> TryRestoreSignIn(IUiContext? uiContext, CancellationToken cancellationToken)
     {
@@ -322,13 +333,22 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
             return null;
         _restoreSignInAttempted = true;
 
+        if (_accountStorage.Read(RestoreCheckedFileName) != null)
+            return null;
+
         try {
             var session = await SignInWithRestoreCredential(uiContext, cancellationToken).Vhc();
+            _accountStorage.Write(RestoreCheckedFileName, DateTime.UtcNow.ToString("O"));
             if (session != null)
                 VhLogger.Instance.LogInformation("Signed in via the restored credential (zero-tap).");
             return session;
         }
         catch (Exception ex) {
+            // the portal's refusal is final (a retired key, a deleted account): every later start
+            // would be refused the same way; no network or a busy portal is worth another try
+            if (ex is ApiException { StatusCode: (int)HttpStatusCode.Unauthorized })
+                _accountStorage.Write(RestoreCheckedFileName, DateTime.UtcNow.ToString("O"));
+
             VhLogger.Instance.LogWarning(ex, "The restore-credential sign-in did not complete.");
             return null;
         }

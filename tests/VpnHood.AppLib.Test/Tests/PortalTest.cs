@@ -3,6 +3,7 @@ using System.Security.Authentication;
 using System.Text.Json;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Abstractions.UiContexts;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
@@ -33,6 +34,7 @@ public class PortalTest
     private const string PackageName = "com.vpnhood.connect.android";
     private const string SignInRoute = "POST /auth/sessions";
     private const string SignOutRoute = "DELETE /auth/sessions/current";
+    private const string RestoreOptionsRoute = "POST /auth/restore-credentials/assertion-options";
     private static readonly Guid ExternalUid = Guid.Parse("c0ffee00-0000-4000-8000-000000000001");
 
     private TestPortalServer _portal = null!;
@@ -748,6 +750,66 @@ public class PortalTest
         // ...but an answer of "nothing is sellable" is an answer, not a failure
         _portal.Enqueue("GET /billing/products", Array.Empty<string>());
         Assert.AreEqual(0, (await accountProvider.GetProductIds(TestCt)).Count);
+    }
+
+    private PortalAuthenticationProvider CreateRestoringProvider(string? assertionResponseJson)
+    {
+        return new PortalAuthenticationProvider(
+            new Storage(new FileSystemStorageProvider(), _storageFolder), _portal.BaseUrl, PackageName,
+            [new TestAuthenticationExternalProvider("google-id-token")],
+            restoreCredentialProvider: new TestRestoreCredentialProvider(assertionResponseJson));
+    }
+
+    // The zero-tap check takes the app's window, which is process-wide: never beside a test that clears it.
+    [TestMethod]
+    [DoNotParallelize]
+    public async Task Zero_tap_restoration_is_asked_once_per_install()
+    {
+        AppUiContext.Context = new TestUiContext();
+        _portal.Enqueue(RestoreOptionsRoute, new { requestJson = "{}" });
+
+        // no key on this device, a final answer: the next process asks nothing
+        using var firstProcess = CreateRestoringProvider(assertionResponseJson: null);
+        Assert.IsNull(await firstProcess.GetAccessToken(TestCt));
+        using var secondProcess = CreateRestoringProvider(assertionResponseJson: null);
+        Assert.IsNull(await secondProcess.GetAccessToken(TestCt));
+
+        Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == RestoreOptionsRoute));
+    }
+
+    [TestMethod]
+    [DoNotParallelize]
+    public async Task Zero_tap_restoration_is_asked_again_after_no_answer()
+    {
+        AppUiContext.Context = new TestUiContext();
+
+        // nothing scripted, so the portal answers 500: the next process asks again
+        using var firstProcess = CreateRestoringProvider(assertionResponseJson: null);
+        Assert.IsNull(await firstProcess.GetAccessToken(TestCt));
+        _portal.Enqueue(RestoreOptionsRoute, new { requestJson = "{}" });
+        using var secondProcess = CreateRestoringProvider(assertionResponseJson: null);
+        Assert.IsNull(await secondProcess.GetAccessToken(TestCt));
+
+        Assert.AreEqual(2, _portal.Requests.Count(x => x.Route == RestoreOptionsRoute));
+    }
+
+    [TestMethod]
+    [DoNotParallelize]
+    public async Task Zero_tap_restoration_stops_once_the_portal_refuses_the_key()
+    {
+        AppUiContext.Context = new TestUiContext();
+        _portal.Enqueue(RestoreOptionsRoute, new { requestJson = "{}" });
+        _portal.Enqueue(SignInRoute, new TestPortalServer.ErrorScript {
+            Code = "invalid_restore_credential", Detail = "The restore credential is not valid.", StatusCode = 401
+        });
+
+        using var firstProcess = CreateRestoringProvider(assertionResponseJson: """{"id":"key-1"}""");
+        Assert.IsNull(await firstProcess.GetAccessToken(TestCt));
+        using var secondProcess = CreateRestoringProvider(assertionResponseJson: """{"id":"key-1"}""");
+        Assert.IsNull(await secondProcess.GetAccessToken(TestCt));
+
+        Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == RestoreOptionsRoute));
+        Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == SignInRoute));
     }
 
     [TestMethod]

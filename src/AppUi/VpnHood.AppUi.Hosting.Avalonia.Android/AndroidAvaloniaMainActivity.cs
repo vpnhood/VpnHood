@@ -62,6 +62,11 @@ public class AndroidAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityE
         MainActivityHandler = new AndroidAvaloniaMainActivityHandler(this, CreateActivityOptions(),
             Task.FromResult((AvaloniaApplication.Current as VpnHoodAvaloniaAppBase)?.ChromeColor));
 
+        // and the app's UI context before the view, which reads the account as it is built: a read with
+        // no window skips zero-tap sign-in restoration, and on a restored phone the person would have
+        // to sign in again by hand
+        MainActivityHandler.TakeUiContext();
+
         ApplyOrientation();
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });

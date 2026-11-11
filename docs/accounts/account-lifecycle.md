@@ -67,7 +67,7 @@ Section 8 answers these, in order:
 | What blocks deletion? | **Nothing.** Billing is cancelled at the end of its paid period instead | §8 |
 | Coming back? | A new, empty account — the store is asked at sign-in and gives the subscription back by itself; a code they kept still works | §7 |
 | Blocked where they are, so they cannot sign in? | Connect first on the free or trial path, then sign in through the tunnel. No portal clock removes the applied code; only an access-server refusal starts the ending flow | §8 |
-| Does a refund end a code? | Only if we end it. Whoever refunds chooses; a full refund with no choice made ends it | §8 |
+| Does a refund end a code? | Only if we end it. Whoever refunds chooses, and keeping is the default; a full refund with no choice made keeps a subscription to its paid cycle's end, at most one month | §8 |
 | Can a partner refund a code they sold? | Ending it, any time. Money back as credit, only for a first purchase and only for 7 days after they paid us; a refund always ends the code | §8 |
 
 ---
@@ -1194,9 +1194,16 @@ refund itself, with the *Reverse Payment* box of WHMCS's refund form:
 | **Refund and keep** | A goodwill gesture — an apology, a customer we want to keep: *Reverse Payment* left unticked | Left running to its original expiry, on purpose |
 
 Both are legitimate; what must never happen is either one **by accident**. So the choice is made
-where the money goes back, by the person giving it. A partial refund always keeps the code. A full
-refund nobody made from the refund form — a payment processor's notice, an automated call — ends
-the code: nobody chose to keep it.
+where the money goes back, by the person giving it, and the form's default is keep: access usually
+stays after a refund, and whether it should depends on the customer. A partial refund always keeps
+the code.
+
+A full refund nobody made from the refund form — one made in the payment provider's own dashboard
+and reported by the gateway, a payment processor's notice, an automated call — keeps a subscription's
+code to the end of its paid cycle, but never more than one month, and then ends it with nothing
+billed again: a monthly code runs out its cycle, a yearly one gets one month. A month of service is
+fine to give anyone who paid us; many months are not. A one-time code is a reseller's, and a
+reseller's refund always ends the code, so that one ends at once.
 
 A store-issued refund is the store's decision, not ours, and it arrives as a notification — the code
 is ended when the store says the entitlement is gone. **Refund and keep is a website-side option
@@ -1392,7 +1399,7 @@ These came up and are now settled — kept here only so they are not re-opened.
 | What brings a returning person back to premium? | Signing in — the store is asked automatically, and a website buyer signs in as their website account. A code they kept is the third route — §7 |
 | Can two accounts hold the same code? | Yes, harmlessly — the device limit rides on the code, so there is nothing to fight over — §2, §7 |
 | Could delete-and-recreate farm duplicate services? | No. The same purchase always returns the same code — §2 |
-| Does a refund switch a code off? | Only if someone ends it. Whoever refunds chooses revoke or keep on the refund form; a full refund with no choice made revokes — §8 |
+| Does a refund switch a code off? | Only if someone ends it. Whoever refunds chooses revoke or keep on the refund form, keep by default; a full refund with no choice made keeps a subscription to its paid cycle's end, at most one month, and a one-time (reseller) code ends — §8 |
 | Does a website purchase block deletion? | No. Billing is cancelled instead — §8 |
 | Should a one-time purchase block it? | No. Nothing blocks it — §8 |
 | Can a merchant end a gateway agreement? | Always, from the gateway's own dashboard; an administrator does it when alerted — §8 |

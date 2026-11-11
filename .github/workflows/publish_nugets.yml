@@ -50,9 +50,14 @@ jobs:
       # at the commit this ref pins; fastlane/, the other submodule, stays out.
       - name: Check out the asset submodule
         run: git submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
-      # The .NET 11 SDK global.json names, for the build...
+      # The .NET 11 SDK global.json names, for the build, by its version: setup-dotnet reads that
+      # file's rollForward latestMajor as the LTS channel and installs .NET 10 instead...
+      - name: Read the SDK version global.json names
+        id: sdk
+        shell: pwsh
+        run: '"version=$((Get-Content global.json -Raw | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT'
       - uses: actions/setup-dotnet@v6
-        with: { global-json-file: global.json }
+        with: { dotnet-version: "${{ steps.sdk.outputs.version }}" }
       # ...and the .NET 10 SDK the browser page's own global.json names, for the page alone (below).
       - uses: actions/setup-dotnet@v6
         with: { global-json-file: src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/global.json }

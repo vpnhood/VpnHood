@@ -159,8 +159,14 @@ jobs:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      # The SDK global.json names, by its version: setup-dotnet reads that file's rollForward
+      # latestMajor as the LTS channel and installs .NET 10 instead.
+      - name: Read the SDK version global.json names
+        id: sdk
+        shell: pwsh
+        run: '"version=$((Get-Content code/global.json -Raw | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT'
       - uses: actions/setup-dotnet@v6
-        with: { global-json-file: code/global.json }
+        with: { dotnet-version: "${{ steps.sdk.outputs.version }}" }
       # TreatNoTestsAsError: a renamed test would otherwise match nothing and pass.
       - name: Test that every API call finds its JSON types
         working-directory: code
@@ -428,8 +434,14 @@ jobs:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v7
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      # The SDK global.json names, by its version: setup-dotnet reads that file's rollForward
+      # latestMajor as the LTS channel and installs .NET 10 instead.
+      - name: Read the SDK version global.json names
+        id: sdk
+        shell: pwsh
+        run: '"version=$((Get-Content code/global.json -Raw | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT'
       - uses: actions/setup-dotnet@v6
-        with: { global-json-file: code/global.json }
+        with: { dotnet-version: "${{ steps.sdk.outputs.version }}" }
       # Stage the artifacts in the EXACT dir Publish-GithubRelease.ps1 reads. pub/lib/Common.ps1 resolves
       # $releaseRootDir to pub/bin/<tag> on a prerelease but pub/bin/latest on a STABLE release (the local
       # per-platform publishers write both dirs; CI's artifacts only ever land in one). Deriving it from

@@ -17,7 +17,7 @@ using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib.App;
 
-public class AppAdManager(
+internal class AppAdManager(
     AppAdService adService,
     VpnServiceManager vpnServiceManager,
     IDeviceUiProvider uiProvider,
@@ -216,7 +216,6 @@ public class AppAdManager(
 
         return Task.FromResult(isUnallowedPrivateDns);
     }
-
 
     // ReSharper disable once UnusedMember.Local
     private async Task<bool> IsAdBlockerByCheckDnsRequest(Exception ex, CancellationToken cancellationToken)

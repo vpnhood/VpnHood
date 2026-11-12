@@ -18,22 +18,55 @@ using VpnHood.AppLib.App.WebHosting;
 
 namespace VpnHood.AppLib.App;
 
-// The app id, its name and the storage path come from the platform's context (AppInitParams),
-// never from a default here: a platform that settled them after the options were built would be
-// too late for the providers the head made with them. None can be set after, either: a desktop
-// platform has used the id and the path - its lock, its files - before it calls the factory, and
-// its host uses the name where no factory runs.
+/// <summary>
+/// Provides the options a head builds the app with (<see cref="VpnHoodApp.Init"/>): who the app is, what it offers,
+/// the providers it works through, and how it behaves.
+/// </summary>
+/// <param name="context">
+/// What the platform has settled before the head builds the options: the app's ID, name and version, and its
+/// storage.
+/// </param>
+/// <param name="isDebugMode">
+/// <see langword="true"/> for a Debug build, which logs at the debug level and never anonymously, and reports to no
+/// tracker; by default, it also adds <c>_dbg</c> to its adapter's name and takes port 9091 for its web host, so it runs
+/// beside an installed release.
+/// </param>
+/// <remarks>
+/// The app's ID, name, version and storage come from <paramref name="context"/> and cannot be set here: a desktop
+/// platform has used the ID and the storage, for its single-instance lock and its files, before it builds the
+/// options.
+/// </remarks>
 public class AppOptions(AppOptionsContext context, bool isDebugMode)
 {
+    /// <summary>Gets the app's ID on the device (<see cref="AppOptionsContext.AppId"/>).</summary>
     public string AppId => context.AppId;
+
+    /// <summary>Gets a value indicating whether this is a Debug build.</summary>
     public bool IsDebugMode => isDebugMode;
 
     // Tests run many concurrent apps in one process, so they opt out of the singleton
     // registration; production keeps the single-instance guarantee and VpnHoodApp.Instance.
     internal bool IsSingleton { get; set; } = true;
+
+    /// <summary>
+    /// Gets the folder that holds the settings and the VPN profiles (<see cref="AppOptionsContext.StoragePath"/>).
+    /// </summary>
     public string StorageFolderPath => context.StoragePath;
+
+    /// <summary>
+    /// Gets the folder for what must not travel with a backup: the sign-in session, the log and the caches
+    /// (<see cref="AppOptionsContext.NoBackupStoragePath"/>).
+    /// </summary>
     public string NoBackupStorageFolderPath => context.NoBackupStoragePath;
+
+    /// <summary>
+    /// Gets the storage over <see cref="StorageFolderPath"/> (<see cref="AppOptionsContext.Storage"/>).
+    /// </summary>
     public Storage Storage => context.Storage;
+
+    /// <summary>
+    /// Gets the storage over <see cref="NoBackupStorageFolderPath"/> (<see cref="AppOptionsContext.NoBackupStorage"/>).
+    /// </summary>
     public Storage NoBackupStorage => context.NoBackupStorage;
 
     // tvOS empties the VPN service's data folder - in the App Group's Caches, the only folder there an app
@@ -41,166 +74,296 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     // storage too (ProxyEndPointCopy). Tests set it to see that work off a TV.
     internal bool IsVpnServiceDataPurgeable { get; set; } = OperatingSystem.IsTvOS();
 
-    // Transport tuning handed to the client untouched. Its timeouts default themselves; the buffer
-    // and count knobs stay null so each core component applies its own default at first use.
-    // Starts at the preset for this platform, so a memory-capped head is safe without opting in.
+    /// <summary>
+    /// Gets or sets the transport's tuning, which the app hands to the VPN client as it is. The default is this
+    /// platform's preset (<see cref="ClientTransportOptions.ForCurrentPlatform"/>), a limited one on iOS and tvOS.
+    /// </summary>
     public ClientTransportOptions Transport { get; set; } = ClientTransportOptions.ForCurrentPlatform();
+
+    /// <summary>
+    /// Gets or sets how the app looks for its updates, or <see langword="null"/> for an app that does not.
+    /// </summary>
     public AppUpdaterOptions? UpdaterOptions { get; set; }
-    // What the ENGINE reads of a head's identity. The window's look is not among it: the UI paints the
-    // window and the chrome around it in its own colours (UiTheme names its palette), and the tray
-    // draws the head's own icon, from its build.
+
+    /// <summary>Gets the name people see (<see cref="AppOptionsContext.AppName"/>).</summary>
     public string AppName => context.AppName;
+
+    /// <summary>Gets the app's version (<see cref="AppOptionsContext.AppVersion"/>).</summary>
     public Version AppVersion => context.AppVersion;
 
-    // The name without spaces, which the release files, a desktop executable and its service, and
-    // the VPN adapter are called by: the build's (AppConstants.PackageTitle).
+    /// <summary>
+    /// Gets the app's name without spaces, which its release files, a desktop executable and its service, and the VPN
+    /// adapter are named by.
+    /// </summary>
     public required string PackageTitle { get; init; }
 
-    // Whose app this is: the maker's name, for the words that name it - {companyName} in a consent
-    // summary or any content document - as AppName is {appName}: the Company the build states
-    // (AppConstants.CompanyName).
+    /// <summary>
+    /// Gets the maker's name, which the app's words put in place of <c>{companyName}</c>, as they put
+    /// <see cref="AppName"/> in place of <c>{appName}</c>.
+    /// </summary>
     public required string CompanyName { get; init; }
 
-    // The VPN adapter's name where the OS shows one: a Windows adapter, a Linux interface. Null is
-    // the package title, with _dbg in a Debug build (AppUtils.GetAdapterName).
+    /// <summary>
+    /// Gets or sets the VPN adapter's name where the system shows one, a Windows adapter or a Linux interface, or
+    /// <see langword="null"/> for <see cref="PackageTitle"/>, with <c>_dbg</c> in a Debug build.
+    /// </summary>
     public string? AdapterName { get; set; }
 
-    // The ~14 MB IP-location db the head ships, wherever its platform placed it. Opened only when a
-    // country split or a location lookup actually runs, never at startup, and opened afresh each
-    // time - the readers dispose what they are given. Null means the head shipped no database.
+    /// <summary>
+    /// Gets or sets the IP-location database the head ships, a zip, or <see langword="null"/> for none, and then the
+    /// app offers no split by country and looks up no location.
+    /// </summary>
+    /// <remarks>
+    /// The app opens it when it builds a split by country or looks a location up, as the reconfigure at its start may
+    /// do.
+    /// </remarks>
     public IAsset? IpLocationZipAsset { get; set; }
 
-    // The files the app's UI draws from - pictures, fonts, words - if the head has any: the asset
-    // package's zips, wherever its platform placed them. The app extracts each and shares ONE
-    // provider over all of them: the web host serves it at /assets/ to a paired phone's page, and
-    // the in-process UI reads it directly. Empty for a head whose UI brings nothing of its own.
-    // Searched in the order given, and the first zip that has the file wins - so a head that ships
-    // a zip of its own BEFORE the UI's replaces single files of it: a fork's logo, its consent
-    // summary, a picture, without a UI build. Ours name one, the UI's store.
+    /// <summary>
+    /// Gets or sets the zips of the files the app's UI draws from, such as pictures, fonts and words; empty for a UI
+    /// that brings none of its own. The default is empty.
+    /// </summary>
+    /// <remarks>
+    /// The app unpacks each into its device-only storage and reads them as one store
+    /// (<see cref="VpnHoodApp.UiAssetProvider"/>), which its web host serves to a paired phone too. A file is taken
+    /// from the first zip that has it, so a zip of the head's own placed before the UI's replaces single files of it,
+    /// such as a logo, without a UI build.
+    /// </remarks>
     public IReadOnlyList<IAsset> UiZipAssets { get; set; } = [];
 
-    // The page the web host serves - the UI's browser build - as the zip the head's
-    // platform placed beside it, wherever that is; the app extracts it as it does the UI's. Carried
-    // here rather than configured on the factory, so both of the host's files travel one path and
-    // are named once; the app itself never reads it. Required by a head that sets WebHostFactory.
+    /// <summary>
+    /// Gets or sets the page the web host serves, the UI's browser build, as a zip, or <see langword="null"/> for none.
+    /// A head that sets <see cref="WebHostFactory"/> must set it too.
+    /// </summary>
     public IAsset? WebRootZipAsset { get; set; }
 
-    // The look, as the UI's store carries it: "blue" or "violet" - the theme's own name, never a
-    // product's, since what a product IS is the features above. It picks the palette the UI draws
-    // and themes/<theme>/ in the store for the OS chrome.
+    /// <summary>
+    /// Gets or sets the look's name in the UI's store, such as <c>blue</c> or <c>violet</c>, which picks the palette
+    /// the UI draws with and the store's <c>themes/</c> folder of the same name. The default is <c>blue</c>.
+    /// </summary>
     public string UiTheme { get; set; } = "blue";
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a person may add an access key in the app
+    /// (<see cref="AppDescriptor.IsAddAccessKeySupported"/>). The default is <see langword="true"/>.
+    /// </summary>
     public bool IsAddAccessKeySupported { get; set; } = true;
 
-    // This build's premium tier, or null when the product has none (the CLIENT apps): the app then
-    // runs as the FULL app — every feature on, nothing sold, no promotion — however the server's
-    // client policies tempt it. See AppPremiumOptions for the per-member rules.
+    /// <summary>
+    /// Gets or sets this build's premium tier, or <see langword="null"/> for a product that has none, which then runs
+    /// as the full app: every feature allowed, with no tier to sell.
+    /// </summary>
     public AppPremiumOptions? Premium { get; set; }
+
+    /// <summary>
+    /// Gets or sets the access keys the app is built with. The default is none.
+    /// </summary>
+    /// <remarks>
+    /// At its start the app adds each as a built-in VPN profile, which the person cannot overwrite by importing its
+    /// key, and removes the built-in profiles of keys no longer listed. The first is selected when no profile is.
+    /// </remarks>
     public string[] AccessKeys { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets what the app asks of the device's own UI, such as notifications, Quick Launch and the system bars,
+    /// or <see langword="null"/> for a <see cref="NullDeviceUiProvider"/>, which supports none of it but takes a web
+    /// browser as present.
+    /// </summary>
     public IDeviceUiProvider? DeviceUiProvider { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the app reads and sets its language, or <see langword="null"/> for the app's own, which keeps
+    /// it in the settings.
+    /// </summary>
     public IAppCultureProvider? CultureProvider { get; set; }
+
+    /// <summary>
+    /// Gets or sets the account backend, and its store through <see cref="IAccountProvider.Billing"/>, or
+    /// <see langword="null"/> for an app with no accounts.
+    /// </summary>
     public IAccountProvider? AccountProvider { get; set; }
+
+    /// <summary>
+    /// Gets or sets the store's in-app review, or <see langword="null"/> for none, and then the app never asks for a
+    /// review.
+    /// </summary>
     public IAppUserReviewProvider? UserReviewProvider { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ad networks the app shows ads from, tried in this order. The default is none, and so is the
+    /// value an engine without ads (<see cref="VpnEngineFeatures.Ads"/>) leaves the app with.
+    /// </summary>
     public IReadOnlyList<AppAdProviderItem> AdProviderItems { get; set; } = [];
-    // The trackers the app and its VPN service report through, one from each factory (see
-    // ITrackerFactory): none by default, so a head that means to report names its own, such as
-    // Ga4TrackerFactory with its id. The app decides when they report, and a Debug build makes none.
+
+    /// <summary>
+    /// Gets or sets the factories of the trackers the app and its VPN service report through, one tracker from each.
+    /// The default is none.
+    /// </summary>
+    /// <remarks>The app decides when they report, and a Debug build makes none.</remarks>
     public IReadOnlyList<ITrackerFactory> TrackerFactories { get; set; } = [];
 
-    // The VPN engine this head bundles, as it reports itself (VpnEngineInfo): the contract versions it speaks
-    // and the optional features it has. The app writes the options in a version both speak, and offers only
-    // what the engine has, before the engine ever runs. This library's own engine by default; a head that
-    // bundles another engine names that one's report.
+    /// <summary>
+    /// Gets or sets the VPN engine this head bundles, as it reports itself: the app writes the options in a version
+    /// both speak, and offers only what the engine has. The default is this library's engine.
+    /// </summary>
     public VpnEngineInfo VpnEngineInfo { get; set; } = VpnEngineInfo.VpnHoodEngine;
 
-    // What a paired phone loads, built on the app itself - so the head
-    // hands in a factory rather than an instance. Null means this head runs no web host, and
-    // AppDescriptor.IsRemoteAccessSupported says so before a UI offers the pairing screen.
+    /// <summary>
+    /// Gets or sets how the app makes its web hosts, the one this device loads its UI from and the one a phone pairs
+    /// with, or <see langword="null"/> for an app with neither, which then supports no remote access
+    /// (<see cref="AppDescriptor.IsRemoteAccessSupported"/>).
+    /// </summary>
     public IAppWebHostFactory? WebHostFactory { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value the app does not read. The default is <see langword="false"/> in a Debug build and
+    /// <see langword="null"/> otherwise.
+    /// </summary>
+    /// <remarks>
+    /// Whether the log hides addresses comes from <see cref="LogServiceOptions"/>'s
+    /// <see cref="VpnHood.Net.Toolkit.Logging.LogServiceOptions.LogAnonymous"/> and the person's
+    /// <see cref="VpnHood.AppLib.Api.Settings.UserSettings.LogAnonymous"/>: anonymous where either is on, and never in
+    /// a Debug build.
+    /// </remarks>
     public bool? LogAnonymous { get; set; } =
-        isDebugMode ? false : null; // it follows user's settings if it set to null
+        isDebugMode ? false : null;
 
-    // The whole-connect deadline for the app (tripled when diagnosing) - not the per-TCP connect
-    // timeout, which is Transport.TcpConnectTimeout.
+    /// <summary>
+    /// Gets or sets how long a whole connect may take, three times as long when it diagnoses; not a single TCP
+    /// connect's, which is <see cref="Transport"/>'s. The default is four minutes.
+    /// </summary>
+    /// <remarks>
+    /// While a debugger is attached, <see cref="VhUtils.DebuggerTimeout"/> takes its place where it is set.
+    /// </remarks>
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromMinutes(4).WhenNoDebugger();
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a connect that fails checks the network on its own, so an error that
+    /// comes from no internet says so. The default is <see langword="true"/>.
+    /// </summary>
+    /// <remarks>Not after a cancel, a server's refusal or a connect its caller tries again.</remarks>
     public bool AutoDiagnose { get; set; } = true;
+
+    /// <summary>Gets or sets how the app loads and shows its ads.</summary>
     public AppAdOptions AdOptions { get; set; } = new();
+
+    /// <summary>Gets or sets how always on tries again after a failure.</summary>
     public AppAlwaysOnOptions AlwaysOnOptions { get; set; } = new();
 
-    // The installer's script that lifts the kill switch's block with neither the service nor the app's exe: a
-    // person's way out when the app cannot run at all, so they are never stuck behind the block.
-    // Its menu entry, the command line and the uninstallers run it too. Set by the Linux platform, which knows its
-    // install, for the Kill Switch page to print as a command; Windows' page names the Start menu's entry instead.
-    // Null outside an install.
+    /// <summary>
+    /// Gets or sets the path of the installer's script that lifts the kill switch's block with neither the service nor
+    /// the app running, which the Kill Switch page prints as a command; <see langword="null"/> outside an install. The
+    /// Linux platform sets it.
+    /// </summary>
     public string? KillSwitchOffScriptPath { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the trackers may get the availability of each server endpoint the client
+    /// checks (<see cref="ClientOptions.AllowEndPointTracker"/>), where the person allows usage data. The default is
+    /// <see langword="false"/>.
+    /// </summary>
     public bool AllowEndPointTracker { get; set; }
+
+    /// <summary>
+    /// Gets or sets the device's own ID, which the client ID is made from, or <see langword="null"/> for the install's
+    /// own random ID.
+    /// </summary>
     public string? DeviceId { get; set; }
-    public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically
+
+    /// <summary>
+    /// Gets or sets how often the app reads the VPN service's state in the background, for a head that does not read
+    /// <see cref="VpnHoodApp.State"/> often, or <see langword="null"/> for no reading beyond the first.
+    /// </summary>
+    public TimeSpan? EventWatcherInterval { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether disposing the app with <see cref="VpnHoodApp.DisposeAsync"/> disconnects
+    /// the VPN; <see cref="VpnHood.Net.Toolkit.Utils.Singleton{T}.Dispose()"/> does not. The default is
+    /// <see langword="false"/>, which leaves the VPN service connected.
+    /// </summary>
     public bool DisconnectOnDispose { get; set; }
 
+    /// <summary>
+    /// Gets or sets the log's options. A Debug build logs at the debug level at least, and the person's debug commands
+    /// may lower the level further.
+    /// </summary>
     public LogServiceOptions LogServiceOptions { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the person may choose how the client picks the server's endpoints, where
+    /// the engine has it too (<see cref="AppDescriptor.AllowEndPointStrategy"/>). The default is
+    /// <see langword="true"/>.
+    /// </summary>
     public bool AllowEndPointStrategy { get; set; } = true;
-    // JSON the head hands the UI, uninterpreted: whatever of the product's own settings a UI of its own
-    // reads, straight out of its appsettings. JsonElement, not object - the contract is serialized
-    // through a source-generated context on trimmed heads, and "object" means "whatever the head
-    // happened to put here", which is how one head ended up passing a JsonObject and another a
-    // JsonElement for the same field.
+
+    /// <summary>
+    /// Gets or sets JSON the head hands a UI of its own, which the app does not read
+    /// (<see cref="AppDescriptor.CustomData"/>), or <see langword="null"/>.
+    /// </summary>
     public JsonElement? CustomData { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the app asks for a review when the server recommends it during a session
+    /// that ended well, where the app has a review provider. The default is <see langword="false"/>.
+    /// </summary>
     public bool AllowRecommendUserReviewByServer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address of the settings the app reads from the web at each start, such as its promotion, or
+    /// <see langword="null"/> for none.
+    /// </summary>
     public Uri? RemoteSettingsUrl { get; set; }
 
-    // The pages this build links to (AppLinks): its legal documents and the menu's links. Every head
-    // fills them in from its product's appsettings (AppConfigs.Links), exactly like the GA4 id and
-    // RemoteSettingsUrl above, so a fork points at its own pages without editing code. The App
-    // Store heads are the one exception: they set TermsOfUse to Apple's standard EULA, the agreement
-    // actually governing a purchase made there while no custom EULA is registered with Apple.
-    // Keep this the only place a link is set: a second source would have to be resolved against this
-    // one, and the symptom of getting that wrong is the wrong EULA on a paywall, found by a store
-    // rejection rather than by a test.
+    /// <summary>
+    /// Gets or sets the pages this build links to: its legal documents and the menu's links.
+    /// </summary>
+    /// <remarks>
+    /// Our heads fill them in from their product's settings (<see cref="VpnHood.AppLib.App.Utils.AppConfigs.Links"/>),
+    /// so a fork points at its own pages without changing code; the App Store heads set the terms of use to Apple's
+    /// standard licence agreement.
+    /// </remarks>
     public AppLinks Links { get; set; } = new();
 
-    // The menu's "Powered by VpnHood! ENGINE", the engine's credit: every app shows it unless its
-    // settings turn it off (AppConfigs.ShowPoweredBy).
+    /// <summary>
+    /// Gets or sets a value indicating whether the menu shows the engine's credit, Powered by VpnHood! ENGINE. The
+    /// default is <see langword="true"/>.
+    /// </summary>
     public bool ShowPoweredBy { get; set; } = true;
 
-    // The two things the UI shows that carry the product's own word, named by the head as the links
-    // above are, and neither the look's (UiTheme) to decide: a fork keeps our violet under its own
-    // name and its own promises.
-    //
-    // Both address the UI's store, and the suffix says how completely. PATH is the whole thing, the
-    // string a provider takes ("images/logo-connect.png"), so a fork may keep its logo
-    // anywhere in the store. NAME is the part the head chooses ("privacy-consent-connect") and the
-    // UI completes: content/<lang>/<name>.md, because the consent summary is one asset per language
-    // and a language never translated has to fall back to English.
-    //
-    // Required here, and stated once per product by its options builder rather than by each head: a
-    // connect head that forgot would show the client's promises on a consent screen, which no test
-    // finds.
+    /// <summary>
+    /// Gets the path of the product's logo in the UI's store, such as <c>images/logo-connect.png</c>.
+    /// </summary>
     public required string LogoAssetPath { get; init; }
+
+    /// <summary>
+    /// Gets the name of the product's consent summary in the UI's store, such as <c>privacy-consent-connect</c>, which
+    /// the UI reads as <c>content/</c><i>language</i><c>/</c><i>name</i><c>.md</c>, in English where a language has
+    /// none.
+    /// </summary>
     public required string PrivacyConsentAssetName { get; init; }
 
-    // Whether this build must have its licence agreement accepted before the app can be used. A
-    // DISTRIBUTION decision, not a product one: a website download passed through nothing that put
-    // our terms in front of the user, while a store build's user already accepted that store's own
-    // agreement to install it. The screen is that channel's substitute for a store, not an extra
-    // requirement on top of one - it is the links above that App Review 3.1.2 and Play's User Data
-    // policy actually ask for.
-    // On by default and opted OUT of by the Google Play heads, deliberately that way round: a head
-    // added later that forgets the line shows one screen too many, which is noise, rather than
-    // skipping a disclosure, which is a gap. The App Store heads keep it: App Review 5.4 wants a VPN
-    // app to say what it collects on a screen before first use, which the store's own does not.
-    // The user's answer is UserSettings.IsLicenseAccepted, asked once.
+    /// <summary>
+    /// Gets or sets a value indicating whether the person must accept the licence agreement before using the app, once.
+    /// The default is <see langword="true"/>.
+    /// </summary>
+    /// <remarks>
+    /// A matter of distribution: a download from a website passed through nothing that showed the terms, while a
+    /// store's install did. The Google Play heads turn it off; the App Store heads keep it, as App Review wants a VPN
+    /// app to say what it collects before first use. The answer is
+    /// <see cref="VpnHood.AppLib.Api.Settings.UserSettings.IsLicenseAccepted"/>.
+    /// </remarks>
     public bool IsLicenseAgreementRequired { get; set; } = true;
 
-    // Whether usage data waits for the person's own tick in every region: the first-run page asks with the box
-    // unticked, as it does by default only where the law wants a yes first (AppTrackerService). A DISTRIBUTION
-    // decision: a store whose rules want an opt-in in the app before personal information goes to a third party,
-    // as the Microsoft Store's Policies 10.5.2 read. Our heads leave it off, the Store's too, as their privacy
-    // policy says.
+    /// <summary>
+    /// Gets or sets a value indicating whether usage data waits for the person's own yes in every region, as it does
+    /// where the law wants one: the first-run page then asks with the box unticked everywhere. The default is
+    /// <see langword="false"/>.
+    /// </summary>
     public bool IsAnonymousTrackerOptInRequired { get; set; }
 
-    // The web host's port, which a paired phone's address and a UI developer's dev server name; two
-    // apps on one device need two. Null takes 9090, and 9091 in a Debug build, so a Debug build runs
-    // beside the installed app with no settings at all.
+    /// <summary>
+    /// Gets or sets the web host's port, which a paired phone's address names, or <see langword="null"/> for 9090, and
+    /// 9091 in a Debug build, so it runs beside the installed app.
+    /// </summary>
     public int? WebHostPort { get; set; }
 }

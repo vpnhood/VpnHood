@@ -6,6 +6,7 @@ using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppLib.App.Utils;
 
+/// <summary>Provides helpers for a head's options.</summary>
 public static class AppUtils
 {
     internal const string FolderNameAssets = "assets";
@@ -36,14 +37,24 @@ public static class AppUtils
                 .ToArray());
     }
 
-    // The adapter's name, which only a desktop shows to people: the package title, with _dbg in a
-    // Debug build so it never takes over a release's adapter.
+    /// <summary>
+    /// Returns the VPN adapter's name, which only a desktop shows: the package title, with <c>_dbg</c> in a Debug
+    /// build, so a Debug build never takes over a release's adapter.
+    /// </summary>
+    /// <param name="packageTitle">The app's name without spaces (<see cref="AppOptions.PackageTitle"/>).</param>
+    /// <param name="isDebugMode"><see langword="true"/> for a Debug build.</param>
+    /// <returns>The adapter's name.</returns>
     public static string GetAdapterName(string packageTitle, bool isDebugMode)
     {
         return isDebugMode ? $"{packageTitle}_dbg" : packageTitle;
     }
 
-    // the adapter's name as the app takes it from a head's options (VpnHoodAppConfig.AdapterName)
+    /// <summary>
+    /// Returns the VPN adapter's name the app takes from a head's options: <see cref="AppOptions.AdapterName"/>, or
+    /// else the name the package title gives.
+    /// </summary>
+    /// <param name="options">The head's options.</param>
+    /// <returns>The adapter's name.</returns>
     public static string GetAdapterName(AppOptions options)
     {
         return options.AdapterName ?? GetAdapterName(options.PackageTitle, options.IsDebugMode);
@@ -54,7 +65,7 @@ public static class AppUtils
     // (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36 VpnHoodConnect/8.2.854". The model only when
     // asked for: the trackers get it, the server - which logs what it gets, whatever the usage-data
     // switch says - does not.
-    public static string BuildUserAgent(DeviceUserAgentInfo device, string packageTitle, Version version,
+    internal static string BuildUserAgent(DeviceUserAgentInfo device, string packageTitle, Version version,
         bool includeModel)
     {
         var model = includeModel ? ToUserAgentComment(device.Model) : "";
@@ -72,7 +83,7 @@ public static class AppUtils
 
     // Mac Catalyst is checked BEFORE iOS on purpose: OperatingSystem.IsIOS() reports true for Catalyst
     // too, so testing iOS first would label a Mac build as an iPhone and hide/show the wrong content.
-    public static AppOsType GetOsType()
+    internal static AppOsType GetOsType()
     {
         if (OperatingSystem.IsAndroid()) return AppOsType.Android;
         if (OperatingSystem.IsMacCatalyst()) return AppOsType.MacOs;
@@ -87,7 +98,7 @@ public static class AppUtils
     // A stable per-install id: MD5 over "appId:deviceId", read as a Guid. MD5 is not used as a
     // security primitive here — it is the shape that keeps existing installs on the id they already
     // report, so changing it would orphan every device's history.
-    public static string CreateClientId(string appId, string deviceId)
+    internal static string CreateClientId(string appId, string deviceId)
     {
         // Convert the combined string to bytes
         var uid = $"{appId}:{deviceId}";
@@ -102,9 +113,4 @@ public static class AppUtils
         return guid.ToString();
     }
 
-    // Cheap change signature over files (modified time + length; no content read) — one label:ticks:length
-    // entry per file, a missing file counts as "none". Callers store it (e.g. as a split db's
-    // source_signature meta) to detect stale derived data without parsing the sources.
-    // Kept human-readable on purpose: the stored signature then shows exactly which file it was built
-    // from, so a did-it-rebuild question is answered by inspection.
 }

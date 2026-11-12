@@ -3,7 +3,7 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.AppLib.App.Utils;
 
-public static class IpRangeTextFileParser
+internal static class IpRangeTextFileParser
 {
     public static IpRange[]? Parse(string? text)
     {
@@ -28,7 +28,6 @@ public static class IpRangeTextFileParser
         var ipRanges = Parse(text);
         return ipRanges is null || ipRanges.Length == 0 ? defaultValue : ipRanges;
     }
-
 
     public static IpRange[] ParseIncludes(string? text)
     {

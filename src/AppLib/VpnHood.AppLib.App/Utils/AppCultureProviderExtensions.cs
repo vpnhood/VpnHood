@@ -3,7 +3,7 @@ using VpnHood.AppLib.Abstractions;
 
 namespace VpnHood.AppLib.App.Utils;
 
-public static class AppCultureProviderExtensions
+internal static class AppCultureProviderExtensions
 {
     public static CultureInfo GetBestCultureInfo(this IAppCultureProvider cultureProvider)
     {

@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib.App;
 
-public static class AppConnectionStateExtensions
+internal static class AppConnectionStateExtensions
 {
     extension(AppConnectionState connectionState)
     {

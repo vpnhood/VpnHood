@@ -10,7 +10,7 @@ using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib.App.Services.Ads;
 
-public class AppAdService(
+internal class AppAdService(
     IReadOnlyList<AppAdProviderItem> adProviderItems,
     TimeSpan loadAdTimeout,
     TimeSpan loadAdPostDelay,

@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.App.Settings;
 // What the split actually does, as against what it is set to: a setting the build does not sell,
 // or this person has not paid for, is not in effect, and the UI is told so rather than being
 // silently ignored. The shape is the contract's; the resolution is the app's.
-public static class SplitTunnelingSettingsExtensions
+internal static class SplitTunnelingSettingsExtensions
 {
     public static EffectiveSplitTunnelingSettings ToEffective(this SplitTunnelingSettings settings,
         IPremiumFeatureChecker premiumFeatureChecker)

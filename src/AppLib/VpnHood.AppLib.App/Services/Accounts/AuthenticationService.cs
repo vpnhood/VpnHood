@@ -6,7 +6,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.App.Services.Accounts;
 
-public class AuthenticationService(
+internal class AuthenticationService(
     AccountService accountService,
     IAuthenticationProvider accountProvider)
     : IDisposable

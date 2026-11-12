@@ -8,7 +8,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Diagnosing;
 
-public class Diagnoser
+internal class Diagnoser
 {
     public IPAddress[] TestPingIpAddresses { get; set; } = [
         IPAddressUtil.KidsSafeCloudflareDnsServers.First(x => x.IsV4),

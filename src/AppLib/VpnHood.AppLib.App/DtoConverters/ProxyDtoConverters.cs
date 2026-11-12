@@ -10,7 +10,7 @@ namespace VpnHood.AppLib.App.DtoConverters;
 // contract holds no behaviour and a second implementation of the rating rule in a UI would drift
 // from the one the engine actually routes by. Every enum maps with no default arm on purpose: a
 // protocol or a grade added to the engine breaks this file rather than reaching a UI as Unknown.
-public static class ProxyDtoConverters
+internal static class ProxyDtoConverters
 {
     public static ProxyEndPoint ToAppDto(this CoreProxy.ProxyEndPoint endPoint)
     {

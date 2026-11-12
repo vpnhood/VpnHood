@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.App.Settings;
 // anything. Built exclusively by SplitTunnelingSettings.ToEffective(IPremiumFeatureChecker).
 // AppMode/Apps and UseLocalNetwork survive a disabled toggle: neither can expose the public IP of
 // the traffic that stays in the tunnel, so neither is sacrificed for the guarantee.
-public class EffectiveSplitTunnelingSettings
+internal class EffectiveSplitTunnelingSettings
 {
     public required bool Enabled { get; init; }
     public required SplitAppMode AppMode { get; init; }

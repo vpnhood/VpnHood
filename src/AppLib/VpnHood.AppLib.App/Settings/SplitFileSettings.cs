@@ -5,7 +5,7 @@ namespace VpnHood.AppLib.App.Settings;
 // List settings core: one text file per list in the storage. A missing list reads as empty and signs as
 // missing until its first write, so a change signature taken before a build describes what the build
 // reads. Writes validate first: an unparsable list is never kept.
-public abstract class SplitFileSettings(Storage storage)
+internal abstract class SplitFileSettings(Storage storage)
 {
     // One access at a time: a reconfigure reads the lists, connected or not, while the person may be
     // saving them, and a read and a write that meet on the open file fail one of them.

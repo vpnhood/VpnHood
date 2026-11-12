@@ -9,7 +9,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services.Accounts;
 
-public class BillingService(
+internal class BillingService(
     AccountService accountService,
     AppBilling billing)
     : IDisposable

@@ -3,7 +3,7 @@ using VpnHood.AppLib.Abstractions.Ads;
 
 namespace VpnHood.AppLib.App;
 
-public static class AppTrackerBuilder
+internal static class AppTrackerBuilder
 {
     private static TrackEvent BuildAdFailed(string eventName, string? adNetwork,
         string errorMessage, string? countryCode, bool isPreload)

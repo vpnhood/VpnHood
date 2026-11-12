@@ -54,16 +54,27 @@ using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.App;
 
+/// <summary>
+/// Represents the VPN app: its settings and VPN profiles, its connection through the device's VPN service, its account,
+/// ads and updates, and the API a UI reads it through (<see cref="Api"/>).
+/// </summary>
+/// <remarks>
+/// A head makes it once, through its platform's <c>Init</c>, which calls <see cref="Init"/>, and reaches it as
+/// <see cref="Singleton{T}.Instance"/>.
+/// </remarks>
 public class VpnHoodApp : Singleton<VpnHoodApp>,
     IPremiumFeatureChecker, IDisposable, IAsyncDisposable
 {
-    // In the device-only storage folder, a desktop's storage folder; public for a reader that holds no
-    // app ("service log" on Windows).
+    /// <summary>
+    /// The name of the app's log file in its device-only storage folder
+    /// (<see cref="AppOptions.NoBackupStorageFolderPath"/>), for a reader that holds no app.
+    /// </summary>
     public const string FileNameLog = "app.log";
 
-    // The two parts of the log the API sends (CopyLogToStream), each under a header of its own, at
-    // which "service log -f" tells them apart.
+    /// <summary>The header above the app's own log in the log the API sends, before the VPN service's.</summary>
     public const string LogAppHeader = "VPN App Log";
+
+    /// <summary>The header above the VPN service's log in the log the API sends.</summary>
     public const string LogVpnServiceHeader = "VPN Service Log";
     internal const string FolderNameProfiles = "profiles";
     internal const string FolderNameAccount = "account";
@@ -99,27 +110,62 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AppKillSwitchService? _killSwitchService;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
-    public string TempFolderPath => Path.Combine(NoBackupStorageFolderPath, FolderNameTemp);
+    internal string TempFolderPath => Path.Combine(NoBackupStorageFolderPath, FolderNameTemp);
+
+    /// <summary>
+    /// Occurs when <see cref="ConnectionState"/> has changed, on a thread pool thread.
+    /// </summary>
     public event EventHandler? ConnectionStateChanged;
-    public event EventHandler? UiHasChanged;
+    internal event EventHandler? UiHasChanged;
+
+    /// <summary>
+    /// Gets a value indicating whether <see cref="ConnectionState"/> is <see cref="AppConnectionState.None"/>, as it is
+    /// while a disconnect finishes in the background too.
+    /// </summary>
     public bool IsIdle => ConnectionState.IsIdle();
+
+    /// <summary>
+    /// Gets the folder that holds the settings and the VPN profiles (<see cref="AppOptions.StorageFolderPath"/>).
+    /// </summary>
     public string StorageFolderPath { get; }
-    public string NoBackupStorageFolderPath { get; }
+
+    /// <summary>
+    /// Gets the folder for what must not travel with a backup (<see cref="AppOptions.NoBackupStorageFolderPath"/>).
+    /// </summary>
+    internal string NoBackupStorageFolderPath { get; }
+
+    /// <summary>Gets the app's settings, which <see cref="AppSettings.Save"/> saves.</summary>
     public AppSettings Settings => SettingsService.Settings;
+
+    /// <summary>Gets the person's settings (<see cref="AppSettings.UserSettings"/>).</summary>
     public UserSettings UserSettings => SettingsService.UserSettings;
+
+    /// <summary>Gets what this build is and offers, as the UI reads it.</summary>
     public AppDescriptor Descriptor { get; }
-    public VpnHoodAppConfig Config { get; }
+    internal VpnHoodAppConfig Config { get; }
+
+    /// <summary>Gets the VPN profiles.</summary>
     public VpnProfileService VpnProfileService { get; }
-    public Diagnoser Diagnoser { get; } = new();
+    internal Diagnoser Diagnoser { get; } = new();
+
+    /// <summary>Gets the app's own words.</summary>
     public AppResources Resources { get; }
 
+    /// <summary>
+    /// Gets the files the app's UI draws from, unpacked from <see cref="AppOptions.UiZipAssets"/>, which the web host
+    /// serves too, or <see langword="null"/> for a head that named none.
+    /// </summary>
     public IAssetProvider? UiAssetProvider { get; }
+
+    /// <summary>Gets the app's services and the providers it works through.</summary>
     public AppServices Services { get; }
+
+    /// <summary>Gets the service that keeps the settings.</summary>
     public AppSettingsService SettingsService { get; }
     // Every caller shares one build, the app's page and a paired browser's alike, until the app returns
     // to the foreground, the only moment the user could have installed or removed an app; a build that
     // failed is tried again. A caller's cancel ends only its own wait.
-    public Task<IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>> GetInstalledApps(
+    internal Task<IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>> GetInstalledApps(
         CancellationToken cancellationToken)
     {
         return GetInstalledAppsBuild().WaitAsync(cancellationToken);
@@ -135,17 +181,34 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public AppAdManager AdManager { get; }
+    internal AppAdManager AdManager { get; }
 
-    // What a UI reads this app through - the same six interfaces a browser reaches over HTTP, here
-    // answered in process with no listener and no JSON. The implementations are internal: a head
-    // holds this object and the contract's interfaces, never their classes.
+    /// <summary>
+    /// Gets the API a UI reads the app through: the six interfaces a browser reaches over HTTP, answered in process.
+    /// </summary>
     public VpnHoodApi Api { get; }
 
-    // The two hosts a head can ask for; null when this head runs no web host at all. Everything about
-    // them - what each is told, when they come up by themselves, what a settings change does to them -
-    // belongs to AppWebHostManager, so this is only the way in.
+    /// <summary>
+    /// Gets the web host this device loads its UI from, made at the first read and not started, or
+    /// <see langword="null"/> for a head with no web host (<see cref="AppOptions.WebHostFactory"/>).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The head set <see cref="AppOptions.WebHostFactory"/> but no <see cref="AppOptions.WebRootZipAsset"/>.
+    /// </exception>
     public IAppWebHost? LocalWebHost => _webHostManager.Local;
+
+    /// <summary>
+    /// Gets the web host a phone pairs with, made at the first read, or <see langword="null"/> for a head with no web
+    /// host (<see cref="AppOptions.WebHostFactory"/>).
+    /// </summary>
+    /// <remarks>
+    /// In a Debug build, or with the <see cref="DebugCommands.RemoteAccess"/> command, it stays up for the life of the
+    /// process and asks for no pairing; when that changes, as the command is turned on or off outside a Debug build,
+    /// the app replaces the host.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The head set <see cref="AppOptions.WebHostFactory"/> but no <see cref="AppOptions.WebRootZipAsset"/>.
+    /// </exception>
     public IAppWebHost? RemoteWebHost => _webHostManager.Remote;
 
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options,
@@ -523,7 +586,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // to show its "reconnect to apply" bar. It survives an app restart (the VpnService session may
     // outlive the app process) and clears on the next connect or disconnect. No-op while idle — a
     // change made while disconnected simply applies at the next connect.
-    public void SetReconnectRequired()
+    internal void SetReconnectRequired()
     {
         if (ConnectionInfo.IsStarted())
             _appPersistState.IsReconnectRequired = true;
@@ -531,7 +594,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     // The user acknowledged the pending change (dismissed the UI's reconnect bar) — same pattern as
     // ClearLastError. A later connect-only change simply raises the flag again.
-    public void ClearReconnectRequired() => _appPersistState.IsReconnectRequired = false;
+    internal void ClearReconnectRequired() => _appPersistState.IsReconnectRequired = false;
 
     // Live-apply reconfigurable settings to the running session, including the split filters: the dbs
     // are rebuilt (or reused) under signature-versioned names, published through the folder manifests,
@@ -541,7 +604,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // save (ApplySettings), by the split text-file settings' and the VPN profiles' change events (wired
     // in the ctor), and by a connect, again, for one that came while it connected. One at a time, each
     // made from the settings as its turn finds them, so the last one written has the latest.
-    public async Task ReconfigureVpnService(CancellationToken cancellationToken)
+    internal async Task ReconfigureVpnService(CancellationToken cancellationToken)
     {
         _isReconfiguredWhileConnecting = true;
         using var scopeLock = await _reconfigureLock.LockAsync(cancellationToken).Vhc();
@@ -606,10 +669,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = Services.UpdaterService?.TryCheckForUpdate(uiContext, false, CancellationToken.None);
     }
 
-    public VpnProfileInfo? CurrentVpnProfileInfo =>
+    internal VpnProfileInfo? CurrentVpnProfileInfo =>
         VpnProfileService.FindInfo(UserSettings.VpnProfileId ?? Guid.Empty);
 
-    public ApiError? LastError {
+    /// <summary>
+    /// Gets the error the app shows, or <see langword="null"/>: none while the app is not idle; after a diagnose that
+    /// ended with no error, or with <see cref="UserCanceledException"/>, <see cref="NoErrorFoundException"/>'s; else
+    /// the last connect's failure; else the VPN service's last error, unless it was cleared.
+    /// </summary>
+    internal ApiError? LastError {
         get {
             // don't show an error if it is not idle
             if (!IsIdle)
@@ -630,12 +698,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // The state for a caller with no window to measure, whose system bars are then the default.
+    /// <summary>
+    /// Gets the app's state, made at each read, for a caller with no window to measure, whose system bars are then the
+    /// defaults.
+    /// </summary>
     public AppState State => GetState(uiContext: null);
 
     /// <param name="uiContext">The caller's window, whose system bars the state reports; null when it has
     /// none.</param>
-    public AppState GetState(IUiContext? uiContext)
+    internal AppState GetState(IUiContext? uiContext)
     {
         var vpnProfileInfo = CurrentVpnProfileInfo;
         var connectionState = ConnectionState;
@@ -710,11 +781,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return SettingsService.PromotionImageFilePath != null;
     }
 
-    public Task ForceUpdateState(CancellationToken cancellationToken)
+    internal Task ForceUpdateState(CancellationToken cancellationToken)
     {
         return _vpnServiceManager.RefreshState(cancellationToken);
     }
 
+    /// <summary>Gets the connection's state as the app shows it.</summary>
+    /// <remarks>
+    /// It reads <see cref="AppConnectionState.Updating"/> while the app installs its update,
+    /// <see cref="AppConnectionState.Diagnosing"/> while a check of the network runs, and
+    /// <see cref="AppConnectionState.None"/> while a disconnect finishes in the background;
+    /// <see cref="AppConnectionState.Initializing"/> while the split by country or by IP address builds its list, and
+    /// <see cref="AppConnectionState.Connected"/> for the last seconds after an ad closed.
+    /// </remarks>
     public AppConnectionState ConnectionState {
         get {
             var connectionInfo = ConnectionInfo;
@@ -811,6 +890,26 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
     }
 
+    /// <summary>
+    /// Creates the app: it makes the storage folders, opens the log, reads the settings and the VPN profiles, adds the
+    /// built-in access keys, and registers the app as <see cref="Singleton{T}.Instance"/>.
+    /// </summary>
+    /// <param name="device">The device, whose VPN service the app runs.</param>
+    /// <param name="options">The head's options.</param>
+    /// <returns>The app.</returns>
+    /// <exception cref="InvalidOperationException">An app is registered already.</exception>
+    /// <exception cref="FormatException">
+    /// A built-in access key (<see cref="AppOptions.AccessKeys"/>) is not valid.
+    /// </exception>
+    /// <exception cref="NotSupportedException">A built-in access key's version is not supported.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A built-in access key's JSON is not valid.</exception>
+    /// <exception cref="InvalidDataException">A built-in access key's JSON is <c>null</c>.</exception>
+    /// <exception cref="OverflowException">A duration in a built-in access key is out of range.</exception>
+    /// <exception cref="Exception">
+    /// An ad network item has both country lists (<see cref="AppAdProviderItem.IncludeCountryCodes"/>).
+    /// </exception>
+    /// <exception cref="IOException">A storage folder could not be made, or a file of the app's written.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not write the storage folders.</exception>
     public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
@@ -877,7 +976,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         settingsService.Save();
     }
 
-    public void ClearLastError()
+    internal void ClearLastError()
     {
         _appPersistState.LastError = null;
         _appPersistState.LastClearedError = ConnectionInfo.Error;
@@ -907,7 +1006,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return logOptions;
     }
 
-    public async Task<bool> TryConnect(IUiContext? uiContext, ConnectOptions? connectOptions,
+    /// <summary>Connects the VPN as <see cref="Connect"/> does, but returns a value rather than throw.</summary>
+    /// <param name="uiContext">
+    /// The caller's window, which asks the person for the VPN permission and for notifications, or
+    /// <see langword="null"/> when it has none.
+    /// </param>
+    /// <param name="connectOptions">The connect's options, or <see langword="null"/> for the defaults.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is <see langword="true"/> if the VPN connected; otherwise, <see langword="false"/>, a cancel
+    /// included.
+    /// </returns>
+    internal async Task<bool> TryConnect(IUiContext? uiContext, ConnectOptions? connectOptions,
         CancellationToken cancellationToken)
     {
         try {
@@ -919,8 +1029,56 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // uiContext: the caller's window, which asks the person for the VPN permission and for notifications;
-    // null when it has none, and then a missing permission fails and nothing is asked.
+    /// <summary>Connects the VPN, ending a connection under way first.</summary>
+    /// <remarks>
+    /// Unless the app is installing an update, it clears the last error first, and a connect applies every pending
+    /// change of the settings. A failed connect throws the app's error: the server's refusal
+    /// (<see cref="SessionException"/>), the VPN service's failure, an ad the session required that failed, or the
+    /// system's own VPN failure, as where there is no window to ask for the VPN permission. The state keeps it as its
+    /// last error (<see cref="AppState.LastError"/>), but for a refusal while the app installs an update, a connect a
+    /// newer one replaced, and one its caller tries again (<see cref="ConnectOptions.IsRetried"/>). A token canceled
+    /// while the connect runs may come as <see cref="NoInternetException"/>, as the check after the failure finds no
+    /// internet.
+    /// </remarks>
+    /// <param name="uiContext">
+    /// The caller's window, which asks the person for the VPN permission and for notifications, or
+    /// <see langword="null"/> when it has none, and then a missing permission fails and nothing is asked.
+    /// </param>
+    /// <param name="connectOptions">The connect's options, or <see langword="null"/> for the defaults.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the VPN is connected.</returns>
+    /// <exception cref="EndPointDiscoveryException">A diagnosing connect found no endpoint of the server.</exception>
+    /// <exception cref="VpnServiceContractException">
+    /// The app and the VPN engine it bundles share no version of the VPN service's contract.
+    /// </exception>
+    /// <exception cref="ConnectionTimeoutException">
+    /// The connection did not come up in the app's connect time (<see cref="AppOptions.ConnectTimeout"/>).
+    /// </exception>
+    /// <exception cref="TimeoutException">
+    /// The VPN service did not start in time, or the system's VPN permission prompt was not answered.
+    /// </exception>
+    /// <exception cref="PremiumOnlyException">
+    /// Always on is for premium only, and the connect was always on's.
+    /// </exception>
+    /// <exception cref="NoInternetException">
+    /// A check after a failed connect found the device without internet.
+    /// </exception>
+    /// <exception cref="NoStableVpnException">A diagnosing connect found the tunnel not working.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The split by country has no IP location data, or no known country; the client connected with no session; or, on
+    /// a diagnosing connect, the access key has neither endpoints nor a real host name.
+    /// </exception>
+    /// <exception cref="NotExistsException">
+    /// No VPN profile is given and none is selected, or the profile does not exist.
+    /// </exception>
+    /// <exception cref="AppUpdatingException">The app is installing an update.</exception>
+    /// <exception cref="UserCanceledException">
+    /// A disconnect, or a newer connect, ended the connect, or the person refused the system's VPN permission.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, while the connect waited for a disconnect or while it
+    /// connected.
+    /// </exception>
     public async Task Connect(IUiContext? uiContext, ConnectOptions? connectOptions,
         CancellationToken cancellationToken)
     {
@@ -1409,7 +1567,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         SettingsService.Save(); // ApplySettings applies it to AppRegionInfo; VpnProfileService rebuilds its cache on region change
     }
 
-    public bool HasDebugCommand(string command)
+    internal bool HasDebugCommand(string command)
     {
         return HasDebugCommand(UserSettings, command);
     }
@@ -1455,7 +1613,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public CultureInfo SystemUiCulture =>
+    internal CultureInfo SystemUiCulture =>
         _systemUiCulture ??
         new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ??
                         CultureInfo.InstalledUICulture.Name);
@@ -1488,7 +1646,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ApplySettings();
     }
 
-    public void SetUserReview(int rating, string reviewText)
+    internal void SetUserReview(int rating, string reviewText)
     {
         _userReviewRecommended = 0;
         Settings.UserReview = new UserReview {
@@ -1574,8 +1732,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // the app's own disconnect: a failed ad's, a dispose's
-    public Task TryDisconnect() => TryDisconnect(connectNumber: null);
+    /// <summary>
+    /// Disconnects the VPN as the app does by itself, after a failed ad or on its dispose: unlike
+    /// <see cref="Disconnect"/>, it does not stop always on or lift the kill switch's block. A failure is logged, never
+    /// thrown.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    internal Task TryDisconnect() => TryDisconnect(connectNumber: null);
 
     // connectNumber: a connect's own - a new one's before it starts, a failed one's after - which leaves a newer
     // connect alone
@@ -1589,9 +1752,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // A person's disconnect, which also stops always on until a person connects or the service restarts, and is
-    // the one that lifts the kill switch's block, even when the stop failed. Not under the caller's token: a
-    // person's disconnect is finished whoever stops waiting for it.
+    /// <summary>
+    /// Disconnects the VPN as a person does: it also stops always on, until a person connects or the service starts
+    /// again, and lifts this app's kill switch block, even when the stop failed; in lockdown the block stays, by the
+    /// split's settings.
+    /// </summary>
+    /// <remarks>It takes no token: a person's disconnect is finished whoever stops waiting for it.</remarks>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="FormatException">In lockdown, the device's split list of IP ranges is not valid.</exception>
+    /// <exception cref="NotSupportedException">
+    /// In lockdown, Linux has no nftables, or the service is in no cgroup v2 group of its own.
+    /// </exception>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// The system refused the kill switch's change: Linux's <c>nft</c>, or Windows' filtering engine.
+    /// </exception>
     public async Task Disconnect()
     {
         _alwaysOnService.PersonDisconnecting();
@@ -1666,7 +1840,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public async Task CopyLogToStream(Stream destination)
+    internal async Task CopyLogToStream(Stream destination)
     {
         await using var write = new StreamWriter(destination, Encoding.UTF8, bufferSize: -1, leaveOpen: true);
 
@@ -1710,7 +1884,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public async Task<AppPurchaseOptions> GetPurchaseOptions(Guid vpnProfileId, CancellationToken cancellationToken)
+    internal async Task<AppPurchaseOptions> GetPurchaseOptions(Guid vpnProfileId, CancellationToken cancellationToken)
     {
         var profileInfo = VpnProfileService.GetInfo(vpnProfileId);
         var clientPolicy = profileInfo.ClientPolicy;
@@ -1759,7 +1933,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     /// reach the account service — that dependency runs the other way.
     /// </para>
     /// </summary>
-    public async Task<VpnProfileInfo> UpdateVpnProfile(Guid vpnProfileId,
+    internal async Task<VpnProfileInfo> UpdateVpnProfile(Guid vpnProfileId,
         VpnProfileUpdateParams updateParams, CancellationToken cancellationToken)
     {
         VpnProfileService.Update(vpnProfileId, updateParams);
@@ -1772,6 +1946,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return VpnProfileService.GetInfo(vpnProfileId);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Every feature is allowed on a build with no premium tier (<see cref="AppOptions.Premium"/>), and every one its
+    /// tier does not sell; one it sells, only on a premium VPN profile.
+    /// </remarks>
     public bool IsPremiumFeatureAllowed(AppFeature feature)
     {
         // a build with no premium tier IS the full app: every feature is everyone's
@@ -1786,6 +1965,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return CurrentVpnProfileInfo?.IsPremium == true;
     }
 
+    /// <summary>Sets off applying the settings as they stand, as a save does, without saving them.</summary>
     public void UpdateUi()
     {
         ApplySettings();
@@ -1793,6 +1973,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _disposeLock = new();
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It stops always on, disconnects the VPN where <see cref="AppOptions.DisconnectOnDispose"/> says so and the VPN
+    /// can be disconnected, as it cannot while an update installs, lets a reconfigure under way end, then disposes the
+    /// app. A second call waits for the first one's end.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end. One after a quick close returns: that close leaves
@@ -1813,6 +2000,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Dispose();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>A second call does nothing.</remarks>
     protected override void Dispose(bool disposing)
     {
         // the daemon's stop deadline may run it while the graceful close ends with it

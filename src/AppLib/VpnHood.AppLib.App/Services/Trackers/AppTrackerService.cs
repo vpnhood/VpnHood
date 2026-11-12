@@ -9,12 +9,11 @@ using VpnHood.Net.Toolkit.Trackers;
 
 namespace VpnHood.AppLib.App.Services.Trackers;
 
-// The app's trackers and when they report: one from each of the head's factories, none in a Debug
-// build, switched by the first-run terms where the head asks for them and by the usage-data switch,
-// which counts only once answered where the law wants a yes first - the app's own question, not
-// Google's consent mode, which would steer Firebase alone and not the servers' reports, whose
-// switch rides in the hello. The VPN service makes its own from the same factories, with what this
-// says it may.
+/// <summary>
+/// Provides the app's trackers and decides when they report: never in a Debug build, and only as the first-run terms
+/// and the usage-data switch allow; in the European Economic Area, the UK and Switzerland, and everywhere on a build
+/// that asks for an opt-in, only once the person said yes.
+/// </summary>
 public class AppTrackerService
 {
     // Where the law wants a yes before usage data - the EEA, the UK and Switzerland - as the app's region
@@ -36,16 +35,16 @@ public class AppTrackerService
     private readonly string _clientId;
     private readonly Lock _firstLaunchLock = new();
 
-    public ITracker Tracker { get; }
+    internal ITracker Tracker { get; }
 
     // whether this build collects anything: a tracker that is not a null one
-    public bool IsSupported { get; }
+    internal bool IsSupported { get; }
 
     // the factories as the VPN service makes them again, in its own process, and the user agent they send
-    public IReadOnlyList<TrackerFactoryInfo> TrackerFactoryInfos { get; }
-    public string UserAgent { get; }
+    internal IReadOnlyList<TrackerFactoryInfo> TrackerFactoryInfos { get; }
+    internal string UserAgent { get; }
 
-    public AppTrackerService(AppSettingsService settingsService, AppTrackerServiceParams serviceParams)
+    internal AppTrackerService(AppSettingsService settingsService, AppTrackerServiceParams serviceParams)
     {
         _settingsService = settingsService;
         _isLicenseAgreementRequired = serviceParams.IsLicenseAgreementRequired;
@@ -69,10 +68,10 @@ public class AppTrackerService
 
     // What the VPN service is told: the same, and off where this build has no tracker (iOS, a Debug
     // build), which keeps the access manager's own hit off there too.
-    public bool IsVpnServiceTrackerAllowed => IsSupported && IsAllowed;
+    internal bool IsVpnServiceTrackerAllowed => IsSupported && IsAllowed;
 
     // the first-run page must ask before this build reports anything
-    public bool IsPromptRequired => IsSupported && IsPromptPending;
+    internal bool IsPromptRequired => IsSupported && IsPromptPending;
 
     private bool IsPromptPending =>
         !_settingsService.UserSettings.IsAnonymousTrackerPrompted &&
@@ -91,7 +90,7 @@ public class AppTrackerService
     }
 
     // At each settings save; a tracker turning on sends the first launch, if it is still due.
-    public void ApplySettings()
+    internal void ApplySettings()
     {
         var wasEnabled = Tracker.IsEnabled;
         Tracker.IsEnabled = IsAllowed;
@@ -102,7 +101,7 @@ public class AppTrackerService
     // The first launch, with the locale-based country, once and only while the tracker is on. The flag is
     // taken before the send, so the start and a switch turning on cannot both send it; a send that fails
     // is not tried again.
-    public async Task TrackFirstLaunch(CancellationToken cancellationToken)
+    internal async Task TrackFirstLaunch(CancellationToken cancellationToken)
     {
         lock (_firstLaunchLock) {
             if (_settingsService.Settings.IsStartupTrackerSent || !Tracker.IsEnabled)

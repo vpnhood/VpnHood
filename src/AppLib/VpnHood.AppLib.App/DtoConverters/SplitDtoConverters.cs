@@ -7,7 +7,7 @@ namespace VpnHood.AppLib.App.DtoConverters;
 // The split vocabulary in both directions. These are saved settings as well as wire values, so the
 // member names on each side must stay identical - the switches below are exhaustive with no default
 // arm so that a mode added to either side breaks this file rather than being silently mapped.
-public static class SplitDtoConverters
+internal static class SplitDtoConverters
 {
     public static SplitDnsMode ToAppDto(this CoreClient.SplitDnsMode mode)
     {

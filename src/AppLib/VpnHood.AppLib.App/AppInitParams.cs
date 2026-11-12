@@ -1,38 +1,59 @@
 ﻿namespace VpnHood.AppLib.App;
 
-// What a head hands its platform's Init, the same on every platform: who the app is, where the
-// platform keeps its files, and how to build its options once the platform has said where things
-// are (AppOptionsContext). The platform does the rest in one order: its single-instance lock and
-// cleanup on a desktop, the context, the head's factory, its own defaults for what the head left
-// unset, then the app. A platform that needs more takes a subclass (IosInitParams).
+/// <summary>
+/// Provides what a head hands its platform's <c>Init</c>, the same on every platform: who the app is, where the
+/// platform keeps its files, and how to build its options once the platform has said where things are.
+/// </summary>
+/// <remarks>
+/// The platform settles the context from it (<see cref="AppOptionsContext"/>), calls the head's factory, fills in its
+/// own defaults for what the head left unset, and makes the app; a desktop platform takes its single-instance lock
+/// first. A platform that needs more takes a derived class.
+/// </remarks>
 public class AppInitParams
 {
-    // The app's identity on the device: AppOptions carries it, a desktop platform takes its
-    // single-instance lock on it, and a Linux tun is tagged with it.
+    /// <summary>
+    /// Gets the app's ID on the device, which the options carry, a desktop platform takes its single-instance lock on,
+    /// and a Linux tunnel is tagged with.
+    /// </summary>
     public required string AppId { get; init; }
 
-    // The name people see (AppConstants.AppName). AppOptions carries it, and a desktop host names
-    // its service and its message with it in the processes that never build the options.
+    /// <summary>
+    /// Gets the name people see, which the options carry, and which a desktop host names its service and its messages
+    /// with in the processes that build no options.
+    /// </summary>
     public required string AppName { get; init; }
 
-    // The app's version, Version.Parse(AppConstants.AppVersion): the Version it states beside its name,
-    // not the library's, so a version that is not numbers stops the app at its start. AppOptions
-    // carries it.
+    /// <summary>
+    /// Gets the app's own version, beside its name, not the library's, which the options carry.
+    /// </summary>
     public required Version AppVersion { get; init; }
 
-    // The folder, under the platform's own place for app data, that holds the settings and the
-    // profiles; one of the same name under its device-only place holds the sign-in session, the log
-    // and the caches (ResolveNoBackupStoragePath). Required where the platform names such a folder
-    // (Android, iOS, a Windows desktop app); null where a host lays storage out itself (the Linux
-    // daemon). Never changed for a head that has shipped: a new name is an empty folder, and every
-    // setting and profile left behind in the old one.
+    /// <summary>
+    /// Gets the name of the app's folder under the platform's own place for app data, and of its device-only
+    /// counterpart (<see cref="ResolveNoBackupStoragePath"/>), or <see langword="null"/> where a host lays its storage
+    /// out itself, as the Linux service does.
+    /// </summary>
+    /// <remarks>
+    /// Required on Android and iOS, whose platforms name the folders; the desktop platforms lay their storage out
+    /// themselves and do not read it. Never change it for a head that has shipped: a new name is an empty folder, and
+    /// every setting and profile stays behind in the old one.
+    /// </remarks>
     public string? StorageFolderName { get; init; }
 
-    // Called once, in the process that runs the app, after the platform has resolved the context.
+    /// <summary>
+    /// Gets the head's options factory, which the platform calls once, in the process that runs the app, after it has
+    /// settled the context.
+    /// </summary>
     public required Func<AppOptionsContext, AppOptions> AppOptionsFactory { get; init; }
 
-    // Where a platform that names folders keeps them: the OS's local app data - %LOCALAPPDATA% on
-    // Windows, the app's files folder on Android, Documents on iOS.
+    /// <summary>
+    /// Returns the app's folder under the system's local app data: <c>%LOCALAPPDATA%</c> on Windows, the app's files
+    /// folder on Android, Documents on iOS.
+    /// </summary>
+    /// <returns>The folder's path, <see cref="StorageFolderName"/> in the local app data.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The system has no local app data folder, or <see cref="StorageFolderName"/> is <see langword="null"/>.
+    /// </exception>
     public string ResolveStoragePath()
     {
         // GetFolderPath answers an empty string for a folder that does not exist, which Path.Combine
@@ -45,8 +66,15 @@ public class AppInitParams
         return Path.Combine(localAppData, RequiredStorageFolderName);
     }
 
-    // Its device-only counterpart (AppOptionsContext.NoBackupStoragePath): the same name, under the
-    // folder the platform keeps out of backups.
+    /// <summary>
+    /// Returns the app's device-only folder (<see cref="AppOptionsContext.NoBackupStoragePath"/>): the same name, under
+    /// the folder the platform keeps out of backups.
+    /// </summary>
+    /// <param name="noBackupFolderPath">The platform's folder that is kept out of backups.</param>
+    /// <returns>The folder's path, <see cref="StorageFolderName"/> in <paramref name="noBackupFolderPath"/>.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// <see cref="StorageFolderName"/> is <see langword="null"/>.
+    /// </exception>
     public string ResolveNoBackupStoragePath(string noBackupFolderPath)
     {
         return Path.Combine(noBackupFolderPath, RequiredStorageFolderName);

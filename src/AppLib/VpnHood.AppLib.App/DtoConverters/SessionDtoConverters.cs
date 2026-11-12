@@ -10,7 +10,7 @@ namespace VpnHood.AppLib.App.DtoConverters;
 // The session vocabulary the engine speaks and the one the contract publishes. Every enum maps with
 // no default arm: these travel to a UI and, for several of them, into settings.json, so a member
 // added to the engine must break this file rather than arrive somewhere as a silent fallback.
-public static class SessionDtoConverters
+internal static class SessionDtoConverters
 {
     public static ChannelProtocol ToAppDto(this CoreMsg.ChannelProtocol protocol)
     {

@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AppLib.App.Settings;
 
-public class RemoteSettings
+internal class RemoteSettings
 {
     public bool ShowInternalAd { get; set; }
     public string? PromotionId { get; set; }

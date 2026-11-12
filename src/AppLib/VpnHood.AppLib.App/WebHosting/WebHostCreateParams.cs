@@ -3,45 +3,72 @@ using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppLib.App.WebHosting;
 
-// Everything a web host is made with: the API it puts on HTTP, the two things it serves - the page
-// and the UI's files - the port to prefer, and how it should behave. The head chooses all of it on
-// AppOptions; the app hands it over here, one of these per host, since the local and the remote one
-// are not told the same thing. The host obeys rather than infers, so what counts as a developer's
-// build is never spelled out on the server side, and the server half names nothing of the engine and
-// compiles against the contract alone - the mirror of VpnHood.AppLib.Api.HttpClients on the other
-// side of the same API.
+/// <summary>
+/// Provides what a web host is made with (<see cref="IAppWebHostFactory"/>): the API it puts on HTTP, the page and the
+/// UI's files it serves, the port, and how it behaves. The app makes one for each host, as the two are not told the
+/// same.
+/// </summary>
+/// <remarks>
+/// The host does as it is told rather than infer, so the server half names nothing of the engine and builds against
+/// the API alone.
+/// </remarks>
 public class WebHostCreateParams
 {
-    // One instance, every transport, so a paired browser and the device's own UI cannot drift apart.
+    /// <summary>
+    /// Gets the app's API, the same instance for every transport, so a paired browser and the device's own UI agree.
+    /// </summary>
     public required VpnHoodApi Api { get; init; }
 
-    // The page this host serves - index.html at its root - to this device and to a paired one
-    // alike: the UI's browser build, as the head shipped it (AppOptions.WebRootZipAsset).
-    // One instance for both hosts, so the zip behind it is extracted once.
+    /// <summary>
+    /// Gets the page the host serves, <c>index.html</c> at its root, to this device and to a paired one alike: the UI's
+    /// browser build, as the head shipped it (<see cref="AppOptions.WebRootZipAsset"/>), the same instance for both
+    /// hosts.
+    /// </summary>
     public required IAssetProvider WebRoot { get; init; }
 
-    // The files the app's UI draws from, which the host serves at /assets/ to a paired phone's page -
-    // the same instance the app's own UI reads. Null for a head whose UI brings nothing of its own.
+    /// <summary>
+    /// Gets the files the app's UI draws from, which the host serves at <c>/assets/</c> to a paired phone's page, the
+    /// instance the app's own UI reads (<see cref="VpnHoodApp.UiAssetProvider"/>), or <see langword="null"/> for a UI
+    /// that brings none of its own.
+    /// </summary>
     public IAssetProvider? UiAssetProvider { get; init; }
 
-    // Whose page it is (AppDescriptor.AppName, LogoAssetPath, a path in the UI's files) and its look
-    // (AppDescriptor.UiTheme, whose colours are in the UI's files): the page is every app's and names
-    // none, so the host writes them into its index.html.
+    /// <summary>
+    /// Gets the app's name, which the host writes into its page, as the page is every app's and names none.
+    /// </summary>
     public required string AppName { get; init; }
+
+    /// <summary>
+    /// Gets the path of the app's logo in the UI's files (<see cref="AppOptions.LogoAssetPath"/>), which the host
+    /// writes into its page.
+    /// </summary>
     public required string LogoAssetPath { get; init; }
+
+    /// <summary>
+    /// Gets the look's name (<see cref="AppOptions.UiTheme"/>), whose colours the host reads from the UI's files and
+    /// writes into its page.
+    /// </summary>
     public required string UiTheme { get; init; }
 
-    // What the local host binds when it is free, and what the remote one is pinned to.
+    /// <summary>
+    /// Gets the port the host prefers: the local host takes another where it is not free; the remote host keeps to it
+    /// unless it can bind it on no address at all, and then takes a free one.
+    /// </summary>
     public required int WebHostPort { get; init; }
 
-    // Stay up for the life of the process, whether or not anything asked: true only for remote access
-    // when a developer opened it. A host that is always on also refuses to stop, since nothing holds
-    // it that could let go.
+    /// <summary>
+    /// Gets a value indicating whether the host stays up for the life of the process, whether or not anything asked,
+    /// and refuses to stop: <see langword="true"/> only for the remote host a developer opened.
+    /// </summary>
     public required bool IsAlwaysOn { get; init; }
 
-    // Ask a caller for this host's token: the remote host's pairing, and on the local host the token
-    // its own address carries, which an API call sends as a bearer header. False is the developer's
-    // open door: a debug build, and for the remote host /remote-access too, where there is no screen
-    // to read a pairing from. Read once at launch and never written back to the settings.
+    /// <summary>
+    /// Gets a value indicating whether the host asks a caller for its token: the remote host's pairing, or on the local
+    /// host the token its own address carries, which an API call sends as a bearer token.
+    /// </summary>
+    /// <remarks>
+    /// <see langword="false"/> is the developer's open door: in a Debug build, and for the remote host with the
+    /// <see cref="Utils.DebugCommands.RemoteAccess"/> command too, where there is no screen to read a pairing from.
+    /// </remarks>
     public required bool IsTokenRequired { get; init; }
 }

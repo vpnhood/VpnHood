@@ -10,6 +10,10 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Settings;
 
+/// <summary>
+/// Provides the app's settings, read from the storage at the app's start (<see cref="VpnHoodApp.SettingsService"/>):
+/// a file that cannot be read is logged and replaced by the defaults.
+/// </summary>
 public class AppSettingsService
 {
     private const string FileNameSettings = "settings.json";
@@ -20,16 +24,16 @@ public class AppSettingsService
     private string RemoteSettingsFilePath => Path.Combine(_storage.FolderPath, "remote_settings.json");
     private string PromotionFolderPath => Path.Combine(_storage.FolderPath, "promotions");
 
-    public event EventHandler? BeforeSave;
-    public AppSettings Settings { get; }
-    public UserSettings UserSettings => Settings.UserSettings;
-    public UserSettings OldUserSettings { get; private set; }
-    public RemoteSettings? RemoteSettings { get; private set; }
-    public SplitIpViaAppSettings SplitIpViaAppSettings { get; }
-    public SplitIpViaDeviceSettings SplitIpViaDeviceSettings { get; }
-    public SplitDomainSettings SplitDomainSettings { get; }
+    internal event EventHandler? BeforeSave;
+    internal AppSettings Settings { get; }
+    internal UserSettings UserSettings => Settings.UserSettings;
+    internal UserSettings OldUserSettings { get; private set; }
+    internal RemoteSettings? RemoteSettings { get; private set; }
+    internal SplitIpViaAppSettings SplitIpViaAppSettings { get; }
+    internal SplitIpViaDeviceSettings SplitIpViaDeviceSettings { get; }
+    internal SplitDomainSettings SplitDomainSettings { get; }
 
-    public AppSettingsService(Storage storage, Uri? remoteSettingsUrl)
+    internal AppSettingsService(Storage storage, Uri? remoteSettingsUrl)
     {
         _storage = storage;
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -58,7 +62,7 @@ public class AppSettingsService
     }
 
     // get promotion image file path if exists
-    public string? PromotionImageFilePath {
+    internal string? PromotionImageFilePath {
         get {
             if (RemoteSettings?.PromotionImageUrl is null)
                 return null;
@@ -73,7 +77,14 @@ public class AppSettingsService
         return Path.Combine(PromotionFolderPath, "image" + Path.GetExtension(imageUrl.AbsolutePath));
     }
 
-
+    /// <summary>
+    /// Saves the settings: it sets off applying them to the running app, some of them only at the next connect, then
+    /// writes them with the time of the save (<see cref="AppSettings.ConfigTime"/>).
+    /// </summary>
+    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
+    /// <exception cref="IOException">
+    /// The file could not be written, as where the device keeps too little room for it.
+    /// </exception>
     public void Save()
     {
         BeforeSave?.Invoke(this, EventArgs.Empty);

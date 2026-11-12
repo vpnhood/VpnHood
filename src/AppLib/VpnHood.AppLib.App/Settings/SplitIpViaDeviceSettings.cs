@@ -8,7 +8,7 @@ namespace VpnHood.AppLib.App.Settings;
 // The split-ip-via-device source lists (see SplitTunneling.UseIpViaDevice). They shape the vpn adapter's
 // ranges, which are applied at connect only — a change while connected flags the session for a
 // reconnect instead of live-applying.
-public class SplitIpViaDeviceSettings(Storage storage)
+internal class SplitIpViaDeviceSettings(Storage storage)
     : SplitFileSettings(storage)
 {
     // Raised by Set when the lists actually changed, AFTER the files are written — a handler that

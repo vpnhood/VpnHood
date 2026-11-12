@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.App.Services.Proxies;
 
-public class HostCountryResolver(
+internal class HostCountryResolver(
     IIpLocationProvider ipLocationProvider)
 {
     public async Task<Dictionary<string, string>> GetHostCountries(IEnumerable<string> hosts,

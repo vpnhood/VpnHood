@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib.App.Utils;
 
-public static class DomainTextFileParser
+internal static class DomainTextFileParser
 {
     public static string[]? Parse(string? text)
     {

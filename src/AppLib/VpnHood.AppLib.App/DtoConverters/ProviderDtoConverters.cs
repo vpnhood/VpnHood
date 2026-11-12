@@ -20,7 +20,7 @@ namespace VpnHood.AppLib.App.DtoConverters;
 // Every enum maps with no default arm - a member added on either side breaks this file rather than
 // arriving somewhere as a silent fallback. The classes have no such guard: a property added to one
 // side and forgotten here reaches the UI as a blank, so add the pair in one edit.
-public static class ProviderDtoConverters
+internal static class ProviderDtoConverters
 {
     public static Account ToAppDto(this ProviderAccounts.Account account)
     {

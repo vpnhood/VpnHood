@@ -4,16 +4,14 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services;
 
-// Publishes the current split filter db set for the VpnService: asks each split service for its db
-// (each service owns its whole activity decision — settings gate, premium plan, build) and writes the
-// folder manifests the VpnService's filter chains read, at connect and on every reconfigure. The
-// manifest write also sweeps superseded files. An inactive feature is simply absent from the set — off
-// is the empty case of the same flow, never inferred from files on disk.
-// The manifest MUST be written by this aggregator, never by a single service: the ip folder is SHARED
-// (split-country + split-ip-via-app) and a manifest write sweeps unlisted db files, so a one-service
-// write would sweep its sibling's live db.
-// The dbs live under VpnServiceConfigFolder because that is the only folder the VpnService process is
-// guaranteed to read (on iOS it is the shared app-group container).
+/// <summary>
+/// Provides the splits' databases to the VPN service: at a connect and at every reconfigure, it asks each split's
+/// service for its database and writes the lists the VPN service reads, in its config folder.
+/// </summary>
+/// <param name="vpnServiceConfigFolder">The VPN service's config folder, the one it is sure to read.</param>
+/// <param name="splitCountryService">The split by country's service.</param>
+/// <param name="splitIpViaAppService">The split by IP address's service.</param>
+/// <param name="splitDomainService">The split by domain's service.</param>
 public class SplitDbPublisherService(
     string vpnServiceConfigFolder,
     SplitCountryService splitCountryService,
@@ -24,7 +22,7 @@ public class SplitDbPublisherService(
 
     // One at a time: a connect's and a reconfigure's would build a changed db together, over one temp
     // file, and each manifest write sweeps what the other just listed.
-    public async Task Publish(CancellationToken cancellationToken)
+    internal async Task Publish(CancellationToken cancellationToken)
     {
         using var scopeLock = await _publishLock.LockAsync(cancellationToken).Vhc();
         var ipDbFolder = Path.Combine(vpnServiceConfigFolder, SplitDbManifest.IpFiltersFolderName);

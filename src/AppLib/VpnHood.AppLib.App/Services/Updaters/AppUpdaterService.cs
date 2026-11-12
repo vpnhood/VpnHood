@@ -12,6 +12,10 @@ using ProviderUpdaters = VpnHood.AppLib.Abstractions.Updaters;
 
 namespace VpnHood.AppLib.App.Services.Updaters;
 
+/// <summary>
+/// Provides the app's updates: it reads the update feed and asks the channel's updater, and tells the UI when to offer
+/// a newer version.
+/// </summary>
 public class AppUpdaterService : IDisposable
 {
     // a DNS lookup can take minutes, and on Android the HttpClient's own timeout cannot end it
@@ -33,7 +37,7 @@ public class AppUpdaterService : IDisposable
 
     // isConnected: whether the VPN is connected: a filtered network may reach the store only through the
     // tunnel, so the store's "none" counts only then.
-    public AppUpdaterService(string storageFolderPath, Version appVersion,
+    internal AppUpdaterService(string storageFolderPath, Version appVersion,
         AppUpdaterOptions updateOptions, Func<bool> isConnected)
     {
         VersionCheckFilePath = storageFolderPath;
@@ -53,6 +57,11 @@ public class AppUpdaterService : IDisposable
         });
     }
 
+    /// <summary>
+    /// Gets the update's status, made at each read: the version's standing, by the feed's release or the store's offer,
+    /// the last recorded check, the feed's release as last read, whether the app prompts, and the updater's own
+    /// progress with a newer release.
+    /// </summary>
     public AppUpdaterStatus Status {
         get {
             var versionStatus = CalcVersionStatus();
@@ -82,11 +91,15 @@ public class AppUpdaterService : IDisposable
             ? new ProviderUpdaters.AppRelease { Version = publishInfo.Version, PackageUrl = publishInfo.PackageUrl }
             : null;
 
-    // the channel's updater, the one the app was built with: a desktop service's hand-back installs by it too
+    /// <summary>
+    /// Gets the updater of the app's channel, the one the app was built with
+    /// (<see cref="AppUpdaterOptions.UpdaterProvider"/>), or <see langword="null"/>; a desktop service's hand-back
+    /// installs with it too.
+    /// </summary>
     public ProviderUpdaters.IAppUpdaterProvider? UpdaterProvider => _updateOptions.UpdaterProvider;
 
     // an install the app runs itself, which stops it in a moment (AppConnectionState.Updating)
-    public bool IsInstalling => _updateOptions.UpdaterProvider?.IsInstalling == true;
+    internal bool IsInstalling => _updateOptions.UpdaterProvider?.IsInstalling == true;
 
     // The updater whose update the notice offers: one with no screen of its own
     private ProviderUpdaters.IAppUpdaterProvider? NoticeUpdater =>
@@ -129,7 +142,7 @@ public class AppUpdaterService : IDisposable
     }
 
     // The notice's Update: the newer release's update, started the updater's own way
-    public Task StartUpdate(IUiContext? uiContext, CancellationToken cancellationToken)
+    internal Task StartUpdate(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var updater = NoticeUpdater ?? throw new NotSupportedException("The notice offers no update of its own.");
         var release = NewerRelease;
@@ -138,7 +151,7 @@ public class AppUpdaterService : IDisposable
     }
 
     // The notice's Install: the downloaded update, handed to the platform's installer
-    public Task CompleteUpdate(IUiContext? uiContext, CancellationToken cancellationToken)
+    internal Task CompleteUpdate(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var updater = NoticeUpdater ?? throw new NotSupportedException("The notice offers no update of its own.");
         var release = NewerRelease;
@@ -150,13 +163,13 @@ public class AppUpdaterService : IDisposable
     private ProviderUpdaters.IAppUpdaterProvider? AutomaticUpdater =>
         _updateOptions.UpdaterProvider is { IsAutomaticUpdateSupported: true } updater ? updater : null;
 
-    public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
+    internal Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
     {
         var updater = AutomaticUpdater ?? throw new NotSupportedException("The app has no automatic update to switch.");
         return updater.IsAutomaticUpdateOn(cancellationToken);
     }
 
-    public async Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
+    internal async Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
     {
         var updater = AutomaticUpdater ?? throw new NotSupportedException("The app has no automatic update to switch.");
         VhLogger.Instance.LogInformation("Turning the automatic update {State}.", isOn ? "on" : "off");
@@ -210,7 +223,7 @@ public class AppUpdaterService : IDisposable
             : VersionStatus.Latest;
     }
 
-    public async Task TryCheckForUpdate(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
+    internal async Task TryCheckForUpdate(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
     {
         try {
             await CheckForUpdate(uiContext, force, cancellationToken).Vhc();
@@ -224,7 +237,7 @@ public class AppUpdaterService : IDisposable
     // uiContext: the window, or null where none is open, as in the desktop service: the feed needs none,
     // and a store's updater that needs one leaves the check for a call that has it.
     // Returns what the check found, which a check the person asked for tells them.
-    public async Task<VersionCheckResult> CheckForUpdate(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
+    internal async Task<VersionCheckResult> CheckForUpdate(IUiContext? uiContext, bool force, CancellationToken cancellationToken)
     {
         // check if the version check is already in progress
         using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
@@ -409,7 +422,6 @@ public class AppUpdaterService : IDisposable
         return StoreAnswer.Offered;
     }
 
-
     // ReSharper disable once UnusedMethodReturnValue.Local
     private async Task<bool> TryUpdateByPublishInfoUrl(CancellationToken cancellationToken)
     {
@@ -440,7 +452,7 @@ public class AppUpdaterService : IDisposable
     }
 
     // Later on the feed's notice: under the check's lock, as both write version.json
-    public async Task Postpone(CancellationToken cancellationToken)
+    internal async Task Postpone(CancellationToken cancellationToken)
     {
         using var lockAsync = await _versionCheckLock.LockAsync(cancellationToken).Vhc();
         MarkPostponed();
@@ -469,6 +481,8 @@ public class AppUpdaterService : IDisposable
             File.WriteAllText(VersionCheckFilePath, JsonSerializer.Serialize(Data));
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Once disposed, the service starts no more writes of its data; one under way may still end.</remarks>
     public void Dispose()
     {
         _disposed = true;

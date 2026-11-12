@@ -1,16 +1,25 @@
 ﻿namespace VpnHood.AppLib.App.WebHosting;
 
-// How the app gets its web hosts, since a host needs the API to exist first while the app must say at
-// construction whether pairing is supported. A head hands in a factory; the app calls it once per
-// host, the first time anything asks for that one, and owns what comes back.
-//
-// Two hosts, one implementation bound differently: the local one is what this device loads from,
-// the remote one is what a phone pairs with. A head that shows a native UI never asks for the first.
-//
-// Everything it hands over is in WebHostCreateParams, so an implementation needs nothing of the engine -
-// only the API contract it puts on HTTP.
+/// <summary>
+/// Defines how the app gets its two web hosts (<see cref="AppOptions.WebHostFactory"/>): the local one this device
+/// loads its UI from, and the remote one a phone pairs with, one implementation bound in two ways.
+/// </summary>
+/// <remarks>
+/// A head hands the factory in, as a host needs the API to exist first while the app says at its making whether
+/// pairing is supported. The app calls each method the first time anything asks for that host, and
+/// <see cref="CreateRemote"/> again when the developer's open door is turned on or off, as it then replaces the remote
+/// host; it owns and disposes what they return. Everything a host is made with is in
+/// <see cref="WebHostCreateParams"/>, so an implementation needs nothing of the engine, only the API it puts on HTTP.
+/// </remarks>
 public interface IAppWebHostFactory
 {
+    /// <summary>Creates the host this device loads its UI from, on loopback, not yet started.</summary>
+    /// <param name="createParams">What the host is made with.</param>
+    /// <returns>The host.</returns>
     IAppWebHost CreateLocal(WebHostCreateParams createParams);
+
+    /// <summary>Creates the host a phone pairs with, on the LAN's addresses, not yet started.</summary>
+    /// <param name="createParams">What the host is made with.</param>
+    /// <returns>The host.</returns>
     IAppWebHost CreateRemote(WebHostCreateParams createParams);
 }

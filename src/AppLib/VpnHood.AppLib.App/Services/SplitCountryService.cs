@@ -18,8 +18,13 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services;
 
-// Prepares the on-disk split-country filter db before connecting. Uses the app's ip-range provider
-// as a data source; the client country itself comes from AppRegionInfo; nothing is discovered here.
+/// <summary>
+/// Provides the database of the split by country, which the app builds before it connects from the IP-location data.
+/// </summary>
+/// <param name="settingsService">The app's settings.</param>
+/// <param name="premiumFeatureChecker">The premium gate.</param>
+/// <param name="ipRangeLocationProvider">The IP ranges' countries, or <see langword="null"/> for none.</param>
+/// <param name="ipLocationZipAsset">The IP-location database the head ships, or <see langword="null"/>.</param>
 public class SplitCountryService(
     AppSettingsService settingsService,
     IPremiumFeatureChecker premiumFeatureChecker,
@@ -27,14 +32,14 @@ public class SplitCountryService(
     IAsset? ipLocationZipAsset)
 {
     private string? _ipLocationAssetHash;
-    public event EventHandler? StateChanged;
+    internal event EventHandler? StateChanged;
 
-    public bool IsBusy { get; private set; }
+    internal bool IsBusy { get; private set; }
 
     // The ip-range provider's countries, as codes: a UI names them. Only the ones a culture names, as
     // the list has always been: the UIs hold its length as the count of all countries, for their
     // "all except" text, so a longer list would put that text wrong.
-    public async Task<IReadOnlyList<string>> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    internal async Task<IReadOnlyList<string>> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         if (ipRangeLocationProvider is null)
             return [];
@@ -56,7 +61,7 @@ public class SplitCountryService(
     // connect: a split the user configured is enforced or the connection does not proceed — never
     // silently skipped.
     // The (potentially huge) country ranges never enter memory — they stream from the zip into SQLite.
-    public async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
+    internal async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
         // effective: the super toggle and the premium plan are both resolved here, so an inactive
         // feature is simply IncludeAll — no second gate to keep in sync

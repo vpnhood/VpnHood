@@ -15,6 +15,11 @@ using VpnHood.AppLib.App.DtoConverters;
 
 namespace VpnHood.AppLib.App.VpnProfiles;
 
+/// <summary>
+/// Provides the VPN profiles, kept in the storage's <c>profiles</c> folder
+/// (<see cref="VpnHoodApp.VpnProfileService"/>).
+/// </summary>
+/// <remarks>Its members are safe to call from any thread.</remarks>
 public class VpnProfileService
 {
     private const string FilenameProfiles = "vpn_profiles.json";
@@ -38,9 +43,9 @@ public class VpnProfileService
     private string? _cashInfoRegion;
 
     // after each write of the store, off the writer's thread and lock
-    public event EventHandler? Changed;
+    internal event EventHandler? Changed;
 
-    public VpnProfileService(Storage storage, AppDescriptor appDescriptor)
+    internal VpnProfileService(Storage storage, AppDescriptor appDescriptor)
     {
         _storage = storage;
         _appDescriptor = appDescriptor;
@@ -50,7 +55,7 @@ public class VpnProfileService
         _vpnProfiles = [.. Load()];
     }
 
-    public VpnProfileInfo? FindInfo(Guid vpnProfileId)
+    internal VpnProfileInfo? FindInfo(Guid vpnProfileId)
     {
         lock (_storeLock) {
             // the cached info bakes in the client country (policy & locations), so it is only valid
@@ -66,44 +71,46 @@ public class VpnProfileService
         }
     }
 
-    public VpnProfileInfo GetInfo(Guid vpnProfileId)
+    internal VpnProfileInfo GetInfo(Guid vpnProfileId)
     {
         return FindInfo(vpnProfileId)
                ?? throw new NotExistsException($"Could not find VpnProfile. VpnProfileId={vpnProfileId}");
     }
 
-    public VpnProfile? FindById(Guid vpnProfileId)
+    internal VpnProfile? FindById(Guid vpnProfileId)
     {
         lock (_storeLock)
             return _vpnProfiles.SingleOrDefault(x => x.VpnProfileId == vpnProfileId);
     }
 
-    public VpnProfile? FindByTokenId(string tokenId)
+    internal VpnProfile? FindByTokenId(string tokenId)
     {
         lock (_storeLock)
             return _vpnProfiles.SingleOrDefault(x => x.Token.TokenId == tokenId);
     }
 
-    public VpnProfile Get(Guid vpnProfileId)
+    internal VpnProfile Get(Guid vpnProfileId)
     {
         return FindById(vpnProfileId)
                ?? throw new NotExistsException($"Could not find VpnProfile. VpnProfileId={vpnProfileId}");
     }
 
-    public Token GetToken(string tokenId)
+    internal Token GetToken(string tokenId)
     {
         var vpnProfile = FindByTokenId(tokenId) ??
                             throw new NotExistsException($"TokenId does not exist. TokenId: {tokenId}");
         return vpnProfile.Token;
     }
 
+    /// <summary>Returns the VPN profiles.</summary>
+    /// <returns>The profiles, in a new array.</returns>
     public VpnProfile[] List()
     {
         lock (_storeLock)
             return [.. _vpnProfiles];
     }
 
-    public void Delete(Guid vpnProfileId)
+    internal void Delete(Guid vpnProfileId)
     {
         lock (_storeLock) {
             var item =
@@ -119,7 +126,7 @@ public class VpnProfileService
         }
     }
 
-    public void TryRemoveByTokenId(string tokenId)
+    internal void TryRemoveByTokenId(string tokenId)
     {
         lock (_storeLock) {
             var items = _vpnProfiles.Where(x => x.Token.TokenId == tokenId).ToArray();
@@ -141,7 +148,7 @@ public class VpnProfileService
         return ret;
     }
 
-    public VpnProfile Update(Guid vpnProfileId, VpnProfileUpdateParams updateParams)
+    internal VpnProfile Update(Guid vpnProfileId, VpnProfileUpdateParams updateParams)
     {
         lock (_storeLock) {
             var item = ApplyUpdate(vpnProfileId, updateParams);
@@ -160,7 +167,7 @@ public class VpnProfileService
     /// knows this, and only it can say it.
     /// </para>
     /// </summary>
-    public void SetAccountAccessCode(Guid vpnProfileId, string accessCode)
+    internal void SetAccountAccessCode(Guid vpnProfileId, string accessCode)
     {
         lock (_storeLock) {
             var item = ApplyUpdate(vpnProfileId,
@@ -241,7 +248,7 @@ public class VpnProfileService
     /// code the server has never heard of. Idempotent; the first refusal's story stands until the
     /// code changes or a connection succeeds.
     /// </summary>
-    public void MarkAccessCodeRefused(Guid vpnProfileId, SessionErrorCode errorCode)
+    internal void MarkAccessCodeRefused(Guid vpnProfileId, SessionErrorCode errorCode)
     {
         lock (_storeLock) {
             var item = FindById(vpnProfileId);
@@ -257,7 +264,7 @@ public class VpnProfileService
     /// A connection with this profile's code succeeded — revival proves itself (keyring plan §8):
     /// the refusal mark clears by itself, with nothing to re-enter.
     /// </summary>
-    public void ClearAccessCodeRefused(Guid vpnProfileId)
+    internal void ClearAccessCodeRefused(Guid vpnProfileId)
     {
         lock (_storeLock) {
             var item = FindById(vpnProfileId);
@@ -269,6 +276,20 @@ public class VpnProfileService
         }
     }
 
+    /// <summary>
+    /// Adds an access key as a VPN profile, or updates the profiles of its token with it, and saves the profiles.
+    /// </summary>
+    /// <param name="accessKey">The access key.</param>
+    /// <returns>The profile of the key's token.</returns>
+    /// <exception cref="FormatException">The key is not valid.</exception>
+    /// <exception cref="NotSupportedException">The key's version is not supported.</exception>
+    /// <exception cref="System.Text.Json.JsonException">The key's JSON is not valid.</exception>
+    /// <exception cref="InvalidDataException">The key's JSON is <c>null</c>.</exception>
+    /// <exception cref="OverflowException">A duration in the key is out of range.</exception>
+    /// <exception cref="UnauthorizedAccessException">
+    /// The key is a built-in profile's (<see cref="VpnProfile.IsBuiltIn"/>), or the process may not write the profiles.
+    /// </exception>
+    /// <exception cref="IOException">The profiles could not be saved.</exception>
     public VpnProfile ImportAccessKey(string accessKey)
     {
         try {
@@ -337,7 +358,7 @@ public class VpnProfileService
         }
     }
 
-    public bool TryUpdateTokenByAccessKey(string tokenId, string accessKey)
+    internal bool TryUpdateTokenByAccessKey(string tokenId, string accessKey)
     {
         try {
             var token = GetToken(tokenId);
@@ -359,7 +380,7 @@ public class VpnProfileService
         }
     }
 
-    public async Task<bool> UpdateServerTokenByUrls(Token token, CancellationToken cancellationToken)
+    internal async Task<bool> UpdateServerTokenByUrls(Token token, CancellationToken cancellationToken)
     {
         // run update for all urls asynchronously and return true if any of them is successful
         var urls = token.ServerToken.Urls;
@@ -440,7 +461,7 @@ public class VpnProfileService
         Task.Run(() => Changed?.Invoke(this, EventArgs.Empty));
     }
 
-    public void Reload()
+    internal void Reload()
     {
         lock (_storeLock) {
             _vpnProfiles = [.. Load()];

@@ -4,18 +4,19 @@ using VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.AppLib.App;
 
-// What the engine itself shows: its own words. The window's look - its size, its colours, the chrome
-// around it, the taskbar badge - is the UI's, which the engine never draws.
+/// <summary>Provides the app's own words, which the system shows for it, such as in a notification.</summary>
 public class AppResources
 {
-    // Each word is resolved on read - the provider, or this library's own English - so a language
-    // chosen while the app runs is the one shown.
+    /// <summary>
+    /// Gets the words, each looked up at its read in the language the app shows: the UI's, where it gave one, else the
+    /// library's own English.
+    /// </summary>
     public IAppStrings Strings { get; }
 
     // The UI's words, pushed through ConfigParams.Strings; null, and every word is the resx's.
-    public IStringProvider? StringProvider { get; set; }
+    internal IStringProvider? StringProvider { get; set; }
 
-    public AppResources()
+    internal AppResources()
     {
         Strings = new AppStrings(this);
     }
@@ -29,7 +30,7 @@ public class AppResources
 
     // The connection's states in the UI's words, keyed as its main page keys them
     // (Strings.ConnectionStateText); a state it gave no word for is left out.
-    public IReadOnlyDictionary<ClientState, string> GetClientStateTexts()
+    internal IReadOnlyDictionary<ClientState, string> GetClientStateTexts()
     {
         var texts = new Dictionary<ClientState, string>();
         foreach (var (clientState, key) in ClientStateKeys)

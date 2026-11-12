@@ -8,17 +8,17 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services;
 
-// Prepares the on-disk split-ip-via-app filter db before connecting — ONE self-describing db whose sets
-// mirror the user's three source files exactly (no merge algebra, each table answers "what did the user
-// write"):
-//   include: tunnel only members — a non-empty set vetoes non-members; empty ⇒ no constraint
-//   exclude: members bypass the tunnel
-//   block:   members are dropped entirely at app level
+/// <summary>
+/// Provides the database of the split by IP address that the app applies, built before a connect from the person's
+/// three lists: the addresses to tunnel only, to leave outside and to drop.
+/// </summary>
+/// <param name="settingsService">The app's settings.</param>
+/// <param name="premiumFeatureChecker">The premium gate.</param>
 public class SplitIpViaAppService(AppSettingsService settingsService, IPremiumFeatureChecker premiumFeatureChecker)
 {
-    public event EventHandler? StateChanged;
+    internal event EventHandler? StateChanged;
 
-    public bool IsBusy { get; private set; }
+    internal bool IsBusy { get; private set; }
 
     // Build or reuse the db for the current source files and return its path, or null when the feature
     // is inactive — this service owns its whole activity decision (SplitTunneling.UseIpViaApp + premium plan).
@@ -27,7 +27,7 @@ public class SplitIpViaAppService(AppSettingsService settingsService, IPremiumFe
     // files count as empty, and empty sources leave their sets empty (a no-op gate). Failures propagate
     // and fail to connect: a split the user configured is enforced or the connection does not proceed —
     // never silently skipped.
-    public async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
+    internal async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
         // effective: the super toggle and the premium plan are both resolved here, so an inactive
         // feature is simply a false flag — no second gate to keep in sync

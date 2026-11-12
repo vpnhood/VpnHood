@@ -20,6 +20,16 @@ using ProxyEndPointStatus = VpnHood.AppLib.Api.Proxies.ProxyEndPointStatus;
 
 namespace VpnHood.AppLib.App.Services.Proxies;
 
+/// <summary>Provides the proxies the client connects through, and their settings.</summary>
+/// <param name="dbPath">The proxies' database, which the VPN service shares.</param>
+/// <param name="ipLocationProvider">What tells a proxy's country, or <see langword="null"/> for none.</param>
+/// <param name="deviceUiProvider">What the app asks of the device's own UI, such as its proxy.</param>
+/// <param name="vpnServiceManager">The VPN service's manager.</param>
+/// <param name="settingsService">The app's settings.</param>
+/// <param name="endPointCopy">
+/// The copy of the person's proxies in the app's storage, where the platform may delete the database, or
+/// <see langword="null"/>.
+/// </param>
 public class AppProxyEndPointService(
     string dbPath,
     IIpLocationProvider? ipLocationProvider,
@@ -38,7 +48,7 @@ public class AppProxyEndPointService(
     private static readonly TimeSpan HasCustomEndPointsCacheTimeout = TimeSpan.FromSeconds(10);
     private AppProxySettings ProxySettings => settingsService.UserSettings.ProxySettings;
 
-    public bool IsProxyEndPointActive {
+    internal bool IsProxyEndPointActive {
         get {
             return ProxySettings.Mode switch {
                 AppProxyMode.NoProxy => false,
@@ -84,7 +94,7 @@ public class AppProxyEndPointService(
             () => ProxyEndPointParser.FromUrl(deviceProxySettings.ProxyUrl));
     }
 
-    public AppProxyEndPointInfo? GetDeviceProxy()
+    internal AppProxyEndPointInfo? GetDeviceProxy()
     {
         var deviceProxyEndPoint = GetDeviceProxyEndPoint();
         if (deviceProxyEndPoint is null)
@@ -114,7 +124,7 @@ public class AppProxyEndPointService(
         };
     }
 
-    public async Task<ListResult<AppProxyEndPointInfo>> ListProxies(
+    internal async Task<ListResult<AppProxyEndPointInfo>> ListProxies(
         string? search,
         bool includeSucceeded,
         bool includeFailed,
@@ -142,7 +152,7 @@ public class AppProxyEndPointService(
         };
     }
 
-    public async Task<AppProxyEndPointInfo> Get(string id, CancellationToken cancellationToken)
+    internal async Task<AppProxyEndPointInfo> Get(string id, CancellationToken cancellationToken)
     {
         var store = await GetStore(cancellationToken).Vhc();
         var record = await store.Get(id, cancellationToken).Vhc() ??
@@ -150,7 +160,7 @@ public class AppProxyEndPointService(
         return ToAppInfo(record);
     }
 
-    public async Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
+    internal async Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
         var endPoint = ProxyEndPointParser.Normalize(proxyEndPoint.ToEngine());
 
@@ -165,7 +175,7 @@ public class AppProxyEndPointService(
         return await Get(endPoint.Id, cancellationToken).Vhc();
     }
 
-    public async Task<AppProxyEndPointInfo> Update(string id, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
+    internal async Task<AppProxyEndPointInfo> Update(string id, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
         var endPoint = ProxyEndPointParser.Normalize(proxyEndPoint.ToEngine());
         var store = await GetStore(cancellationToken).Vhc();
@@ -189,7 +199,7 @@ public class AppProxyEndPointService(
         return await Get(endPoint.Id, cancellationToken).Vhc();
     }
 
-    public async Task Delete(string proxyEndPointId, CancellationToken cancellationToken)
+    internal async Task Delete(string proxyEndPointId, CancellationToken cancellationToken)
     {
         var store = await GetStore(cancellationToken).Vhc();
         await store.Delete([proxyEndPointId], cancellationToken).Vhc();
@@ -198,7 +208,7 @@ public class AppProxyEndPointService(
         settingsService.Save(); // fire changes
     }
 
-    public async Task DeleteAll(DeleteAllOptions? options, CancellationToken cancellationToken)
+    internal async Task DeleteAll(DeleteAllOptions? options, CancellationToken cancellationToken)
     {
         var store = await GetStore(cancellationToken).Vhc();
         await store.DeleteAll(options ?? new DeleteAllOptions(), cancellationToken).Vhc();
@@ -207,7 +217,7 @@ public class AppProxyEndPointService(
         settingsService.Save(); // fire changes
     }
 
-    public async Task DisableAllFailed(CancellationToken cancellationToken)
+    internal async Task DisableAllFailed(CancellationToken cancellationToken)
     {
         var store = await GetStore(cancellationToken).Vhc();
         await store.DisableAllFailed(cancellationToken).Vhc();
@@ -216,7 +226,7 @@ public class AppProxyEndPointService(
     }
 
     // a list the person pasted: its proxies are the person's own
-    public async Task Import(string content, CancellationToken cancellationToken)
+    internal async Task Import(string content, CancellationToken cancellationToken)
     {
         var store = await GetStore(cancellationToken).Vhc();
         var newProxyEndPoints = await Merge(store, content, cancellationToken).Vhc();
@@ -226,7 +236,7 @@ public class AppProxyEndPointService(
     }
 
     // the URL's list, which the URL gives again, so no copy keeps it
-    public async Task ReloadUrl(CancellationToken cancellationToken)
+    internal async Task ReloadUrl(CancellationToken cancellationToken)
     {
         // ReSharper disable once ShortLivedHttpClient
         using var httpClient = new HttpClient();
@@ -252,7 +262,7 @@ public class AppProxyEndPointService(
         return newProxyEndPoints;
     }
 
-    public async Task ResetStates(CancellationToken cancellationToken)
+    internal async Task ResetStates(CancellationToken cancellationToken)
     {
         var store = await GetStore(cancellationToken).Vhc();
         await store.ResetStatuses(cancellationToken).Vhc();
@@ -283,7 +293,7 @@ public class AppProxyEndPointService(
         }
     }
 
-    public async Task<ProxyOptions> GetProxyOptions(CancellationToken cancellationToken)
+    internal async Task<ProxyOptions> GetProxyOptions(CancellationToken cancellationToken)
     {
         var resetStates = _pendingResetStates;
         _pendingResetStates = false;

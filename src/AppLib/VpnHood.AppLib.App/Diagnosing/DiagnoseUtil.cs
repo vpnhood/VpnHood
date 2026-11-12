@@ -9,7 +9,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Diagnosing;
 
-public static class DiagnoseUtil
+internal static class DiagnoseUtil
 {
     public static Task<Exception?> CheckHttps(Uri[] uris, TimeSpan timeout, CancellationToken cancellationToken)
     {

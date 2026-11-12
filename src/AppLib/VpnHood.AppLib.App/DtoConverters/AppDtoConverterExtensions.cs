@@ -15,7 +15,7 @@ using CoreDeviceAppInfo = VpnHood.Core.Client.Devices.Abstractions.DeviceAppInfo
 
 namespace VpnHood.AppLib.App.DtoConverters;
 
-public static class AppDtoConverterExtensions
+internal static class AppDtoConverterExtensions
 {
     public static DeviceAppInfo ToAppDto(this CoreDeviceAppInfo deviceAppInfo)
     {

@@ -6,9 +6,11 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services.Proxies;
 
-// The proxies the person added - by hand or as a pasted list; a URL's come back with the URL - kept in the
-// app's storage as well, where the platform may delete the proxies' database
-// (AppOptions.IsVpnServiceDataPurgeable).
+/// <summary>
+/// Provides a copy of the proxies the person added, by hand or as a pasted list, in the app's storage, where the
+/// platform may delete the proxies' database, as tvOS does when the device runs low on storage.
+/// </summary>
+/// <param name="storage">The storage the copy is kept in.</param>
 public class ProxyEndPointCopy(Storage storage)
 {
     private const string FileName = "proxies.json";
@@ -18,7 +20,7 @@ public class ProxyEndPointCopy(Storage storage)
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public IReadOnlyList<ProxyEndPoint> Load()
+    internal IReadOnlyList<ProxyEndPoint> Load()
     {
         var json = storage.Read(FileName);
         return json is null
@@ -33,7 +35,7 @@ public class ProxyEndPointCopy(Storage storage)
             }).ToArray();
     }
 
-    public void Save(IReadOnlyList<ProxyEndPoint> endPoints)
+    internal void Save(IReadOnlyList<ProxyEndPoint> endPoints)
     {
         var items = endPoints
             .Select(x => new Item(x.Protocol, x.Host, x.Port, x.Username, x.Password, x.IsEnabled))

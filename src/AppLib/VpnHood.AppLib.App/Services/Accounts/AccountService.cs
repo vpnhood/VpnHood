@@ -11,6 +11,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services.Accounts;
 
+/// <summary>Provides the account on this device, its sign-in and its store.</summary>
 public class AccountService
 {
     // A floor between attempts, NOT a poll: it only applies once the cached account has actually
@@ -31,7 +32,7 @@ public class AccountService
     private readonly string _storageFolderPath;
     private readonly string _accountFilePath;
 
-    public AccountService(
+    internal AccountService(
         AppSettingsService settingsService,
         IAccountProvider accountProvider,
         VpnProfileService vpnProfileService,
@@ -48,11 +49,10 @@ public class AccountService
             : null;
     }
 
-
     /// <summary>Does the backend already know a store subscription for this account? This is the
     /// silent-restore skip, not the premium question — a code-served account still wants the store
     /// asked, because its home store's subscription outranks the code (lifecycle §8).</summary>
-    public async Task<bool> HasSubscription(bool useCache, CancellationToken cancellationToken)
+    internal async Task<bool> HasSubscription(bool useCache, CancellationToken cancellationToken)
     {
         var account = await GetAccount(useCache, cancellationToken).Vhc();
         return account?.Subscription != null;
@@ -64,20 +64,20 @@ public class AccountService
     /// asked fresh (useCache false) before the store's payment sheet opens: after the sheet there
     /// is no undo, and on at least one store no refund we can trigger.
     /// </summary>
-    public async Task<bool> IsServed(bool useCache, CancellationToken cancellationToken)
+    internal async Task<bool> IsServed(bool useCache, CancellationToken cancellationToken)
     {
         var account = await GetAccount(useCache, cancellationToken).Vhc();
         return account?.Subscription != null || account?.AccessCodeInfo != null;
     }
 
-    public AuthenticationService AuthenticationService { get; }
+    internal AuthenticationService AuthenticationService { get; }
 
-    public BillingService? BillingService { get; }
+    internal BillingService? BillingService { get; }
 
     // When the account held here last changed. Every UI compares it between polls (AppState.AccountTime),
     // as a sign-in from a paired browser must reach the device's own UI. A time, not a count: a desktop
     // window outlives its service, and a count would start again at the same number.
-    public DateTime AccountTime { get; private set; } = DateTime.UtcNow;
+    internal DateTime AccountTime { get; private set; } = DateTime.UtcNow;
 
     // Under the file lock. Each change is later than the last, so two in one tick of the clock still differ.
     private void MoveAccountTime()
@@ -86,7 +86,7 @@ public class AccountService
         AccountTime = now > AccountTime ? now : AccountTime.AddTicks(1);
     }
 
-    public Task<Account?> GetAccount(CancellationToken cancellationToken)
+    internal Task<Account?> GetAccount(CancellationToken cancellationToken)
     {
         return GetAccount(useCache: true, cancellationToken);
     }
@@ -173,7 +173,7 @@ public class AccountService
     /// backend deliberately does not cancel it, and signing in again brings it back by itself.
     /// </para>
     /// </summary>
-    public async Task DeleteAccount(IUiContext? uiContext, CancellationToken cancellationToken)
+    internal async Task DeleteAccount(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         await _accountProvider.DeleteAccount(cancellationToken).Vhc();
 
@@ -198,7 +198,7 @@ public class AccountService
     /// time.
     /// </para>
     /// </summary>
-    public async Task TryUploadPendingAccessCode(CancellationToken cancellationToken)
+    internal async Task TryUploadPendingAccessCode(CancellationToken cancellationToken)
     {
         try {
             await UploadPendingAccessCode(cancellationToken).Vhc();
@@ -239,7 +239,7 @@ public class AccountService
     /// Best-effort by design: the refusal has already been recorded on the profile and shown to the
     /// person, and failing to tell the account must never become a second error on top of it.
     /// </summary>
-    public async Task TryReportAccessCodeRejected(string refusedAccessCode, CancellationToken cancellationToken)
+    internal async Task TryReportAccessCodeRejected(string refusedAccessCode, CancellationToken cancellationToken)
     {
         if (_account?.AccessCodeInfo?.AccessCode != refusedAccessCode)
             return;
@@ -255,7 +255,7 @@ public class AccountService
         }
     }
 
-    public async Task Refresh(CancellationToken cancellationToken)
+    internal async Task Refresh(CancellationToken cancellationToken)
     {
         // Serialized: this writes account.json and rewrites the current profile, and it is now
         // reached from the background at startup as well as from the UI. Two at once collide on the
@@ -402,7 +402,7 @@ public class AccountService
     }
 
     /// <summary>The store product ids this app may sell — see <see cref="IAccountProvider.GetProductIds" />.</summary>
-    public Task<IReadOnlyList<string>> GetProductIds(CancellationToken cancellationToken)
+    internal Task<IReadOnlyList<string>> GetProductIds(CancellationToken cancellationToken)
     {
         return _accountProvider.GetProductIds(cancellationToken);
     }

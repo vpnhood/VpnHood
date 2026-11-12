@@ -5,7 +5,7 @@ using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib.App;
 
-public static class AppExceptionConverter
+internal static class AppExceptionConverter
 {
     public static Exception? ApiErrorToException(ApiError apiError)
     {

@@ -7,7 +7,7 @@ namespace VpnHood.AppLib.App.Settings;
 
 // The split-ip-via-app source lists (see SplitTunneling.UseIpViaApp). They feed the split-ip db, which
 // live-applies to a running session through a reconfigure.
-public class SplitIpViaAppSettings(Storage storage)
+internal class SplitIpViaAppSettings(Storage storage)
     : SplitFileSettings(storage)
 {
     // Raised by Set when the lists actually changed, AFTER the files are written — a handler that

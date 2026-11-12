@@ -3,7 +3,7 @@ using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.App.Services.Accounts;
 
-public class StoreInfo
+internal class StoreInfo
 {
     public static StoreInfo Empty => new() { StoreError = null, SubscriptionPlans = [] };
     public required IReadOnlyList<SubscriptionPlan> SubscriptionPlans { get; init; }

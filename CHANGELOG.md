@@ -1,5 +1,6 @@
 # Latest
 
+* Update: The app has a new icon, its name on a ribbon across the top
 * Feature: The app runs on Android TV, and Remote Access lets you set it up from a phone or computer on the same network #android #store
 * Feature: The app runs on Apple TV, and Remote Access lets you set it up from a phone or computer on the same network #ios
 * Improve: On Remote Access, you can paste into every box, IP and proxy lists included, a password manager can fill in your sign-in, and any character you type shows

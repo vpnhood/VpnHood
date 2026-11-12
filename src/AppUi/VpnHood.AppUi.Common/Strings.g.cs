@@ -179,9 +179,13 @@ public sealed partial class Strings
     public string All => Get("ALL");
 
     /// <summary>All Except {x}</summary>
+    /// <param name="x">The value in place of <c>{x}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string AllExceptX(object x) => Get("ALL_EXCEPT_X", ("x", x));
 
     /// <summary>Only {x}</summary>
+    /// <param name="x">The value in place of <c>{x}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string OnlyX(object x) => Get("ONLY_X", ("x", x));
 
     /// <summary>Countries</summary>
@@ -326,6 +330,8 @@ public sealed partial class Strings
     public string SessionSuppressedByOther => Get("SESSION_SUPPRESSED_BY_OTHER");
 
     /// <summary>Your {appName} app is deprecated and will stop working sooner or later! Consider upgrading as soon as possible.</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string VersionIsDeprecated(object appName) => Get("VERSION_IS_DEPRECATED", ("appName", appName));
 
     /// <summary>There is a new version available to install.</summary>
@@ -365,6 +371,8 @@ public sealed partial class Strings
     public string UpdateNow => Get("UPDATE_NOW");
 
     /// <summary>Downloading the update: {percent}%</summary>
+    /// <param name="percent">The value in place of <c>{percent}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string UpdateDownloading(object percent) => Get("UPDATE_DOWNLOADING", ("percent", percent));
 
     /// <summary>Installing the update...</summary>
@@ -374,9 +382,13 @@ public sealed partial class Strings
     public string UpdateVpnDisconnects => Get("UPDATE_VPN_DISCONNECTS");
 
     /// <summary>Android will first ask you to allow {appName} to install apps: turn it on, then press Install again.</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string UpdateAllowInstalls(object appName) => Get("UPDATE_ALLOW_INSTALLS", ("appName", appName));
 
     /// <summary>Could not update. {error}</summary>
+    /// <param name="error">The value in place of <c>{error}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string UpdateFailed(object error) => Get("UPDATE_FAILED", ("error", error));
 
     /// <summary>The update is ready to install.</summary>
@@ -440,6 +452,8 @@ public sealed partial class Strings
     public string GetServerKeyMethodsNoConnectDesc => Get("GET_SERVER_KEY_METHODS_NO_CONNECT_DESC");
 
     /// <summary>&lt;h3 class="mb-3"&gt;Don’t have an access key?&lt;/h3&gt;&lt;p class="mb-2"&gt;If you need a free VPN for personal use, consider &lt;a h...</summary>
+    /// <param name="connectAppUrl">The value in place of <c>{connectAppUrl}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string GetServerKeyMethodsDesc(object connectAppUrl) => Get("GET_SERVER_KEY_METHODS_DESC", ("connectAppUrl", connectAppUrl));
 
     /// <summary>Check for update</summary>
@@ -491,6 +505,8 @@ public sealed partial class Strings
     public string SignInEmailScopeHint => Get("SIGN_IN_EMAIL_SCOPE_HINT");
 
     /// <summary>Signed up with {provider}? Go back and use that option — those accounts have no password.</summary>
+    /// <param name="provider">The value in place of <c>{provider}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string SignInProviderHint(object provider) => Get("SIGN_IN_PROVIDER_HINT", ("provider", provider));
 
     /// <summary>Email</summary>
@@ -515,6 +531,8 @@ public sealed partial class Strings
     public string SignInNoAccount => Get("SIGN_IN_NO_ACCOUNT");
 
     /// <summary>No account was found for this email. Accounts are created when you sign in with {provider}, or on our website.</summary>
+    /// <param name="provider">The value in place of <c>{provider}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string SignInNoAccountWithProvider(object provider) => Get("SIGN_IN_NO_ACCOUNT_WITH_PROVIDER", ("provider", provider));
 
     /// <summary>More than one account matches this login. Please contact support.</summary>
@@ -584,6 +602,8 @@ public sealed partial class Strings
     public string SignInToContinue => Get("SIGN_IN_TO_CONTINUE");
 
     /// <summary>Signed in as {email}</summary>
+    /// <param name="email">The value in place of <c>{email}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string SignedInAsX(object email) => Get("SIGNED_IN_AS_X", ("email", email));
 
     /// <summary>Already subscribed</summary>
@@ -737,6 +757,9 @@ public sealed partial class Strings
     public string AlwaysOnHowToTurnOnStep1 => Get("ALWAYS_ON_HOW_TO_TURN_ON_STEP_1");
 
     /// <summary>Find &lt;strong&gt;{appName}&lt;/strong&gt; and tap &lt;span class="text-label-large"&gt;{icon}&lt;/span&gt;</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <param name="icon">The value in place of <c>{icon}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string AlwaysOnHowToTurnOnStep2(object appName, object icon) => Get("ALWAYS_ON_HOW_TO_TURN_ON_STEP_2", ("appName", appName), ("icon", icon));
 
     /// <summary>Enable &lt;strong&gt;Always-on VPN&lt;/strong&gt;</summary>
@@ -755,6 +778,9 @@ public sealed partial class Strings
     public string KillSwitchHowToTurnOnStep1 => Get("KILL_SWITCH_HOW_TO_TURN_ON_STEP_1");
 
     /// <summary>Find &lt;strong&gt;{appName}&lt;/strong&gt; and tap &lt;span class="text-label-large"&gt;{icon}&lt;/span&gt;</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <param name="icon">The value in place of <c>{icon}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string KillSwitchHowToTurnOnStep2(object appName, object icon) => Get("KILL_SWITCH_HOW_TO_TURN_ON_STEP_2", ("appName", appName), ("icon", icon));
 
     /// <summary>Enable &lt;strong&gt;Always-on VPN&lt;/strong&gt; and &lt;strong&gt;Block connections without VPN&lt;/strong&gt;</summary>
@@ -764,9 +790,16 @@ public sealed partial class Strings
     public string KillSwitchBlockingMsg => Get("KILL_SWITCH_BLOCKING_MSG");
 
     /// <summary>If {appName} won't open while the internet is blocked, open the Start menu and choose "{shortcutName}". Uninstalling ...</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <param name="shortcutName">The value in place of <c>{shortcutName}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string KillSwitchWayOutWindows(object appName, object shortcutName) => Get("KILL_SWITCH_WAY_OUT_WINDOWS", ("appName", appName), ("shortcutName", shortcutName));
 
     /// <summary>If {appName} won't open while the internet is blocked, right-click {appName} in the app menu and choose "{actionName}...</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <param name="actionName">The value in place of <c>{actionName}</c>.</param>
+    /// <param name="command">The value in place of <c>{command}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string KillSwitchWayOutLinux(object appName, object actionName, object command) => Get("KILL_SWITCH_WAY_OUT_LINUX", ("appName", appName), ("actionName", actionName), ("command", command));
 
     /// <summary>Never blocks internet access.</summary>
@@ -839,6 +872,8 @@ public sealed partial class Strings
     public string QuickLaunchHowToTurnOnAlternativeStep2 => Get("QUICK_LAUNCH_HOW_TO_TURN_ON_ALTERNATIVE_STEP_2");
 
     /// <summary>In the &lt;strong&gt;Available buttons&lt;/strong&gt; find the &lt;strong&gt;{appName}&lt;/strong&gt;</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string QuickLaunchHowToTurnOnAlternativeStep3(object appName) => Get("QUICK_LAUNCH_HOW_TO_TURN_ON_ALTERNATIVE_STEP_3", ("appName", appName));
 
     /// <summary>Touch and hold the icon, drag it to the section where the other active tiles are located.</summary>
@@ -1064,15 +1099,27 @@ public sealed partial class Strings
     public string Days => Get("DAYS");
 
     /// <summary>{count} {unit} ago</summary>
+    /// <param name="count">The value in place of <c>{count}</c>.</param>
+    /// <param name="unit">The value in place of <c>{unit}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string TimeSecondsAgo(object count, object unit) => Get("TIME_SECONDS_AGO", ("count", count), ("unit", unit));
 
     /// <summary>{count} {unit} ago</summary>
+    /// <param name="count">The value in place of <c>{count}</c>.</param>
+    /// <param name="unit">The value in place of <c>{unit}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string TimeMinutesAgo(object count, object unit) => Get("TIME_MINUTES_AGO", ("count", count), ("unit", unit));
 
     /// <summary>{count} {unit} ago</summary>
+    /// <param name="count">The value in place of <c>{count}</c>.</param>
+    /// <param name="unit">The value in place of <c>{unit}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string TimeHoursAgo(object count, object unit) => Get("TIME_HOURS_AGO", ("count", count), ("unit", unit));
 
     /// <summary>{count} {unit} ago</summary>
+    /// <param name="count">The value in place of <c>{count}</c>.</param>
+    /// <param name="unit">The value in place of <c>{unit}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string TimeDaysAgo(object count, object unit) => Get("TIME_DAYS_AGO", ("count", count), ("unit", unit));
 
     /// <summary>just now</summary>
@@ -1163,6 +1210,10 @@ public sealed partial class Strings
     public string UnreachableProxiesMessage => Get("UNREACHABLE_PROXIES_MESSAGE");
 
     /// <summary>{start} - {end} of {total}</summary>
+    /// <param name="start">The value in place of <c>{start}</c>.</param>
+    /// <param name="end">The value in place of <c>{end}</c>.</param>
+    /// <param name="total">The value in place of <c>{total}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string PaginationStatus(object start, object end, object total) => Get("PAGINATION_STATUS", ("start", start), ("end", end), ("total", total));
 
     /// <summary>Change and reconnect</summary>
@@ -1190,12 +1241,16 @@ public sealed partial class Strings
     public string SelectedFreeServerDesc => Get("SELECTED_FREE_SERVER_DESC");
 
     /// <summary>Free access for {minutes} minutes.</summary>
+    /// <param name="minutes">The value in place of <c>{minutes}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string SelectedFreeServerUnlimitedDesc(object minutes) => Get("SELECTED_FREE_SERVER_UNLIMITED_DESC", ("minutes", minutes));
 
     /// <summary>Free Server by Ad</summary>
     public string SelectedFreeServerByRewardedAd => Get("SELECTED_FREE_SERVER_BY_REWARDED_AD");
 
     /// <summary>Watch an ad for {minutes} minutes of free.</summary>
+    /// <param name="minutes">The value in place of <c>{minutes}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string SelectedFreeServerByRewardedAdDesc(object minutes) => Get("SELECTED_FREE_SERVER_BY_REWARDED_AD_DESC", ("minutes", minutes));
 
     /// <summary>Unlimited access.</summary>
@@ -1205,6 +1260,8 @@ public sealed partial class Strings
     public string WatchRewardedAd => Get("WATCH_REWARDED_AD");
 
     /// <summary>Premium for {minutes} minutes.</summary>
+    /// <param name="minutes">The value in place of <c>{minutes}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string WatchRewardedAdDesc(object minutes) => Get("WATCH_REWARDED_AD_DESC", ("minutes", minutes));
 
     /// <summary>Try Premium</summary>
@@ -1214,6 +1271,8 @@ public sealed partial class Strings
     public string TryPremiumForFree => Get("TRY_PREMIUM_FOR_FREE");
 
     /// <summary>Premium for {minutes} minutes.</summary>
+    /// <param name="minutes">The value in place of <c>{minutes}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string TryPremiumDesc(object minutes) => Get("TRY_PREMIUM_DESC", ("minutes", minutes));
 
     /// <summary>Premium by code</summary>
@@ -1298,6 +1357,8 @@ public sealed partial class Strings
     public string ShowAd => Get("SHOW_AD");
 
     /// <summary>Add {minutes} minutes to current session after watch ad.</summary>
+    /// <param name="minutes">The value in place of <c>{minutes}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string ExtendByRewardedAdDesc(object minutes) => Get("EXTEND_BY_REWARDED_AD_DESC", ("minutes", minutes));
 
     /// <summary>Subscribed since</summary>
@@ -1580,6 +1641,8 @@ public sealed partial class Strings
     public string Device => Get("DEVICE");
 
     /// <summary>More than {x} devices</summary>
+    /// <param name="x">The value in place of <c>{x}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string MoreThanXDevices(object x) => Get("MORE_THAN_X_DEVICES", ("x", x));
 
     /// <summary>Date</summary>
@@ -1601,6 +1664,8 @@ public sealed partial class Strings
     public string PremiumCodeSavedForLaterMsg => Get("PREMIUM_CODE_SAVED_FOR_LATER_MSG");
 
     /// <summary>You can use this code o {x} devices</summary>
+    /// <param name="x">The value in place of <c>{x}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string PremiumCodeDesc(object x) => Get("PREMIUM_CODE_DESC", ("x", x));
 
     /// <summary>Expiration date</summary>
@@ -1661,6 +1726,8 @@ public sealed partial class Strings
     public string StatisticsServerCardDesc => Get("STATISTICS_SERVER_CARD_DESC");
 
     /// <summary>In the last {x} days.</summary>
+    /// <param name="x">The value in place of <c>{x}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string StatisticsDevicesCardDesc(object x) => Get("STATISTICS_DEVICES_CARD_DESC", ("x", x));
 
     /// <summary>Maximum allowed and used traffic for the current connection.</summary>
@@ -1799,6 +1866,8 @@ public sealed partial class Strings
     public string Feedback => Get("FEEDBACK");
 
     /// <summary>Your feedback motivates us to keep making {appName} better. How would you rate your experience?</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string FeedbackDesc(object appName) => Get("FEEDBACK_DESC", ("appName", appName));
 
     /// <summary>Submit</summary>
@@ -1970,6 +2039,8 @@ public sealed partial class Strings
     public string RemoteAccess => Get("REMOTE_ACCESS");
 
     /// <summary>Manage {appName} from your phone or computer: scan this code, or type the address into a browser on the same network.</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string RemoteAccessDesc(object appName) => Get("REMOTE_ACCESS_DESC", ("appName", appName));
 
     /// <summary>Other addresses:</summary>
@@ -2021,6 +2092,8 @@ public sealed partial class Strings
     public string RemoteAccessHelpComputerDesc => Get("REMOTE_ACCESS_HELP_COMPUTER_DESC");
 
     /// <summary>Connected from {address}.</summary>
+    /// <param name="address">The value in place of <c>{address}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string RemoteAccessConnectedFrom(object address) => Get("REMOTE_ACCESS_CONNECTED_FROM", ("address", address));
 
     /// <summary>On your phone, open Servers to add or remove servers.</summary>
@@ -2096,6 +2169,8 @@ public sealed partial class Strings
     public string LearnMoreFreeServersDisruptions3 => Get("LEARN_MORE_FREE_SERVERS_DISRUPTIONS_3");
 
     /// <summary>Although {appName} is equipped with DPI Proof (Deep Packet Inspection), free servers, due to their public nature, hos...</summary>
+    /// <param name="appName">The value in place of <c>{appName}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string LearnMoreFreeServersDisruptions4(object appName) => Get("LEARN_MORE_FREE_SERVERS_DISRUPTIONS_4", ("appName", appName));
 
     /// <summary>Differences in ISP-Level Filtering</summary>
@@ -2189,6 +2264,8 @@ public sealed partial class Strings
     public string StarlinkTools => Get("STARLINK_TOOLS");
 
     /// <summary>This applies to {profileName} only.</summary>
+    /// <param name="profileName">The value in place of <c>{profileName}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string StarlinkToolsProfileScope(object profileName) => Get("STARLINK_TOOLS_PROFILE_SCOPE", ("profileName", profileName));
 
     /// <summary>Send the VPN traffic through a Starlink connection. Tell the app where that Starlink is.</summary>
@@ -2225,9 +2302,13 @@ public sealed partial class Strings
     public string RestorePremium => Get("RESTORE_PREMIUM");
 
     /// <summary>This code expired on {date}. It is kept — if it is extended, it will work again by itself.</summary>
+    /// <param name="date">The value in place of <c>{date}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string CodeRefusedExpiredNotice(object date) => Get("CODE_REFUSED_EXPIRED_NOTICE", ("date", date));
 
     /// <summary>The server rejected this code on {date}. It is kept and will work again if its issuer restores it.</summary>
+    /// <param name="date">The value in place of <c>{date}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
     public string CodeRefusedRejectedNotice(object date) => Get("CODE_REFUSED_REJECTED_NOTICE", ("date", date));
 
     /// <summary>Exit &amp; Disconnect</summary>

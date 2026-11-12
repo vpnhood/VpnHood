@@ -6,7 +6,7 @@ namespace VpnHood.AppLib.Stores.GooglePlay;
 // keeps calling them on the main executor for as long as it holds them, and disposing the managed
 // peer first forces .NET to re-create it on the next call — which fails (no activation
 // constructor) and crashes the process. The GC bridge releases them once the Java side lets go.
-public class GoogleCredentialManager(ICredentialManager credentialManager) : IDisposable
+internal class GoogleCredentialManager(ICredentialManager credentialManager) : IDisposable
 {
     public static GoogleCredentialManager Create(Activity activity)
     {

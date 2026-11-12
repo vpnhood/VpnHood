@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood Android Client App Common Library for Google</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 	</PropertyGroup>
 

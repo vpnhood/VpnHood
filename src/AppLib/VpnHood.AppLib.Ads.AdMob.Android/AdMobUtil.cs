@@ -6,7 +6,7 @@ using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
 
 namespace VpnHood.AppLib.Ads.AdMob.Android;
 
-public static class AdMobUtil
+internal static class AdMobUtil
 {
     private static readonly AsyncLock InitLock = new();
     public static bool IsInitialized { get; private set; }

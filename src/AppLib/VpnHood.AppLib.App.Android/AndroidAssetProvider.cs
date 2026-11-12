@@ -14,7 +14,7 @@ namespace VpnHood.AppLib.App.Android;
 // but only while the entry is stored rather than deflated AND the offset belongs to the file we
 // think it does - and the second cannot be shown to hold for a split or an asset-pack delivery. It
 // would not fail if it were wrong; it would return whatever bytes lie at that offset.
-public class AndroidAssetProvider(Context context) : IAssetProvider
+internal class AndroidAssetProvider(Context context) : IAssetProvider
 {
     public Task<Stream> OpenReadAsync(string assetPath, CancellationToken cancellationToken)
     {

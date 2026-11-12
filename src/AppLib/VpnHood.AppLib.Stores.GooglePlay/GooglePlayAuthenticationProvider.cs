@@ -10,10 +10,30 @@ using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 
+/// <summary>Provides the sign-in with Google, through Android's Credential Manager, which gives Google's ID token.</summary>
+/// <param name="googleSignInClientId">The server's OAuth client ID, which Google issues the ID token for.</param>
 public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAuthenticationExternalProvider
 {
+    /// <inheritdoc/>
+    /// <remarks>It is <see cref="AuthProviders.Google"/>.</remarks>
     public string ProviderId => AuthProviders.Google;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It first asks for a Google ID credential, which is picked without the person where
+    /// <paramref name="isSilentLogin"/> is <see langword="true"/> and the device allows it; where the device offers none
+    /// and the sign-in is not silent, it shows the "Sign in with Google" sheet.
+    /// </remarks>
+    /// <exception cref="System.Security.Authentication.AuthenticationException">
+    /// The device has no Google account, or Google's sign-in failed.
+    /// </exception>
+    /// <exception cref="AndroidX.Credentials.Exceptions.NoCredentialException">
+    /// The sign-in is silent, and the device offers no credential.
+    /// </exception>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">The Credential Manager failed.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The activity has no main executor, or the Credential Manager gave no response, or one of another type.
+    /// </exception>
     public async Task<string> SignIn(IUiContext? uiContext, bool isSilentLogin,
         CancellationToken cancellationToken)
     {
@@ -66,6 +86,9 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAu
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It clears the Credential Manager's sign-in state for the app.</remarks>
+    /// <exception cref="InvalidOperationException">The activity has no main executor.</exception>
     public async Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
@@ -84,6 +107,7 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAu
         return googleIdTokenCredential.IdToken;
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
     }

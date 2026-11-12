@@ -1,14 +1,17 @@
 namespace VpnHood.AppLib.App.Android.Activities;
 
-// How AssetVideoActivity ended.
+/// <summary>Specifies how <see cref="AssetVideoActivity"/> ended.</summary>
 public enum AssetVideoResult
 {
-    // gone before the end with no choice of the person's: the system finished it
+    /// <summary>The screen ended with no answer of its own, as where the system finished it.</summary>
     Left,
 
-    // closed once the video had run - by the close mark, Close or Back - or earlier where allowed
+    /// <summary>
+    /// The person closed it by the close mark, Close or Back, once the video had run or earlier where allowed; or the screen
+    /// closed itself when the person left it after the end.
+    /// </summary>
     Closed,
 
-    // the action button, once the video had run
+    /// <summary>The person chose the action button, once the video had run.</summary>
     Action
 }

@@ -12,6 +12,16 @@ namespace VpnHood.AppLib.App.WindowsVpnPlugin;
 // Windows': the package's VPN host, which Windows starts when the app's VPN profile connects, holds it
 // and outlives the app, so closing the app leaves the connection up and the next start finds it. While it
 // runs, the app connects the VPN again after a sleep that ended it (WindowsVpnPluginSleepReconnect).
+/// <summary>
+/// Provides the app as the Windows VPN plug-in runs it: in the window's process, as the person, in the package's own
+/// folder.
+/// </summary>
+/// <remarks>
+/// The tunnel is Windows': the package's VPN host, which Windows starts when the app's VPN profile connects, holds it and
+/// outlives the app, so closing the app leaves the connection up and the next start finds it. While the app runs, it
+/// tries to connect the VPN again after a sleep that ended it, once the screen is on, where Windows lets it watch the
+/// sleeps.
+/// </remarks>
 public class VpnHoodWindowsVpnPluginApp : Singleton<VpnHoodWindowsVpnPluginApp>
 {
     private readonly FileStream _singleInstanceLock;
@@ -26,6 +36,26 @@ public class VpnHoodWindowsVpnPluginApp : Singleton<VpnHoodWindowsVpnPluginApp>
         _sleepReconnect = sleepReconnect;
     }
 
+    /// <summary>
+    /// Starts the app, once, with one per person: it takes the single-instance lock in the package's folder first; a second
+    /// call gives the app started already.
+    /// </summary>
+    /// <param name="initParams">The init params.</param>
+    /// <returns>The app.</returns>
+    /// <exception cref="ArgumentNullException">The init params' app name is <see langword="null"/>.</exception>
+    /// <exception cref="OverflowException">A duration in a built-in access key is out of range.</exception>
+    /// <exception cref="InvalidDataException">A built-in access key decodes to JSON <c>null</c>.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A built-in access key holds no valid access key.</exception>
+    /// <exception cref="NotSupportedException">A built-in access key's version is not one the app reads.</exception>
+    /// <exception cref="FormatException">
+    /// A built-in access key is no valid Base64, or an endpoint or a duration in it is not valid.
+    /// </exception>
+    /// <exception cref="ArgumentException">The init params' app name is empty.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The process does not run from the package, or the core app has started already, outside this class.
+    /// </exception>
+    /// <exception cref="VpnHood.Core.Common.Exceptions.AnotherInstanceIsRunningException">Another instance of the app holds the lock.</exception>
+    /// <remarks>An ad provider that names countries both to include and to exclude fails the start.</remarks>
     public static VpnHoodWindowsVpnPluginApp Init(AppInitParams initParams)
     {
         // this process already holds the lock; taking it again would call itself another instance
@@ -71,6 +101,7 @@ public class VpnHoodWindowsVpnPluginApp : Singleton<VpnHoodWindowsVpnPluginApp>
         }
     }
 
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing)
     {
         if (disposing) {

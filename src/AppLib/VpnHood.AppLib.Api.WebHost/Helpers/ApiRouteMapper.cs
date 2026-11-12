@@ -13,7 +13,7 @@ namespace VpnHood.AppLib.Api.WebHost.Helpers;
 
 // guard: run before every route but a preflight, and true when it answered the request itself (the
 // local token's check, VpnHoodAppWebHost). A preflight carries no credentials, and answers nothing.
-public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin, Func<HttpContextBase, Task<bool>>? guard = null)
+internal class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin, Func<HttpContextBase, Task<bool>>? guard = null)
     : IRouteMapper
 {
     private Task Options(HttpContextBase ctx)

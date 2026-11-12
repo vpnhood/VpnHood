@@ -9,9 +9,9 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.AppLib.Portal;
 
 /// <summary>
-/// Portal reconciliation: one synchronous POST /billing/purchases returns the
-/// entitlement and access code — no polling loop (that was Store.Server's
-/// design). A short retry only covers the store-side "pending" state.
+/// Portal reconciliation: POST /billing/purchases answers the purchase's state, and a
+/// provisioned one completes the order; the account's next refresh then reads the account's code
+/// and subscription, as the portal ranks them. A short retry only covers the store-side "pending" state.
 /// </summary>
 internal class PortalOrderProcessor(
     HttpClient httpClient,

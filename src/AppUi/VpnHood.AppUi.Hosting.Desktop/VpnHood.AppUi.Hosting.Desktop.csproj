@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<Description>The VpnHood desktop window: the window over a running app's own API, one per person and session, and the host that runs the app and its window in one process. Platform-free - the service and its commands are VpnHood.AppUi.Hosting.Desktop.Daemon's, and where an install keeps things is the platform package's to say (Desktop.Linux, Desktop.WindowsTun, Desktop.WindowsVpnPlugin)</Description>
 	</PropertyGroup>
 

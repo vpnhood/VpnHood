@@ -19,20 +19,33 @@ namespace VpnHood.AppLib.Stores.AppStore;
 /// shapes the first price, the newest entitlement is the one restored, and a purchase
 /// is finished at StoreKit once the portal has redeemed it.
 /// </summary>
+/// <param name="bridge">The bridge to StoreKit, or <see langword="null"/> for the native one.</param>
 public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
     : IBillingProvider
 {
     private readonly IStoreKitBridge _bridge = bridge ?? new NativeStoreKitBridge();
 
+    /// <inheritdoc/>
     public PurchaseState PurchaseState { get; private set; }
+
+    /// <inheritdoc/>
+    /// <remarks>It is <see cref="StoreIds.AppStore"/>.</remarks>
     public string ProviderId => StoreIds.AppStore;
 
-    // StoreKit presents Apple's own sheet inside the app, so nothing here opens a URL and the user
-    // never leaves. Available since iOS 15, which is this project's minimum — no fallback path, and
-    // no store address anywhere in the codebase. tvOS has no such sheet: a TV's subscriptions are
-    // managed in its Settings or from another of the person's devices.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// StoreKit shows Apple's own sheet in the app, so the person never leaves it. tvOS has no such sheet, so it is
+    /// <see langword="false"/> there: a TV's subscriptions are managed in its Settings or from another of the person's
+    /// devices.
+    /// </remarks>
     public bool IsSubscriptionManagementSupported => !OperatingSystem.IsTvOS();
 
+    /// <inheritdoc/>
+    /// <remarks>StoreKit's manage-subscriptions sheet shows over the window.</remarks>
+    /// <returns>A task that completes once the person has closed the sheet.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// StoreKit failed to show the sheet; the error comes as StoreKit's, not as a <see cref="BillingException"/>.
+    /// </exception>
     [UnsupportedOSPlatform("tvos")]
     public Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
@@ -43,6 +56,11 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
         return _bridge.ShowManageSubscriptions(cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Only subscriptions are priced; an introductory offer the person may still take sets the first price, or the free
+    /// trial.
+    /// </remarks>
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
         CancellationToken cancellationToken)
     {
@@ -76,6 +94,16 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
         };
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The plan token is the App Store product ID; the account's ID goes to StoreKit as the purchase's app account token,
+    /// which must be a UUID. The proof is StoreKit's signed transaction (JWS). A purchase StoreKit leaves pending, as one
+    /// waiting for a parent's approval, throws a <see cref="BillingException"/> with
+    /// <see cref="BillingErrorCode.Pending"/>.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The account's ID is not a UUID, or StoreKit answered a purchase without its transaction.
+    /// </exception>
     public async Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
@@ -108,7 +136,8 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
         }
     }
 
-    /// <summary>Apple review requirement: surface previously purchased items without a new charge.</summary>
+    /// <inheritdoc/>
+    /// <remarks>It presents the newest of the store account's current entitlements, without a new charge.</remarks>
     public async Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var entitlements = await CallBridge(() => _bridge.CurrentEntitlements(cancellationToken), cancellationToken).Vhc();
@@ -118,9 +147,11 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
         return newest == null ? null : ToPurchaseProof(newest);
     }
 
-    // StoreKit keeps a transaction unfinished until the app has delivered it, which here is the
-    // portal redeeming its JWS. A restored one was finished long ago, and finishing it again
-    // changes nothing.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// StoreKit keeps a transaction unfinished until the app has delivered it, which here is the portal redeeming its
+    /// JWS. A restored transaction may be unfinished too; finishing one already finished changes nothing.
+    /// </remarks>
     public async Task FinishPurchase(PurchaseProof purchaseProof, CancellationToken cancellationToken)
     {
         if (purchaseProof is not AppStorePurchaseProof appStoreProof)
@@ -157,6 +188,7 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
     }

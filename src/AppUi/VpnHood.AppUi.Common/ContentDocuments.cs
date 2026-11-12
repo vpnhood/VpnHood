@@ -12,13 +12,26 @@ namespace VpnHood.AppUi.Common;
 // The translator never touches a placeholder - vhtranslator's docs mode masks {...} out of the
 // body before a model reads it (maskPatterns) and puts it back after, so the words around it are
 // translated and the placeholder is restored, not retyped.
+
+/// <summary>
+/// Provides the long-form documents of the UI's content store, with the product's names filled in.
+/// </summary>
 public static class ContentDocuments
 {
     private const string SourceLanguage = "en";
 
-    // The document in the app's language, else in English: a language whose translation failed
-    // verification ships no file, and the English text beats none - on a consent screen above all.
-    // Read through the store's provider, which may be a web server, so it lands after the page shows.
+    /// <summary>
+    /// Loads a document in the app's language, else in its language alone, else in English, with the product's names
+    /// filled in.
+    /// </summary>
+    /// <param name="assets">The UI's content store.</param>
+    /// <param name="name">The document's name.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the document's text.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The store has no such document, not even in English, or the app's state has not been read (<see cref="VhApp.Init"/>).
+    /// </exception>
     public static async Task<string> LoadAsync(IAssetProvider assets, string name,
         CancellationToken cancellationToken)
     {

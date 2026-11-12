@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<Description>The VpnHood desktop service: the daemon that is the app on a machine with no window, the commands that drive it over its own API, the channel that hands that API to an administrator, and its updater. Platform-free - what a service is and where an install keeps things is the platform package's to say (Desktop.Linux, Desktop.WindowsTun)</Description>
 	</PropertyGroup>
 

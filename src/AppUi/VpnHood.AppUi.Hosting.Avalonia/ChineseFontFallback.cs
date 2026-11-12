@@ -17,6 +17,12 @@ namespace VpnHood.AppUi.Hosting.Avalonia;
 // and the language list has drawn Chinese by the time someone picks it, so a culture would take effect
 // only at the next start. It holds in every language, the words having no other Chinese; kana stays
 // out of it, so a Japanese name typed in only takes its kanji from here.
+
+/// <summary>
+/// Provides a font fallback that draws the Chinese characters and their punctuation in a Simplified Chinese face on
+/// Windows and Linux.
+/// </summary>
+/// <remarks>Elsewhere it changes nothing, so only a desktop host calls it.</remarks>
 public static class ChineseFontFallback
 {
     // the punctuation with the ideographs: a comma comes from the face of the words around it
@@ -27,6 +33,12 @@ public static class ChineseFontFallback
         OperatingSystem.IsLinux() ? "Noto Sans CJK SC" :
         null;
 
+    /// <summary>
+    /// Names Microsoft YaHei UI on Windows, or Noto Sans CJK SC on Linux, as the face of the Chinese characters and their
+    /// punctuation; elsewhere it changes nothing.
+    /// </summary>
+    /// <param name="builder">The app builder.</param>
+    /// <returns>The app builder.</returns>
     public static AppBuilder WithChineseFontFallback(this AppBuilder builder)
     {
         return FamilyName is not { } familyName

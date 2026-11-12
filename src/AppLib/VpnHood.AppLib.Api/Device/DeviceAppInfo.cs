@@ -1,11 +1,14 @@
 namespace VpnHood.AppLib.Api.Device;
 
-// An app installed on this device, as the split-tunneling picker shows it. The app's own shape,
-// not the device layer's: what a UI needs is a name, an id and an icon, and the engine's device
-// abstraction is free to learn more without that reaching a picker.
+/// <summary>Represents an app installed on the device, as the split tunneling by app shows it.</summary>
 public class DeviceAppInfo
 {
+    /// <summary>Gets the app's ID, as its package name on Android.</summary>
     public required string AppId { get; init; }
+
+    /// <summary>Gets the app's name.</summary>
     public required string AppName { get; init; }
+
+    /// <summary>Gets the app's icon, a PNG in Base64.</summary>
     public required string IconPng { get; init; }
 }

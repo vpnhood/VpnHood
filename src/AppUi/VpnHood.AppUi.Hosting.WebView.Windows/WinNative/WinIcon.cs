@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
 
-public static class WinIcon
+internal static class WinIcon
 {
     public const uint RES_ICON = 1;
     public const uint DEFAULT_ICON_SIZE = 0;

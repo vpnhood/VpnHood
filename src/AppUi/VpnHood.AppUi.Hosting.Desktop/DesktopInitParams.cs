@@ -3,37 +3,48 @@ using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
 namespace VpnHood.AppUi.Hosting.Desktop;
 
-// What a head says for itself, and only that: the init params every platform takes
-// (AppInitParams) and the two answers the commands and the window need. Where the machine keeps
-// things and what "the service" is are the platform's answers, in IDesktopPlatform; the daemon's host
-// lays its storage out itself, so a desktop head names no storage folder. The options factory runs
-// once, in the daemon and nowhere else: the window and the commands hold no VpnHoodApp at all.
+/// <summary>
+/// Represents what a desktop head says for itself: the init params of every platform, and the answers the commands and
+/// the window need.
+/// </summary>
+/// <remarks>
+/// Where the machine keeps things and what the service is are the platform's answers; the service's host lays its
+/// storage out itself, so a desktop head names no storage folder. The options factory runs only where the app runs.
+/// </remarks>
 public class DesktopInitParams : AppInitParams
 {
-    // The head's UI, which the window runs on the host's main thread against the running daemon:
-    // the API over loopback, and the UI's own content extracted under the current user's cache. It
-    // comes from the small package this and every UI package reference, so neither references the
-    // other.
+    /// <summary>
+    /// Gets the head's UI, which the window runs on the host's main thread against the running app: the API over loopback,
+    /// and the UI's own content extracted under the current user's cache.
+    /// </summary>
     public required IDesktopUi Ui { get; init; }
 
-    // The same answer the head gives AppOptions.IsAddAccessKeySupported, and it must be the same
-    // one: a head that cannot be given a key has exactly the profile it was built with, so naming
-    // a profile, listing them and adding one are all questions with no answer. Those commands and
-    // the --profile option are not printed, not parsed and not offered in help when this is false.
     //
-    // Required rather than defaulted: it is the one thing that differs between Client and Connect,
-    // and a new head that forgets it would silently offer Connect's users a profile list of one.
+
+    /// <summary>
+    /// Gets a value indicating whether the head offers adding access keys: the same answer the head gives the app's
+    /// options, which must agree.
+    /// </summary>
+    /// <remarks>
+    /// Where it is <see langword="false"/>, the commands that name, list and add profiles, and the <c>--profile</c> option,
+    /// are not printed, parsed or offered in help. It is required, as it is the one answer that differs between the two
+    /// shipped heads.
+    /// </remarks>
     public required bool IsAddAccessKeySupported { get; init; }
 
-    // The extensions of an access key's file - one an admin downloads and mails on - that open in
-    // this app, which imports the key ("ui --access-key"): on Windows, "service install" registers
-    // them in an installer's layout. None for a head that takes no keys.
+    /// <summary>
+    /// Gets the extensions of an access key's file, as one sent to the person, that open in this app, which imports the
+    /// key. The default is none.
+    /// </summary>
+    /// <remarks>On Windows, <c>service install</c> registers them in an installer's layout.</remarks>
     public IReadOnlyList<string> AccessKeyFileExtensions { get; init; } = [];
 
-    // The schemes of a link that is an access key itself (vh:...), which opens in this app the same way.
+    /// <summary>Gets the schemes of a link that is an access key itself, as <c>vh:</c>, which opens in this app the same way. The default is none.</summary>
     public IReadOnlyList<string> AccessKeySchemes { get; init; } = [];
 
-    // Where this package placed the UI's content, beside the binary. The default is what the
-    // Classic assets targets place for every head that imports them.
-    public string UiZipAssetPath { get; init; } = "assets/ui.zip";
+    /// <summary>
+    /// Gets where this package placed the UI's content, beside the binary. The default is <c>assets/ui.zip</c>, where the
+    /// Classic assets place it for every head that imports them.
+    /// </summary>
+    internal string UiZipAssetPath { get; init; } = "assets/ui.zip";
 }

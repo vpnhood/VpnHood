@@ -6,7 +6,7 @@ using VpnHood.AppUi.Hosting.Desktop.Platform;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 
-public sealed class LinuxDaemonHostFactory(AppInitParams initParams, LinuxDesktopPaths paths) : IAppDaemonHostFactory
+internal sealed class LinuxDaemonHostFactory(AppInitParams initParams, LinuxDesktopPaths paths) : IAppDaemonHostFactory
 {
     // Only root can be the service: the tun device, the routes and resolvectl belong to root, which is
     // said here rather than by the tun device failing ten layers down. Its lock is in its folder

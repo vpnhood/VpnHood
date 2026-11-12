@@ -22,7 +22,7 @@ namespace VpnHood.AppLib.Portal;
 /// does differently fits in the constructor and one override: resources append
 /// to an endpoint script (PATH_INFO), and the wire is camelCase.
 /// </summary>
-public class PortalApiClient : ApiClientBase
+internal class PortalApiClient : ApiClientBase
 {
     /// <summary>
     /// The major version every path below hangs off, added to the base address once so the paths
@@ -186,9 +186,8 @@ public class PortalApiClient : ApiClientBase
 
     /// <summary>
     /// PUT /account/access-code — upload a code into the account's ONE slot, or empty it with null.
-    /// The portal takes the code on trust and never looks it up to approve it, so there is no
-    /// <c>code_not_found</c> to catch here any more and the only failure is a transport one. The
-    /// answer carries nothing: what the account serves afterwards is read from GET /account, and it
+    /// The portal checks the code's shape but never looks it up to approve it, so there is no
+    /// <c>code_not_found</c> to catch here. The answer carries nothing: what the account serves afterwards is read from GET /account, and it
     /// need not be the code just uploaded.
     /// </summary>
     public Task SetAccessCode(string? accessCode, CancellationToken cancellationToken)
@@ -226,8 +225,8 @@ public class PortalApiClient : ApiClientBase
     /// <summary>
     /// GET /billing/plans — the priced plans a WEB-distributed app offers, each with a ready-made
     /// checkout URL. The portal refuses store-distributed apps (their store prices their plans),
-    /// and prices everything in one currency that each purchase URL pins — called with the session
-    /// attached when one exists, so a signed-in account is priced in its own locked currency.
+    /// and prices everything in one currency that each purchase URL pins. The web billing provider
+    /// calls it without a session, so the plans come in the portal's default currency.
     /// </summary>
     public Task<IReadOnlyList<PortalPlan>> ListPlans(string storeId, string packageName,
         CancellationToken cancellationToken)

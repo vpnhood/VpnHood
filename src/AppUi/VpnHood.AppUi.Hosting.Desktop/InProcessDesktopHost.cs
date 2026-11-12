@@ -9,17 +9,33 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop;
 
-// The app and its window in one process, as a host's whole job: a desktop whose tunnel runs where the
-// OS starts it - the Windows VPN plug-in's VPN host - needs no service, and its window no channel and
-// no command line. One window per person and session, as under the service: a second launch brings
-// it forward (DesktopUiInstance) and builds no app.
+/// <summary>
+/// Provides the app and its window in one process, as a host's whole job, for a desktop whose tunnel runs where the
+/// system starts it, as the Windows VPN plug-in's VPN host.
+/// </summary>
+/// <remarks>
+/// It needs no service, and its window no service channel and no service commands. There is one window per person and
+/// session: a second launch brings it forward and builds no app.
+/// </remarks>
 public static class InProcessDesktopHost
 {
-    // The whole run, on the calling thread, which is the host's main thread and the window's, as in
-    // DesktopHost.Run. A window's process ends with its window: nothing cancels it from outside. The
-    // arguments acted on are --access-key, which a vh: link passes (the package's scheme), and
-    // --quick-launch, which the package's Quick Launch entry passes (vh-quick-launch:); the log keeps
-    // them all.
+    /// <summary>
+    /// Runs the app and its window until the window's run ends: the app on a worker thread, and the window on the calling
+    /// thread, the host's main thread.
+    /// </summary>
+    /// <param name="args">
+    /// The process's arguments: <c>--access-key</c>, as a <c>vh:</c> link passes, and <c>--quick-launch</c>, as the
+    /// package's Quick Launch entry passes, are acted on; the log keeps them all, once this launch holds the window.
+    /// </param>
+    /// <param name="initParams">The head's init params.</param>
+    /// <param name="platform">What the platform says for itself.</param>
+    /// <returns>
+    /// The process's exit code: 0, or 1 where the run failed or an access key it was given could not be read.
+    /// </returns>
+    /// <remarks>
+    /// A window's process ends with its window: nothing cancels it from outside. A second launch hands its access key or
+    /// Quick Launch to the running one, and returns 0.
+    /// </remarks>
     public static int Run(string[] args, DesktopInitParams initParams, IInProcessDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();

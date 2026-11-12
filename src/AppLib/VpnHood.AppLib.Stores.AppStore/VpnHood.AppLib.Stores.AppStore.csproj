@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood App Store billing (StoreKit 2 via the VpnHoodStoreKit Swift facade) and Sign in with Apple</Description>
 		<TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-tvos'))">17.0</SupportedOSPlatformVersion>
 	</PropertyGroup>

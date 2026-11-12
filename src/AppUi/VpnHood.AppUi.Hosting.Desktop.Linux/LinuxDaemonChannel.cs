@@ -9,7 +9,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 
 // The channel on Linux: a Unix socket in a folder under /run only root may write, so nobody takes
 // its name first. A caller must be root or in sudo, wheel or admin; a sudoers line alone is not seen.
-public sealed class LinuxDaemonChannel(LinuxDesktopPaths paths) : IDaemonChannel
+internal sealed class LinuxDaemonChannel(LinuxDesktopPaths paths) : IDaemonChannel
 {
     private const int SolSocket = 1;
     private const int SoPeerCred = 17;

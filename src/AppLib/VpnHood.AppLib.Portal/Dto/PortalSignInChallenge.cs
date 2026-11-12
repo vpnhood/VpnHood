@@ -5,7 +5,7 @@ namespace VpnHood.AppLib.Portal.Dto;
 /// session: single-use, minutes long, a small attempt budget, and it can do nothing but complete
 /// its own challenge.
 /// </summary>
-public class PortalSignInChallenge
+internal class PortalSignInChallenge
 {
     /// <summary>The only kind this app can prompt for; the provider refuses anything else.</summary>
     public const string TypeTotp = "totp";

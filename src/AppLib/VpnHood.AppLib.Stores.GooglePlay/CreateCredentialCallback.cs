@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.Stores.GooglePlay;
 /// there is no sheet to dismiss, so unlike sign-in no error here means "the user changed their
 /// mind"; every one is surfaced to the (best-effort) caller.
 /// </summary>
-public class CreateCredentialCallback : Java.Lang.Object, ICredentialManagerCallback
+internal class CreateCredentialCallback : Java.Lang.Object, ICredentialManagerCallback
 {
     // completed from the Android main thread; the awaiting caller must not resume inside that callback frame
     private readonly TaskCompletionSource<CreateCredentialResponse> _taskCompletionSource =

@@ -12,7 +12,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 // service control manager, which "service install" registers and which stops it with a call; the
 // window runs as whoever is signed in, not elevated, and reaches the service over loopback; the
 // service's warnings and the window's go to the Application log under the service's name.
-public sealed class WindowsDesktopPlatform : IDesktopPlatform
+internal sealed class WindowsDesktopPlatform : IDesktopPlatform
 {
     private readonly WindowsDesktopPaths _paths;
 

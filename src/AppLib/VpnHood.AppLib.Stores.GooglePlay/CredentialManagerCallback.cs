@@ -10,7 +10,7 @@ using GetCredentialResponse = AndroidX.Credentials.GetCredentialResponse;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 
-public partial class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCallback
+internal partial class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCallback
 {
     // completed from the Android main thread; the awaiting caller must not resume inside that callback frame
     private readonly TaskCompletionSource<GetCredentialResponse> _taskCompletionSource =

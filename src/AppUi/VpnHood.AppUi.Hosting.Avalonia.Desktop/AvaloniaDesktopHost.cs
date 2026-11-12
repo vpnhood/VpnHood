@@ -16,15 +16,17 @@ using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 
-// An Avalonia UI in a window on a desktop. Which UI is the head's to name, once, as the type
-// argument of Run. With a tray, the app's icon sits in the desktop's tray beside the window, and
-// while the desktop shows tray icons - Windows always, Linux where its panel does - closing the
-// window only hides it: the tray's Open and a second launch bring it back, and the run ends with the
-// tray's Exit or Shutdown. Without one, or where the desktop shows none, closing the window ends the
-// run - or, with the app in this process and its VPN up, hides it until the VPN is down
-// (keepRunningWhileConnected). The service lives on either way. On Windows the window's taskbar button
-// carries the connection's badge too (AvaloniaTaskbarBadge). Run takes the calling thread as the UI
-// thread until then.
+/// <summary>
+/// Provides an Avalonia UI in a window on a desktop, with the app's icon in the desktop's tray where the host allows one.
+/// </summary>
+/// <remarks>
+/// While the run uses a tray and the desktop shows tray icons, closing the window only hides it: the tray's Open and a
+/// second launch bring it back, and the run ends with the tray's Exit or the host's shutdown. Otherwise closing the
+/// window ends the run, unless the run is to keep going while the app in this process is connected: the window then
+/// hides while the app's VPN can be disconnected, a connect under way included, and the run ends once it cannot, unless
+/// a launch shows the window first. On Windows the window's taskbar button carries the connection's badge too. The run
+/// takes the calling thread as the UI thread.
+/// </remarks>
 public static class AvaloniaDesktopHost
 {
     // How long a start in the tray waits for the desktop's panel, which a sign-in may start after it.
@@ -49,14 +51,32 @@ public static class AvaloniaDesktopHost
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
-    // The window over whatever app the host hands over. Its API is the one built over HTTP
-    // (VpnHoodApiHttpFactory) against an app running in another process, or an app's own controllers
-    // in this one; the content store is the host's to name - a user's cache where the app's storage
-    // belongs to the service. Nothing below this line knows which it was given; the pages never did.
-    // A run that starts in the tray (startHidden) keeps the window back until ShowMainWindow, and with
-    // no tray to wait in, ends at once. Cancelling ends the run: before the window exists, here, with
-    // OperationCanceledException; after, through Shutdown, which the caller registers. The window takes
-    // the shape its UI states, fitted to its screen (DesktopWindowFit), its title bar in the UI's colour.
+    /// <summary>Runs the window over the app's API until the run ends, on the calling thread.</summary>
+    /// <typeparam name="TUi">The UI's application.</typeparam>
+    /// <param name="args">The command-line arguments Avalonia's lifetime gets.</param>
+    /// <param name="api">The app's API, over HTTP against an app in another process, or the app's own in this one.</param>
+    /// <param name="uiAssetProvider">The UI's content store, which the UI reads its pictures and its words from.</param>
+    /// <param name="useTray"><see langword="true"/> to put the app's icon in the desktop's tray.</param>
+    /// <param name="keepRunningWhileConnected">
+    /// <see langword="true"/> to hide the window, rather than end the run, while the app's VPN can be disconnected.
+    /// </param>
+    /// <param name="shell">The desktop's shell, or <see langword="null"/>.</param>
+    /// <param name="startHidden"><see langword="true"/> to start in the tray, the window kept back until it is asked for.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests while the run starts.</param>
+    /// <exception cref="InvalidOperationException">
+    /// <paramref name="uiAssetProvider"/> is <see langword="null"/>, or the UI made no main window or is not a
+    /// <see cref="VpnHoodAvaloniaAppBase"/>.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled before the window's loop started.
+    /// </exception>
+    /// <remarks>
+    /// A run that starts in the tray waits up to 30 seconds for the desktop to show tray icons, as a sign-in may start
+    /// before its panel, and ends at once where none show, unless a launch asks for the window first. A canceled token ends
+    /// the run only while it starts; to have a cancel end the running window too, run it through
+    /// <see cref="AvaloniaDesktopUi{TUi}"/>. The window takes the shape its UI states, fitted to its screen, with its title
+    /// bar in the UI's colour where the UI names one and the platform lets it be set.
+    /// </remarks>
     public static void Run<TUi>(string[] args, VpnHoodApi api, IAssetProvider? uiAssetProvider, bool useTray,
         bool keepRunningWhileConnected, IDesktopShell? shell, bool startHidden, CancellationToken cancellationToken)
         where TUi : Application, IAvaloniaUi, new()
@@ -202,7 +222,7 @@ public static class AvaloniaDesktopHost
     // are the UI's own files in the device's language - the language a person chose is in the app's
     // settings, which are not to be had - and the rest of the UI's start does not run, since it calls
     // the app first (StartAsync).
-    public static void RunMessage<TUi>(DesktopUiMessageParams messageParams)
+    internal static void RunMessage<TUi>(DesktopUiMessageParams messageParams)
         where TUi : Application, IAvaloniaUi, new()
     {
         // Avalonia before the content, as on Android: the UI then takes its fonts in as they load,
@@ -252,7 +272,7 @@ public static class AvaloniaDesktopHost
     // From any thread: the tray's click, a second launch's command. Before the run has a window the
     // ask is kept for its start, and nothing of Avalonia is touched: its dispatcher belongs to the
     // thread the run makes it on.
-    public static void ShowMainWindow()
+    internal static void ShowMainWindow()
     {
         lock (RunLock) {
             ShowRequest.TrySetResult();
@@ -271,7 +291,7 @@ public static class AvaloniaDesktopHost
     // From any thread: an access key a launch was given, which the UI imports and says so (VpnHoodAvaloniaAppBase).
     // Before the run has its UI the key is kept for its start, as in ShowMainWindow; a run that shows a message in
     // the window's place has no app to import it into.
-    public static void ImportAccessKey(string accessKey)
+    internal static void ImportAccessKey(string accessKey)
     {
         lock (RunLock) {
             if (_ui is { } ui)
@@ -283,7 +303,7 @@ public static class AvaloniaDesktopHost
 
     // From any thread: a Quick Launch, on which the UI connects as its Connect button does (VpnHoodAvaloniaAppBase).
     // Before the run has its UI it is kept for its start, as an access key is.
-    public static void QuickLaunch()
+    internal static void QuickLaunch()
     {
         lock (RunLock) {
             if (_ui is { } ui)
@@ -295,7 +315,7 @@ public static class AvaloniaDesktopHost
 
     // From any thread. Before a run has a lifetime there is nothing to end, and nothing of Avalonia
     // is touched, as in ShowMainWindow.
-    public static void Shutdown()
+    internal static void Shutdown()
     {
         lock (RunLock) {
             if (_lifetime is { } lifetime)

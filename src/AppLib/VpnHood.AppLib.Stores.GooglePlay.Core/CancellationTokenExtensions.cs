@@ -2,10 +2,16 @@
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 
+/// <summary>Provides the conversion of a cancellation token to Android's cancellation signal.</summary>
 public static class CancellationTokenExtensions
 {
-    // do not dispose this CancellationSignal, because it will be cancelled by system when cancellationToken is cancelled,
-    // and we don't want to dispose it before that. It may cause system crash if we dispose it too early.
+    /// <summary>Creates an Android cancellation signal that is canceled with the token.</summary>
+    /// <param name="cancellationToken">The token.</param>
+    /// <returns>The signal, canceled already where the token is.</returns>
+    /// <remarks>
+    /// The caller must not dispose the signal: the token's cancel cancels it, and an early disposal can crash the
+    /// process.
+    /// </remarks>
     public static CancellationSignal ToCancellationSignal(this CancellationToken cancellationToken)
     {
         var cancellationSignal = new CancellationSignal();

@@ -6,6 +6,11 @@ namespace VpnHood.AppUi.Common;
 // The content documents (assets/content/<lang>/*.md) are markdown.
 // This renders the subset they use - the front matter's title, paragraphs, headings, bullet and
 // numbered lists, bold, links - to the markup RichText draws, so a document reads the same here.
+
+/// <summary>
+/// Provides the rendering of the content documents' markdown, the subset they use, to the markup the UI's rich text
+/// draws.
+/// </summary>
 public static partial class Markdown
 {
     [GeneratedRegex(@"\*\*(.+?)\*\*", RegexOptions.Compiled)]
@@ -17,6 +22,12 @@ public static partial class Markdown
     [GeneratedRegex(@"^\d+\.\s+", RegexOptions.Compiled)]
     private static partial Regex NumberedRegex();
 
+    /// <summary>
+    /// Renders a content document: the front matter's title, paragraphs, headings, bullet and numbered lists, bold and links.
+    /// </summary>
+    /// <param name="markdown">The document.</param>
+    /// <returns>The document's title, and its markup.</returns>
+    /// <remarks>Links keep their text only, headings go to four levels, and lists are flat.</remarks>
     public static (string Title, string Markup) Render(string markdown)
     {
         var lines = markdown.Replace("\r", "").Split('\n');

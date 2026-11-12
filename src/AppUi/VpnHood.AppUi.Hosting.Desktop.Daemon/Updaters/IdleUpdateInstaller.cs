@@ -4,17 +4,18 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 
-// The service's half of the automatic update's wait for an idle VPN (the platform's updater, -waitForIdle): once a
-// session has ended and the app has stayed idle for the idle wait (DefaultIdleWait), the update the updater downloaded
-// meanwhile goes to the installer (DesktopAppUpdaterProvider.InstallDownloadedUpdate), one try per session's end. The
-// wait passes over a connect that disconnects first - a server switch - and a person who connects again at once; a
-// connect within it, or before the installer has started, puts the install off to the next end. Not at the app's
-// start, idle before always on or anyone has connected: the updater's own run at boot sees to that. Disposed before the
-// app, whose disconnect at a stop must install nothing.
+/// <summary>
+/// Provides the service's half of the automatic update's wait for an idle VPN: once a session ended and the app stayed
+/// idle for the idle wait, the update the updater downloaded meanwhile goes to the installer, one try per session's end.
+/// </summary>
+/// <remarks>
+/// The wait passes over a connect that disconnects first, as a server switch; a connect within it puts the install off
+/// to the next end. Nothing installs at the app's start. It is disposed before the app, whose disconnect at a stop must
+/// install nothing.
+/// </remarks>
 public sealed class IdleUpdateInstaller : IDisposable
 {
-    // short of always on's first pause (AppAlwaysOnOptions.RetryPauses, 30 s less a fifth at most), so a session's end
-    // under always on installs before always on connects again
+    /// <summary>The default idle wait, 10 seconds: shorter than always-on's default first pause.</summary>
     public static readonly TimeSpan DefaultIdleWait = TimeSpan.FromSeconds(10);
 
     private readonly VpnHoodApp _app;
@@ -25,6 +26,12 @@ public sealed class IdleUpdateInstaller : IDisposable
     private bool _hasBeenInUse;
     private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IdleUpdateInstaller"/> class, which follows the app's state.
+    /// </summary>
+    /// <param name="app">The app.</param>
+    /// <param name="updater">The updater.</param>
+    /// <param name="idleWait">How long the app must stay idle after a session's end.</param>
     public IdleUpdateInstaller(VpnHoodApp app, DesktopAppUpdaterProvider updater, TimeSpan idleWait)
     {
         _app = app;
@@ -99,6 +106,8 @@ public sealed class IdleUpdateInstaller : IDisposable
         _waitCts = null;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It stops following the app's state.</remarks>
     public void Dispose()
     {
         lock (_lock) {

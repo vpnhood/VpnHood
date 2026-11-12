@@ -5,9 +5,7 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
-// Who owns the far end of a loopback connection on Windows: the process its TCP table row names. The
-// row may lag a connect by a moment, so it is read a few times before the answer is no. Here rather
-// than in a Windows host, since both have a window to check for: the service's and the Store app's.
+/// <summary>Provides who owns the far end of an IPv4 loopback connection on Windows: the process its TCP table row names.</summary>
 [SupportedOSPlatform("windows")]
 public sealed class WindowsLoopbackPeerCheck : ILoopbackPeerCheck
 {
@@ -16,6 +14,9 @@ public sealed class WindowsLoopbackPeerCheck : ILoopbackPeerCheck
     private const int AfInet = 2;
     private const int TcpTableOwnerPidAll = 5;
 
+    /// <inheritdoc/>
+    /// <remarks>The row may lag a connect by a moment, so it is read up to ten times, 10 ms apart, before the answer is no.</remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<bool> IsOwnedBy(IPEndPoint local, IPEndPoint remote, int processId, CancellationToken cancellationToken)
     {
         for (var attempt = 1; ; attempt++) {

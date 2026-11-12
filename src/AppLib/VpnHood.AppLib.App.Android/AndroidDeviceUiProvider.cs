@@ -15,7 +15,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.App.Android;
 
-public class AndroidDeviceUiProvider : IDeviceUiProvider
+internal class AndroidDeviceUiProvider : IDeviceUiProvider
 {
     private const int RequestPostNotificationId = 11;
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;

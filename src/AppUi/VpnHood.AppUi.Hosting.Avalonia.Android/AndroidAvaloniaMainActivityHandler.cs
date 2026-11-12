@@ -8,7 +8,7 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Android;
 
 // The access key a link or a file opens the activity with goes to the UI, which imports it as on iOS and the
 // desktop: it waits while the consent page holds the app, and says it in the UI's snackbar, not a toast.
-public class AndroidAvaloniaMainActivityHandler(
+internal class AndroidAvaloniaMainActivityHandler(
     IActivityEvent activityEvent,
     AndroidMainActivityOptions options,
     Task<VhColor?> chromeColor)

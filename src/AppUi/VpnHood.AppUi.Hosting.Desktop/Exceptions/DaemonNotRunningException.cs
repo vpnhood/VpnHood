@@ -1,6 +1,9 @@
 namespace VpnHood.AppUi.Hosting.Desktop.Exceptions;
 
-// Nothing to talk to: no daemon has published an address and the platform says none is running.
-// The message is the platform's own sentence (IAppInstanceController.NotRunningHint), because
-// how to start it is the one thing the reader wants and the one thing this project cannot know.
+/// <summary>
+/// The exception that is thrown when the app's service cannot be reached: no address is published, or the service's
+/// answer went away.
+/// </summary>
+/// <remarks>The message is the platform's own sentence on how to start the service.</remarks>
+/// <param name="notRunningHint">The platform's sentence on how to start the service.</param>
 public class DaemonNotRunningException(string notRunningHint) : InvalidOperationException(notRunningHint);

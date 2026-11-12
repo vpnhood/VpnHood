@@ -7,7 +7,7 @@ namespace VpnHood.AppLib.App.Ios;
 // iOS implementation of the device UI provider. Most platform-integration points (quick launch,
 // notifications, private DNS, kill switch) are not applicable to a regular iOS VPN app, so they
 // fall back to the Null implementation. We only wire up opening the iOS Settings app.
-public class IosDeviceUiProvider : NullDeviceUiProvider
+internal class IosDeviceUiProvider : NullDeviceUiProvider
 {
     // The UI renders edge-to-edge, so it needs the status-bar / home-indicator inset sizes to pad
     // itself. Mirrors AndroidDeviceUiProvider.GetBarsInfo. Heights are reported in PHYSICAL PIXELS

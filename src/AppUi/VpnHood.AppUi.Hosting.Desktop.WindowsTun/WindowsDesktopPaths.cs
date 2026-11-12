@@ -14,7 +14,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 // not a release's. The instance - the service, the executable - is named after the entry assembly
 // rather than the process, because the same install runs as several processes: the service and the
 // window run the apphost, "dotnet VpnHoodClient.dll" runs dotnet.
-public class WindowsDesktopPaths(string appId) : IAppDesktopPaths
+internal class WindowsDesktopPaths(string appId) : IAppDesktopPaths
 {
     public string InstanceName { get; } =
         Assembly.GetEntryAssembly()?.GetName().Name ??

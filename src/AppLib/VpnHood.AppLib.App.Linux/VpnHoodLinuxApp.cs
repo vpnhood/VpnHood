@@ -14,6 +14,11 @@ namespace VpnHood.AppLib.App.Linux;
 // tunnel comes down before the process ends. The storage path is the host's (the daemon's folder
 // beside its versions), so the init params name no folder here. The VPN service runs in a process of
 // its own, the VPN host, which the service starts at a connect.
+/// <summary>
+/// Provides the app as Linux runs it: in a root service, one per lock folder, with the VPN service in a process of its
+/// own, the VPN host, which the service starts at a connect.
+/// </summary>
+/// <remarks>Stopping it is disposing it, asynchronously, which tries to take the tunnel down before the process ends.</remarks>
 public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
 {
     private static FileStream? _singleInstanceLock;
@@ -25,6 +30,24 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
         _app = VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath, vpnHostPath: paths.VpnHostPath), appOptions);
     }
 
+    /// <summary>
+    /// Starts the app, once: it takes the single-instance lock in the paths' lock folder before anything is built, tries to
+    /// remove what a crashed run of the app ID left, without failing where it cannot, then starts the app; a second call
+    /// gives the app started already.
+    /// </summary>
+    /// <param name="initParams">The init params.</param>
+    /// <param name="paths">Where the app keeps things, as its host decides.</param>
+    /// <returns>The app.</returns>
+    /// <exception cref="OverflowException">A duration in a built-in access key is out of range.</exception>
+    /// <exception cref="InvalidDataException">A built-in access key decodes to JSON <c>null</c>.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A built-in access key holds no valid access key.</exception>
+    /// <exception cref="NotSupportedException">A built-in access key's version is not one the app reads.</exception>
+    /// <exception cref="FormatException">
+    /// A built-in access key is no valid Base64, or an endpoint or a duration in it is not valid.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">The core app has started already, outside this class.</exception>
+    /// <exception cref="VpnHood.Core.Common.Exceptions.AnotherInstanceIsRunningException">Another instance of the app holds the lock.</exception>
+    /// <remarks>An ad provider that names countries both to include and to exclude fails the start.</remarks>
     public static VpnHoodLinuxApp Init(AppInitParams initParams, VpnHoodLinuxAppPaths paths)
     {
         // this process already holds the lock; taking it again would call itself another instance
@@ -64,12 +87,16 @@ public class VpnHoodLinuxApp : Singleton<VpnHoodLinuxApp>, IAsyncDisposable
     }
 
     // VpnHoodApp.DisposeAsync disconnects first (DisconnectOnDispose); its plain Dispose would not.
+    /// <inheritdoc/>
+    /// <remarks>It tries to disconnect the VPN first; a failure to disconnect is logged, not thrown.</remarks>
     public async ValueTask DisposeAsync()
     {
         await _app.DisposeAsync().Vhc();
         Dispose();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does not disconnect the VPN first, as <see cref="DisposeAsync"/> does; a second call does nothing.</remarks>
     protected override void Dispose(bool disposing)
     {
         // the daemon's stop deadline may run it while the graceful close ends with it

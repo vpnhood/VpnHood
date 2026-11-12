@@ -4,15 +4,18 @@ using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView;
 
-// Platform-neutral controller that hosts the VpnHood SPA in a web view: starts the page host it is
-// handed, computes the launch URL, drives the loading/error state and loads the SPA again after the
-// web view reports a failure. Only the native web-view mechanics live in the per-platform IWebView;
-// the web host keeps itself alive (see IAppWebHost). Which page host is the OS host's to say - the
-// app's own local web host when the app runs in the host's process (AppWebViewPageHost) - so nothing
-// here assumes the app is.
-//
-// Lifecycle from the OS host: construct one per web view, call Start() when the host UI is created,
-// OnResume() from the platform's foreground/resume hook, and Dispose() when it is torn down.
+/// <summary>
+/// Provides the platform-neutral control of a web view that hosts the app's web UI: it starts the page host it is
+/// handed, works out the launch address, drives the loading and error states, and loads the UI again after the web view
+/// reports a failure.
+/// </summary>
+/// <remarks>
+/// Only the native web view's mechanics are the platform's, in its <see cref="IWebView"/>. A platform host makes one per
+/// web view, calls <see cref="Start"/> when its UI is created, <see cref="OnResume"/> from its resume hook, and
+/// <see cref="Dispose"/> when it is torn down. A failed load is tried again: the page host is asked for its address
+/// again, which a server the platform owns checks, and after a second's wait the page loads again; another failure
+/// starts another round.
+/// </remarks>
 public sealed class WebViewHost : IDisposable
 {
     private static readonly TimeSpan ReloadDelay = TimeSpan.FromSeconds(1);
@@ -25,6 +28,13 @@ public sealed class WebViewHost : IDisposable
     private bool _isLoadFailing;
     private bool _disposed;
 
+    /// <summary>Initializes a new instance of the <see cref="WebViewHost"/> class.</summary>
+    /// <param name="view">The platform's web view.</param>
+    /// <param name="pageHost">The server the page comes from.</param>
+    /// <param name="options">The options, or <see langword="null"/> for the defaults.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="view"/> or <paramref name="pageHost"/> is <see langword="null"/>.
+    /// </exception>
     public WebViewHost(IWebView view, IWebViewPageHost pageHost, WebViewHostOptions? options = null)
     {
         _view = view ?? throw new ArgumentNullException(nameof(view));
@@ -37,8 +47,10 @@ public sealed class WebViewHost : IDisposable
         _pageHost.Restarted += OnServerRestarted;
     }
 
-    // Start the page host off the UI thread (the app's own extracts the web root and binds a socket),
-    // then build the web view and load the SPA back on the UI thread.
+    /// <summary>
+    /// Starts the page host off the UI thread, then makes the web view and loads the UI on the UI thread; where the page
+    /// host fails to start, the failure goes to the web view's <see cref="IWebView.ShowError"/>.
+    /// </summary>
     public void Start()
     {
         Task.Run(async () => {
@@ -55,7 +67,7 @@ public sealed class WebViewHost : IDisposable
         });
     }
 
-    // Call from the platform's resume/foreground hook. The app and the web server subscribe to it.
+    /// <summary>Tells the app's UI context the app is in front again; a platform host calls it from its resume hook.</summary>
     public void OnResume()
     {
         AppUiContext.NotifyResumed();
@@ -153,6 +165,8 @@ public sealed class WebViewHost : IDisposable
         });
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It stops following the web view's and the page host's events; a second call does nothing.</remarks>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

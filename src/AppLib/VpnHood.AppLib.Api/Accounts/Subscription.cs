@@ -1,44 +1,49 @@
 namespace VpnHood.AppLib.Api.Accounts;
 
-/// <summary>
-/// The store subscription serving an account. Its very presence is the answer to "is this account
-/// subscribed" — the facts below are only meaningful together, so they live or go as one object
-/// rather than as eight independently-nullable fields on the account.
-/// </summary>
+/// <summary>Represents the store subscription that serves an account; it is there only where the account has one.</summary>
 public class Subscription
 {
     /// <summary>
-    /// The store that billed it ("googleplay", "appstore", "microsoft"). This is the BILLING store,
-    /// which legitimately differs from the store this build ships to (bought on Android, now signed in
-    /// on an iPhone), so it never answers "which app is this". An id, as the name says: the app
-    /// decides on it, the UI never shows it.
+    /// Gets or sets the ID of the store that billed the subscription, as <c>googleplay</c>, <c>appstore</c> or
+    /// <c>microsoft</c>.
     /// </summary>
+    /// <remarks>
+    /// It can differ from the store this build comes from, as for a subscription bought on Android with an iPhone now
+    /// signed in: the app decides by it, and the UI never shows it.
+    /// </remarks>
     public required string StoreId { get; set; }
 
-    /// <summary>When the subscription began.</summary>
+    /// <summary>Gets or sets when the account backend first recorded the subscription, or <see langword="null"/>.</summary>
     public DateTime? CreatedTime { get; set; }
 
+    /// <summary>Gets or sets when the current period ends, or <see langword="null"/>.</summary>
     public DateTime? ExpirationTime { get; set; }
 
-    /// <summary>What the STORE charged for the current period — not a catalogue price.</summary>
+    /// <summary>Gets or sets the last charge the store reported for the subscription, not a list price, or <see langword="null"/>.</summary>
     public decimal? PriceAmount { get; set; }
 
+    /// <summary>Gets or sets the currency of <see cref="PriceAmount"/>, or <see langword="null"/>.</summary>
     public string? PriceCurrency { get; set; }
 
     /// <summary>
-    /// The period <see cref="PriceAmount" /> buys, as an ISO-8601 duration ("P1M", "P1Y", …) — the same
-    /// vocabulary the store uses for plan periods. Without it the UI cannot say what the price is
-    /// *per*, and a yearly subscription reads as a monthly one.
+    /// Gets or sets the period <see cref="PriceAmount"/> pays for, as an ISO 8601 duration (<c>P1M</c>, <c>P1Y</c>), or
+    /// <see langword="null"/>.
     /// </summary>
     public string? BillingPeriod { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the subscription renews at the period's end, or
+    /// <see langword="null"/> where that is not known.
+    /// </summary>
     public bool? IsAutoRenew { get; set; }
 
     /// <summary>
-    /// Where this subscription can be managed from here, and when it cannot, why. A URL never
-    /// crosses to the UI: the store provider performs it, so no UI holds a store address. Composed
-    /// by the account provider, which is the only place that knows both who billed the subscription
-    /// and what this device can show — the portal never sends it.
+    /// Gets or sets where the subscription can be managed from this device, or why not. The default is
+    /// <see cref="SubscriptionManagement.AnotherStore"/>.
     /// </summary>
+    /// <remarks>
+    /// The account provider sets it, as it knows both the store that billed it and what this device can show. The UI gets
+    /// no store address: the app opens the store's screen itself.
+    /// </remarks>
     public SubscriptionManagement Management { get; set; }
 }

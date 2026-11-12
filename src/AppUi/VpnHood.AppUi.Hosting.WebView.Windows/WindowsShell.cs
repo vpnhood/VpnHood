@@ -6,7 +6,7 @@ namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
 // What the web view's window asks of the shell and the window manager: a link in the person's
 // browser, a title bar in the app's colour.
-public static class WindowsShell
+internal static class WindowsShell
 {
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);

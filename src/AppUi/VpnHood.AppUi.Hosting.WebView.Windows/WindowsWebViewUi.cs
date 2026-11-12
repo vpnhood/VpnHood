@@ -10,12 +10,16 @@ using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView.Windows;
 
-// The SPA in a Win32 window over WebView2, as a desktop head names its UI (DesktopInitParams.Ui): the
-// page the app's web host serves - the service's, at the address the host hands over - with the
-// window's look read from the app and from the UI's store. It runs the window's message loop on the
-// host's STA main thread until the window closes or the run is cancelled. It keeps no tray, so a
-// start in the tray ends at once. No UI framework: Windows' own window, message box and taskbar.
-// The head states the shape the web UI's layout needs of the window (windowFit), as a page cannot.
+/// <summary>
+/// Provides the app's web UI in a Win32 window over WebView2, as a desktop head names its UI: the page the app's web
+/// host serves, at the address the host hands over, with the window's look read from the app and the UI's content.
+/// </summary>
+/// <remarks>
+/// It runs the window's message loop on the host's STA main thread until the window closes or the run is canceled. It
+/// keeps no tray, so a start in the tray ends at once. It uses no UI framework: Windows' own window, message box and
+/// taskbar.
+/// </remarks>
+/// <param name="windowFit">The shape the web UI's layout needs of the window, which a page cannot state.</param>
 public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
 {
     // the running window, which BringToFront reaches from another thread; or the thread showing the
@@ -24,6 +28,18 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
     private volatile uint _messageThreadId;
     private volatile VpnHoodApi? _api;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A start in the tray, or a token canceled before the call, returns at once, as it keeps no tray. An access key the
+    /// launch was given is imported before the window is made, and a Quick Launch connects beside it; a failure of either
+    /// is logged. A cancel closes the window.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The window's icon could not be made.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">Windows refused the window.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled while the launch's access key was imported or the window's look
+    /// was read.
+    /// </exception>
     public void Run(DesktopUiParams uiParams, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested || uiParams.StartHidden)
@@ -69,7 +85,11 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
         }
     }
 
-    // In the host's own English: the web UI's words are its page's, which the app serves.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It shows the host's text in a Windows message box with an OK button, as the web UI's words are its page's, which the
+    /// app serves. A token canceled before the call returns at once.
+    /// </remarks>
     public void RunMessage(DesktopUiMessageParams messageParams, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -86,6 +106,11 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It asks for the window, or the message box in its place; with neither, it does nothing. Where WebView2 is missing,
+    /// the page opens in the browser. The task is already complete, and the token is not read.
+    /// </remarks>
     public Task BringToFront(CancellationToken cancellationToken)
     {
         var messageThreadId = _messageThreadId;
@@ -97,6 +122,12 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It asks the app to import the key and make its server the chosen one, which the page then shows; before a window
+    /// runs, it does nothing. A key the app refuses, or a call that fails, is logged only.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task ImportAccessKey(string accessKey, CancellationToken cancellationToken)
     {
         return _api is { } api ? ImportAccessKey(api, accessKey, cancellationToken) : Task.CompletedTask;
@@ -118,6 +149,13 @@ public class WindowsWebViewUi(DesktopWindowFitOptions windowFit) : IDesktopUi
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It asks the app to connect with its chosen location where it can connect; unlike the page's Connect, it does not
+    /// adjust the location first. Before a window runs, it does nothing. A failure is logged, and the page shows it where
+    /// the app keeps it as the state's last error.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task QuickLaunch(CancellationToken cancellationToken)
     {
         return _api is { } api ? QuickLaunch(api, cancellationToken) : Task.CompletedTask;

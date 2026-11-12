@@ -10,7 +10,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 // byte of it, so the content the UI extracts for itself goes under that person's cache instead.
 // The install's own places follow where the binary sits; a person's follow the app id, which no
 // other app on the machine has and a Debug build does not share with a release.
-public class LinuxDesktopPaths(string appId) : IAppDesktopPaths
+internal class LinuxDesktopPaths(string appId) : IAppDesktopPaths
 {
     // The launcher script says its own name in this variable, because the binary cannot know it:
     // "vhclient" is what is on the PATH, and "VpnHoodClient" - the binary's name - is not.

@@ -24,7 +24,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 // So the child inherits this process's streams and only its exit code comes back. sudo is prepended
 // just when this process is not already root, so the same call works from a session, from a script
 // run under sudo, and from a unit.
-public class LinuxInstanceController(IAppDesktopPaths paths) : IAppInstanceController
+internal class LinuxInstanceController(IAppDesktopPaths paths) : IAppInstanceController
 {
     public string NotRunningHint =>
         $"The {paths.InstanceName} service is not running. Start it with: sudo systemctl start {paths.InstanceName}";

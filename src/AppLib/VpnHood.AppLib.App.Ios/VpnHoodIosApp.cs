@@ -11,8 +11,33 @@ namespace VpnHood.AppLib.App.Ios;
 
 // The app on iOS, from the same init params as every platform plus the two iOS facts
 // (IosInitParams). The Network Extension is a binary of its own and never runs this.
+/// <summary>
+/// Provides the app on iOS, from the init params of every platform and the two iOS facts. The Network Extension is a
+/// binary of its own and never runs it.
+/// </summary>
 public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
 {
+    /// <summary>Starts the app, once; a second call gives the app started already.</summary>
+    /// <param name="initParams">The init params.</param>
+    /// <returns>The app.</returns>
+    /// <remarks>
+    /// It keeps what must not travel with a backup in a folder beside the storage, which it marks for iOS not to back up; a
+    /// mark that cannot be set is logged. On tvOS, which may empty every folder an app writes, it keeps the storage in the
+    /// app's defaults. An ad provider that names countries both to include and to exclude fails the start.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">The init params' app name is <see langword="null"/>.</exception>
+    /// <exception cref="OverflowException">A duration in a built-in access key is out of range.</exception>
+    /// <exception cref="InvalidDataException">A built-in access key decodes to JSON <c>null</c>.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A built-in access key holds no valid access key.</exception>
+    /// <exception cref="NotSupportedException">A built-in access key's version is not one the app reads.</exception>
+    /// <exception cref="FormatException">
+    /// A built-in access key is no valid Base64, or an endpoint or a duration in it is not valid.
+    /// </exception>
+    /// <exception cref="ArgumentException">The init params' app name is empty.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The init params name no storage folder, or an App Group without a container, as where the entitlements lack it; the
+    /// platform has no local app data folder; or the app's storage has no parent folder.
+    /// </exception>
     public static VpnHoodIosApp Init(IosInitParams initParams)
     {
         // do not init again
@@ -85,6 +110,7 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
             localizedDescription: appName);
     }
 
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing)
     {
         if (disposing) {

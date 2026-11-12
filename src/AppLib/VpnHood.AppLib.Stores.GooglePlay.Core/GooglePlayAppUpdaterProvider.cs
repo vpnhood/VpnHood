@@ -12,8 +12,11 @@ using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 
-// Play shows its update on its own screen, where the person decides. A failure throws: the service
-// treats a failed check like Play's "none", and a failed screen as one to show again.
+/// <summary>Provides Google Play's update, which Play shows on its own screen, where the person decides.</summary>
+/// <remarks>
+/// A failed query throws. The update flow's own result is not read, so a flow Play ends with a failure completes as one
+/// that ended.
+/// </remarks>
 public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 {
     // with Google out of reach Play answers "none" only after minutes, holding the check, and the check
@@ -22,13 +25,19 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 
     private AppUpdateState _state = AppUpdateState.None;
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="true"/>: Play's own screen shows the update.</remarks>
     public bool HasOwnScreen => true;
 
-    // Play installs it, and stops the app itself
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: Play installs the update, and stops the app itself.</remarks>
     public bool IsInstalling => false;
 
-    // Play's update flow shows over the window: without one the check waits, outside the service's
-    // catch, which would answer "no update" and restart the prompt's delay
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It asks Play, within 15 seconds, and gives since when Play has known the update. It needs the window, as Play's
+    /// update flow shows over it.
+    /// </remarks>
     public async Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
@@ -58,11 +67,19 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         return _state;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It gives the last check's state.</remarks>
     public AppUpdateState GetState(AppRelease? feedRelease)
     {
         return _state;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It starts Play's immediate update flow over the window, and completes once the flow has ended, installed,
+    /// dismissed or failed: its completing does not tell that the update was installed.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Play has no update to show.</exception>
     public async Task StartUpdate(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
@@ -72,28 +89,38 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             throw new InvalidOperationException("Google Play has no update to show.");
     }
 
-    // Play installs on its own screen: nothing waits for the app's Install
+    /// <inheritdoc/>
+    /// <remarks>It always throws <see cref="NotSupportedException"/>: Play installs on its own screen.</remarks>
     public Task CompleteUpdate(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
         throw new NotSupportedException("Google Play installs its update on its own screen.");
     }
 
-    // Google's guide for immediate updates: one the person started and left before it finished reports
-    // DeveloperTriggeredUpdateInProgress, and the app brings its screen back
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It brings back Play's screen for an update the person started and left before it finished, as Google's guide for
+    /// immediate updates asks.
+    /// </remarks>
     public Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken)
     {
         return TryStartUpdateFlow((AndroidUiContext)uiContext,
             UpdateAvailability.DeveloperTriggeredUpdateInProgress, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: Play keeps its own automatic update setting.</remarks>
     public bool IsAutomaticUpdateSupported => false;
 
+    /// <inheritdoc/>
+    /// <remarks>It always throws <see cref="NotSupportedException"/>.</remarks>
     public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
     {
         throw new NotSupportedException("Google Play keeps its own automatic update setting.");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It always throws <see cref="NotSupportedException"/>.</remarks>
     public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("Google Play keeps its own automatic update setting.");

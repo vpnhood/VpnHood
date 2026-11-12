@@ -7,7 +7,7 @@ namespace VpnHood.AppLib.Portal.Dto;
 /// repeated here: once provisioned, GET /account is where the code and the subscription live.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<PortalPurchaseState>))]
-public enum PortalPurchaseState
+internal enum PortalPurchaseState
 {
     /// <summary>Delivered — refresh GET /account for the code.</summary>
     Provisioned,

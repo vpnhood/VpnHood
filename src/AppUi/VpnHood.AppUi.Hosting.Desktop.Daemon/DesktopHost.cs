@@ -6,14 +6,16 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Daemon;
 
-// One binary, three jobs, chosen by the first word on the command line: the daemon that holds the
-// app, the window that shows it, and the commands that drive it from a shell. A head is then the
-// product facts only it can give (DesktopInitParams), a platform package is the machine facts only it
-// can give (IDesktopPlatform), and this joins them. The VPN service is a binary of its own beside it,
-// the VPN host, which the daemon starts at each connect; `dev` keeps it in its one process.
-//
-// Run alone, the window's executable opens the window, which is what a desktop entry means by it,
-// and the command a person types prints its help, as a terminal's command does.
+/// <summary>
+/// Provides a desktop head's whole run: one binary with three jobs, chosen by the first word on the command line, the
+/// service that holds the app, the window that shows it, and the commands that drive it from a shell.
+/// </summary>
+/// <remarks>
+/// A head gives the product facts only it can give (<see cref="DesktopInitParams"/>), a platform package the machine
+/// facts only it can give (<see cref="IDesktopPlatform"/>), and this joins them. The VPN service is a binary of its own
+/// beside it, the VPN host, which the service starts at each connect; <c>dev</c> runs the app and the window in one
+/// process. Run alone, the window's executable opens the window, and the command a person types prints its help.
+/// </remarks>
 public static class DesktopHost
 {
     // SIGTERM - how the service manager stops the daemon - cancels the running command, and the
@@ -24,9 +26,14 @@ public static class DesktopHost
     // The daemon's graceful close in a signal's stop, which leaves its quick one the rest.
     private static readonly TimeSpan SignalGracefulCloseTimeout = ProcessTerminationTimeout - TimeSpan.FromSeconds(2);
 
-    // The whole run, on the calling thread, which is the host's main thread: the UI gets it (on
-    // Windows it must be the STA thread Main was given), and it waits while the parser and every
-    // command's work run off it (MainThreadQueue).
+    /// <summary>
+    /// Runs what the command line asks for, and blocks until it ends: the work runs off the calling thread and the UI on
+    /// it, so a head calls it from its <c>Main</c>, on Windows its <c>[STAThread]</c> one.
+    /// </summary>
+    /// <param name="args">The process's command-line arguments.</param>
+    /// <param name="initParams">The head's init params.</param>
+    /// <param name="platform">What the platform says for itself.</param>
+    /// <returns>The process's exit code.</returns>
     public static int Run(string[] args, DesktopInitParams initParams, IDesktopPlatform platform)
     {
         using var mainThread = new MainThreadQueue();
@@ -98,8 +105,13 @@ public static class DesktopHost
         return await parseResult.InvokeAsync(invocationConfiguration, cancellationToken).Vhc();
     }
 
-    // The daemon's run where a signal stops it (IDesktopPlatform.HostDaemon): the parser cancels its
-    // token, and the app's graceful close gives way to its quick one before the parser ends the process.
+    /// <summary>
+    /// Runs the service where a signal stops it, as on Linux: the parser cancels the token at the signal, and the app's
+    /// graceful close then gives way to its quick one after a while, before the process ends.
+    /// </summary>
+    /// <param name="run">The service's run.</param>
+    /// <param name="cancellationToken">The token the parser cancels at the signal.</param>
+    /// <returns>A task whose result is the process's exit code.</returns>
     public static async Task<int> HostDaemonStoppedBySignal(DaemonRun run, CancellationToken cancellationToken)
     {
         using var quickClose = new CancellationTokenSource();

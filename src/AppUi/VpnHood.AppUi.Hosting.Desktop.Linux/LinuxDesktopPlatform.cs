@@ -16,7 +16,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 // daemon, which the parser turns into the run's cancellation; the daemon's console is the journal where stdout is the journal, so no line
 // reaches it twice; and the window writes to the journal's socket, under the instance's name, which
 // "service log" reads beside the unit.
-public sealed class LinuxDesktopPlatform : IDesktopPlatform
+internal sealed class LinuxDesktopPlatform : IDesktopPlatform
 {
     private readonly LinuxDesktopPaths _paths;
 

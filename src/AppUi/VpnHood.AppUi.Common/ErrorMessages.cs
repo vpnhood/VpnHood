@@ -10,19 +10,37 @@ namespace VpnHood.AppUi.Common;
 // HTTP call there or a method call here, so the two read the same fields. What the sentence depends
 // on besides the failure comes in as the ErrorContext, read by the UI that holds the app's state.
 // Every button is decided here, so a dialog only draws what it is given.
+
+/// <summary>
+/// Provides the sentence for a failure, and the buttons that go with it, as the app reports it, in process or over HTTP.
+/// </summary>
+/// <remarks>Every button is decided here, so a dialog only draws what it is given.</remarks>
 public static class ErrorMessages
 {
+    /// <summary>Gets what the UI does about a failure.</summary>
+    /// <param name="exception">The failure.</param>
+    /// <param name="context">What the sentence and the buttons depend on besides the failure.</param>
+    /// <returns>What to do.</returns>
+    /// <exception cref="InvalidOperationException">The words have not been loaded (<see cref="Strings.InitAsync"/>).</exception>
     public static ErrorMessage For(Exception exception, ErrorContext context)
     {
         return For(exception.ToApiError(), context);
     }
 
+    /// <summary>Gets what the UI does about a failure, as the app reported it.</summary>
+    /// <param name="error">The failure.</param>
+    /// <param name="context">What the sentence and the buttons depend on besides the failure.</param>
+    /// <returns>What to do.</returns>
+    /// <exception cref="InvalidOperationException">The words have not been loaded (<see cref="Strings.InitAsync"/>).</exception>
     public static ErrorMessage For(ApiError error, ErrorContext context)
     {
         return WithReport(Map(error, context), context);
     }
 
-    // a sentence of the UI's own, shown the way a failure is
+    /// <summary>Gets a dialog for a sentence of the UI's own, shown the way a failure is.</summary>
+    /// <param name="text">The sentence.</param>
+    /// <param name="context">What the buttons depend on.</param>
+    /// <returns>The dialog.</returns>
     public static ErrorMessage ForText(string text, ErrorContext context)
     {
         return WithReport(new ErrorMessage.Dialog(text), context);

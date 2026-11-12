@@ -31,6 +31,16 @@ namespace VpnHood.AppLib.App.Android;
 // debouncing, and each nudge spawns this process with nobody watching), yet after a crash no
 // final nudge ever comes and the tile would show Connected until tapped. The passive cost — one
 // tile-process spawn per panel open — is acceptable and shrinks further with AOT.
+
+/// <summary>
+/// Provides the Quick Settings tile that connects and disconnects the VPN, in a lightweight process of its own but in a
+/// debug build.
+/// </summary>
+/// <remarks>
+/// Its callbacks never touch the app: a tap disconnects the VPN service, starts it with its last configuration, or opens
+/// the app where there is none or the server asks for an ad. It is a passive tile, which reads the state again each time
+/// the panel opens.
+/// </remarks>
 [Service(
     // Android keeps a user's added tile by this Java name. The generated default hashes the namespace
     // and the assembly name, so it is pinned to the name the tile shipped under (VpnHood.AppLib.Droid.Common
@@ -45,23 +55,30 @@ namespace VpnHood.AppLib.App.Android;
 [IntentFilter([ActionQsTile])]
 public class QuickLaunchTileService : TileService
 {
-    public const string ProcessName = ":vpnhood_tile";
+    /// <summary>The name of the tile's process.</summary>
+    internal const string ProcessName = ":vpnhood_tile";
     private const string IconResourceName = "notification"; // the app's white glyph, as its notifications show
     private readonly Handler _mainHandler = new(Looper.MainLooper!);
     private readonly VpnServiceManager _vpnServiceManager = new(AndroidDevice.Create(), eventWatcherInterval: null);
     private CancellationTokenSource? _listeningCts;
     private ClientState? _overrideClientState; // for immediate visual feedback while the service is starting/stopping
+
+    /// <summary>Gets a value indicating whether this process is the tile's.</summary>
+    /// <exception cref="InvalidOperationException">The process's name cannot be read.</exception>
     public static bool IsTileProcess => AndroidDevice.CurrentProcessName.Contains(ProcessName);
 
+    /// <inheritdoc/>
     public override void OnCreate()
     {
         base.OnCreate();
         VhLogger.Instance.LogDebug("QuickLaunchTileService has been created.");
     }
 
-    // Android 7 to 12 throw from their own bind when the system UI that bound the tile has died since
-    // ("Unable to reach IQSService"), which crashes the app; Android 13 and later give it no binder
-    // instead, and the system UI binds the tile again when it needs it. So does this.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Where binding fails as the system UI that bound the tile has died, it gives no binder, as Android 13 and later do, and
+    /// the system UI binds the tile again when it needs it.
+    /// </remarks>
     public override IBinder? OnBind(Intent? intent)
     {
         try {
@@ -73,6 +90,7 @@ public class QuickLaunchTileService : TileService
         }
     }
 
+    /// <inheritdoc/>
     public override void OnDestroy()
     {
         _listeningCts?.TryCancel();
@@ -84,18 +102,22 @@ public class QuickLaunchTileService : TileService
         base.OnDestroy();
     }
 
+    /// <inheritdoc/>
     public override void OnTileAdded()
     {
         VhLogger.Instance.LogDebug("OnTileAdded is requested.");
         base.OnTileAdded();
     }
 
+    /// <inheritdoc/>
     public override void OnTileRemoved()
     {
         VhLogger.Instance.LogDebug("OnTileRemoved is requested.");
         base.OnTileRemoved();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps the tile live while the Quick Settings panel is open.</remarks>
     public override void OnStartListening()
     {
         base.OnStartListening();
@@ -105,6 +127,7 @@ public class QuickLaunchTileService : TileService
         _ = PollWhileListening(_listeningCts.Token);
     }
 
+    /// <inheritdoc/>
     public override void OnStopListening()
     {
         _listeningCts?.TryCancel();
@@ -159,7 +182,6 @@ public class QuickLaunchTileService : TileService
         UpdateTile(qsTile, qsState, qsLabel, qsStateDescription);
     }
 
-
     private static void UpdateTile(Tile tile, TileState state, string? label, string? stateDescription)
     {
         // avoid unnecessary updates that would trigger a tile animation
@@ -175,11 +197,15 @@ public class QuickLaunchTileService : TileService
         tile.UpdateTile();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A tap disconnects, starts the VPN service with its last configuration, or opens the app where there is none or the
+    /// server asks for an ad.
+    /// </remarks>
     public override void OnClick()
     {
         _ = TryClick();
     }
-
 
     private async Task TryClick()
     {
@@ -275,7 +301,14 @@ public class QuickLaunchTileService : TileService
         }
     }
 
-    public static Task<int> RequestAddTile(Context context)
+    /// <summary>Asks the person to add the tile to Quick Settings.</summary>
+    /// <param name="context">The context to ask from.</param>
+    /// <returns>
+    /// A task whose result is the system's answer code, or 0 where the system has no status bar service or main executor.
+    /// </returns>
+    /// <remarks>Where the app has started, it marks the prompt as asked in the app's settings, so the app does not ask again.</remarks>
+    /// <exception cref="ArgumentNullException">The context has no resources, package manager or package name.</exception>
+    internal static Task<int> RequestAddTile(Context context)
     {
         // the user is being prompted right now; do not prompt again later. This runs in the app
         // process — the tile process never touches app settings

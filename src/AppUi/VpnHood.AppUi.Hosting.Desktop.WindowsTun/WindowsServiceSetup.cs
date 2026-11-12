@@ -18,7 +18,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 // (WindowsInstallFolder). The folder is checked before the prompt, since reading access lists needs
 // no elevation, so the reason reaches whoever asked: the elevated copy's output reaches nobody. The
 // elevated copy checks again, as the boundary, and answers with an exit code of its own.
-public class WindowsServiceSetup(
+internal class WindowsServiceSetup(
     WindowsDesktopPaths paths,
     string appName,
     IReadOnlyList<string> accessKeyFileExtensions,

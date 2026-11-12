@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Hosts the app web UI in an Android WebView: the IWebView adapter, the web-view clients, and the activity handler a head derives from</Description>
+		<Description>Hosts the app web UI in an Android WebView: the application and the main activity a head derives from, over its IWebView adapter and web-view clients</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 	</PropertyGroup>
 

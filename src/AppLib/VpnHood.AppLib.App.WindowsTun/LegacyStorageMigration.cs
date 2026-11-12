@@ -14,6 +14,15 @@ namespace VpnHood.AppLib.App.WindowsTun;
 // folder is the person's to shape. settings.json goes last, so a start cut short copies again.
 // Only an administrator's folder: those releases ran elevated, so no other is one they used, and a
 // standard user's could be planted - settings that turn on /remote-access, or a server of their own.
+/// <summary>
+/// Provides the copy of the app's files from the person's own folder, where the releases before the service kept them,
+/// at the service's first start.
+/// </summary>
+/// <remarks>
+/// It runs only as LocalSystem, as the service does, and only where the service's storage has no settings yet. It
+/// copies only the known files, skipping those that are links, and only from an administrator's folder, as those
+/// releases ran elevated; the settings go last, so a start cut short before them copies again.
+/// </remarks>
 [Obsolete("Migration (2026-09): drop a few months after it ships, with its calls in Connect.Windows.Web " +
           "and Client.Windows.Web and LegacyStorageMigrationTest.")]
 public static class LegacyStorageMigration
@@ -32,6 +41,9 @@ public static class LegacyStorageMigration
     // A person's debug commands stay behind: the service is every administrator's.
     private static readonly string[] DroppedUserSettings = ["DebugData1", "DebugData2"];
 
+    /// <summary>Copies the newest such folder's files into the service's storage, logging a failure.</summary>
+    /// <param name="storagePath">The service's storage.</param>
+    /// <param name="legacyFolderName">The name of the folder the older releases kept the files in.</param>
     public static void TryImport(string storagePath, string legacyFolderName)
     {
         try {

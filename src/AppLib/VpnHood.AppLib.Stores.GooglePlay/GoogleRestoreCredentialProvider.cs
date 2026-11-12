@@ -15,6 +15,11 @@ namespace VpnHood.AppLib.Stores.GooglePlay;
 /// </summary>
 public class GoogleRestoreCredentialProvider : IRestoreCredentialProvider
 {
+    /// <inheritdoc/>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">The Credential Manager failed.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The activity has no main executor, or the platform gave no response, or one of another type.
+    /// </exception>
     public async Task<string> Create(IUiContext? uiContext, string requestJson, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
@@ -30,6 +35,12 @@ public class GoogleRestoreCredentialProvider : IRestoreCredentialProvider
         return restoreResponse.ResponseJson;
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">The Credential Manager failed.</exception>
+    /// <exception cref="System.Security.Authentication.AuthenticationException">Google's restore failed.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The activity has no main executor, or the platform gave no credential, or one of another type.
+    /// </exception>
     public async Task<string?> TryGet(IUiContext? uiContext, string requestJson, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
@@ -54,6 +65,8 @@ public class GoogleRestoreCredentialProvider : IRestoreCredentialProvider
         }
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The activity has no main executor.</exception>
     public async Task Clear(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
@@ -63,6 +76,7 @@ public class GoogleRestoreCredentialProvider : IRestoreCredentialProvider
             .ConfigureAwait(false);
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
     }

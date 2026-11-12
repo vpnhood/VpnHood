@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>Platform-neutral controller that hosts the app web UI in a native web view; each platform supplies a thin IWebView adapter.</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

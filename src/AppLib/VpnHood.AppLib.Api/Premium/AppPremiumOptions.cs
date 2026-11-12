@@ -3,41 +3,40 @@ using VpnHood.AppLib.Api.App;
 
 namespace VpnHood.AppLib.Api.Premium;
 
-/// <summary>
-/// The premium tier of a build — present only when the product HAS one. Grouped because none of
-/// these members mean anything on their own: a null <c>AppOptions.Premium</c> is not
-/// "premium locked", it is the FULL app — every feature allowed, nothing sold, nothing promoted —
-/// and with the members living inside the block, "no premium, but codes are fine" is simply not
-/// writable.
-/// </summary>
+/// <summary>Represents a build's premium tier, set only where the product has one.</summary>
+/// <remarks>
+/// Without it, the app is the full app: every feature allowed, nothing sold or promoted. Its members mean nothing
+/// alone, so a build without a premium tier does not offer premium-code entry either.
+/// </remarks>
 public class AppPremiumOptions
 {
     /// <summary>
-    /// The features this build sells: present here means "premium profiles only", absent means free
-    /// for everyone. Empty is a premium tier that gates nothing — plans still sell time, not features.
+    /// Gets the features this build sells: one listed is for premium profiles only, and one not listed is free for
+    /// everyone. The default is none.
     /// </summary>
+    /// <remarks>With none, the tier gates no feature: its plans sell time.</remarks>
     public IReadOnlyList<AppFeature> Features { get; init; } = [];
 
     /// <summary>
-    /// Whether this build may take a typed premium code IN. Default FALSE, because the store that
-    /// forbids it refuses the whole app for it: App Review 3.1.1 reads a premium code as a license
-    /// key, so a head that never considered the question must not ship a code box by accident.
-    /// A per-build capability, never an OS check — a sideloaded iOS build may lawfully keep the box.
-    /// <para>
-    /// Importing only. Showing the code this device already holds is the operator's call alone
-    /// (<see cref="VpnProfiles.VpnProfileInfo.CanViewAccessCode" />): a build with no code box
-    /// still shows the buyer the credential their own purchase produced, because that is what they
-    /// carry to the devices where typing it is allowed.
-    /// </para>
+    /// Gets a value indicating whether this build takes a typed premium code. The default is <see langword="false"/>.
     /// </summary>
+    /// <remarks>
+    /// A store may refuse the whole app for a code box: Apple's App Review takes a premium code for a license key. It is a
+    /// capability of the build, not of the device's system: an iOS build from outside the App Store may keep the box. It
+    /// covers only typing a code; whether the code this device holds is shown is the operator's choice
+    /// (<see cref="VpnProfiles.VpnProfileInfo.CanViewAccessCode"/>), so a build without the box still shows a buyer the code
+    /// their purchase made, for the devices that take it.
+    /// </remarks>
     public bool AllowImportAccessCode { get; init; }
 
     /// <summary>
-    /// Whether this build may send a buyer to an outside shop. Default FALSE for the same reason
-    /// with more force: the URL arrives from the SERVER — every access token carries its operator's
-    /// own — so no policy may be trusted to know which store this build shipped through. Apple
-    /// 3.1.1/3.1.3 and Play's Payments policy both forbid steering a buyer out of the app, so a head
-    /// sold through either never opts in and the link stays dark whatever the token says.
+    /// Gets a value indicating whether this build may send a buyer to a shop outside the app. The default is
+    /// <see langword="false"/>.
     /// </summary>
+    /// <remarks>
+    /// The shop's address comes from the server, as each access key carries its operator's, so no policy can know which
+    /// store this build came through. Apple's and Google Play's rules forbid sending a buyer out of the app, so a build
+    /// sold through either keeps it off, and the link stays hidden whatever the access key says.
+    /// </remarks>
     public bool IsPurchaseUrlSupported { get; init; }
 }

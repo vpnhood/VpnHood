@@ -7,12 +7,18 @@ using Windows.Services.Store;
 
 namespace VpnHood.AppLib.Stores.MicrosoftStore;
 
-// The Microsoft Store counterpart of GooglePlayInAppUserReviewProvider: the Store's own rating and review dialog
-// over the app's window, asked for after the app's own rating dialog (UserReviewDialog) got a top rating, as on
-// Android and iOS. The Store tells how the dialog closed: the person's cancel is an answer, anything else an error,
-// such as a package the Store does not know - one sideloaded, not installed from it (0x803F6107).
+/// <summary>Provides the Microsoft Store's own rating and review dialog, over the app's desktop window.</summary>
+/// <remarks>
+/// The Store tells how the dialog closed: a success and the person's cancel complete normally, and any other status
+/// throws, as for an app the Store does not associate with its listing (0x803F6107).
+/// </remarks>
 public class MicrosoftStoreInAppUserReviewProvider : IAppUserReviewProvider
 {
+    /// <inheritdoc/>
+    /// <remarks>It completes once the dialog has closed.</remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The window has no native handle, or the Store could not show its dialog.
+    /// </exception>
     public async Task RequestReview(IUiContext uiContext, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Requesting Microsoft Store rating and review.");

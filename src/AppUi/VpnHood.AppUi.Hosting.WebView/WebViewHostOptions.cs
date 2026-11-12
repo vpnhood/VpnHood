@@ -1,8 +1,8 @@
 namespace VpnHood.AppUi.Hosting.WebView;
 
+/// <summary>Represents the options of a <see cref="WebViewHost"/>.</summary>
 public class WebViewHostOptions
 {
-    // Optional transform of the computed launch URL. Android uses this to redirect to its
-    // "please update your WebView" page when the installed system WebView is too old.
+    /// <summary>Gets or sets a change to the launch address, or <see langword="null"/> for none.</summary>
     public Func<Uri, Uri>? LaunchUrlBuilder { get; set; }
 }

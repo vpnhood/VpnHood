@@ -8,12 +8,17 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
-// Install on an install from our site hands the package to the install's own updater, vhupdate.ps1 in its root, as
-// Linux's vhupdate takes it: the updater checks the feed's version, then runs the setup silently, which stops this
-// service, closes what runs from the install - the windows and trays it lists, which the new service opens again
-// (WindowsUiRelaunch) - puts the new version in and starts it. It is the automatic update too: run by the setup's
-// <instance>Updater task while updates are on. Here it is a child of this service, which it outlives: Windows ends
-// no process with the one that started it. Its output goes to update.log beside it, whose last line says why.
+/// <summary>
+/// Provides the app's update on Windows, for an install from the website: it hands the package to the install's own
+/// updater, <c>vhupdate.ps1</c> in its root, which is the automatic update too.
+/// </summary>
+/// <remarks>
+/// The task's runs of the updater check the feed; an install here hands it the downloaded package, whose own version it
+/// checks, then runs the setup silently, which stops this service, closes the windows and trays that run from the
+/// install, puts the new version in and asks Windows to start it, and the new service tries to open those windows and
+/// trays again.
+/// Here the updater runs as a child of this service; its output goes to <c>update.log</c> beside it.
+/// </remarks>
 public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
 {
     private const string UpdaterFileName = "vhupdate.ps1";
@@ -29,9 +34,15 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
     }
 
     /// <summary>
-    /// The updater of an install the setup made, whose version's folder holds the setup's publish.json; null for a
-    /// copy run where it lies, a debugger's build.
+    /// Creates the updater of an install the setup made, whose version's folder holds the setup's <c>publish.json</c>.
     /// </summary>
+    /// <param name="context">The app's options context, with its app ID and version.</param>
+    /// <returns>
+    /// The updater, or <see langword="null"/> where the install has no updater script or the version's folder no
+    /// <c>publish.json</c>, as in a debugger's build.
+    /// </returns>
+    /// <exception cref="System.IO.InvalidDataException">The <c>UpdateInfoUrl</c> property in <c>publish.json</c> is null.</exception>
+    /// <exception cref="InvalidOperationException">The entry assembly has no name, so the install has none.</exception>
     public static WindowsAppUpdaterProvider? TryCreate(AppOptionsContext context)
     {
         return TryCreate(new WindowsDesktopPaths(context.AppId), context.AppVersion);
@@ -50,7 +61,14 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
     private string TaskName { get; }
     private static string SchTasksPath => Path.Combine(Environment.SystemDirectory, "schtasks.exe");
 
-    // the task's choice, which the setup makes and keeps: its XML's Enabled, which only a disabled task says
+    /// <summary>Gets whether the updater's task is on, as the setup left it or the person set it.</summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is <see langword="true"/> unless the task is disabled; <see langword="false"/> where the query
+    /// fails.
+    /// </returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="InvalidOperationException">schtasks could not be run.</exception>
     public override async Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
     {
         var result = await RunTool(SchTasksPath, ["/Query", "/TN", TaskName, "/XML"], cancellationToken).Vhc();
@@ -63,8 +81,16 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
         return enabled != "false";
     }
 
-    // The task on or off, as the setup leaves it; a run under way ends as it would. Turned on, it runs once at once,
-    // as Linux's timer runs its updater when it starts: a check now rather than at the next boot or 12 hours on.
+    /// <summary>Turns the updater's task on or off, as the setup does.</summary>
+    /// <param name="isOn"><see langword="true"/> to turn it on.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>
+    /// Turned on, it asks for one run at once, a check now, which a run under way ignores; where that request fails, it is
+    /// logged, and the task stays on.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="InvalidOperationException">schtasks could not be run, or could not enable or disable the task.</exception>
     public override async Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
     {
         var result = await RunTool(SchTasksPath, ["/Change", "/TN", TaskName, isOn ? "/ENABLE" : "/DISABLE"],
@@ -85,7 +111,11 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
         }
     }
 
-    // the task's run, whose triggers keep their times; one while it runs is ignored (IgnoreNew)
+    /// <summary>Runs the updater's task now; its triggers keep their times, and a run under way ignores it.</summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the run is asked for.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="InvalidOperationException">schtasks could not be run, or could not run the task.</exception>
     protected override async Task RunUpdater(CancellationToken cancellationToken)
     {
         var result = await RunTool(SchTasksPath, ["/Run", "/TN", TaskName], cancellationToken).Vhc();
@@ -93,6 +123,14 @@ public sealed class WindowsAppUpdaterProvider : DesktopAppUpdaterProvider
             throw new InvalidOperationException($"schtasks could not run the {TaskName} task. {result.Error.Trim()}");
     }
 
+    /// <summary>Runs the install's updater on a package, and waits for it.</summary>
+    /// <param name="packagePath">The package.</param>
+    /// <returns>
+    /// A task whose result is why the update installed nothing: the update log's last line that is not blank, or the
+    /// updater's exit code. The setup stops this service before it puts anything in, so an updater that ends first installed
+    /// nothing.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">The updater could not be started.</exception>
     protected override async Task<string?> RunInstaller(string packagePath)
     {
         var startInfo = new ProcessStartInfo {

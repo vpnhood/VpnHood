@@ -23,6 +23,16 @@ namespace VpnHood.AppUi.Common;
 //
 // so a language chosen on the paired phone reaches a TV that is already showing the page - a
 // property change with an empty name, which every binding on this object takes as its own.
+
+/// <summary>
+/// Provides the UI's words, from the locale files of the UI's content store, as members named after their keys.
+/// </summary>
+/// <remarks>
+/// The pages bind to <see cref="Current"/>'s members, so a language chosen on a paired phone reaches a page already
+/// showing: a property change with an empty name. An app built on this package lays its own words over these
+/// (<see cref="AddSourceAsync"/>). Every generated word throws <see cref="InvalidOperationException"/> until
+/// <see cref="InitAsync"/> has loaded the words.
+/// </remarks>
 public sealed partial class Strings : INotifyPropertyChanged
 {
     private const string LocalesFolder = "locales";
@@ -40,6 +50,7 @@ public sealed partial class Strings : INotifyPropertyChanged
     private IReadOnlyDictionary<string, string>? _texts;
     private string _cultureName = EnglishName;
 
+    /// <summary>Gets the one instance the pages bind to.</summary>
     public static Strings Current { get; } = new();
 
     private static IAssetProvider Assets => _assets ?? throw NotLoaded();
@@ -50,10 +61,18 @@ public sealed partial class Strings : INotifyPropertyChanged
         return new InvalidOperationException($"The words have not been loaded: {nameof(Strings)}.{nameof(InitAsync)} runs before the first view.");
     }
 
-    // The words, out of the store the head hands in: English, which every other language falls
-    // back to, and the languages there are files for. Before the first view, and on Android before
-    // every activity's: a language already shown stays, since CultureName says it has been loaded and
-    // nothing would load it again.
+    /// <summary>
+    /// Loads the words from the UI's content store: English, which every other language falls back to, and the languages
+    /// there are files for.
+    /// </summary>
+    /// <param name="assets">The UI's content store.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>It runs before the first view, and on Android before every activity's; a language already shown stays.</remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A file of the store's words cannot be read.</exception>
+    /// <exception cref="VpnHood.Net.Toolkit.Assets.AssetNotFoundException">The store has no English words or no index of its languages.</exception>
+    /// <exception cref="InvalidOperationException">The store's English file holds no words.</exception>
     public static async Task InitAsync(IAssetProvider assets, CancellationToken cancellationToken)
     {
         _assets = assets;
@@ -68,9 +87,9 @@ public sealed partial class Strings : INotifyPropertyChanged
         Current._texts ??= _english;
     }
 
-    // The languages there are words for: the store's, by its index, and every source added -
-    // which is what the UI declares to the app at start (ConfigParams.AvailableCultures), so the
-    // app's language list and its best-culture choice are made from the words that exist.
+    /// <summary>
+    /// Gets the languages there are words for: the store's, by its index, and every source's added.
+    /// </summary>
     public static IReadOnlyList<string> AvailableCultures {
         get {
             lock (Sources)
@@ -78,21 +97,32 @@ public sealed partial class Strings : INotifyPropertyChanged
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is raised with an empty name when the words change, for every binding on this object.</remarks>
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private Strings()
     {
     }
 
-    // The language the words are in: what SetCultureAsync last took, English at first.
+    /// <summary>
+    /// Gets the language asked for last (<see cref="SetCultureAsync"/>), English at first; where neither the store nor an
+    /// added source has it, the words shown are its language's alone, or English.
+    /// </summary>
     public string CultureName => _cultureName;
 
-    // The words shown now, by key: what the app is given for its own text (VhApp).
+    /// <summary>Gets the words shown now, by key, which the app is given for its own text.</summary>
+    /// <exception cref="InvalidOperationException">The words have not been loaded (<see cref="InitAsync"/>).</exception>
     public IReadOnlyDictionary<string, string> Texts => _texts ?? English;
 
-    // Words laid over the store's: a language it does not ship, or lines said another way. The
-    // last source added speaks first. Takes effect as soon as the words are reloaded, on a page
-    // already showing.
+    /// <summary>Lays a source's words over the store's; the last source added speaks first.</summary>
+    /// <param name="source">The source.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>It takes effect as soon as the words are loaded again, on a page already showing.</remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A file of the store's words cannot be read.</exception>
+    /// <exception cref="InvalidOperationException">The words have not been loaded (<see cref="Strings.InitAsync"/>).</exception>
     public static async Task AddSourceAsync(IStringSource source, CancellationToken cancellationToken)
     {
         lock (Sources)
@@ -100,9 +130,19 @@ public sealed partial class Strings : INotifyPropertyChanged
         await Current.Reload(CultureInfo.GetCultureInfo(Current._cultureName), cancellationToken).ConfigureAwait(false);
     }
 
-    // The language to show - the app's answer, the person's choice or the device's. A culture we
-    // ship no file for falls back to the language alone (pt-PT to pt), then to English.
-    // Returns whether the words changed, so a caller can rebuild text it has already composed.
+    /// <summary>
+    /// Sets the language to show; where neither the store nor an added source has the culture, the words fall back to its
+    /// language alone, then to English.
+    /// </summary>
+    /// <param name="culture">The culture: the app's answer, the person's choice or the device's.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is <see langword="true"/> where the language asked for differs from the one before, so a caller
+    /// can rebuild text it composed.
+    /// </returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A file of the store's words cannot be read.</exception>
+    /// <exception cref="InvalidOperationException">The words have not been loaded (<see cref="InitAsync"/>).</exception>
     public async Task<bool> SetCultureAsync(CultureInfo culture, CancellationToken cancellationToken)
     {
         if (_cultureName == culture.Name)
@@ -127,23 +167,26 @@ public sealed partial class Strings : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
     }
 
-    // The way the words run: right to left in ar and fa. The UI's
-    // root mirrors its layout by it - the panels, the grids, the margins, the drawer's side. Text
-    // and images are never mirrored, and addresses, keys and figures are pinned left to right.
+    /// <summary>Gets a value indicating whether the words run right to left, as in Arabic and Persian.</summary>
+    /// <remarks>The UI's root mirrors its layout by it; text, images, addresses, keys and figures are not mirrored.</remarks>
     public bool IsRightToLeft { get; private set; }
 
-    // The chevrons that point the way through the pages - Util.getLocalizedRightChevron and its
-    // left twin. A glyph is text, which the mirroring leaves as it is, so the glyph itself turns.
+    /// <summary>Gets the chevron that points forward through the pages, turned for a right-to-left language.</summary>
     public string ChevronForward => IsRightToLeft ? Mdi.ChevronLeft : Mdi.ChevronRight;
+
+    /// <summary>Gets the chevron that points back through the pages, turned for a right-to-left language.</summary>
     public string ChevronBack => IsRightToLeft ? Mdi.ChevronRight : Mdi.ChevronLeft;
 
-    // The unit reads the same in every language, so it has no key.
+    /// <summary>Gets the unit of speed, the same in every language.</summary>
     public string Mbps => "Mbps";
 
-    // The address the phone dials, before the listener has one. It has no key either.
+    /// <summary>Gets the words in place of the address the phone dials, before the listener has one.</summary>
     public string RemoteAccessStarting => "Starting…";
 
-    // A connection's state in words, as the home page and the desktop's tray show it.
+    /// <summary>Gets a connection's state in words, as the home page and the desktop's tray show it.</summary>
+    /// <param name="connectionState">The state.</param>
+    /// <returns>The words.</returns>
+    /// <exception cref="InvalidOperationException">The words have not been loaded (<see cref="Strings.InitAsync"/>).</exception>
     public string ConnectionStateText(AppConnectionState connectionState)
     {
         return connectionState switch {

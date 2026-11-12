@@ -14,6 +14,15 @@ namespace VpnHood.AppLib.App.Android;
 // library free of AndroidX (the app variants are sensitive to AndroidX version conflicts).
 //
 // The authority is "<applicationId>.reportprovider" so multiple VpnHood apps can coexist on one device.
+
+/// <summary>
+/// Provides the report's file to another app through the share sheet, as a content address the receiving app is
+/// granted to read.
+/// </summary>
+/// <remarks>
+/// The report is copied into the app's cache; the authority is <c>&lt;applicationId&gt;.reportprovider</c>, so several
+/// VpnHood apps can live on one device. It takes no change: inserting, updating and deleting do nothing.
+/// </remarks>
 [ContentProvider(["${applicationId}.reportprovider"], Exported = false, GrantUriPermissions = true)]
 public sealed class ReportFileProvider : ContentProvider
 {
@@ -24,9 +33,16 @@ public sealed class ReportFileProvider : ContentProvider
     private const string ColumnDisplayName = "_display_name";
     private const string ColumnSize = "_size";
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="true"/>: there is nothing to set up.</remarks>
     public override bool OnCreate() => true;
 
-    // Copy the report into the cache and return a content:// URI the share sheet can grant to other apps.
+    /// <summary>Copies a report into the app's cache, and gives the content address the share sheet can grant.</summary>
+    /// <param name="context">The app's context.</param>
+    /// <param name="fileName">The report's file name.</param>
+    /// <param name="content">The report.</param>
+    /// <returns>The content address.</returns>
+    /// <exception cref="Exception">Android built no content address.</exception>
     public static AndroidUri SaveAndGetUri(Context context, string fileName, byte[] content)
     {
         var dir = GetReportsDir(context);
@@ -41,6 +57,9 @@ public sealed class ReportFileProvider : ContentProvider
         return ret ?? throw new Exception("Failed to build content URI");
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="Java.IO.FileNotFoundException">The address names no report in the cache, or one outside it.</exception>
+    /// <remarks>It opens the file read-only, whatever the mode.</remarks>
     public override ParcelFileDescriptor? OpenFile(AndroidUri uri, string mode)
     {
         var file = ResolveFile(uri) ??
@@ -48,7 +67,8 @@ public sealed class ReportFileProvider : ContentProvider
         return ParcelFileDescriptor.Open(file, ParcelFileMode.ReadOnly);
     }
 
-    // Consumers (mail/messengers) query the display name and size before attaching; supply just those.
+    /// <inheritdoc/>
+    /// <remarks>It answers the display name and the size only.</remarks>
     public override ICursor? Query(AndroidUri uri, string[]? projection, string? selection,
         string[]? selectionArgs, string? sortOrder)
     {
@@ -75,11 +95,18 @@ public sealed class ReportFileProvider : ContentProvider
         return cursor;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is <c>text/plain</c>.</remarks>
     public override string GetType(AndroidUri uri) => "text/plain";
 
-    // Read-only provider: mutations are unsupported.
+    /// <inheritdoc/>
+    /// <remarks>It takes no change.</remarks>
     public override AndroidUri? Insert(AndroidUri uri, ContentValues? values) => null;
+    /// <inheritdoc/>
+    /// <remarks>It takes no change.</remarks>
     public override int Delete(AndroidUri uri, string? selection, string[]? selectionArgs) => 0;
+    /// <inheritdoc/>
+    /// <remarks>It takes no change.</remarks>
     public override int Update(AndroidUri uri, ContentValues? values, string? selection,
         string[]? selectionArgs) => 0;
 

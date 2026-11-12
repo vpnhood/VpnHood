@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>Hosts the VpnHood Avalonia UI in an iOS app: the application delegate a head's AppDelegate derives from</Description>
 		<TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-tvos'))">17.0</SupportedOSPlatformVersion>
 	</PropertyGroup>

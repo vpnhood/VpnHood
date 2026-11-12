@@ -1,19 +1,29 @@
 namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
-// Where the window keeps things: the window's share of an install's paths (IAppDesktopPaths), and all
-// a host without a service hands it (IInProcessDesktopPlatform).
+/// <summary>
+/// Defines where the window keeps things: the window's share of an install's paths, and all a host without a service
+/// hands it.
+/// </summary>
 public interface IDesktopUiPaths
 {
-    // The install's own name: the service, the folder it keeps its storage in, a person's folder of
-    // the UI's, the window's single instance. "VpnHoodClient" or "VpnHoodConnect", however this
-    // platform spells it.
+    /// <summary>Gets the install's own name, as the platform spells it, which names the service and the window's single instance.</summary>
     string InstanceName { get; }
 
-    // The UI's own folder, per person, because the daemon's storage is not theirs to write: the UI's
-    // extracted content, a web view's profile.
+    /// <summary>
+    /// Gets the UI's own folder, per person, as the service's storage is not theirs to write: the UI's extracted content,
+    /// and a web view's profile.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The platform cannot name the folder, as the Windows plug-in's outside its package.
+    /// </exception>
     string UiDataPath { get; }
 
-    // The UI's own extracted content, under the UI's folder, named apart from the app's own copies
-    // (assets/ui), which share that folder when the app runs in the window's process.
+    /// <summary>
+    /// Gets the folder of the UI's own extracted content, under the UI's folder, named apart from the app's own copies,
+    /// which may share that folder where the app runs in the window's process.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The platform cannot name the folder, as the Windows plug-in's outside its package.
+    /// </exception>
     string UiContentCachePath => Path.Combine(UiDataPath, "assets", "window");
 }

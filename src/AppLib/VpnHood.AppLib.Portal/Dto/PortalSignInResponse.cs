@@ -4,7 +4,7 @@ namespace VpnHood.AppLib.Portal.Dto;
 /// POST /auth/sessions response. Either a session (AccessToken set) or, for the password form when
 /// a second factor is due, only <see cref="Challenge"/> — the fields are exclusive.
 /// </summary>
-public class PortalSignInResponse
+internal class PortalSignInResponse
 {
     public string? AccessToken { get; init; }
     public DateTime? ExpiresAt { get; init; }

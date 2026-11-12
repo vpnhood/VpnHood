@@ -3,11 +3,21 @@ using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 
 namespace VpnHood.AppLib.App.Android.Activities;
 
+/// <summary>
+/// Represents a head's main activity that leaves its work to the app's main activity handler, which it makes as it is
+/// created (<see cref="CreateMainActivityHandler"/>).
+/// </summary>
 public abstract class AndroidAppMainActivity : ActivityEvent
 {
-    protected AndroidAppMainActivityHandler? MainActivityHandler { get; private set; }
+    /// <summary>Gets the activity's handler, once it is made, or <see langword="null"/>.</summary>
+    private AndroidAppMainActivityHandler? MainActivityHandler { get; set; }
+
+    /// <summary>Creates the handler that does the activity's work for the app.</summary>
+    /// <returns>The handler.</returns>
     protected abstract AndroidAppMainActivityHandler CreateMainActivityHandler();
 
+    /// <inheritdoc/>
+    /// <remarks>It makes the handler before the base raises the create event, so the handler sees it.</remarks>
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         // must before base.OnCreate to make sure event is fired
@@ -15,13 +25,16 @@ public abstract class AndroidAppMainActivity : ActivityEvent
         base.OnCreate(savedInstanceState);
     }
 
-    // The creation of a launch that another activity takes instead: a head that ships a second UI
-    // sends the launch to that UI's activity. Called from OnCreate in place of base.OnCreate,
-    // which is why it takes the bundle - Android throws SuperNotCalledException for an OnCreate
-    // that returns without its super call, and the one to reach is ActivityEvent's, above the
-    // handler this class builds: no main activity handler for an activity about to finish, so
-    // nothing is mounted and the access key is imported once, by the activity that stays.
-    // The intent comes along, so that key arrives there all the same.
+    /// <summary>
+    /// Creates this activity only to hand its launch, with its intent, to another activity, and finishes: for a head that
+    /// ships a second UI. A head calls it from <see cref="OnCreate"/> in place of the base's.
+    /// </summary>
+    /// <typeparam name="TActivity">The activity that takes the launch.</typeparam>
+    /// <param name="savedInstanceState">The state Android saved, as <see cref="OnCreate"/> was given it.</param>
+    /// <remarks>
+    /// No handler is made for an activity about to finish; the intent goes along, so an access key in it reaches the
+    /// activity that takes the launch, where that one handles it.
+    /// </remarks>
     protected void OnCreateRedirectingTo<TActivity>(Bundle? savedInstanceState)
         where TActivity : Activity
     {

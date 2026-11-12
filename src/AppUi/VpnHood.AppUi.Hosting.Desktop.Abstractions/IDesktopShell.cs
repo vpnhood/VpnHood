@@ -1,17 +1,32 @@
 namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
-// What the UI asks of the OS outside its window, where the UI framework's own way, or the host's, is refused: a
-// sandboxed app's (the Store edition's), which Windows lets neither shell-execute a link, reach the Win32 clipboard nor
-// set its taskbar button's overlay icon. A host with none leaves the framework's and the host's own ways
-// (DesktopUiParams.Shell).
+/// <summary>
+/// Defines what the UI asks of the system outside its window, where the UI framework's own way, or the host's, is
+/// refused.
+/// </summary>
+/// <remarks>
+/// It serves where the platform keeps an app from those ways, as for the Store edition. A host with no shell leaves the
+/// framework's and the host's own ways (<see cref="DesktopUiParams.Shell"/>).
+/// </remarks>
 public interface IDesktopShell
 {
-    // The link opened in the person's browser; false when the OS would not, and the UI offers it another way.
+    /// <summary>
+    /// Opens a link with the application the system associates with it: a web link in the person's browser.
+    /// </summary>
+    /// <param name="url">The link.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is <see langword="true"/> where the link opened, or <see langword="false"/> where the system
+    /// would not open it, and the UI offers it another way.
+    /// </returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     Task<bool> OpenLink(Uri url, CancellationToken cancellationToken);
 
-    // The text put on the clipboard, for the person to paste elsewhere.
+    /// <summary>Puts text on the clipboard, for the person to paste elsewhere.</summary>
+    /// <param name="text">The text.</param>
     void CopyText(string text);
 
-    // The connection's state on the app's taskbar button, in the OS's own badge; null takes it away, as the UI ends.
+    /// <summary>Shows the connection's state on the app's taskbar button, in the system's own badge.</summary>
+    /// <param name="badge">The state, or <see langword="null"/> to take the badge away, as the UI ends.</param>
     void ShowConnectionBadge(DesktopConnectionBadge? badge);
 }

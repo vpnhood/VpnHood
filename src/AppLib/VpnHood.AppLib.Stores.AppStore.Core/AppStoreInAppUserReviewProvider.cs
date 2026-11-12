@@ -9,14 +9,17 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Stores.AppStore;
 
-// App Store counterpart of GooglePlayInAppUserReviewProvider: presents the native in-app rating
-// dialog via SKStoreReviewController. The OS decides whether the dialog actually appears — it is
-// throttled (at most a few prompts per year per app) and never shows for TestFlight/dev builds —
-// and gives no completion signal, so this returns once the request is made, not when the user is
-// done. That is the platform contract; the app's own rating dialog runs first (UserReviewDialog)
-// and this native prompt is only requested after a top rating, matching the Android flow.
+/// <summary>Provides the App Store's in-app rating dialog, through StoreKit's review controller.</summary>
+/// <remarks>
+/// iOS decides whether the dialog shows: a few times a year at most, and never in TestFlight, while a development build
+/// always shows it, for testing. It tells nothing back, so a request completes once it is made, not when the person is
+/// done.
+/// </remarks>
 public class AppStoreInAppUserReviewProvider : IAppUserReviewProvider
 {
+    /// <inheritdoc/>
+    /// <remarks>It asks for the dialog on the app's foreground scene.</remarks>
+    /// <exception cref="InvalidOperationException">No scene of the app is in front.</exception>
     public async Task RequestReview(IUiContext uiContext, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Requesting App Store user review.");

@@ -7,7 +7,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 
 // Who owns the far end of a loopback connection on Linux: the user its row in /proc/net/tcp names.
 // That is root for the service, and this process's own user when the far end is this process (dev).
-public sealed class LinuxLoopbackPeerCheck : ILoopbackPeerCheck
+internal sealed class LinuxLoopbackPeerCheck : ILoopbackPeerCheck
 {
     public Task<bool> IsOwnedBy(IPEndPoint local, IPEndPoint remote, int processId, CancellationToken cancellationToken)
     {

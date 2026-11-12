@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood Microsoft Store updates and reviews, which any Microsoft Store app can use.</Description>
 		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.AppLib.Stores.MicrosoftStore</RootNamespace>
 	</PropertyGroup>

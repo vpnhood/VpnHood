@@ -11,6 +11,11 @@ namespace VpnHood.AppUi.Common;
 // with the words, as a row asks for a name while it is drawn and a page in a browser cannot wait for a
 // file. A language or a country the store has no name for falls back to English, then to the caller's
 // name (a location's own, from the server), then to the code.
+
+/// <summary>
+/// Provides the countries' names in the language last asked for, else in English, from the UI's content store; the
+/// names fall back apart from the words.
+/// </summary>
 public static class CountryNames
 {
     private const string Folder = "countries";
@@ -19,6 +24,12 @@ public static class CountryNames
     private static IReadOnlyDictionary<string, string> _english = ReadOnlyDictionary<string, string>.Empty;
     private static IReadOnlyDictionary<string, string> _names = ReadOnlyDictionary<string, string>.Empty;
 
+    /// <summary>
+    /// Gets a country's name in the language last set, else in English, else the fallback, else the code.
+    /// </summary>
+    /// <param name="countryCode">The country's two-letter code.</param>
+    /// <param name="fallback">The name to use where the store has none, as a location's own, or <see langword="null"/>.</param>
+    /// <returns>The name.</returns>
     public static string Get(string countryCode, string? fallback = null)
     {
         var code = countryCode.ToUpperInvariant();

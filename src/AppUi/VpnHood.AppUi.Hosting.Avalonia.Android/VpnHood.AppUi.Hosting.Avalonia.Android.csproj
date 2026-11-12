@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<Description>Hosts the VpnHood Avalonia UI in an Android activity</Description>
 	</PropertyGroup>

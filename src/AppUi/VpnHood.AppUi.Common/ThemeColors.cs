@@ -13,15 +13,34 @@ namespace VpnHood.AppUi.Common;
 //
 // A theme the store does not have is a build bug: ReadAsync throws, and LoadAsync, for a start, logs
 // it and answers the built-in look.
+
+/// <summary>
+/// Represents the colours the native chrome around the UI draws with, the window's and the bars', as the theme names
+/// them in the UI's content store.
+/// </summary>
+/// <remarks>A colour the theme does not name is <see langword="null"/>, and that part of the chrome keeps the system's.</remarks>
 public class ThemeColors
 {
+    /// <summary>Gets the window's background colour, or <see langword="null"/>.</summary>
     public VhColor? WindowBackgroundColor { get; init; }
+
+    /// <summary>Gets the navigation bar's colour, or <see langword="null"/>.</summary>
     public VhColor? NavigationBarColor { get; init; }
+
+    /// <summary>Gets the progress bar's colour, or <see langword="null"/>.</summary>
     public VhColor? ProgressBarColor { get; init; }
 
-    // For a start: the theme's colours, or - no store, no such theme, a store that could not be read -
-    // an error in the log and the built-in look, not a dead app. Never faulted but by a cancel, so whatever
-    // waits on it needs no catch.
+    /// <summary>
+    /// Loads a theme's colours, for a start: with no store, it gives the built-in look; with no such theme or a store that
+    /// cannot be read, it logs the error and gives the built-in look.
+    /// </summary>
+    /// <param name="assets">The UI's content store, or <see langword="null"/>.</param>
+    /// <param name="theme">The theme's name.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the colours.</returns>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled: the task is canceled, the one way it ends without colours.
+    /// </exception>
     public static async Task<ThemeColors> LoadAsync(IAssetProvider? assets, string theme,
         CancellationToken cancellationToken)
     {
@@ -40,7 +59,7 @@ public class ThemeColors
         }
     }
 
-    public static async Task<ThemeColors> ReadAsync(IAssetProvider assets, string theme,
+    internal static async Task<ThemeColors> ReadAsync(IAssetProvider assets, string theme,
         CancellationToken cancellationToken)
     {
         var folder = $"themes/{theme}";

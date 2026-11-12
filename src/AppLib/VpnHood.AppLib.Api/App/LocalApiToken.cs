@@ -1,14 +1,22 @@
 namespace VpnHood.AppLib.Api.App;
 
-// The local web host's token as its address carries it: after "#", which a browser never sends, so
-// whatever loads the page hands it the token.
+/// <summary>
+/// Provides the local web host's token as its address carries it: after <c>#</c>, which a browser never sends, so
+/// whatever loads the page hands it the token.
+/// </summary>
 public static class LocalApiToken
 {
-    public const string FragmentName = "token";
+    private const string FragmentName = "token";
 
+    /// <summary>Makes the address's fragment that carries a token.</summary>
+    /// <param name="token">The token.</param>
+    /// <returns>The fragment, as <c>#token=…</c>.</returns>
     public static string Fragment(string token) => $"#{FragmentName}={token}";
 
-    // Null when the address carries none: a remote listener's, or an address from before the token.
+    /// <summary>Reads the token an address carries.</summary>
+    /// <param name="url">The address.</param>
+    /// <returns>The token, or <see langword="null"/> where the address carries none, as a remote listener's.</returns>
+    /// <exception cref="InvalidOperationException"><paramref name="url"/> is a relative address.</exception>
     public static string? Read(Uri url)
     {
         var fragment = url.Fragment.TrimStart('#');

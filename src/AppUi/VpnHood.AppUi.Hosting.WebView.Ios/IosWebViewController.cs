@@ -8,26 +8,38 @@ using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppUi.Hosting.WebView.Ios;
 
-// iOS host for the VpnHood SPA. All the hosting business logic lives in the shared WebViewHost;
-// this controller only supplies the iOS chrome (root-view background, status bar, safe area) and
-// forwards the native lifecycle (create / foreground / dispose) to the host. The WKWebView mechanics
-// live in IosWebView.
+/// <summary>
+/// Represents the page's controller on iOS: the iOS chrome around the web UI, its background, status bar and safe area,
+/// with the native lifecycle handed to the shared <see cref="WebViewHost"/>.
+/// </summary>
+/// <remarks>
+/// The app must have started with its local web host, which needs the app's web content, as the page comes from it.
+/// </remarks>
 public class IosWebViewController : UIViewController
 {
     private WebViewHost? _host;
     private NSObject? _foregroundObserver;
 
-    // Rotation is opt-in: the SPA is portrait-first, so the controller locks to portrait unless the
-    // implementor enables rotation. On iPad the mask is only honored when the host app also sets
-    // UIRequiresFullScreen in its Info.plist (multitasking-capable iPad apps ignore it).
+    /// <summary>
+    /// Gets a value indicating whether the controller asks for every orientation, rather than portrait only, as the web UI
+    /// is portrait first; the app's and the device's own limits still apply.
+    /// </summary>
+    /// <remarks>On an iPad that shares its screen with other apps, the system may not honour the mask.</remarks>
     public bool AllowRotation { get; init; }
 
+    /// <inheritdoc/>
+    /// <remarks>Portrait, or every orientation with <see cref="AllowRotation"/>.</remarks>
     public override UIInterfaceOrientationMask GetSupportedInterfaceOrientations() =>
         AllowRotation ? UIInterfaceOrientationMask.All : UIInterfaceOrientationMask.Portrait;
 
-    // The SPA uses a dark window background, so the status bar should use light (white) content.
+    /// <inheritdoc/>
+    /// <remarks>Light content, always, whatever the background.</remarks>
     public override UIStatusBarStyle PreferredStatusBarStyle() => UIStatusBarStyle.LightContent;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It gives the app its UI context, then paints the view and makes the web view once the theme's colours are read.
+    /// </remarks>
     public override void ViewDidLoad()
     {
         base.ViewDidLoad();
@@ -72,6 +84,11 @@ public class IosWebViewController : UIViewController
             : null;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// With <paramref name="disposing"/>, it stops following the app's return to the foreground, and disposes the web view's
+    /// host.
+    /// </remarks>
     protected override void Dispose(bool disposing)
     {
         if (disposing) {

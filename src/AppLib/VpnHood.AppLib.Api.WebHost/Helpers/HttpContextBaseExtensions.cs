@@ -8,7 +8,7 @@ using WatsonWebserver.Core;
 
 namespace VpnHood.AppLib.Api.WebHost.Helpers;
 
-public static class HttpContextBaseExtensions
+internal static class HttpContextBaseExtensions
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
         { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };

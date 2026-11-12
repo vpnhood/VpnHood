@@ -8,11 +8,25 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Android.Utils;
 
-// The activity's window as every UI on Android has it: edge to edge where the version allows, the
-// keyboard's inset kept clear, and the system bars and the ground behind them in the UI's own colour,
-// its theme's window background, which its host hands in as it becomes known.
-public static class WindowInsetUtils
+/// <summary>
+/// Provides the activity's window as every UI on Android has it: edge to edge where the version allows, the keyboard's
+/// inset kept clear, and the system bars and the ground behind them in the UI's own colour.
+/// </summary>
+internal static class WindowInsetUtils
 {
+    /// <summary>Configures an activity's window: edge to edge, the keyboard's inset kept clear, and the bars' colours.</summary>
+    /// <param name="window">The window, or <see langword="null"/>, which only logs a warning.</param>
+    /// <param name="lightStatusBars"><see langword="true"/> for dark status bar icons, over a light colour.</param>
+    /// <param name="lightNavBars"><see langword="true"/> for dark navigation bar icons.</param>
+    /// <param name="navigationBarContrastEnforced"><see langword="true"/> to let the system keep the navigation bar's contrast.</param>
+    /// <param name="backgroundColor">
+    /// A task whose result is the UI's colour for the bars and the ground behind them, as it becomes known; with a
+    /// <see langword="null"/> result, no background of the UI's is painted.
+    /// </param>
+    /// <remarks>
+    /// On Android 11 and later the window draws edge to edge and the bars' icons follow the light flags; on Android 10 and
+    /// later the navigation bar's contrast follows its flag. Until the colour has arrived, nothing of the UI's is painted.
+    /// </remarks>
     public static void Configure(Window? window,
         bool lightStatusBars, bool lightNavBars, bool navigationBarContrastEnforced, Task<VhColor?> backgroundColor)
     {

@@ -10,7 +10,7 @@ namespace VpnHood.AppLib.App.Linux;
 // starts: each entry one datagram on the journal's own socket, filed under the identifier it is given
 // (journalctl -t). Warnings and errors only, as the window's on Windows. The journal stamps each entry
 // and shows its priority, so its provider asks TextLogger for neither.
-public sealed class LinuxJournalSocketLogger(Socket socket, string identifier) : ILogger
+internal sealed class LinuxJournalSocketLogger(Socket socket, string identifier) : ILogger
 {
     private static readonly UnixDomainSocketEndPoint JournalSocket = new("/run/systemd/journal/socket");
 

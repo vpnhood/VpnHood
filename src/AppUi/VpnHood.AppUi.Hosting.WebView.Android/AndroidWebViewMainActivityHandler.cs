@@ -16,7 +16,7 @@ namespace VpnHood.AppUi.Hosting.WebView.Android;
 // Android host for the VpnHood SPA. All hosting business logic lives in the shared WebViewHost;
 // this handler only supplies the Android chrome (content-view timing, hardware back) and forwards the
 // activity lifecycle to the host. The WebView mechanics live in AndroidWebView.
-public class AndroidWebViewMainActivityHandler(
+internal class AndroidWebViewMainActivityHandler(
     IActivityEvent activityEvent,
     AndroidWebViewMainActivityOptions options)
     : AndroidAppMainActivityHandler(activityEvent, options, WindowBackgroundColor())

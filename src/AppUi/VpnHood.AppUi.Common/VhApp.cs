@@ -16,6 +16,17 @@ namespace VpnHood.AppUi.Common;
 // The values are read again through the API: the state every second by the home's clock and after
 // every action, the rest when the state says the configuration moved (AppState.ConfigTime)
 // or a page saved, and the account when the state says it changed (AppState.AccountTime).
+
+/// <summary>
+/// Provides what the UI's pages read off the app, and the one way they reach it: the app's API, in process or over HTTP
+/// from a paired browser.
+/// </summary>
+/// <remarks>
+/// The pages read plain values held here, the features, the state, the settings and the profiles, never the app itself,
+/// so the same pages run on the device and in a browser. The state is read again every second by the home's clock and
+/// after every action; the rest when the state says the configuration moved or a page saved; the account when the state
+/// says it changed.
+/// </remarks>
 public static class VhApp
 {
     private static VpnHoodApi? _api;
@@ -24,17 +35,33 @@ public static class VhApp
     private static IReadOnlyList<string> _availableCultures = [];
     private static string? _sentCultureName;
 
+    /// <summary>Gets the app's API.</summary>
+    /// <exception cref="InvalidOperationException">The UI has not been given the app's API (<see cref="Init"/>).</exception>
     public static VpnHoodApi Api => _api ?? throw new InvalidOperationException(
         $"The UI has not been given the app's API. A head must call {nameof(VhApp)}.{nameof(Init)} before the UI starts.");
 
+    /// <summary>Gets a value indicating whether the UI has the app's API.</summary>
     public static bool IsInit => _api != null;
+
+    /// <summary>Gets a value indicating whether the head has configured the UI (<see cref="Configure"/>).</summary>
     public static bool IsConfigured { get; private set; }
 
-    // The head's first step, before Avalonia starts: the API, and the app's info read through
-    // it - the features decide the theme, which is applied as the application initializes. In
-    // process the read completes at once. This and Configure configure their awaits away (Vhc): the
-    // Android host blocks its main thread on both (AvaloniaUiHosting). The read is this method's own,
-    // not ReloadInfo's: the pages call that one, and it stores its values on their thread.
+    /// <summary>
+    /// Gives the UI the app's API, and reads the app's information through it: the head's first step, before Avalonia
+    /// starts, as the features read decide the theme.
+    /// </summary>
+    /// <param name="api">The app's API.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>In process the read completes at once.</remarks>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or, over HTTP, a request timed out.
+    /// </exception>
+    /// <exception cref="System.Net.Http.HttpRequestException">Over HTTP, the app could not be reached.</exception>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
+    /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, answered with an error it does
+    /// not name, or answered with a body that cannot be read.
+    /// </exception>
     public static async Task Init(VpnHoodApi api, CancellationToken cancellationToken)
     {
         _api = api;
@@ -49,10 +76,26 @@ public static class VhApp
         _state = _info.State;
     }
 
-    // The head's second step, once the UI can say which languages it has: they are declared to
-    // the app, so the app's language list and its
-    // best-culture choice are made from the words that exist. A UI whose words live in files it
-    // must first place has placed them by now - that moment is the head's, not a page's.
+    /// <summary>
+    /// Tells the app which languages the UI has words for, and gives it the UI's words for its own text: the head's second
+    /// step, once the UI can say which languages it has.
+    /// </summary>
+    /// <param name="availableCultures">The languages the UI has words for.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>From then on, the app gets the UI's words again whenever the UI's language changes.</remarks>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or, over HTTP, a request timed out.
+    /// </exception>
+    /// <exception cref="System.Net.Http.HttpRequestException">Over HTTP, the app could not be reached.</exception>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
+    /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, answered with an error it does
+    /// not name, or answered with a body that cannot be read.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// The UI has not been given the app's API (<see cref="Init"/>), or the words have not been loaded
+    /// (<see cref="Strings.InitAsync"/>).
+    /// </exception>
     public static async Task Configure(IReadOnlyList<string> availableCultures, CancellationToken cancellationToken)
     {
         _availableCultures = availableCultures;
@@ -93,22 +136,42 @@ public static class VhApp
     private static AppInfo Info => _info ?? throw new InvalidOperationException(
         $"The app's info has not been read. {nameof(VhApp)}.{nameof(Init)} reads it.");
 
+    /// <summary>Gets the app's descriptor, as last read.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static AppDescriptor Descriptor => Info.Descriptor;
+
+    /// <summary>Gets what the UI may ask of the device, as last read.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static DeviceIntentFeatures Intents => Info.IntentFeatures;
+
+    /// <summary>Gets the person's settings, as last read.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static UserSettings UserSettings => Info.UserSettings;
+
+    /// <summary>Gets the VPN profiles, as last read.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static IReadOnlyList<VpnProfileInfo> VpnProfileInfos => Info.VpnProfileInfos;
+
+    /// <summary>Gets the languages the app offers, as last read.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static IReadOnlyList<UiCultureInfo> AvailableCultureInfos => Info.AvailableCultureInfos;
+
+    /// <summary>Gets the app's state, as last read.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static AppState State => _state ?? Info.State;
 
-    // Whether this UI is the remote: served by the app to a browser on another device, which is
-    // what the API says of the request that read the configuration. Never
-    // on the device itself.
+    /// <summary>Gets a value indicating whether this UI is the remote: served by the app to a browser on another device.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsRemote => Info.IsRemote;
 
-    // The profile the app is set to, whole (its locations), off the last configuration read; the
-    // state carries its base info.
+    /// <summary>Gets the VPN profile the app is set to, whole, from the last configuration read, or <see langword="null"/>.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static VpnProfileInfo? CurrentVpnProfileInfo => FindVpnProfileInfo(UserSettings.VpnProfileId);
 
+    /// <summary>Finds a VPN profile in the last configuration read.</summary>
+    /// <param name="vpnProfileId">The profile's ID, or <see langword="null"/>.</param>
+    /// <returns>The profile, or <see langword="null"/> where there is none.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static VpnProfileInfo? FindVpnProfileInfo(Guid? vpnProfileId)
     {
         return vpnProfileId == null
@@ -116,6 +179,22 @@ public static class VhApp
             : VpnProfileInfos.FirstOrDefault(x => x.VpnProfileId == vpnProfileId);
     }
 
+    /// <summary>
+    /// Reads the app's state again; where the configuration moved, the information too; and where the account changed, the
+    /// account.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>A failed account read is logged and tried again after a pause; the state still shows.</remarks>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or, over HTTP, a request timed out.
+    /// </exception>
+    /// <exception cref="System.Net.Http.HttpRequestException">Over HTTP, the app could not be reached.</exception>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
+    /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, answered with an error it does
+    /// not name, or answered with a body that cannot be read.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">The UI has not been given the app's API (<see cref="Init"/>).</exception>
     public static async Task ReloadState(CancellationToken cancellationToken)
     {
         var state = await Api.App.GetState(cancellationToken);
@@ -150,23 +229,49 @@ public static class VhApp
         }
     }
 
+    /// <summary>Reads the app's information again, with its state.</summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or, over HTTP, a request timed out.
+    /// </exception>
+    /// <exception cref="System.Net.Http.HttpRequestException">Over HTTP, the app could not be reached.</exception>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
+    /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, answered with an error it does
+    /// not name, or answered with a body that cannot be read.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">The UI has not been given the app's API (<see cref="Init"/>).</exception>
     public static async Task ReloadInfo(CancellationToken cancellationToken)
     {
         _info = await Api.App.GetInfo(cancellationToken);
         _state = _info.State;
     }
 
-    // The settings, written as one and read again: the app applies them as it saves, and may have
-    // corrected a value. The object is the caller's - the one it read here and changed - so a
-    // configuration read in between (the clock's) cannot lose the change.
+    /// <summary>
+    /// Saves the person's settings, and reads the information again, as the app applies them and may correct a value.
+    /// </summary>
+    /// <param name="userSettings">The settings: the object read here and changed.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or, over HTTP, a request timed out.
+    /// </exception>
+    /// <exception cref="System.Net.Http.HttpRequestException">Over HTTP, the app could not be reached.</exception>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
+    /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, answered with an error it does
+    /// not name, or answered with a body that cannot be read.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">The UI has not been given the app's API (<see cref="Init"/>).</exception>
     public static async Task SaveUserSettings(UserSettings userSettings, CancellationToken cancellationToken)
     {
         await Api.App.SetUserSettings(userSettings, cancellationToken);
         await ReloadInfo(cancellationToken);
     }
 
-    // The account: read at start, after this UI's sign-in, sign-out or purchase, and when the state
-    // says it changed - never polled itself.
+    /// <summary>Gets the signed-in person's account, as last read, or <see langword="null"/>.</summary>
+    /// <remarks>
+    /// It is read at start, after this UI's sign-in, sign-out or purchase, and when the state says it changed; never polled.
+    /// </remarks>
     public static Account? Account { get; private set; }
 
     // the state's AccountTime as of the account shown, taken before its read: a change during the read
@@ -182,6 +287,29 @@ public static class VhApp
     private static long _accountRetryTime;
     private static bool _accountReadFailed;
 
+    /// <summary>Reads the account, after a refresh from the account backend where asked.</summary>
+    /// <param name="withRefresh">
+    /// <see langword="true"/> to refresh it from the account backend first; a failed refresh is ignored, and the read that
+    /// follows may still fail.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>An older read that answers after a newer one is not shown.</remarks>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or, over HTTP, a request timed out.
+    /// </exception>
+    /// <exception cref="System.Net.Http.HttpRequestException">Over HTTP, the app could not be reached.</exception>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
+    /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, answered with an error it does
+    /// not name, or answered with a body that cannot be read.
+    /// </exception>
+    /// <exception cref="NotSupportedException">
+    /// A premium code waits to be uploaded, and the account backend keeps no codes on the account.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// The app's information has not been read (<see cref="Init"/>), or the account's read found no current VPN profile, or
+    /// several and none selected.
+    /// </exception>
     public static async Task LoadAccount(bool withRefresh, CancellationToken cancellationToken)
     {
         var accountTime = State.AccountTime;
@@ -214,45 +342,82 @@ public static class VhApp
         _accountTime = accountTime;
     }
 
-    // The TV layout: the device's word, unless this UI is the remote.
-    // A phone driving a TV gets the phone's layout.
+    /// <summary>Gets a value indicating whether the UI takes the TV layout: the device is a TV, and this UI is not the remote.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsTvUi => Descriptor.IsTv && !IsRemote;
 
-    // A browser driving a TV: what the TV's own screen asks - a store's sheet, Android's VPN prompt,
-    // an ad - is answered there, so a wait for it says to go on there.
+    /// <summary>Gets a value indicating whether this UI is a browser driving a TV, so a wait for what the TV's own screen asks says to go on there.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsTvRemote => Descriptor.IsTv && IsRemote;
 
-    // One built-in profile, called "location", against a list of servers the user adds keys for:
-    // the list is fixed exactly when no key can be added.
+    /// <summary>
+    /// Gets a value indicating whether the app takes no access keys, so its profiles are the ones it was built with.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsSingleProfileMode => !Descriptor.IsAddAccessKeySupported;
 
+    /// <summary>Gets whether a state is connected: connected or unstable.</summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns><see langword="true"/> where it is.</returns>
     public static bool IsConnected(AppState state)
     {
         return state.ConnectionState is AppConnectionState.Connected or AppConnectionState.Unstable;
     }
 
+    /// <summary>Gets whether the last state read is connected: connected or unstable.</summary>
+    /// <returns><see langword="true"/> where it is.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsConnected() => IsConnected(State);
 
-    // A build with no premium tier is the full app: nothing sold, no crown, everything allowed. Left
-    // so: a public key whose own plans include premium still shows them there (the locations' crowns,
-    // the countdown, the promote page), since they describe that key.
+    /// <summary>Gets a value indicating whether the build has a premium tier; without one, it is the full app.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsPremiumSupported => Descriptor.Premium != null;
+
+    /// <summary>Gets a value indicating whether the current VPN profile is premium.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsPremiumUser => State.VpnProfile?.IsPremium == true;
+
+    /// <summary>Gets a value indicating whether the premium comes from the account's subscription.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsPremiumByAccount => IsPremiumUser && Account?.Subscription != null;
-    public static bool IsPremiumByCode => IsPremiumUser && !IsPremiumByAccount;
+    internal static bool IsPremiumByCode => IsPremiumUser && !IsPremiumByAccount;
+
+    /// <summary>Gets a value indicating whether a premium code can be typed for the current VPN profile.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool CanImportAccessCode => State.VpnProfile?.CanImportAccessCode == true;
+
+    /// <summary>Gets a value indicating whether the current VPN profile's premium code may be shown.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool CanViewAccessCode => State.VpnProfile?.CanViewAccessCode == true;
+
+    /// <summary>Gets a value indicating whether the current VPN profile offers a premium trial.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool CanTryPremium => State.VpnProfile?.CanTryPremium == true;
+
+    /// <summary>Gets a value indicating whether premium can be bought or had by a code for the current VPN profile.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool CanGoPremium => State.VpnProfile?.CanGoPremium == true;
+
+    /// <summary>Gets the current VPN profile's ID: the state's, else the settings'.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static Guid? VpnProfileId => State.VpnProfile?.VpnProfileId ?? UserSettings.VpnProfileId;
 
+    /// <summary>Gets whether the build's premium tier sells a feature.</summary>
+    /// <param name="feature">The feature.</param>
+    /// <returns><see langword="true"/> where it does.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsPremiumFeature(AppFeature feature)
     {
         return Descriptor.Premium?.Features.Contains(feature) ?? false;
     }
 
-    // VpnHoodApp.IsPremiumFeatureAllowed, from what the API gives: a build with no premium tier
-    // allows everything, a feature the tier does not sell is everyone's, the rest is the profile's.
+    /// <summary>
+    /// Gets whether a feature is allowed: always without a premium tier or for a feature the tier does not sell, else for a
+    /// premium profile.
+    /// </summary>
+    /// <param name="feature">The feature.</param>
+    /// <returns><see langword="true"/> where it is.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsPremiumFeatureAllowed(AppFeature feature)
     {
         if (Descriptor.Premium == null)
@@ -264,21 +429,41 @@ public static class VhApp
         return IsPremiumUser;
     }
 
-    // the crown marks what this session does not have yet: a feature a tier sells, a location's
-    // premium plan
+    /// <summary>Gets whether to show the crown on something: where it is premium, and the profile is not.</summary>
+    /// <param name="isPremium"><see langword="true"/> where the thing is premium.</param>
+    /// <returns><see langword="true"/> to show the crown.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool ShowCrown(bool isPremium)
     {
         return isPremium && !IsPremiumUser;
     }
 
+    /// <summary>Gets whether to show the crown on a feature: where the tier sells it, and the profile is not premium.</summary>
+    /// <param name="feature">The feature.</param>
+    /// <returns><see langword="true"/> to show the crown.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool ShowCrown(AppFeature feature)
     {
         return ShowCrown(IsPremiumFeature(feature));
     }
 
+    /// <summary>Gets whether the device's private DNS is active.</summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns><see langword="true"/> where it is.</returns>
     public static bool IsPrivateDnsActive(AppState state) => state.SystemPrivateDns?.IsActive == true;
+
+    /// <summary>Gets whether the device's private DNS names a provider of its own.</summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns><see langword="true"/> where it does.</returns>
     public static bool IsPrivateDnsCustomized(AppState state) => !string.IsNullOrEmpty(state.SystemPrivateDns?.Provider);
 
+    /// <summary>
+    /// Gets whether the DNS is customized: the device's private DNS names a provider, or the settings use the adapter's DNS
+    /// where custom DNS is allowed.
+    /// </summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns><see langword="true"/> where it is.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsDnsCustomized(AppState state)
     {
         if (IsPrivateDnsCustomized(state))
@@ -286,22 +471,37 @@ public static class VhApp
         return UserSettings.DnsMode == DnsMode.AdapterDns && IsPremiumFeatureAllowed(AppFeature.CustomDns);
     }
 
+    /// <summary>Gets whether the current VPN profile connects to server addresses the person gave.</summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns><see langword="true"/> where it does.</returns>
     public static bool IsCustomEndpointActive(AppState state)
     {
         var profile = state.VpnProfile;
         return profile is { IsCustomServerEndpointsEnabled: true, CustomServerEndpoints.Length: > 0 };
     }
 
+    /// <summary>Gets whether the app's notifications are enabled.</summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns><see langword="true"/> where they are.</returns>
     public static bool IsNotificationEnabled(AppState state) => state.IsNotificationEnabled == true;
 
+    /// <summary>Gets the protocol in use: the session's while connected, else the settings'.</summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns>The protocol.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static ChannelProtocol ActiveProtocol(AppState state)
     {
         return IsConnected(state) ? state.ChannelProtocol : UserSettings.ChannelProtocol;
     }
 
-    // The TCP forwarding switch as the user sees it: the setting, or what the server or Split Domains force; never the
-    // session's status, which a save does not wait for: read back at once, the switch would jump to the old value
-    // and stay there
+    /// <summary>
+    /// Gets the TCP forwarding switch as the person sees it: on or off where the server or the split by domain forces it,
+    /// else the setting.
+    /// </summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns><see langword="true"/> where the switch is on.</returns>
+    /// <remarks>It is never the session's status, which a save does not wait for.</remarks>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsTcpForwardingSwitchOn(AppState state)
     {
         return state.TcpForwardingLockReason switch {
@@ -311,6 +511,11 @@ public static class VhApp
         };
     }
 
+    /// <summary>Gets whether a protocol can be chosen: the session's protocols while there is a session, else the build's.</summary>
+    /// <param name="state">The app's state.</param>
+    /// <param name="protocol">The protocol.</param>
+    /// <returns><see langword="true"/> where it can.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsProtocolEnabled(AppState state, ChannelProtocol protocol)
     {
         return state.SessionInfo != null
@@ -318,42 +523,61 @@ public static class VhApp
             : IsShowProtocol(protocol);
     }
 
+    /// <summary>Gets whether the build offers a protocol.</summary>
+    /// <param name="protocol">The protocol.</param>
+    /// <returns><see langword="true"/> where it does.</returns>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsShowProtocol(ChannelProtocol protocol)
     {
         return Descriptor.ChannelProtocols.Contains(protocol);
     }
 
-    // this head has no web analytics of its own, so the tracker the app reports is the whole answer
+    /// <summary>
+    /// Gets a value indicating whether the app supports reporting anonymous usage: the whole answer, as this head has no web
+    /// analytics of its own.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsAnonymousTrackerSupported => Descriptor.IsAnonymousTrackerSupported;
 
+    /// <summary>Gets whether the local network can be reached: while disconnected, or where the session allows it.</summary>
+    /// <param name="state">The app's state.</param>
+    /// <returns><see langword="true"/> where it can.</returns>
     public static bool IsLocalNetworkAvailable(AppState state)
     {
         return !IsConnected(state) || state.SessionInfo?.IsLocalNetworkAllowed == true;
     }
 
+    /// <summary>Gets whether a server location is the automatic one, <c>*</c> or <c>*/*</c>.</summary>
+    /// <param name="serverLocation">The server location, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> where it is.</returns>
     public static bool IsLocationAutoSelected(string? serverLocation)
     {
         return serverLocation is "*" or "*/*";
     }
 
     // VpnHoodApp.HasDebugCommand, from the settings: the commands are the words of DebugData1.
-    public static bool HasDebugCommand(string command)
+    internal static bool HasDebugCommand(string command)
     {
         return UserSettings.DebugData1?
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(command, StringComparer.OrdinalIgnoreCase) == true;
     }
 
-    // Android only: the tools drive the Starlink app, which exists on no other platform; a debug
-    // build keeps the page reachable while it is developed
+    /// <summary>Gets a value indicating whether the Starlink tools are on: the debug command <c>/starlink</c> is set, on Android or in a debug build.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool IsStarlinkToolsEnabled =>
         HasDebugCommand("/starlink") && (Descriptor.IsDebugMode || Descriptor.OsType == AppOsType.Android);
 
-    // the store's method, never the portal's password (VpnHoodApp.primaryProviderId)
+    /// <summary>Gets the first sign-in method that is not the password's, or <see langword="null"/>.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static string? PrimaryProviderId => Descriptor.AuthProviderIds.FirstOrDefault(x => x != "password");
 
+    /// <summary>Gets a value indicating whether the person chooses how to sign in: several methods, or the password's first.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool HasSignInChoice =>
         Descriptor.AuthProviderIds.Count > 1 || Descriptor.AuthProviderIds.FirstOrDefault() == "password";
 
+    /// <summary>Gets a value indicating whether the password sign-in is offered.</summary>
+    /// <exception cref="InvalidOperationException">The app's information has not been read (<see cref="Init"/>).</exception>
     public static bool HasPasswordSignIn => Descriptor.AuthProviderIds.Contains("password");
 }

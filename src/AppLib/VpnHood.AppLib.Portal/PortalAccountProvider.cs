@@ -28,6 +28,18 @@ public class PortalAccountProvider : IAccountProvider, IDisposable
     // used to make those three someone else's decision.
     private readonly HttpClient _httpClient;
 
+    /// <summary>Initializes a new instance of the <see cref="PortalAccountProvider"/> class.</summary>
+    /// <param name="authenticationProvider">
+    /// The sign-in, whose credential goes with each authenticated call; this provider disposes it.
+    /// </param>
+    /// <param name="billingProvider">
+    /// The store this build sells through, or <see langword="null"/> where it sells nothing; this provider disposes it.
+    /// </param>
+    /// <param name="portalBaseUrl">The portal's address.</param>
+    /// <param name="packageName">The app's package name, which the portal knows the app by.</param>
+    /// <param name="ignoreSslVerification">
+    /// <see langword="true"/> to accept any server certificate, as a development portal's.
+    /// </param>
     public PortalAccountProvider(
         IAuthenticationProvider authenticationProvider,
         IBillingProvider? billingProvider,
@@ -53,11 +65,18 @@ public class PortalAccountProvider : IAccountProvider, IDisposable
             : null;
     }
 
+    /// <inheritdoc/>
     public IAuthenticationProvider AuthenticationProvider => _authenticationProvider;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It is <see langword="null"/> where no billing provider is given; its order processor redeems purchases at the
+    /// portal.
+    /// </remarks>
     public AppBilling? Billing { get; }
 
-    /// <summary>
+    /// <inheritdoc/>
+    /// <remarks>
     /// The sellable products according to the portal (GET /billing/products), which is where the
     /// mapping from a store product to a plan already lives: a product the portal does not map
     /// cannot be redeemed, so asking it — rather than trusting the build's own list — is what keeps
@@ -71,7 +90,10 @@ public class PortalAccountProvider : IAccountProvider, IDisposable
     /// An answered-but-empty catalog is a different thing and is honoured as given — the portal
     /// saying "nothing is sellable here" is an answer.
     /// </para>
-    /// </summary>
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The app has no store, so it sells nothing.</exception>
+    /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">The portal refused the request.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<IReadOnlyList<string>> GetProductIds(CancellationToken cancellationToken)
     {
         var storeId = _storeId
@@ -89,6 +111,11 @@ public class PortalAccountProvider : IAccountProvider, IDisposable
         return productIds;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Where nobody is signed in, it gives <see langword="null"/> without asking the portal. The portal's answer comes
+    /// ranked; only whether this device can manage the subscription is worked out here, from the billing provider.
+    /// </remarks>
     public async Task<Account?> GetAccount(CancellationToken cancellationToken)
     {
         if (AuthenticationProvider.UserId == null)
@@ -118,18 +145,21 @@ public class PortalAccountProvider : IAccountProvider, IDisposable
             : SubscriptionManagement.NotOnThisDevice;
     }
 
+    /// <inheritdoc/>
     public Task SetAccessCode(string? accessCode, CancellationToken cancellationToken)
     {
         var apiClient = new PortalApiClient(_httpClient, _authenticationProvider);
         return apiClient.SetAccessCode(accessCode, cancellationToken);
     }
 
+    /// <inheritdoc/>
     public Task ReportAccessCodeRejected(string accessCode, CancellationToken cancellationToken)
     {
         var apiClient = new PortalApiClient(_httpClient, _authenticationProvider);
         return apiClient.ReportAccessCodeRejected(accessCode, cancellationToken);
     }
 
+    /// <inheritdoc/>
     public Task DeleteAccount(CancellationToken cancellationToken)
     {
         // The portal erases the person and every session with them; this device is signed out by
@@ -139,6 +169,8 @@ public class PortalAccountProvider : IAccountProvider, IDisposable
         return apiClient.DeleteAccount(cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It disposes the billing provider, the sign-in and its HTTP client.</remarks>
     public void Dispose()
     {
         Billing?.Provider.Dispose();

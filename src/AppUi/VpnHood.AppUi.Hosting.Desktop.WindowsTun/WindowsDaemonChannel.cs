@@ -12,7 +12,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
 // The channel on Windows: a named pipe under a new random name each start, recorded in HKLM, since
 // any user may take a fixed pipe name first. A client trusts only an owner a standard user cannot set.
-public sealed class WindowsDaemonChannel(WindowsDesktopPaths paths) : IDaemonChannel
+internal sealed class WindowsDaemonChannel(WindowsDesktopPaths paths) : IDaemonChannel
 {
     private const string ChannelValueName = "DaemonChannel";
     private const int BufferSize = 4096;

@@ -3,21 +3,28 @@ using VpnHood.AppLib.Api.App;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Channel;
 
-// What the service tells a caller over the channel: its API's address, token and all, which moves at
-// each rebind; or, to anyone but an administrator, the refusal alone.
+/// <summary>
+/// Represents what the service tells a caller over its channel: its API's address, token and all, which moves at each
+/// rebind; or, to a caller who may not use the app, the refusal alone.
+/// </summary>
 public class DaemonChannelAnswer
 {
+    /// <summary>Gets the service's API address, with its token, or <see langword="null"/> with a refusal.</summary>
     public Uri? ApiUrl { get; init; }
+
+    /// <summary>Gets the ID of the service's process, which the caller's peer check is given.</summary>
     public int ProcessId { get; init; }
+
+    /// <summary>Gets the version of the service's binary, as <see cref="CurrentVersion"/> gives it.</summary>
     public required string Version { get; init; }
 
-    // The sentence for a caller who may not use the app; null for one who may.
+    /// <summary>Gets the sentence for a caller who may not use the app, or <see langword="null"/> for one who may.</summary>
     public string? Refusal { get; init; }
 
     [JsonIgnore]
-    public string? Token => ApiUrl == null ? null : LocalApiToken.Read(ApiUrl);
+    internal string? Token => ApiUrl == null ? null : LocalApiToken.Read(ApiUrl);
 
-    // The version this binary is, which both sides send.
+    /// <summary>Gets the version this binary is, as three numbers, which both sides send.</summary>
     public static string CurrentVersion { get; } =
         typeof(DaemonChannelAnswer).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 }

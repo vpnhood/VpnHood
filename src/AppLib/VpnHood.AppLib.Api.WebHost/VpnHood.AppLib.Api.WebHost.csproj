@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA)</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -10,6 +11,7 @@
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+		<InternalsVisibleTo Include="VpnHood.Test" />
 	</ItemGroup>
 
 	<ItemGroup>

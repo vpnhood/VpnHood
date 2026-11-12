@@ -3,6 +3,7 @@
 		<Description>Hosts the VpnHood app under a .NET MAUI UI on Android and Windows, in the app's own process: the platform's start, the Android activity's events, and the app's API for the MAUI pages</Description>
 		<TargetFrameworks>net11.0-android37.0</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net11.0-windows10.0.26100.0</TargetFrameworks>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<UseMaui>true</UseMaui>
 		<SingleProject>true</SingleProject>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>

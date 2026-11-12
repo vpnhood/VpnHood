@@ -15,15 +15,30 @@ using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.App.Android.Activities;
 
+/// <summary>
+/// Provides the app's work for a main activity: its UI context, the window's insets, the access keys of links and files,
+/// and the activity's events.
+/// </summary>
+/// <remarks>It follows the activity's events from its construction; a UI's handler derives from it.</remarks>
 public class AndroidAppMainActivityHandler
 {
     private readonly string[] _accessKeySchemes;
     private readonly string[] _accessKeyMimes;
     private readonly Task<VhColor?> _chromeColor;
+
+    /// <summary>Gets the activity, as the source of its events.</summary>
     protected IActivityEvent ActivityEvent { get; }
 
-    // chromeColor: the UI's colour for the system bars and the ground behind them, from the UI that
-    // hosts this activity, as it becomes known; null, and they keep the system's.
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AndroidAppMainActivityHandler"/> class, which follows the activity's
+    /// events.
+    /// </summary>
+    /// <param name="activityEvent">The activity.</param>
+    /// <param name="options">The access keys the activity takes.</param>
+    /// <param name="chromeColor">
+    /// A task whose result is the UI's colour for the system bars and the ground behind them, as it becomes known; with a
+    /// <see langword="null"/> result, no background of the UI's is painted.
+    /// </param>
     public AndroidAppMainActivityHandler(IActivityEvent activityEvent, AndroidMainActivityOptions options,
         Task<VhColor?> chromeColor)
     {
@@ -45,6 +60,11 @@ public class AndroidAppMainActivityHandler
         activityEvent.ConfigurationChangedEvent += (_, args) => OnConfigurationChanged(args);
     }
 
+    /// <summary>
+    /// Called when the activity is created: it takes the app's UI context, configures the window's insets, and imports an
+    /// access key the intent carries.
+    /// </summary>
+    /// <param name="savedInstanceState">The state Android saved, or <see langword="null"/>.</param>
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
         _ = savedInstanceState;
@@ -59,6 +79,13 @@ public class AndroidAppMainActivityHandler
         ProcessIntent(ActivityEvent.Activity.Intent);
     }
 
+    /// <summary>Called when the activity gets a new intent: it imports an access key the intent carries.</summary>
+    /// <param name="intent">The intent, or <see langword="null"/>.</param>
+    /// <returns>
+    /// <see langword="true"/> where it tried the intent's link or file, whether or not the import worked;
+    /// <see langword="false"/> where the intent carries neither, the activity has no content resolver, or a file is of a type
+    /// the activity does not take.
+    /// </returns>
     protected virtual bool OnNewIntent(Intent? intent)
     {
         return ProcessIntent(intent);
@@ -108,7 +135,17 @@ public class AndroidAppMainActivityHandler
         return true;
     }
 
-    // A UI that imports keys itself, and says so in its own way, takes this over (the Avalonia UI's activity).
+    /// <summary>Imports an access key, makes its server the chosen one, and says so in a toast.</summary>
+    /// <param name="accessKey">The access key.</param>
+    /// <remarks>A UI that imports keys itself, and says so in its own way, overrides it.</remarks>
+    /// <exception cref="FormatException">
+    /// The access key is no valid Base64, or an endpoint or a duration in it is not valid.
+    /// </exception>
+    /// <exception cref="NotSupportedException">The access key's version is not one the app reads.</exception>
+    /// <exception cref="System.Text.Json.JsonException">The text holds no valid access key.</exception>
+    /// <exception cref="InvalidDataException">The access key decodes to JSON <c>null</c>.</exception>
+    /// <exception cref="OverflowException">A duration in the access key is out of range.</exception>
+    /// <exception cref="UnauthorizedAccessException">The access key is a built-in VPN profile's.</exception>
     protected virtual void ImportAccessKey(string accessKey)
     {
         var profiles = VpnHoodApp.Instance.VpnProfileService.List();
@@ -127,6 +164,10 @@ public class AndroidAppMainActivityHandler
         Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }
 
+    /// <summary>Called with a permission request's result; it does nothing by default.</summary>
+    /// <param name="requestCode">The request's code.</param>
+    /// <param name="permissions">The permissions asked for.</param>
+    /// <param name="grantResults">Whether each was granted.</param>
     protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions,
         [GeneratedEnum] Permission[] grantResults)
     {
@@ -135,12 +176,20 @@ public class AndroidAppMainActivityHandler
         _ = grantResults;
     }
 
+    /// <summary>Called when a key is pressed; it handles none by default.</summary>
+    /// <param name="keyCode">The key.</param>
+    /// <param name="keyEvent">The key's event, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> where the handler handled the key.</returns>
     protected virtual bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? keyEvent)
     {
         _ = keyEvent;
         return false;
     }
 
+    /// <summary>Called with the result of an activity this one started; it does nothing by default.</summary>
+    /// <param name="requestCode">The request's code.</param>
+    /// <param name="resultCode">The result.</param>
+    /// <param name="data">The result's data, or <see langword="null"/>.</param>
     protected virtual void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
         _ = requestCode;
@@ -148,23 +197,25 @@ public class AndroidAppMainActivityHandler
         _ = data;
     }
 
+    /// <summary>Called when the activity's configuration changed: it has the app update its UI.</summary>
+    /// <param name="args">The new configuration.</param>
     protected virtual void OnConfigurationChanged(Configuration args)
     {
         _ = args;
         VpnHoodApp.Instance.UpdateUi();
     }
 
-    // The activity in front is the app's UI context. An intent the task did not start with stacks a
-    // second activity, which takes the context in its OnCreate; Back resumes the one beneath before
-    // the second's OnDestroy, so the context comes back here and that OnDestroy leaves it.
+    /// <summary>Called when the activity comes to the front: it takes the app's UI context back.</summary>
     protected virtual void OnResume()
     {
         TakeUiContext();
     }
 
-    // Makes this activity the app's UI context, unless it already is: a context made again would tell the
-    // app of a new window, and it would preload an ad and check for an update once more. An activity whose
-    // view asks for the context as it is built takes it before its own OnCreate builds that view.
+    /// <summary>
+    /// Makes this activity the app's UI context, unless it is already, as a context made again would tell the app of a new
+    /// window, which may start an ad's preload and an update check once more.
+    /// </summary>
+    /// <remarks>An activity whose view asks for the context as it is built takes it before its own create builds that view.</remarks>
     public void TakeUiContext()
     {
         var appUiContext = (AndroidUiContext?)AppUiContext.Context;
@@ -172,10 +223,12 @@ public class AndroidAppMainActivityHandler
             AppUiContext.Context = new AndroidUiContext(ActivityEvent);
     }
 
+    /// <summary>Called when the activity leaves the front; it does nothing by default.</summary>
     protected virtual void OnPause()
     {
     }
 
+    /// <summary>Called when the activity is destroyed: it lets the app's UI context go where it is this activity's.</summary>
     protected virtual void OnDestroy()
     {
         // prevent multiple launch clear the activity context

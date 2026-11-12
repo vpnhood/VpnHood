@@ -1,16 +1,18 @@
 namespace VpnHood.AppLib.Api.Accounts;
 
-/// <summary>
-/// What a SignIn call accomplished. See <see cref="SignInState"/>: anything but SignedIn means
-/// nothing is signed in yet and the caller must repeat SignIn with SignInOptions.TwoFactorCode.
-/// </summary>
+/// <summary>Represents what a sign-in did.</summary>
+/// <remarks>
+/// With a <see cref="State"/> other than <see cref="SignInState.SignedIn"/>, nobody is signed in yet, and the sign-in is
+/// repeated with <see cref="SignInOptions.TwoFactorCode"/>.
+/// </remarks>
 public record SignInResult
 {
+    /// <summary>Gets where the sign-in stands.</summary>
     public required SignInState State { get; init; }
 
     /// <summary>
-    /// Only with <see cref="SignInState.SignedIn"/>, and only after a completion that spent the
-    /// backup code: the replacement. The UI must show it once — nothing ever shows it again.
+    /// Gets the account's new backup code, after a sign-in that used the old one up, or <see langword="null"/>.
     /// </summary>
+    /// <remarks>The UI shows it once: nothing shows it again.</remarks>
     public string? NewBackupCode { get; init; }
 }

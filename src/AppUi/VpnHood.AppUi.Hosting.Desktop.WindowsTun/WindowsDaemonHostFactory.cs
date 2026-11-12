@@ -6,7 +6,7 @@ using VpnHood.AppUi.Hosting.Desktop.WindowsTun.Utils;
 
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
-public sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsDesktopPaths paths) : IAppDaemonHostFactory
+internal sealed class WindowsDaemonHostFactory(AppInitParams initParams, WindowsDesktopPaths paths) : IAppDaemonHostFactory
 {
     // Only an administrator can be the service: the adapter, the routes and the storage's own ACL all
     // need one, which is said here rather than by the adapter failing ten layers down.

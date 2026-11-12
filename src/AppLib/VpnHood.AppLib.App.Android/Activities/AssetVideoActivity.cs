@@ -37,6 +37,17 @@ namespace VpnHood.AppLib.App.Android.Activities;
 //
 // Deliberately knows nothing about ads: the caller names the words and the colour, decides what
 // the action does, and is told how it ended.
+
+/// <summary>
+/// Represents an activity that plays a video shipped as an asset, full screen over whatever shows, as an ad network's
+/// interstitial does.
+/// </summary>
+/// <remarks>
+/// The video is read where it lies in the package, so its entry must be stored, not deflated. It runs to its end before
+/// it can be closed, unless the parameters let it close early: the seconds left count down in the corner and become a
+/// close mark, and Close, the caller's action and Back wake at the end. It knows nothing about ads: the caller names the
+/// words and the colour, decides what the action does, and is told how it ended.
+/// </remarks>
 [Activity(
     // Material: an older theme leaves the system bars' backgrounds to the system, black
     Theme = "@android:style/Theme.Material.NoActionBar.Fullscreen",
@@ -77,8 +88,23 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
     private int _videoWidth;
     private int _videoHeight;
 
-    // Shows the video and returns how it ended. Faults if the asset cannot be opened or the video
-    // cannot be played, so a caller that promised to show something knows it did not happen.
+    /// <summary>Shows the video over an activity, and returns how it ended.</summary>
+    /// <param name="activityEvent">The activity to show it over.</param>
+    /// <param name="videoParams">The video, its colour and its words.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is how the screen ended.</returns>
+    /// <remarks>
+    /// The task faults where the asset cannot be opened or the video cannot be played, so a caller that promised to show
+    /// something knows it did not happen.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled: the call stops waiting, and the screen stays.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">The screen could not open the asset or play the video.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="activityEvent"/>, <paramref name="videoParams"/> or the video's asset path is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentException">The video's asset path is empty or white space.</exception>
     public static async Task<AssetVideoResult> PlayAsync(IActivityEvent activityEvent, AssetVideoParams videoParams,
         CancellationToken cancellationToken)
     {
@@ -130,6 +156,7 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
             : AssetVideoResult.Left;
     }
 
+    /// <inheritdoc/>
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
@@ -231,7 +258,8 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
             window.DecorView.SystemUiFlags = SystemUiFlags.LayoutStable | SystemUiFlags.LayoutHideNavigation;
     }
 
-    // The controls keep clear of the cutout and of the navigation bar the background runs under.
+    /// <inheritdoc/>
+    /// <remarks>The controls keep clear of the cutout and of the navigation bar the background runs under.</remarks>
     public WindowInsets OnApplyWindowInsets(View view, WindowInsets insets)
     {
         if (OperatingSystem.IsAndroidVersionAtLeast(30)) {
@@ -343,7 +371,8 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
             Finish(AssetVideoResult.Closed);
     }
 
-    // Back as a key: a remote's, and a phone's where Android still sends it as one
+    /// <inheritdoc/>
+    /// <remarks>Back waits for the video's end, as the close mark does, unless the parameters let it close early.</remarks>
     public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
     {
         if (keyCode != Keycode.Back)
@@ -405,7 +434,7 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
         return (int)Math.Round(value * (Resources?.DisplayMetrics?.Density ?? 1));
     }
 
-    // The first surface starts the video; a later one - the person back from away - takes it over.
+    /// <inheritdoc/>
     public void SurfaceCreated(ISurfaceHolder holder)
     {
         _hasSurface = true;
@@ -447,18 +476,20 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
         }
     }
 
+    /// <inheritdoc/>
     public void SurfaceChanged(ISurfaceHolder holder, Format format, int width, int height)
     {
     }
 
+    /// <inheritdoc/>
     public void SurfaceDestroyed(ISurfaceHolder holder)
     {
         _hasSurface = false;
         _mediaPlayer?.SetDisplay(null);
     }
 
-    // Away is no way out: before the end the video pauses until the person is back. After it, the
-    // video has been watched, so away closes it.
+    /// <inheritdoc/>
+    /// <remarks>Away before the end, the video pauses and plays on when the person is back; away after it, the screen closes.</remarks>
     protected override void OnPause()
     {
         base.OnPause();
@@ -477,6 +508,7 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnResume()
     {
         base.OnResume();
@@ -484,6 +516,7 @@ public class AssetVideoActivity : Activity, ISurfaceHolderCallback, View.IOnAppl
         PlayOn();
     }
 
+    /// <inheritdoc/>
     protected override void OnDestroy()
     {
         if (_backCallback != null && OperatingSystem.IsAndroidVersionAtLeast(33)) {

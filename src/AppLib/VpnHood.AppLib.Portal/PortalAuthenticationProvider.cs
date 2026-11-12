@@ -49,13 +49,38 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     private PortalSession? _session;
     private PortalSignInChallenge? _pendingChallenge;
 
-    // The external providers' self-declared method ids ("google" on Android, "apple" on iOS, any id
-    // a third-party provider declares), passed through verbatim — plus "password", which is the
-    // portal's own credential form and needs no external provider on any platform. SignInOptions
-    // .ProviderId selects among these, and the portal wire discriminator is the selection verbatim.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// They are the external providers' own IDs, in their order, then <see cref="AuthProviders.Password"/>, the portal's
+    /// own email and password sign-in; an identity provider's ID reaches the portal as it is.
+    /// </remarks>
     public IReadOnlyList<string> ProviderIds { get; }
 
+    /// <inheritdoc/>
     public string? UserId => Session?.UserId;
+
+    /// <summary>Initializes a new instance of the <see cref="PortalAuthenticationProvider"/> class.</summary>
+    /// <param name="storage">
+    /// The app's storage, whose <c>account</c> folder keeps the session and the mark of the zero-tap restore's final
+    /// answer. It must be one no device backup or transfer copies: a copied mark skips the zero-tap restore on the new
+    /// device.
+    /// </param>
+    /// <param name="portalBaseUrl">The portal's address.</param>
+    /// <param name="packageName">The app's package name, which the portal knows the app by.</param>
+    /// <param name="authenticationExternalProviders">
+    /// The identity providers' own sign-ins, as Google's or Apple's; this provider disposes them.
+    /// </param>
+    /// <param name="restoreCredentialProvider">
+    /// The device's restore credential, for the zero-tap restore of a sign-in, or <see langword="null"/>; this provider
+    /// disposes it.
+    /// </param>
+    /// <param name="ignoreSslVerification">
+    /// <see langword="true"/> to accept any server certificate, as a development portal's.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// Two of <paramref name="authenticationExternalProviders"/> declare the same ID, or one declares
+    /// <see cref="AuthProviders.Password"/>, the portal's own.
+    /// </exception>
 
     public PortalAuthenticationProvider(
         Storage storage,
@@ -99,7 +124,8 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         }
     }
 
-    /// <summary>
+    /// <inheritdoc/>
+    /// <remarks>
     /// The portal answered 401: it does not know this session any more. There is no refresh token to
     /// fall back on, so the only honest local state is signed-out — the account was deleted, or its
     /// sessions revoked, somewhere else. Dropping the session here is what stops this device from
@@ -108,7 +134,8 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// The external identity provider is deliberately left signed in: revoking it needs a UI context
     /// no HTTP response handler has, and the next deliberate sign-in re-establishes everything anyway.
     /// </para>
-    /// </summary>
+    /// A session with another token than the refused one is kept.
+    /// </remarks>
     public void InvalidateAccessToken(string accessToken)
     {
         lock (_sessionLock) {
@@ -145,11 +172,13 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         return Session;
     }
 
-    /// <summary>
-    /// The session token. Null when nobody is signed in — an anonymous call asks for none, which is
-    /// also why sign-in itself must not go through here: its 401 means "wrong credentials", not
-    /// "dead session".
-    /// </summary>
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It gives the portal's session token. Where nobody is signed in, it first tries a zero-tap restore of the
+    /// sign-in, at most once per run, and only with a restore credential provider, a window, and no final answer
+    /// recorded in an earlier run; it gives <see langword="null"/> where that fails, a cancel included. Sign-in itself
+    /// must not go through here: its 401 means "wrong credentials", not "dead session".
+    /// </remarks>
     public async Task<string?> GetAccessToken(CancellationToken cancellationToken)
     {
         // The one window read below the API: every portal request asks for the token, and none of
@@ -160,6 +189,8 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     }
 
     // The portal names its own page: only its website knows its address and URL scheme.
+    /// <inheritdoc/>
+    /// <remarks>The portal tells it, for a request without a session.</remarks>
     public async Task<Uri?> GetPasswordResetUrl(CancellationToken cancellationToken)
     {
         var apiClient = new PortalApiClient(_httpClient);
@@ -167,6 +198,16 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         return passwordReset.Url;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The password sign-in goes to the portal itself. Another method asks its identity provider for an ID token, never
+    /// silently, and hands it to the portal. A sign-in that passes also tries to register the device's restore
+    /// credential, which does not fail the sign-in.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// A second step's code came with no sign-in waiting for one, or the portal's answer carries no session token or
+    /// user ID.
+    /// </exception>
     public async Task<SignInResult> SignIn(IUiContext? uiContext, SignInOptions signInOptions,
         CancellationToken cancellationToken)
     {
@@ -244,6 +285,12 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         return exception;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It asks the portal to retire the device's restore key, then to revoke the session, logging a failure, after which
+    /// the second is not asked; then it forgets the session, clears the device's restore credential, and signs out of
+    /// the session's identity provider, or of every one where there was no session, logging their failures too.
+    /// </remarks>
     public async Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // best-effort server-side revoke; local sign-out must succeed regardless
@@ -443,6 +490,11 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         return _authenticationExternalProviders.FirstOrDefault(x => x.ProviderId == providerId);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It disposes the identity providers, the restore credential's provider and its HTTP client; a second call does
+    /// nothing.
+    /// </remarks>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0-browser</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<Description>Runs any VpnHood Avalonia UI as a browser page: the app's web host serves it to a paired device, and the page dials the app's API over HTTP. Names no UI; a page project names one (AvaloniaBrowserHost.RunAsync) and imports build/*.props for the WebAssembly settings.</Description>
 		<!-- [JSImport]'s generated marshalling is unsafe code (BrowserTextInputInterop, BrowserExport). -->
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>

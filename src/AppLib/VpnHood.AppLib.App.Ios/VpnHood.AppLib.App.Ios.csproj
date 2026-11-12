@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood shared code for iOS client apps (WebView host + app bootstrap)</Description>
 		<TargetFrameworks>$(VhAppleTargetFrameworks)</TargetFrameworks>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-tvos'))">17.0</SupportedOSPlatformVersion>
 	</PropertyGroup>

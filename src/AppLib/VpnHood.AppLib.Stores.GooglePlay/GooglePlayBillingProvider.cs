@@ -17,11 +17,17 @@ using VpnHood.AppLib.Abstractions.UiContexts;
 
 namespace VpnHood.AppLib.Stores.GooglePlay;
 
+/// <summary>Provides Google Play's billing, through the Play Billing Library.</summary>
 public class GooglePlayBillingProvider : IBillingProvider
 {
     private readonly Lazy<BillingClient> _billingClient;
     private TaskCompletionSource<PurchaseProof>? _taskCompletionSource;
+
+    /// <inheritdoc/>
     public PurchaseState PurchaseState { get; private set; }
+
+    /// <inheritdoc/>
+    /// <remarks>It is <see cref="StoreIds.GooglePlay"/>.</remarks>
     public string ProviderId => StoreIds.GooglePlay;
 
     // Google's documented deep link, and the only mechanism Play offers — the Billing library has no
@@ -29,11 +35,19 @@ public class GooglePlayBillingProvider : IBillingProvider
     // targeted form below opens the app's own subscription directly.
     private const string SubscriptionsUrl = "https://play.google.com/store/account/subscriptions";
 
-    // Play has no native subscriptions screen on a television: it accepts the deep link and forwards
-    // it to a browser. So what decides this is whether a browser exists, not whether the device is a
-    // TV — a television with one installed reaches the same web page a phone would.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Play's subscriptions screen is its web deep link: it is <see langword="true"/> where the device has an external
+    /// browser to open it.
+    /// </remarks>
     public bool IsSubscriptionManagementSupported => AndroidBrowserUtils.IsExternalBrowserAvailable();
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It opens Play's subscriptions screen by its deep link: at the app's own subscription where the store account owns
+    /// one, and at the account's list otherwise or where that one cannot be named. It returns once the link is handed
+    /// to Android; its query of the subscription does not watch the cancellation token.
+    /// </remarks>
     public async Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)(uiContext ?? throw new UiContextNotAvailableException());
@@ -67,6 +81,8 @@ public class GooglePlayBillingProvider : IBillingProvider
         }
     }
 
+    /// <summary>Initializes a new instance of the <see cref="GooglePlayBillingProvider"/> class.</summary>
+    /// <remarks>It connects to Play's billing service at its first call that needs it.</remarks>
     public GooglePlayBillingProvider()
     {
         _billingClient = new Lazy<BillingClient>(() => {
@@ -117,6 +133,11 @@ public class GooglePlayBillingProvider : IBillingProvider
                     $"Google Play returned a purchase without an order id. PurchaseState: {purchasedItem.PurchaseState}"));
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A plan's token names the product and its offer; a device whose Play does not sell subscriptions throws a
+    /// <see cref="BillingException"/>. It does not watch the cancellation token while it connects to Play and queries it.
+    /// </remarks>
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
         CancellationToken cancellationToken)
     {
@@ -223,6 +244,17 @@ public class GooglePlayBillingProvider : IBillingProvider
         return [.. productDetailsResult.ProductDetails];
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The account's ID goes to Play as the obfuscated account ID, and the proof is Play's purchase token. Play reports
+    /// every purchase to one listener, so callers must not run two purchases at once; one that finds an unfinished flow
+    /// throws <see cref="InvalidOperationException"/>. It watches the cancellation token only once the payment flow is
+    /// open.
+    /// </remarks>
+    /// <exception cref="System.Text.Json.JsonException">
+    /// The plan token is malformed JSON, or cannot be read as a plan token.
+    /// </exception>
+    /// <exception cref="InvalidDataException">The plan token holds <c>null</c>.</exception>
     public async Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
@@ -285,6 +317,11 @@ public class GooglePlayBillingProvider : IBillingProvider
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It queries the store account's subscriptions, without a prompt, and presents the newest one Play has given an
+    /// order ID, so not one still pending. It does not watch the cancellation token.
+    /// </remarks>
     public async Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // The SILENT ownership query (lifecycle §7): reads what the device already knows and never
@@ -297,7 +334,8 @@ public class GooglePlayBillingProvider : IBillingProvider
         return purchase == null ? null : new PurchaseProof { Value = purchase.PurchaseToken };
     }
 
-    // the backend acknowledges a Play purchase itself, once it has provisioned it
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: the backend acknowledges a Play purchase itself, once it has provisioned it.</remarks>
     public Task FinishPurchase(PurchaseProof purchaseProof, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
@@ -346,6 +384,7 @@ public class GooglePlayBillingProvider : IBillingProvider
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         if (_billingClient.IsValueCreated)

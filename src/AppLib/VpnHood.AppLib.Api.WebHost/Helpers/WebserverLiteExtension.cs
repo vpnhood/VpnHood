@@ -5,7 +5,7 @@ using WatsonWebserver.Lite;
 
 namespace VpnHood.AppLib.Api.WebHost.Helpers;
 
-public static class WebServerLiteExtension
+internal static class WebServerLiteExtension
 {
     extension(WebserverLite server)
     {

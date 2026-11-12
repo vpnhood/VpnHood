@@ -27,7 +27,7 @@ namespace VpnHood.AppLib.Api.WebHost;
 // differ only in where they bind, which token they ask for, and who ends them - so what they share
 // is everything below, and what differs is the flag. The listener state machine itself is
 // WebServerListener, once. Nothing is bound, and nothing is unpacked, until EnsureStarted is called.
-public class VpnHoodAppWebHost : IAppWebHost
+internal class VpnHoodAppWebHost : IAppWebHost
 {
     // The pairing: a short token in the QR's address that becomes a cookie on the first hit. Eight
     // characters from an alphabet without 0/O/1/l, since someone may type it from the screen. One per

@@ -54,6 +54,7 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
     /// the app and keeps it updated - it offers nothing, and the notice keeps the feed's link. It checks no
     /// key: Android itself refuses a package signed with another key than the installed app's.
     /// </summary>
+    /// <returns>The updater.</returns>
     public static AndroidWebAppUpdaterProvider Create()
     {
         return new AndroidWebAppUpdaterProvider();
@@ -100,19 +101,38 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         throw new InvalidOperationException("The app's external cache folder is not available."),
         FolderName);
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: the app's notice offers the update.</remarks>
     public bool HasOwnScreen => false;
 
-    // the package installer's, the system's, which stops the app itself
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It is <see langword="false"/>: the install is Android's package installer's, which stops the app itself.
+    /// </remarks>
     public bool IsInstalling => false;
 
-    // whether this install may update itself is asked here first; then DownloadManager's list is all there
-    // is to ask: no network
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It takes no network: it asks Android whether this install may update itself, then reads DownloadManager's list.
+    /// An install a store keeps updated has no update here. It does not watch the cancellation token.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The device has no DownloadManager, the app has no package manager, or its external cache folder is not available.
+    /// </exception>
     public Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
         return Task.FromResult(IsSupported ? GetState(feedRelease) : AppUpdateState.None);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It reads Android's DownloadManager: another version's package is removed, and so is a failed download, whose
+    /// reason the notice shows; a package gone from the cache folder is downloaded anew at the next Update.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The device has no DownloadManager, the app has no package manager, or its external cache folder is not available.
+    /// </exception>
     public AppUpdateState GetState(AppRelease? feedRelease)
     {
         // no newer release and no update check yet: nothing to offer, and nothing to ask Android, as
@@ -176,6 +196,21 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Android's DownloadManager downloads the release's package, with its own notification, and the task completes once
+    /// the download is queued; while one of the release is under way, or its install, it does nothing. It does not
+    /// watch the cancellation token.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// <paramref name="feedRelease"/> is <see langword="null"/>, the device has no DownloadManager, the app has no package
+    /// manager, or its external cache folder is not available.
+    /// </exception>
+    /// <exception cref="NotSupportedException">
+    /// This install does not update itself, as a store keeps it updated, or the release's package is not on https; a
+    /// debuggable build also takes http on the loopback, for a test feed.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">The app has no package name or package manager.</exception>
     public Task StartUpdate(AppRelease? feedRelease, IUiContext? uiContext, CancellationToken cancellationToken)
     {
         var release = feedRelease ?? throw new InvalidOperationException("There is no newer version to download.");
@@ -214,6 +249,21 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Where Android must first let the app install apps ("Install unknown apps"), it opens that page and returns, and the
+    /// person's next Install installs; otherwise it hands the package to Android's installer, whose own screen asks the
+    /// person, and returns once the package is handed over. It watches the cancellation token only while it copies the
+    /// package.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// <paramref name="feedRelease"/> is <see langword="null"/>, its update is not downloaded, or a step of the install
+    /// fails, as for an activity without a package manager.
+    /// </exception>
+    /// <exception cref="NotSupportedException">This install does not update itself, as a store keeps it updated.</exception>
+    /// <exception cref="VpnHood.Core.Common.Exceptions.UiContextNotAvailableException">
+    /// <paramref name="uiContext"/> is not an Android activity's UI context.
+    /// </exception>
     public async Task CompleteUpdate(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
@@ -283,19 +333,28 @@ public class AndroidWebAppUpdaterProvider : IAppUpdaterProvider
         }
     }
 
-    // Android's own screen asks the person at once: nothing is left half done to bring back
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It gives <see langword="false"/>: this provider resumes no installer session.
+    /// </remarks>
     public Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken)
     {
         return Task.FromResult(false);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: the website's APK updates only from the notice.</remarks>
     public bool IsAutomaticUpdateSupported => false;
 
+    /// <inheritdoc/>
+    /// <remarks>It always throws <see cref="NotSupportedException"/>.</remarks>
     public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
     {
         throw new NotSupportedException("The website's APK updates only from the notice.");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It always throws <see cref="NotSupportedException"/>.</remarks>
     public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("The website's APK updates only from the notice.");

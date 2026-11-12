@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0-windows</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<Description>The VpnHood desktop host on Windows: a LocalSystem service is the app, ProgramData is its storage, and the window, the tray and the commands run as whoever is signed in. Everything the commands themselves do is VpnHood.AppUi.Hosting.Desktop.Daemon</Description>
 	</PropertyGroup>
 

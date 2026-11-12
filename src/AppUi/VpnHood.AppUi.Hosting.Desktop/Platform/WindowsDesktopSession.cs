@@ -9,15 +9,25 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 
-// A Windows session, the console's or a Remote Desktop one, by its id. Only the launch the person just started there -
-// a click, a file, a browser's link - may bring a window forward, and it may let another process do so: the window's,
-// which serves the pipe. Here rather than in a Windows host, as both need it.
+/// <summary>Represents a Windows session, the console's or a Remote Desktop one, by its ID.</summary>
+/// <remarks>
+/// Only a launch Windows lets bring a window forward, as the one the person just started there, may let another process
+/// do so: the window's, which serves the pipe.
+/// </remarks>
 [SupportedOSPlatform("windows")]
 public sealed class WindowsDesktopSession : IDesktopSession
 {
+    /// <inheritdoc/>
+    /// <remarks>It is the session's ID.</remarks>
     public string Name { get; } = ReadSessionId();
+    /// <inheritdoc/>
     public bool IsSandboxed { get; init; }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It asks Windows to let the window's process come forward; where Windows refuses, as for a launch with no right of its
+    /// own, the refusal is logged.
+    /// </remarks>
     public void HandForegroundTo(NamedPipeClientStream window)
     {
         // a launch with no right of its own has none to hand on, and the window stays where it is

@@ -2,10 +2,12 @@ using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Abstractions;
 
-// Where a desktop UI's window opens and at what size. The window hands over its screen's work area,
-// its frame - the title bar and the borders - and its UI's shape (DesktopWindowFitOptions), in the
-// screen's logical units: a Win32 window's pixels over its scale, an Avalonia window's logical pixels.
-// It opens in the middle of the work area, its title bar on the screen.
+/// <summary>Provides where a desktop UI's window opens, and at what size.</summary>
+/// <remarks>
+/// The window hands over its screen's work area, its frame (the title bar and the borders) and its UI's shape, in the
+/// screen's logical units: a Win32 window's pixels over its scale, an Avalonia window's logical pixels. It is centred in
+/// the work area, its top never above the work area's.
+/// </remarks>
 public static class DesktopWindowFit
 {
     // Android TV lays out at 960x540 dp - a 1920x1080 panel at xhdpi, a 4K one at twice the density -
@@ -17,6 +19,18 @@ public static class DesktopWindowFit
     // 1080p at 150% has
     private const double PortraitMargin = 40;
 
+    /// <summary>Places a window on its screen.</summary>
+    /// <param name="workArea">The screen's work area.</param>
+    /// <param name="frame">The size the window's frame adds: the title bar and the borders.</param>
+    /// <param name="options">The UI's shape.</param>
+    /// <param name="isTv"><see langword="true"/> to take a TV's size, 960 by 540, as a desktop simulating a TV does.</param>
+    /// <returns>The window's place, and the size inside its frame.</returns>
+    /// <remarks>
+    /// A TV takes 960 by 540 as it is. Otherwise the window takes the phone's shape where the work area is tall enough for
+    /// it with 40 units above and below, whatever its width; else a landscape window whose content is as wide as the UI's
+    /// landscape width within the work area, and as tall as a TV's 540 within the work area, though never below the UI's
+    /// least landscape height. The window is centred in the work area, its top never above the work area's.
+    /// </remarks>
     public static DesktopWindowPlacement Fit(VhRect workArea, VhSize frame, DesktopWindowFitOptions options, bool isTv)
     {
         var size = isTv ? TvSize : FitPhone(workArea, frame, options);

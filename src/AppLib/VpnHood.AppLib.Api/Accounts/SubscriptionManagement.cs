@@ -1,32 +1,27 @@
 namespace VpnHood.AppLib.Api.Accounts;
 
 /// <summary>
-/// Where a subscription can be managed from here — cancel, change plan, change payment method.
-/// A reason rather than a yes/no, because the two ways of saying no need opposite things from the
-/// UI: one forbids naming a store, the other depends on naming ours.
+/// Specifies where a subscription can be managed from this device, to cancel it or change its plan or payment, or why
+/// not.
 /// </summary>
+/// <remarks>The two reasons ask opposite things of the UI: one may not name a store, the other names this build's.</remarks>
 public enum SubscriptionManagement
 {
     /// <summary>
-    /// Another platform's store billed it — bought on Android, now signed in on an iPhone. The UI
-    /// must say so WITHOUT naming that store: naming a competing store is itself a store violation
-    /// (App Review 2.3.10), which is why the subscription's own StoreId must not be rendered here.
+    /// Another platform's store billed it, as Google Play for a person now on an iPhone. The UI says so without naming that
+    /// store, as a store's rules forbid naming a competing one, and does not show <see cref="Subscription.StoreId"/>.
     /// </summary>
     AnotherStore,
 
     /// <summary>
-    /// Our own store billed it, but it cannot show the screen on this device — a television, where
-    /// Google Play has no subscriptions screen and forwards to a browser that may not exist. The UI
-    /// may name the store here, because it is the one this build ships to, and should point the
-    /// person at a device that can.
+    /// This build's store billed it, but cannot show its screen on this device, as on a TV, where Google Play forwards to a
+    /// browser the TV may not have. The UI may name the store, and points the person to a device that can.
     /// </summary>
     NotOnThisDevice,
 
     /// <summary>
-    /// This build's store billed it and can show its own screen on this device. The UI offers the
-    /// control, which calls the app rather than opening any address. Deliberately NOT the zero
-    /// value: an implementation that forgets to answer must fall to the harmless case, not to the
-    /// one that draws a button.
+    /// This build's store billed it and can show its screen here: the UI offers the control, which calls the app. It is not
+    /// the default value, so a provider that sets nothing falls to a case that draws no button.
     /// </summary>
     Available
 }

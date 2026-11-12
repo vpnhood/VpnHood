@@ -17,8 +17,18 @@ namespace VpnHood.AppLib.Stores.AppStore;
 /// </summary>
 public class AppleAuthenticationProvider : IAuthenticationExternalProvider
 {
+    /// <inheritdoc/>
+    /// <remarks>It is <see cref="AuthProviders.Apple"/>.</remarks>
     public string ProviderId => AuthProviders.Apple;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It asks for the email address too, and gives Apple's identity token, a JWS the portal verifies against Apple's
+    /// published keys. Apple has no silent sign-in: a silent one needs the app in front.
+    /// </remarks>
+    /// <exception cref="System.Security.Authentication.AuthenticationException">
+    /// Apple's sign-in failed, or gave no identity token.
+    /// </exception>
     public async Task<string> SignIn(IUiContext? uiContext, bool isSilentLogin, CancellationToken cancellationToken)
     {
         // the sheet shows over the window
@@ -57,6 +67,8 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
         return identityToken;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: Apple has no sign-out on the device, and the portal's session revoke is the sign-out.</remarks>
     public Task SignOut(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // Apple has no sign-out API; the portal session revoke (DELETE /auth/sessions/current) is the
@@ -64,6 +76,7 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
     }

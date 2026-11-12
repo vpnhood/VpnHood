@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<Description>Runs the VpnHood Avalonia UI in a desktop window on Windows and Linux</Description>
 	</PropertyGroup>
 

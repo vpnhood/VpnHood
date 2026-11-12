@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<Description>The VpnHood desktop host on Linux: systemd is the service, /opt is the install, XDG is the cache, and root is who runs the daemon. Everything the commands themselves do is VpnHood.AppUi.Hosting.Desktop.Daemon</Description>
 	</PropertyGroup>
 
@@ -9,6 +10,10 @@
 	<ItemGroup>
 		<None Update="buildTransitive\VpnHood.AppUi.Hosting.Desktop.Linux.targets" Pack="true"
 		      PackagePath="buildTransitive\VpnHood.AppUi.Hosting.Desktop.Linux.targets" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
 	</ItemGroup>
 
 	<ItemGroup>

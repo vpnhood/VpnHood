@@ -16,7 +16,7 @@ namespace VpnHood.AppLib.App.Ios;
 //   feature), so it is kept in-memory; the head pushes the list in via the app config, same as
 //   DefaultAppCultureProvider.
 // - SelectedCultures: the first of the app's list, as it was written: iOS Settings adds the region.
-public class IosAppCultureProvider : IAppCultureProvider
+internal class IosAppCultureProvider : IAppCultureProvider
 {
     private const string AppleLanguagesKey = "AppleLanguages";
 

@@ -2,8 +2,10 @@
 
 namespace VpnHood.AppLib.Api.App;
 
-// Why the TCP forwarding switch is locked, if it is. It says nothing of what really runs: the switch acts on IPv4, and
-// IPv6 may go by TCP forwarding while it is off
+/// <summary>
+/// Specifies why the TCP forwarding switch is locked, if it is; it says nothing of what runs: the switch acts on IPv4,
+/// and IPv6 may go by TCP forwarding while it is off.
+/// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<TcpForwardingLockReason>))]
 public enum TcpForwardingLockReason
 {

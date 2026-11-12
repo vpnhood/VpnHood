@@ -9,21 +9,50 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Ads.AdMob.Android;
 
+/// <summary>Provides AdMob's rewarded ads.</summary>
+/// <param name="adUnitId">The AdMob ad unit's ID; <see cref="AdMobTestAdUnitIds"/> has Google's test units.</param>
 public class AdMobRewardedAdProvider(string adUnitId) : IAdProvider
 {
     private RewardedAd? _loadedAd;
+    /// <inheritdoc/>
+    /// <remarks>It is <c>AdMob</c>.</remarks>
     public string NetworkName => "AdMob";
+    /// <inheritdoc/>
     public AdType AdType => AdType.RewardedAd;
+    /// <inheritdoc/>
     public DateTime? AdLoadedTime { get; private set; }
+    /// <inheritdoc/>
+    /// <remarks>It is 20 minutes.</remarks>
     public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
+
+    /// <summary>
+    /// Gets or sets how long, after the ad has closed, the provider waits for AdMob's SDK to report the reward earned.
+    /// The default is 3 seconds.
+    /// </summary>
+    /// <remarks>
+    /// It counts whole milliseconds, a fraction dropped toward zero: −1 ms (<see cref="Timeout.InfiniteTimeSpan"/>)
+    /// waits without a limit, and a value outside −1 ms to 4,294,967,294 ms makes <see cref="ShowAd"/> throw
+    /// <see cref="ArgumentOutOfRangeException"/> once the ad has closed.
+    /// </remarks>
     public TimeSpan AdEarnedTimeout { get; set; } = TimeSpan.FromSeconds(3);
 
+    /// <summary>Creates a provider of AdMob's rewarded ads.</summary>
+    /// <param name="adUnitId">The AdMob ad unit's ID.</param>
+    /// <returns>The provider.</returns>
     public static AdMobRewardedAdProvider Create(string adUnitId)
     {
         var ret = new AdMobRewardedAdProvider(adUnitId);
         return ret;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It gathers the person's consent where one is due and starts AdMob's SDK, then loads the ad on the UI thread. A
+    /// load that gets that far drops the ad loaded before; one that fails earlier, as for a destroyed activity, keeps it.
+    /// </remarks>
+    /// <exception cref="LoadAdException">
+    /// The activity is destroyed, the consent AdMob needs is missing, or AdMob could not load an ad.
+    /// </exception>
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
@@ -51,6 +80,18 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAdProvider
         AdLoadedTime = DateTime.UtcNow;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It shows the ad over the activity, with <paramref name="customData"/> for AdMob's server-side verification of the
+    /// reward, which it does not wait for, and completes once the person has closed it and AdMob's SDK has reported the
+    /// reward earned, which it waits <see cref="AdEarnedTimeout"/> for.
+    /// A show that starts drops the loaded ad however it ends; one that fails its checks keeps it. A cancel ends the
+    /// wait, not an ad already shown.
+    /// </remarks>
+    /// <exception cref="ShowAdException">The activity is destroyed, no ad is loaded, or AdMob could not show it.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <see cref="AdEarnedTimeout"/> is out of its range, found once the ad has closed.
+    /// </exception>
     public async Task<ShowAdResult> ShowAd(IUiContext uiContext, string? customData,
         CancellationToken cancellationToken)
     {
@@ -135,6 +176,8 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAdProvider
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: a loaded ad stays.</remarks>
     public void Dispose()
     {
     }

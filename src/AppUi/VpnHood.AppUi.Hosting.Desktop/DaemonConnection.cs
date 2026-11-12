@@ -8,8 +8,9 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop;
 
-// The way in to the app's API, followed as it moves: the service's, over its channel
-// (DaemonChannelConnector), or this process's own (CreateInProcess).
+/// <summary>
+/// Provides the way in to the app's API, followed as it moves: the service's, over its channel, or this process's own.
+/// </summary>
 public sealed class DaemonConnection : IAsyncDisposable
 {
     private readonly IDaemonAnswerProvider _answerProvider;
@@ -32,11 +33,12 @@ public sealed class DaemonConnection : IAsyncDisposable
         _answerProvider.Changed += AnswerProvider_Changed;
     }
 
+    /// <summary>Gets the app's API, over loopback to wherever the app's web host answers now.</summary>
     public VpnHoodApi Api { get; }
 
     // A service that answers as a newer version than this binary: an update replaced it under an open window, which
     // starts itself again on the new version (UiCommand).
-    public event EventHandler? NewerServiceAnswered;
+    internal event EventHandler? NewerServiceAnswered;
 
     private void AnswerProvider_Changed(object? sender, EventArgs e)
     {
@@ -46,7 +48,7 @@ public sealed class DaemonConnection : IAsyncDisposable
     }
 
     // The daemon's API URL, followed as it moves: what a web view loads, token and all.
-    public IDesktopApiUrlProvider ApiUrlProvider => _apiUrlProvider;
+    internal IDesktopApiUrlProvider ApiUrlProvider => _apiUrlProvider;
 
     // The app in this very process (InProcessDesktopHost), over its own local web host, which must be
     // started. It answers while this process runs, so it is never found stopped.
@@ -57,6 +59,7 @@ public sealed class DaemonConnection : IAsyncDisposable
             notRunningHint: $"{instanceName} has stopped.");
     }
 
+    /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
         _answerProvider.Changed -= AnswerProvider_Changed;

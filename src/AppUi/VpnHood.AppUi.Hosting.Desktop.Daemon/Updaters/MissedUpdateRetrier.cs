@@ -4,9 +4,14 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 
-// The service's half of the automatic update's retry: at each connect, an updater run that could not reach the server
-// is made again, now through the tunnel (DesktopAppUpdaterProvider.RetryMissedUpdate), one try at a time. A connect is
-// the change into Connected, a reconnect's included. Disposed before the app.
+/// <summary>
+/// Provides the service's half of the automatic update's retry: after it sees a change into Connected, an updater run
+/// that could not reach the server is made again, one try at a time.
+/// </summary>
+/// <remarks>
+/// A connect is the change into Connected, a reconnect's included; one that comes while a retry runs is not seen.
+/// Nothing routes the updater through the tunnel itself. It is disposed before the app.
+/// </remarks>
 public sealed class MissedUpdateRetrier : IDisposable
 {
     private readonly VpnHoodApp _app;
@@ -15,6 +20,11 @@ public sealed class MissedUpdateRetrier : IDisposable
     private int _isRetrying;
     private volatile bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MissedUpdateRetrier"/> class, which follows the app's state.
+    /// </summary>
+    /// <param name="app">The app.</param>
+    /// <param name="updater">The updater.</param>
     public MissedUpdateRetrier(VpnHoodApp app, DesktopAppUpdaterProvider updater)
     {
         _app = app;
@@ -44,6 +54,8 @@ public sealed class MissedUpdateRetrier : IDisposable
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It stops following the app's state.</remarks>
     public void Dispose()
     {
         _disposed = true;

@@ -5,7 +5,7 @@ using VpnHood.AppLib.Abstractions;
 
 namespace VpnHood.AppLib.App.Android;
 
-public class AndroidAppCultureProvider : IAppCultureProvider
+internal class AndroidAppCultureProvider : IAppCultureProvider
 {
     public static bool IsSupported => OperatingSystem.IsAndroidVersionAtLeast(34);
 

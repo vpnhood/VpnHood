@@ -5,14 +5,14 @@ namespace VpnHood.AppLib.Portal.Dto;
 /// only to web builds — a store build prices its plans at its store — and every field is display
 /// or navigation data: the app never assembles a purchase link or computes a price itself.
 /// </summary>
-public class PortalPlan
+internal class PortalPlan
 {
     public required string PlanId { get; init; }
 
     /// <summary>ISO-8601 duration of one billing cycle, e.g. "P1M", "P1Y".</summary>
     public required string BillingPeriod { get; init; }
 
-    /// <summary>Decimal price per cycle, exactly as the checkout will bill it.</summary>
+    /// <summary>Decimal price per cycle, in the plan's currency, as the portal lists it.</summary>
     public required string PriceAmount { get; init; }
 
     /// <summary>ISO 4217 code of <see cref="PriceAmount"/>.</summary>

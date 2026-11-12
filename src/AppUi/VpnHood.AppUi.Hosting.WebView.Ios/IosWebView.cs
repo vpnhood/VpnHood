@@ -10,7 +10,7 @@ namespace VpnHood.AppUi.Hosting.WebView.Ios;
 // iOS IWebView adapter: the only iOS-specific SPA-hosting code. It owns a WKWebView (plus a
 // loading spinner and an error label) inside the given UIViewController, and maps the
 // WKNavigationDelegate callbacks onto the platform-neutral events WebViewHost drives.
-public sealed class IosWebView : IWebView
+internal sealed class IosWebView : IWebView
 {
     private readonly UIViewController _controller;
     private readonly UIColor _backgroundColor;

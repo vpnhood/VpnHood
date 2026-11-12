@@ -16,7 +16,7 @@ namespace VpnHood.AppUi.Hosting.WebView.Android;
 // WebView, swapping the activity's content between the loading screen and the WebView, and reports
 // the WebView client callbacks to WebViewHost. The WebView-version "please update" redirect is
 // Android-specific, so it lives here (it needs the live WebView).
-public sealed class AndroidWebView : IWebView
+internal sealed class AndroidWebView : IWebView
 {
     private readonly IActivityEvent _activityEvent;
     private readonly AndroidWebViewMainActivityOptions _options;

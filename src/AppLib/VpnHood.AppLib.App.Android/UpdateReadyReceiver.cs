@@ -12,6 +12,16 @@ namespace VpnHood.AppLib.App.Android;
 // whose app updates through its store: DownloadManager tells only the app that asked it to download.
 // Without the notification permission, which the first connect asks for, Android drops it unseen; the
 // notice still shows Install at the next open.
+
+/// <summary>
+/// Provides the notification that the update the person started downloading is ready, when the app is not in front to
+/// show it in its notice.
+/// </summary>
+/// <remarks>
+/// It is in the manifest, as Android 14 may hold the broadcast to a receiver registered at run time until the app is in
+/// front again. It is inert in a head whose app updates through its store, and Android drops the notification without
+/// the notification permission; the notice still shows Install at the next open.
+/// </remarks>
 [BroadcastReceiver(Exported = true, Permission = "android.permission.SEND_DOWNLOAD_COMPLETED_INTENTS")]
 [IntentFilter([DownloadManager.ActionDownloadComplete])]
 public class UpdateReadyReceiver : BroadcastReceiver
@@ -21,6 +31,8 @@ public class UpdateReadyReceiver : BroadcastReceiver
     private const string ChannelName = "General";
     private const int NotificationId = 3501;
 
+    /// <inheritdoc/>
+    /// <remarks>A tap on the notification opens the app, whose notice shows Install; a failure is logged.</remarks>
     public override void OnReceive(Context? context, Intent? intent)
     {
         try {

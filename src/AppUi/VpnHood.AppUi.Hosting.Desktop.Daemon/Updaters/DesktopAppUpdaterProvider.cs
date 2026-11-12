@@ -11,24 +11,26 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Daemon.Updaters;
 
-// The notice's Update and Install on a desktop installed from our site, as on Android's website APK, in the service.
-// The feed is the one the install's publish.json names, the release's info file its installer put there, so it always
-// matches the installed release and its processor, and no setting can drift from it. Update downloads the feed's
-// package into the install's updates folder; Install hands it to the platform's installer, whose install stops this
-// service, replaces it and starts the new version: an Install that ends with this service still here installed
-// nothing. The automatic update's rules are not the person's: their Install installs now, the VPN disconnecting, as
-// the notice warns. Add no way back to the version before: a broken release stays until the next, as on Android and
-// iOS - a rollback is the hard, bug-prone part, and the updater outside the service still installs the next. The automatic update is the platform's updater, a script apart from the service so that a
-// broken release still gets the next one: it downloads into the same folder under the same name, and leaves
-// a download made while the VPN was in use for the service to hand back after the next disconnect
-// (InstallDownloadedUpdate). So the folder is shared, and each side removes only what it is done with: this one the
-// downloads of this version and older, and of one overtaken by the release it downloads. A run of the updater that
-// could not reach the server says so in a file of its own, and the service runs the updater again at the next connect
-// (RetryMissedUpdate).
+/// <summary>
+/// Provides the app's update on a desktop installed from the website, in the service: the notice's Update and Install,
+/// and the automatic update's part.
+/// </summary>
+/// <remarks>
+/// The feed is the one the install's <c>publish.json</c> names. Update downloads the feed's package into the install's
+/// updates folder; Install hands it to the platform's installer, whose install stops this service, replaces it and starts
+/// the new version, so an Install that ends with this service still here installed nothing. The automatic update is
+/// the platform's updater, a script apart from the service, which shares the updates folder; a run of it that could not
+/// reach the server leaves a file, and the service may run it again after a later connect, while automatic updates are
+/// on.
+/// </remarks>
+/// <param name="updatesPath">The install's updates folder.</param>
+/// <param name="missedPath">The file the updater leaves while its last run could not reach the server.</param>
+/// <param name="updateInfoUrl">The feed.</param>
+/// <param name="appVersion">This app's version.</param>
 public abstract class DesktopAppUpdaterProvider(string updatesPath, string missedPath, Uri updateInfoUrl,
     Version appVersion) : IAppUpdaterProvider
 {
-    // what the updater leaves while its last run could not reach the server (updater.sh, install-client-updater.ps1)
+    /// <summary>The name of the file the updater leaves while its last run could not reach the server.</summary>
     protected const string MissedFileName = "update.missed";
 
     private static readonly HttpClient HttpClient = new();
@@ -42,12 +44,14 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     private bool _isInstalling;
     private string? _errorMessage;
 
+    /// <summary>Gets the feed, as the install's <c>publish.json</c> names it.</summary>
     public Uri UpdateInfoUrl { get; } = updateInfoUrl;
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: the app's notice shows the update.</remarks>
     public bool HasOwnScreen => false;
 
-    // the notice's Install or a download handed back, from the installer's start until it stops this service or ends
-    // without installing
+    /// <inheritdoc/>
     public bool IsInstalling {
         get {
             lock (_stateLock)
@@ -55,22 +59,42 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         }
     }
 
-    // Runs the platform's installer on the package: null once its install is stopping this service, which the
-    // install goes on without, else why it installed nothing.
+    /// <summary>Runs the platform's installer on a package.</summary>
+    /// <param name="packagePath">The package.</param>
+    /// <returns>
+    /// A task whose result is <see langword="null"/> once its install is stopping this service, which the install goes on
+    /// without; else why it installed nothing.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">The installer could not be started.</exception>
     protected abstract Task<string?> RunInstaller(string packagePath);
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="true"/>: the platform's updater is the automatic update.</remarks>
     public bool IsAutomaticUpdateSupported => true;
 
-    // whether the platform's updater runs by itself: its timer or task on, as its installer left it
+    /// <inheritdoc/>
+    /// <remarks>The platform's updater runs by itself where its timer or task is on, as its installer left it.</remarks>
+    /// <exception cref="InvalidOperationException">The platform's tool could not be started.</exception>
     public abstract Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken);
 
-    // the timer or the task on or off, which the installers keep at an update
+    /// <inheritdoc/>
+    /// <remarks>It turns the timer or the task on or off, which the installers keep at an update.</remarks>
     public abstract Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken);
 
-    // a run of the platform's updater now, as its timer or task starts one, going on by itself
+    /// <summary>Starts a run of the platform's updater now, as its timer or task does, which goes on by itself.</summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the run is asked for.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="InvalidOperationException">The platform's tool could not be started, or could not start the run.</exception>
     protected abstract Task RunUpdater(CancellationToken cancellationToken);
 
-    // a platform tool's run to its end: its exit code and what it wrote
+    /// <summary>Runs a platform tool to its end.</summary>
+    /// <param name="fileName">The tool.</param>
+    /// <param name="arguments">Its arguments.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the tool's exit code and what it wrote to its output and error streams.</returns>
+    /// <exception cref="InvalidOperationException">The tool could not be run.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected static async Task<(int ExitCode, string Output, string Error)> RunTool(string fileName,
         IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
@@ -92,13 +116,18 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     }
 
     /// <summary>
-    /// The automatic update's part in the service, with the VPN idle again: a release downloaded already - by the
-    /// updater while the VPN was in use, or by the notice's Update - and newer than this app, installed now, while
-    /// automatic updates are on. An install stops this service; else this logs why there was none. A cancel before
-    /// the installer starts puts the install off; the installer, once started, runs to its end. Not beside the
-    /// notice's own Install or Update.
+    /// Installs, while automatic updates are on, a release downloaded already, by the updater while the VPN was in use or by
+    /// the notice's Update, and newer than this app: the automatic update's part in the service, with the VPN idle again.
     /// </summary>
-    public async Task InstallDownloadedUpdate(CancellationToken cancellationToken)
+    /// <remarks>
+    /// An install stops this service; else it logs why there was none. A cancel is seen until the install is committed,
+    /// just before the installer starts; the installer, once started, runs to its end. It does not run beside the notice's
+    /// own Install or Update.
+    /// </remarks>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the installer has ended, or the install was put off.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    internal async Task InstallDownloadedUpdate(CancellationToken cancellationToken)
     {
         try {
             if (FindDownload() is not { } packagePath || !await IsAutomaticUpdateOn(cancellationToken).Vhc())
@@ -138,11 +167,16 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
     }
 
     /// <summary>
-    /// The automatic update's part in the service at a connect: a run of the updater that could not reach the feed or
-    /// its package - a filtered network may let it through only in the tunnel - is made again now, while automatic
-    /// updates are on. What it downloads waits for the disconnect, as any download made while the VPN is in use.
+    /// Runs the updater again where its last run could not reach the feed or its package, while automatic updates are on:
+    /// the automatic update's part in the service at a connect.
     /// </summary>
-    public async Task RetryMissedUpdate(CancellationToken cancellationToken)
+    /// <remarks>
+    /// A filtered network may let it through only in the tunnel. What it downloads waits for the disconnect, as any download
+    /// made while the VPN is in use.
+    /// </remarks>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    internal async Task RetryMissedUpdate(CancellationToken cancellationToken)
     {
         try {
             if (!File.Exists(missedPath) || !await IsAutomaticUpdateOn(cancellationToken).Vhc())
@@ -197,7 +231,10 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         }
     }
 
-    // the feed a publish.json names; null where there is none, as outside an install
+    /// <summary>Reads the feed a <c>publish.json</c> names.</summary>
+    /// <param name="publishInfoPath">The <c>publish.json</c>.</param>
+    /// <returns>The feed, or <see langword="null"/> where there is no such file, as outside an install.</returns>
+    /// <exception cref="InvalidDataException">The <c>UpdateInfoUrl</c> property is null.</exception>
     protected static Uri? ReadUpdateInfoUrl(string publishInfoPath)
     {
         if (!File.Exists(publishInfoPath))
@@ -209,13 +246,15 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         return new Uri(updateInfoUrl);
     }
 
-    // this service's own update and the updates folder are all there is to ask: no network
+    /// <inheritdoc/>
+    /// <remarks>It reads only this service's own update and the updates folder: no network. The token is not read.</remarks>
     public Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
         return Task.FromResult(GetState(feedRelease));
     }
 
+    /// <inheritdoc/>
     public AppUpdateState GetState(AppRelease? feedRelease)
     {
         lock (_stateLock) {
@@ -250,6 +289,11 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         }
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">
+    /// There is no newer release, or its package is neither on https nor on this machine.
+    /// </exception>
+    /// <remarks>The token is not read.</remarks>
     public Task StartUpdate(AppRelease? feedRelease, IUiContext? uiContext, CancellationToken cancellationToken)
     {
         if (feedRelease is null)
@@ -275,6 +319,9 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">There is no newer release, or it has not been downloaded.</exception>
+    /// <remarks>The token is not read.</remarks>
     public Task CompleteUpdate(AppRelease? feedRelease, IUiContext? uiContext, CancellationToken cancellationToken)
     {
         if (feedRelease is null)
@@ -298,6 +345,8 @@ public abstract class DesktopAppUpdaterProvider(string updatesPath, string misse
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: nothing here waits for the person. The token is not read.</remarks>
     public Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken)
     {
         return Task.FromResult(false);

@@ -8,7 +8,7 @@ namespace VpnHood.AppUi.Hosting.Desktop.Daemon.Channel;
 
 // The daemon's API over the service's channel. Open waits for a service still coming up - the first
 // command after an install meets one - but not for one stopped.
-public static class DaemonChannelConnector
+internal static class DaemonChannelConnector
 {
     private static readonly TimeSpan BindTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);

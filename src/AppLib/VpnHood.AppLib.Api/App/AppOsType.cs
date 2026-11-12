@@ -2,20 +2,30 @@
 
 namespace VpnHood.AppLib.Api.App;
 
-// The OS the app process is running on, published to the UI through AppDescriptor.
-//
-// The UI needs this because some content is only legal//useful on certain platforms: an App Store
-// build may not point at another mobile platform's store or advertise a download it cannot offer
-// (App Review guideline 2.3.10), while the same screen is genuinely useful elsewhere. Capability
-// questions ("can this device pin a quick-launch tile?") must keep using the IDeviceUiProvider
-// flags — this is for the store-policy/product cases those flags cannot express.
+/// <summary>Specifies the operating system the app runs on.</summary>
+/// <remarks>
+/// It is for what a store's policy or the product decides by platform, as an App Store build that may not point at
+/// another platform's store (App Review guideline 2.3.10); what the device can do comes from
+/// <see cref="DeviceIntentFeatures"/>.
+/// </remarks>
 [JsonConverter(typeof(JsonStringEnumConverter<AppOsType>))]
 public enum AppOsType
 {
+    /// <summary>An operating system the app does not tell.</summary>
     Unknown,
+
+    /// <summary>Windows.</summary>
     Windows,
+
+    /// <summary>Linux.</summary>
     Linux,
+
+    /// <summary>Android.</summary>
     Android,
+
+    /// <summary>iOS, and tvOS.</summary>
     Ios,
+
+    /// <summary>macOS.</summary>
     MacOs
 }

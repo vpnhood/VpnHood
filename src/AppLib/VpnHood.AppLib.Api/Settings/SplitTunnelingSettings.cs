@@ -3,41 +3,59 @@ using VpnHood.AppLib.Api.SplitTunneling;
 
 namespace VpnHood.AppLib.Api.Settings;
 
+/// <summary>Represents the split tunneling's settings, as the person stored them.</summary>
 public class SplitTunnelingSettings
 {
-    // The super toggle: is splitting allowed at all? Off is the one-tap guarantee that no traffic of
-    // the tunneled apps escapes — every split below turns inert and both unsupported-ip modes act as
-    // Block regardless of their stored values. Two splits are deliberately exempt because neither can
-    // expose the public IP of the traffic this app protects: UseLocalNetwork (LAN traffic never
-    // reaches the internet) and AppMode/Apps (an app kept out of the VPN is a per-app decision — the
-    // user picked exactly which apps opt out, and the rest of the device is unaffected).
+    /// <summary>
+    /// Gets or sets a value indicating whether splitting is allowed at all. The default is <see langword="true"/>.
+    /// </summary>
+    /// <remarks>
+    /// Off keeps the traffic of the tunneled apps from going outside the tunnel: every split turns inert, and both modes
+    /// for unsupported addresses act as <see cref="SplitUnsupportedIpMode.Block"/>, whatever they store. The local network
+    /// (<see cref="UseLocalNetwork"/>) and the split by app stay, as neither can show the public address of the traffic the
+    /// app protects. While the app waits on an ad, though, traffic other than DNS goes outside the tunnel all the same.
+    /// </remarks>
     public bool Enabled { get; set; } = true;
+
+    /// <summary>Gets or sets the split by app's mode. The default is <see cref="SplitAppMode.All"/>.</summary>
     public SplitAppMode AppMode { get; set; } = SplitAppMode.All;
+
+    /// <summary>Gets or sets the apps the split by app names, by their IDs. The default is none.</summary>
     public IReadOnlyList<string> Apps { get; set; } = [];
+
+    /// <summary>Gets or sets the split by country's mode. The default is <see cref="SplitCountryMode.IncludeAll"/>.</summary>
     public SplitCountryMode CountryMode { get; set; } = SplitCountryMode.IncludeAll;
+
+    /// <summary>Gets or sets the countries the split by country names, by their codes. The default is none.</summary>
     public IReadOnlyList<string> Countries { get; set; } = [];
+
+    /// <summary>Gets or sets a value indicating whether the app's own split by IP ranges is on.</summary>
     public bool UseIpViaApp { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the device adapter's split by IP ranges is on.</summary>
     public bool UseIpViaDevice { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the split by domain is on.</summary>
     public bool UseDomain { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the local network goes outside the tunnel.</summary>
     public bool UseLocalNetwork { get; set; }
+
+    /// <summary>Gets or sets the DNS's split mode. The default is <see cref="SplitDnsMode.IncludeAll"/>.</summary>
     public SplitDnsMode DnsMode { get; set; } = SplitDnsMode.IncludeAll;
 
-    // The fate of a destination the server does not route: Exclude bypasses it, Block fails closed.
-    // Not shown in the UI (the toggle speaks for ordinary users), but kept as a real option so the
-    // API can still choose Block while splitting is allowed.
+    /// <summary>
+    /// Gets or sets what happens to a destination the server does not route: <see cref="SplitUnsupportedIpMode.Exclude"/>
+    /// bypasses it, <see cref="SplitUnsupportedIpMode.Block"/> fails closed. The default is
+    /// <see cref="SplitUnsupportedIpMode.Exclude"/>.
+    /// </summary>
+    /// <remarks>The UI does not show it; its block covers IPv6 too, over <see cref="UnsupportedIpV6Mode"/>.</remarks>
     public SplitUnsupportedIpMode UnroutedIpMode { get; set; } = SplitUnsupportedIpMode.Exclude;
 
-    // The fate of IPv6 when the server cannot carry the family at all: Block keeps it inside (dead but
-    // private), Exclude lets the OS route it natively (working but visible to WebRTC/STUN probes).
-    // UnroutedIpMode is superior: its Block covers IPv6 too, overriding a stored Exclude here.
+    /// <summary>
+    /// Gets or sets what happens to IPv6 where the server cannot carry it: <see cref="SplitUnsupportedIpMode.Block"/> keeps
+    /// it inside, dead but private, and <see cref="SplitUnsupportedIpMode.Exclude"/> lets the system route it, working but
+    /// visible to WebRTC and STUN probes. The default is <see cref="SplitUnsupportedIpMode.Block"/>.
+    /// </summary>
     public SplitUnsupportedIpMode UnsupportedIpV6Mode { get; set; } = SplitUnsupportedIpMode.Block;
-
-    // The single place BOTH gates are applied — the super toggle and the plan — so no consumer can
-    // apply one and forget the other. A disabled copy keeps only what cannot leak and turns both
-    // unsupported-ip modes to Block; an allowed copy keeps only the splits the current plan can
-    // actually apply, because the connect path skips the rest and an effective copy must not promise
-    // what will not happen. Neither gate touches the stored values. The result depends on the plan,
-    // so it is a snapshot of "now" — call it fresh, never cache it across a purchase or a profile
-    // switch. The checker is required on purpose: an overload without it would restore the very hole
-    // this closes.
 }

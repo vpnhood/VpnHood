@@ -11,25 +11,35 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Stores.AppStore;
 
-// App Store counterpart of GooglePlayAppUpdaterProvider. iOS has no in-app update API, so Check
-// asks the iTunes Lookup API for the released store version (keyed by the bundle id, so no per-app
-// configuration) and StartUpdate opens the app's App Store page, where the user completes — or
-// declines — the update. AppUpdaterService drives the cadence: PromptDelay first gives the OS
-// auto-update a chance, and PostponePeriod suppresses re-prompting after the page opened. The lookup
-// returns no result for TestFlight-only or unreleased apps: "no update". A failure throws, which the
-// service treats like "none". appVersion: the installed app's (AppOptions.AppVersion), which the
-// store's is compared with.
+/// <summary>
+/// Provides the App Store's update: iOS has no in-app update API, so the check asks the iTunes Lookup API for the
+/// released store version, and the update opens the app's App Store page, where the person updates or declines.
+/// </summary>
+/// <remarks>
+/// The lookup is keyed by the bundle ID, so the app needs no configuration of its own. It finds nothing for an app only on
+/// TestFlight or not released, which is no update; a failed lookup throws.
+/// </remarks>
+/// <param name="appVersion">The installed app's version, which the store's is compared with.</param>
 public class AppStoreAppUpdaterProvider(Version appVersion) : IAppUpdaterProvider
 {
     // the lookup result of the last successful check; StartUpdate reuses it for the store page URL
     private AppStoreAppInfo? _storeApp;
     private AppUpdateState _state = AppUpdateState.None;
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="true"/>: the App Store's page shows the update.</remarks>
     public bool HasOwnScreen => true;
 
-    // the App Store installs it, and stops the app itself
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: the App Store installs the update, and stops the app itself.</remarks>
     public bool IsInstalling => false;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It asks the iTunes Lookup API, and compares the store's version with the installed one by their major, minor and
+    /// build numbers.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The app's bundle ID cannot be read.</exception>
     public async Task<AppUpdateState> Check(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
@@ -62,11 +72,20 @@ public class AppStoreAppUpdaterProvider(Version appVersion) : IAppUpdaterProvide
         return _state;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It gives the last check's state.</remarks>
     public AppUpdateState GetState(AppRelease? feedRelease)
     {
         return _state;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It opens the app's App Store page, from the last check's lookup or a new one, and completes once the page is open.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The app's bundle ID cannot be read, the App Store has no page for the app, or iOS did not open it.
+    /// </exception>
     public async Task StartUpdate(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
@@ -93,26 +112,36 @@ public class AppStoreAppUpdaterProvider(Version appVersion) : IAppUpdaterProvide
             throw new InvalidOperationException("Could not open the App Store page.");
     }
 
-    // the App Store installs on its own page: nothing waits for the app's Install
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It always throws <see cref="NotSupportedException"/>: the App Store installs on its own page.
+    /// </remarks>
     public Task CompleteUpdate(AppRelease? feedRelease, IUiContext? uiContext,
         CancellationToken cancellationToken)
     {
         throw new NotSupportedException("The App Store installs its update on its own page.");
     }
 
-    // the update runs in the App Store app, so the app has none of its own to bring back
+    /// <inheritdoc/>
+    /// <remarks>It gives <see langword="false"/>: the update runs in the App Store app.</remarks>
     public Task<bool> ResumeUpdate(IUiContext uiContext, CancellationToken cancellationToken)
     {
         return Task.FromResult(false);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is <see langword="false"/>: the App Store keeps its own automatic update setting.</remarks>
     public bool IsAutomaticUpdateSupported => false;
 
+    /// <inheritdoc/>
+    /// <remarks>It always throws <see cref="NotSupportedException"/>.</remarks>
     public Task<bool> IsAutomaticUpdateOn(CancellationToken cancellationToken)
     {
         throw new NotSupportedException("The App Store keeps its own automatic update setting.");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It always throws <see cref="NotSupportedException"/>.</remarks>
     public Task SetAutomaticUpdate(bool isOn, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("The App Store keeps its own automatic update setting.");

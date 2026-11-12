@@ -9,37 +9,63 @@ using VpnHood.Net.Toolkit.Graphics;
 
 namespace VpnHood.AppUi.Hosting.Avalonia;
 
-// The Avalonia Application a VpnHood UI derives from: one view, whatever hosts it. A single-view
-// host (Android, tvOS, a browser) gets it as the main view; a desktop host gets it in a window that
-// is never resized or maximized, in the shape the UI states (WindowFit), fitted to its screen
-// (AvaloniaDesktopHost). The head gives the UI the app's API before this runs (VhApp.Init) and
-// configures it before the view is made (VhApp.Configure); the views read nothing else.
+/// <summary>Represents the Avalonia application a VpnHood UI derives from: one view, whatever hosts it.</summary>
+/// <remarks>
+/// A single-view host, as Android, tvOS or a browser, gets it as the main view; a desktop host gets it in a window that
+/// cannot be resized or maximized, in the shape the UI states (<see cref="WindowFit"/>), fitted to its screen. The head
+/// gives the UI the app's API before this runs, and configures it before the view is made; the views read nothing else.
+/// </remarks>
 public abstract class VpnHoodAvaloniaAppBase : Application
 {
-    // The UI itself, made once the head has configured it.
+    /// <summary>Creates the UI's main view, once the head has configured the UI.</summary>
+    /// <returns>The view.</returns>
     protected abstract Control CreateMainView();
 
-    // The colour of the OS chrome around the UI - a desktop window's title bar, Android's system bars -
-    // the window background its theme's manifest names, the colour the app's launch showed; null where
-    // the UI's store names none, and the chrome keeps the system's.
+    /// <summary>
+    /// Gets the colour of the system's chrome around the UI, as a desktop window's title bar or Android's system bars: the
+    /// window background its theme names; or <see langword="null"/> where the UI's content names none, and the host chooses
+    /// the chrome's colour.
+    /// </summary>
     public VhColor? ChromeColor => AvaloniaUiHosting.ThemeColors.WindowBackgroundColor;
 
-    // The shape a desktop window takes for this UI (DesktopWindowFit): its layout's, which only its
-    // design knows, so the UI states it and a head names the UI alone.
+    /// <summary>Gets the shape a desktop window takes for this UI: its layout's, which only its design knows.</summary>
     public abstract DesktopWindowFitOptions WindowFit { get; }
 
-    // An access key the OS opened the app with - its file, mailed on by an admin - which the UI imports as the
-    // chosen server and says so, or that it could not read the key, in its own words: the key a desktop launch
-    // read from its file (AvaloniaDesktopHost), or the file itself, as iOS hands it over. On the UI thread, once
-    // the view is made; they fail only where none is.
+    /// <summary>
+    /// Imports an access key the system opened the app with, as the chosen server, and says so, or that it could not read
+    /// the key, in the UI's own words.
+    /// </summary>
+    /// <param name="accessKey">The access key, as a desktop launch read it from its file.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>It is called on the UI thread, once the view is made.</remarks>
     public abstract Task ImportAccessKey(string accessKey);
+
+    /// <summary>
+    /// Imports an access key's file the system opened the app with, as iOS hands it over, as <see cref="ImportAccessKey"/>
+    /// does.
+    /// </summary>
+    /// <param name="file">The file.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>It is called on the UI thread, once the view is made.</remarks>
     public abstract Task ImportAccessKeyFile(IStorageFile file);
 
-    // A Quick Launch - the Windows Store edition's entry of its own in Start (AvaloniaDesktopHost) - on which the UI
-    // connects as its Connect button does, unless the app is connected or on its way. On the UI thread, once the view
-    // is made.
+    /// <summary>
+    /// Connects as the UI's Connect button does, for a Quick Launch, as the Windows Store edition's own entry in Start,
+    /// unless the app is connected or on its way.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>It is called on the UI thread, once the view is made.</remarks>
     public abstract Task QuickLaunch();
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It gives the host's lifetime the UI's view, as that lifetime takes one; Avalonia's designer, which makes the UI with
+    /// no app, gets none.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The UI has the app's API but has not been configured, and the host's lifetime takes its view at once, as a desktop's
+    /// or a single view's does.
+    /// </exception>
     public override void OnFrameworkInitializationCompleted()
     {
         // Avalonia's designer makes the UI with no app and gives it no API: it gets no view.
@@ -74,8 +100,11 @@ public abstract class VpnHoodAvaloniaAppBase : Application
         }
     }
 
-    // A new view in the desktop window, for what the views read only as they are made; a view of any
-    // other host stays as it is.
+    /// <summary>
+    /// Makes a new view in the desktop window, for what the views read only as they are made; a view in any other host
+    /// stays as it is.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The head has not configured the UI.</exception>
     public void ReloadMainView()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } window })

@@ -381,10 +381,12 @@ stored. Apple wants the answers as a reply in App Store Connect and in the versi
 Information. VpnHood! CLIENT's iPhone version got these questions in August 2026, and its first Apple TV
 version got them again in November, under the same app record. Each platform's version is reviewed on its
 own, and an answer given for one does not carry over. Put the answers in each version's review notes
-before you submit. For an app built on this code, which sends no analytics on Apple devices, the answers
-follow from [App Store privacy](../legal/developer/APP_STORE_PRIVACY.md). The notes hold 4,000
-characters, and a VpnHood access key can take 3,000 of them. If the answers and the key don't fit
-together, link the key from a page the reviewer can open; don't shorten the answers.
+before you submit: VpnHood! CONNECT's first Apple TV version had them there from the start, with its
+business model, and passed its first review in November 2026 with no questions. For an app built on
+this code, which sends no analytics on Apple devices, the answers follow from
+[App Store privacy](../legal/developer/APP_STORE_PRIVACY.md). The notes hold 4,000 characters, and a
+VpnHood access key can take 3,000 of them. If the answers and the key don't fit together, link the key
+from a page the reviewer can open; don't shorten the answers.
 
 **An app that takes access keys gets business-model questions.** After the VPN questions, the iPhone
 version was held under 3.1.1, read as "the app uses a server key to unlock a feature". Then came 2.1(b),

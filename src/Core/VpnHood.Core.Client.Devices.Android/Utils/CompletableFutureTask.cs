@@ -3,7 +3,7 @@ using Java.Util.Functions;
 
 namespace VpnHood.Core.Client.Devices.Android.Utils;
 
-public class CompletableFutureTask
+internal class CompletableFutureTask
 {
     private readonly TaskCompletionSource<Java.Lang.Object?> _taskCompletionSource = new();
     public Task<Java.Lang.Object?> Task => _taskCompletionSource.Task;

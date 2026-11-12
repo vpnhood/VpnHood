@@ -9,6 +9,10 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Abstractions;
 
+/// <summary>
+/// Provides the resolution of a server token's endpoints: its host name's addresses and those it lists, in the order an
+/// <see cref="EndPointStrategy"/> says.
+/// </summary>
 public static class EndPointResolver
 {
     private static readonly TimeSpan OwnResolverTimeout = TimeSpan.FromSeconds(5);
@@ -73,8 +77,23 @@ public static class EndPointResolver
             $"The network's resolvers could not resolve the server's name. DnsServers: {dnsServers.Count}");
     }
 
-    // ownResolverSocketFactory: where the kill switch is on, the name is asked from this process
-    // (ResolveByOwnResolver), over sockets it makes.
+    /// <summary>Resolves a server token's endpoints, as <see cref="ResolveHostEndPointsAndName"/> does.</summary>
+    /// <param name="serverToken">The server token.</param>
+    /// <param name="strategy">The order, or <see cref="EndPointStrategy.Auto"/> for the token's own.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="ownResolverSocketFactory">
+    /// The factory of sockets to ask the network's resolvers from this process, as where the kill switch's block lets
+    /// only the VPN service's traffic out, or <see langword="null"/> for the system's resolver. The network's resolvers
+    /// are asked in turn, over UDP and for IPv4 addresses only, five seconds each, and the first answer is taken; the
+    /// system's resolver is not asked then.
+    /// </param>
+    /// <returns>
+    /// A task whose result is the endpoints, without repeats but for <see cref="EndPointStrategy.IpOnly"/>'s, which are
+    /// the token's list as it is.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">The token has neither endpoints nor a real host name.</exception>
+    /// <exception cref="Exceptions.EndPointDiscoveryException">No endpoint was found.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken,
         EndPointStrategy strategy, CancellationToken cancellationToken, ISocketFactory? ownResolverSocketFactory = null)
     {
@@ -83,8 +102,36 @@ public static class EndPointResolver
         return resolved.EndPoints.ToArray();
     }
 
-    // ResolveHostEndPoints, with the addresses the name gave among them. knownAddresses: what the token's name gave,
-    // known already, which is taken rather than asking it (HostNameAddresses).
+    /// <summary>
+    /// Resolves a server token's endpoints: its host name's addresses, where it is a real one, and those it lists,
+    /// ordered as the strategy says.
+    /// </summary>
+    /// <param name="serverToken">The server token.</param>
+    /// <param name="strategy">
+    /// The order, or <see cref="EndPointStrategy.Auto"/> for the token's own. <see cref="EndPointStrategy.IpOnly"/> with
+    /// no endpoints listed falls back to <see cref="EndPointStrategy.DnsOnly"/>, and that with no real host name to
+    /// <see cref="EndPointStrategy.Auto"/>.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="ownResolverSocketFactory">
+    /// The factory of sockets to ask the network's resolvers from this process, as where the kill switch's block lets
+    /// only the VPN service's traffic out, or <see langword="null"/> for the system's resolver. The network's resolvers
+    /// are asked in turn, over UDP and for IPv4 addresses only, five seconds each, and the first answer is taken; the
+    /// system's resolver is not asked then.
+    /// </param>
+    /// <param name="knownAddresses">
+    /// The host name's addresses, known already, which are taken rather than asking the name where theirs is the
+    /// token's, in any letter case, or <see langword="null"/>.
+    /// </param>
+    /// <returns>A task whose result is the endpoints, with those the name gave among them.</returns>
+    /// <remarks>
+    /// A failure to resolve the name is logged and leaves the listed endpoints, or, under
+    /// <see cref="EndPointStrategy.DnsOnly"/>, none, which fails. <see cref="EndPointStrategy.IpOnly"/>'s endpoints are
+    /// the token's list as it is; the others come without repeats.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The token has neither endpoints nor a real host name.</exception>
+    /// <exception cref="Exceptions.EndPointDiscoveryException">No endpoint was found.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<ResolvedHostEndPoints> ResolveHostEndPointsAndName(ServerToken serverToken,
         EndPointStrategy strategy, CancellationToken cancellationToken, ISocketFactory? ownResolverSocketFactory = null,
         HostNameAddresses? knownAddresses = null)

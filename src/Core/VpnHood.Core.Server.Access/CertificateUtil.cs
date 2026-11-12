@@ -5,6 +5,9 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Server.Access;
 
+/// <summary>
+/// Provides the making and reading of TLS certificates for a VPN server.
+/// </summary>
 public static class CertificateUtil
 {
     // pronounceable, as a string of random letters looks like a malware domain
@@ -26,8 +29,11 @@ public static class CertificateUtil
         return name;
     }
 
-    // a made-up name in no fixed shape for a network to match: of any length, under a common ending, on a host of the
-    // kind many sites keep for an API or their files. Long enough to be a real site's name only rarely
+    /// <summary>
+    /// Makes up a host name: a host of the kind many sites keep for an API or their files, a pronounceable name of three
+    /// or four syllables, and <c>.com</c>, <c>.net</c> or <c>.org</c>, meant to have no fixed shape a network could match.
+    /// </summary>
+    /// <returns>The host name.</returns>
     public static string CreateRandomDns()
     {
         string[] hosts = ["api", "app", "assets", "cdn", "data", "edge", "files", "img", "media", "static"];
@@ -38,6 +44,11 @@ public static class CertificateUtil
                extensions[random.Next(extensions.Length)];
     }
 
+    /// <summary>Gets the certificate an HTTPS address presents, without checking it; the request's own errors are ignored.</summary>
+    /// <param name="url">The address.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the certificate.</returns>
+    /// <exception cref="Exception">The address presented no certificate.</exception>
     public static async Task<X509Certificate2> GetCertificateFromUrl(Uri url, CancellationToken cancellationToken)
     {
         X509Certificate2? serverCertificate = null;
@@ -60,6 +71,10 @@ public static class CertificateUtil
         return serverCertificate ?? throw new Exception("Could not extract certificate from url");
     }
 
+    /// <summary>Makes a copy of a certificate whose private key is kept and can be exported.</summary>
+    /// <param name="certificate">The certificate, with its private key.</param>
+    /// <param name="password">The password the copy goes through PKCS#12 with. The default is empty.</param>
+    /// <returns>The copy.</returns>
     public static X509Certificate2 CreateExportable(X509Certificate2 certificate, string password = "")
     {
         // Export with the Exportable flag to ensure the key is usable
@@ -67,12 +82,26 @@ public static class CertificateUtil
             X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
     }
 
+    /// <summary>Makes a self-signed certificate, SHA-256 with a new RSA key, valid from now.</summary>
+    /// <param name="subjectName">
+    /// The subject, or <see langword="null"/> for <c>CN=</c> and a made-up host name (<see cref="CreateRandomDns"/>).
+    /// </param>
+    /// <param name="notAfter">The end of its validity, or <see langword="null"/> for 20 years from now.</param>
+    /// <returns>The certificate, with its private key, which can be exported.</returns>
     public static X509Certificate2 CreateSelfSigned(string? subjectName = null, DateTimeOffset? notAfter = null)
     {
         using var rsa = RSA.Create();
         return CreateSelfSigned(rsa, subjectName, notAfter);
     }
 
+    /// <summary>
+    /// Makes a self-signed copy of a certificate's subject and extensions, SHA-256 with a new RSA key.
+    /// </summary>
+    /// <param name="originalCert">The certificate to copy.</param>
+    /// <param name="noBefore">The start of its validity, or <see langword="null"/> for the original's.</param>
+    /// <param name="notAfter">The end of its validity, or <see langword="null"/> for the original's.</param>
+    /// <returns>The certificate, with its private key, which can be exported.</returns>
+    /// <remarks>On Windows, it takes the original's friendly name too.</remarks>
     public static X509Certificate2 CreateSelfSigned(X509Certificate2 originalCert, DateTime? noBefore = null,
         DateTime? notAfter = null)
     {
@@ -94,6 +123,13 @@ public static class CertificateUtil
         return CreateExportable(selfSignedCert);
     }
 
+    /// <summary>Makes a self-signed certificate, SHA-256 with a given RSA key, valid from now.</summary>
+    /// <param name="rsa">The key.</param>
+    /// <param name="subjectName">
+    /// The subject, or <see langword="null"/> for <c>CN=</c> and a made-up host name (<see cref="CreateRandomDns"/>).
+    /// </param>
+    /// <param name="notAfter">The end of its validity, or <see langword="null"/> for 20 years from now.</param>
+    /// <returns>The certificate, with its private key, which can be exported.</returns>
     public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null,
         DateTimeOffset? notAfter = null)
     {
@@ -106,6 +142,19 @@ public static class CertificateUtil
         return CreateExportable(rootCertificate);
     }
 
+    /// <summary>
+    /// Makes a certificate with a given RSA key under a made-up chain of two authorities that bear DigiCert's names,
+    /// valid from now.
+    /// </summary>
+    /// <param name="rsa">The key.</param>
+    /// <param name="subjectName">
+    /// The subject, or <see langword="null"/> for <c>CN=</c> and a made-up host name (<see cref="CreateRandomDns"/>).
+    /// </param>
+    /// <param name="notAfter">The end of its validity, or <see langword="null"/> for 5 years from now.</param>
+    /// <returns>The certificate, with its private key, which can be exported.</returns>
+    /// <exception cref="ArgumentException">
+    /// The end is past the made-up authority's, 8 March 2027, as the default's is now.
+    /// </exception>
     // ReSharper disable once UnusedMember.Global
     public static X509Certificate2 CreateChained(RSA rsa, string? subjectName = null,
         DateTimeOffset? notAfter = null)

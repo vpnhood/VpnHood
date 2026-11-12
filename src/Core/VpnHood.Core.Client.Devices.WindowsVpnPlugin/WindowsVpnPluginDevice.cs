@@ -16,9 +16,11 @@ using Windows.Networking.Vpn;
 
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 
-// The app's side of the Windows VPN plug-in. Windows owns the virtual interface and launches the package's
-// VPN host when this device connects its VpnPlugInProfile; the app reaches that host through the package's app
-// service, which Windows runs in it.
+/// <summary>
+/// Represents the app's side of the Windows VPN plug-in: Windows owns the virtual interface and launches the package's
+/// VPN host when this device connects its <c>VpnPlugInProfile</c>; the app reaches that host through the package's app
+/// service, which Windows runs in it.
+/// </summary>
 public sealed class WindowsVpnPluginDevice : IDevice
 {
     // Windows dials no plug-in profile without a server (RAS 749), though the plug-in holds the real
@@ -42,12 +44,21 @@ public sealed class WindowsVpnPluginDevice : IDevice
     private static readonly TimeSpan HandoffTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan HandoffPollInterval = TimeSpan.FromMilliseconds(500);
 
-    // The VPN plug-in's wait for its session at a connect (WindowsVpnPluginService), which a dial outlasts.
+    /// <summary>
+    /// The VPN plug-in's wait for its session at a connect (<c>WindowsVpnPluginService</c>), which a dial outlasts: 60
+    /// seconds.
+    /// </summary>
     public static readonly TimeSpan PluginConnectTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DialTimeout = PluginConnectTimeout + TimeSpan.FromSeconds(30);
     private readonly string _profileName;
 
-    // profileName: the profile's name in Windows' VPN settings and quick settings, the app's name
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WindowsVpnPluginDevice"/> class.
+    /// </summary>
+    /// <param name="profileName">The profile's name in Windows' VPN settings and quick settings: the app's name.</param>
+    /// <exception cref="ArgumentException"><paramref name="profileName"/> is empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="profileName"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The process does not run from the package.</exception>
     public WindowsVpnPluginDevice(string profileName)
     {
         ArgumentException.ThrowIfNullOrEmpty(profileName);
@@ -55,29 +66,57 @@ public sealed class WindowsVpnPluginDevice : IDevice
         VpnServiceConfigFolder = WindowsVpnPluginFolders.VpnServiceFolder;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is <c>vpn-service</c> in the package's LocalState (<see cref="WindowsVpnPluginFolders"/>).</remarks>
     public string VpnServiceConfigFolder { get; }
-    public string VpnServiceDataFolder => VpnServiceConfigFolder; // nothing backs up a desktop app's data
+
+    /// <inheritdoc/>
+    /// <remarks>It is the same folder as the config folder.</remarks>
+    public string VpnServiceDataFolder => VpnServiceConfigFolder;
+
+    /// <inheritdoc/>
     public bool IsTv => false;
-    public bool IsWaitingForVpnPermission => false; // RequestVpnService only makes the profile
+
+    /// <inheritdoc/>
+    /// <remarks><see cref="RequestVpnService"/> only makes the profile, with no prompt.</remarks>
+    public bool IsWaitingForVpnPermission => false;
+
+    /// <inheritdoc/>
     public bool IsExcludeAppsSupported => false;
+
+    /// <inheritdoc/>
     public bool IsIncludeAppsSupported => false;
+
+    /// <inheritdoc/>
     public bool IsBindProcessToVpnSupported => false;
+
+    /// <inheritdoc/>
     public bool IsQuicSupported => MsQuicClient.IsSupported;
 
-    // Not the app's: nothing of the package runs at boot, and the app's window, closed, waits only while the VPN is
-    // up. Nor Windows' own Always On (the profile's AlwaysOn, and the person's "Connect automatically"): it would
-    // start the VPN host without the app, which Windows freezes between VPN events while no app holds it.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Not the app's: nothing of the package runs at boot, and the app's window, closed, waits only while the VPN is
+    /// up. Nor Windows' own Always On (the profile's AlwaysOn, and the person's "Connect automatically"): it would start
+    /// the VPN host without the app, which Windows freezes between VPN events while no app holds it.
+    /// </remarks>
     public bool IsAlwaysOnSupported => false;
-    public IVpnKillSwitch? KillSwitch => null; // the sandbox cannot reach WFP; Windows' own lockdown is set only by MDM
+
+    /// <inheritdoc/>
+    /// <remarks>None: the sandbox cannot reach the Windows Filtering Platform, and Windows' own lockdown is set only by MDM.</remarks>
+    public IVpnKillSwitch? KillSwitch => null;
+
+    /// <inheritdoc/>
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
-    // as Chrome says it here, whose NT version reads 10.0 on Windows 11 too
+    /// <inheritdoc/>
+    /// <remarks>As Chrome says it here, whose NT version reads 10.0 on Windows 11 too.</remarks>
     public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
         Platform = $"Windows NT {Environment.OSVersion.Version.ToString(2)}" +
                    (Environment.Is64BitOperatingSystem ? "; Win64; x64" : ""),
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: false)
     };
 
+    /// <inheritdoc/>
     public DeviceMemInfo MemInfo {
         get {
             var gcMemoryInfo = GC.GetGCMemoryInfo();
@@ -88,14 +127,30 @@ public sealed class WindowsVpnPluginDevice : IDevice
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The VPN plug-in cannot split by app, so it always throws <see cref="NotSupportedException"/>.</remarks>
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported by the Windows VPN plug-in.");
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It makes the package's VPN profile where Windows has none, in place of one of its name that is not this package's
+    /// or has no server, which it disconnects and removes first; there is no prompt.
+    /// </remarks>
     public async Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
         _ = await GetOrCreateProfile(cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It disconnects the profile first where Windows holds it connected, so the VPN host starts afresh with the new
+    /// options, then dials it and waits for the dial's end, which comes once the VPN host's session is up or has failed,
+    /// not merely once the start is under way. Where the VPN host has not taken the dial up within about 30 seconds,
+    /// Windows is asked to cancel it, though it may finish later; past that, the dial has up to the plug-in's own wait
+    /// for its session (<see cref="PluginConnectTimeout"/>) and 30 seconds more. Either limit fails it with
+    /// <see cref="TimeoutException"/>.
+    /// </remarks>
     public async Task StartVpnService(CancellationToken cancellationToken)
     {
         var profile = await GetOrCreateProfile(cancellationToken).Vhc();
@@ -251,8 +306,13 @@ public sealed class WindowsVpnPluginDevice : IDevice
         }
     }
 
-    // The package's profiles Windows holds other than disconnected; null when Windows does not say. The app's client
-    // asks before it opens the app service, the VPN plug-in before it waits for a connect.
+    /// <summary>
+    /// Gets the package's profiles Windows holds other than disconnected: the app's client asks before it opens the app
+    /// service, and the VPN plug-in before it waits for a connect.
+    /// </summary>
+    /// <returns>
+    /// A task whose result is the profiles, or <see langword="null"/> where Windows does not say, which it logs.
+    /// </returns>
     public static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles()
     {
         try {
@@ -328,16 +388,22 @@ public sealed class WindowsVpnPluginDevice : IDevice
             throw new InvalidOperationException($"Windows could not add the VPN profile. Status: {status}");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is the package's app service's client.</remarks>
     public IMessageClient CreateMessageClient() => new WindowsVpnPluginAppServiceClient();
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <see langword="true"/> throws <see cref="NotSupportedException"/>; <see langword="false"/> does nothing.
+    /// </remarks>
     public void BindProcessToVpn(bool value)
     {
         if (value)
             throw new NotSupportedException("Binding the app's process to the VPN is not supported by the Windows VPN plug-in.");
     }
 
+    /// <summary>Does nothing: Windows owns the VPN host and the connection's lifetime.</summary>
     public void Dispose()
     {
-        // Windows owns the VPN host and the connection's lifetime.
     }
 }

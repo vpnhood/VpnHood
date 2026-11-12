@@ -5,8 +5,15 @@ using VpnHood.Net.Toolkit.Trackers;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
+/// <summary>
+/// Provides the making of trackers from their factories, where a factory's failure costs only its tracker.
+/// </summary>
 public static class TrackerFactoryExtensions
 {
+    /// <summary>Makes a tracker, or one that sends nothing where the factory fails, which it logs.</summary>
+    /// <param name="trackerFactory">The factory.</param>
+    /// <param name="createParams">The client's ID, version and user agent, and the person's usage-data switch.</param>
+    /// <returns>The tracker, or one that sends nothing.</returns>
     public static ITracker TryCreateTracker(this ITrackerFactory trackerFactory, TrackerCreateParams createParams)
     {
         try {
@@ -18,8 +25,13 @@ public static class TrackerFactoryExtensions
         }
     }
 
-    // One tracker per factory. A null tracker adds nothing, so with none left this is null, with one
-    // it is that one, and with more a composite that hands each the switch and the events.
+    /// <summary>Makes a tracker of each factory, and joins those that send anything.</summary>
+    /// <param name="trackerFactories">The factories.</param>
+    /// <param name="createParams">The client's ID, version and user agent, and the person's usage-data switch.</param>
+    /// <returns>
+    /// <see langword="null"/> where none sends anything; that one where one does; otherwise a composite that hands each
+    /// the switch and the events.
+    /// </returns>
     public static ITracker? TryCreateTracker(this IReadOnlyList<ITrackerFactory> trackerFactories,
         TrackerCreateParams createParams)
     {

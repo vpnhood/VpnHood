@@ -17,6 +17,16 @@ using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
+/// <summary>
+/// Hosts the VPN service's side of the app: it takes the app's requests, connects with the options the app saved, and
+/// reports the connection's state back.
+/// </summary>
+/// <remarks>
+/// The state goes to the config folder as <see cref="ClientOptions.VpnStatusFileName"/> at each change, and with each
+/// answer. A session that ended because the server moved, or the network lacks its address's IP version, is followed
+/// at once by a new connect where the platform lets the service connect by itself
+/// (<see cref="IVpnServiceHandler.CanReconnect"/>).
+/// </remarks>
 public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 {
     private readonly ApiController _apiController;
@@ -47,9 +57,9 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         Client ?? throw new InvalidOperationException("Client is not initialized.");
 
     /// <summary>
-    /// The current TCP forwarding status. Prefers the live session value (it reflects server capability and
-    /// domain-filtering overrides), falls back to the client's configured value before the session is
-    /// established, and to false when there is no client yet.
+    /// Gets a value indicating whether the client forwards IPv4 TCP now: the live session's choice, which follows the
+    /// server's support and a domain filter's needs; the client's setting before the session is up; and
+    /// <see langword="false"/> with no client.
     /// </summary>
     public bool IsTcpForwarding {
         get {
@@ -60,11 +70,32 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
     internal VpnServiceContext Context { get; }
     internal ClientReconfigurer Reconfigurer { get; }
+    /// <summary>
+    /// Gets the placeholder info before the service has made a real one (<see cref="ConnectionInfo.Default"/>).
+    /// </summary>
     public static ConnectionInfo DefaultConnectionInfo => ConnectionInfo.Default;
 
-    // configFolder and dataFolder: IDevice's VpnServiceConfigFolder and VpnServiceDataFolder.
-    // tunnelLock: the machine's one tunnel, where the platform has one (the desktops).
-    // killSwitch: the device's kill switch, where it has one (IDevice.KillSwitch).
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VpnServiceHost"/> class: it makes the config folder where it is
+    /// missing, starts listening to the app, and reports <see cref="ClientState.Initializing"/>.
+    /// </summary>
+    /// <param name="configFolder">The VPN service's config folder (<c>IDevice.VpnServiceConfigFolder</c>).</param>
+    /// <param name="dataFolder">
+    /// The VPN service's data folder, with the person's proxies (<c>IDevice.VpnServiceDataFolder</c>).
+    /// </param>
+    /// <param name="vpnServiceHandler">The platform's part: the adapter, the client factory, and the notification.</param>
+    /// <param name="socketFactory">The factory of the client's sockets.</param>
+    /// <param name="messageListener">The channel the app's requests come over, which the host disposes.</param>
+    /// <param name="withLogger">
+    /// <see langword="true"/> to keep a log file of its own, for a VPN service in a process of its own; in the app's
+    /// process, its lines go to the app's log. The default is <see langword="true"/>.
+    /// </param>
+    /// <param name="tunnelLock">
+    /// The machine's one tunnel, where the platform has one (the desktops), or <see langword="null"/>.
+    /// </param>
+    /// <param name="killSwitch">
+    /// The device's kill switch, where it has one (<c>IDevice.KillSwitch</c>), or <see langword="null"/>.
+    /// </param>
     public VpnServiceHost(string configFolder,
         string dataFolder,
         IVpnServiceHandler vpnServiceHandler,
@@ -192,6 +223,20 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         await TryConnect(forceReconnect: false, isAlwaysOn: false, isReconnect: true, newAddresses).Vhc();
     }
 
+    /// <summary>Connects with the options the app saved, unless a connection is under way.</summary>
+    /// <param name="forceReconnect">
+    /// <see langword="true"/> to end a connection under way and connect anew; <see langword="false"/> to leave it.
+    /// </param>
+    /// <param name="isAlwaysOn">
+    /// <see langword="true"/> if the system starts the VPN with no one asking, as Android's always-on; refused without
+    /// <see cref="ClientOptions.AllowAlwaysOn"/>.
+    /// </param>
+    /// <returns>
+    /// A task whose result is <see langword="true"/> once a connect was made and ran its course, its outcome in the
+    /// state the app reads; <see langword="false"/> where none was made, as the host is disposed or a connection is under
+    /// way.
+    /// </returns>
+    /// <remarks>It never throws: a failure is reported to the app as the state's error, or, where it is not, logged.</remarks>
     public Task<bool> TryConnect(bool forceReconnect = false, bool isAlwaysOn = false)
     {
         return TryConnect(forceReconnect, isAlwaysOn, isReconnect: false, knownHostAddresses: null);
@@ -420,12 +465,12 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
     // a disconnect asked for with a reason - a revoke, say - carries it, as the client's own state changes do, or
     // a reply to the app would publish the session's end without it
-    public Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
+    internal Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
     {
         return UpdateConnectionInfo(client, _disconnectException, cancellationToken);
     }
 
-    public async Task UpdateConnectionInfo(VpnHoodClient client, Exception? ex, CancellationToken cancellationToken)
+    internal async Task UpdateConnectionInfo(VpnHoodClient client, Exception? ex, CancellationToken cancellationToken)
     {
         // flush pending proxy statuses so the app process sees fresh data in the shared endpoint store
         if (client.ProxyConnector != null)
@@ -490,6 +535,15 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         }
     }
 
+    /// <summary>
+    /// Disconnects: it ends a connect under way and the session, and reports the end to the app; the kill switch's
+    /// block stays as it is, as lifting it is the app's call.
+    /// </summary>
+    /// <param name="exception">
+    /// Why, reported to the app as the end's error, or <see langword="null"/> to keep the reason an earlier disconnect or
+    /// a revoke gave, if any.
+    /// </param>
+    /// <returns>A task that completes once the session is gone; it never throws, and logs a failure.</returns>
     public async Task TryDisconnect(Exception? exception = null)
     {
         if (_disposed)
@@ -657,6 +711,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         Interlocked.Exchange(ref _tunnelHold, null)?.Dispose();
     }
 
+    /// <summary>Ends the connection at once, without reporting it, and stops listening to the app.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

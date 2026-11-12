@@ -6,13 +6,18 @@ using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.Core.Server.Access;
 
+/// <summary>
+/// Represents how a listener of the server fared at its configuration.
+/// </summary>
 public class ServerHostEndPointStatus
 {
+    /// <summary>Gets the listener's protocol.</summary>
     public required ChannelProtocol Protocol { get; init; }
 
+    /// <summary>Gets the listener's endpoint.</summary>
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint EndPoint { get; init; }
 
-    /// <summary>null means success; non-null contains the serialized ApiError.</summary>
+    /// <summary>Gets the error the listener failed with, or <see langword="null"/> where it listens.</summary>
     public ApiError? Error { get; init; }
 }

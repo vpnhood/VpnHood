@@ -5,10 +5,19 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
-// A tracker factory on its way to the VPN engine, by its kind (TrackerKinds): GA4's as its measurement id,
-// any other as the .NET type the engine makes again in its own process.
+/// <summary>
+/// Provides the passage of a tracker factory to the VPN engine, by its kind (<see cref="TrackerKinds"/>): GA4's as its
+/// measurement ID, any other as the .NET type the engine makes again in its own process.
+/// </summary>
 public static class TrackerFactorySerializer
 {
+    /// <summary>Writes a factory as its kind and settings.</summary>
+    /// <param name="trackerFactory">The factory.</param>
+    /// <returns>
+    /// <see cref="TrackerKinds.Ga4"/> with the measurement ID for a <see cref="Ga4TrackerFactory"/>; otherwise,
+    /// <see cref="TrackerKinds.DotNet"/> with the factory's assembly-qualified type name and its public properties.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">The factory's type has no assembly-qualified name.</exception>
     public static TrackerFactoryInfo Serialize(ITrackerFactory trackerFactory)
     {
         if (trackerFactory is Ga4TrackerFactory ga4TrackerFactory)
@@ -28,8 +37,12 @@ public static class TrackerFactorySerializer
         };
     }
 
-    // null when this engine cannot make it, which it logs: a kind it does not have, a type this process
-    // lacks, or settings that do not fit
+    /// <summary>Makes a factory again from its kind and settings.</summary>
+    /// <param name="trackerFactoryInfo">The factory's kind and settings.</param>
+    /// <returns>
+    /// The factory, or <see langword="null"/> where this engine cannot make it, which it logs: a kind it does not have,
+    /// a type this process lacks, or settings that do not fit.
+    /// </returns>
     public static ITrackerFactory? TryDeserialize(TrackerFactoryInfo trackerFactoryInfo)
     {
         try {

@@ -5,73 +5,115 @@ using VpnHood.Net.Toolkit.Net;
 namespace VpnHood.Core.Client.Abstractions;
 
 /// <summary>
-/// The transport knobs the app tunes and the client forwards, held by reference from
-/// <c>AppOptions</c> all the way down to the session config so no layer restates them.
-/// <para>
-/// Every knob carries its own default, so the value and the knob live in one place and no consumer
-/// has to resolve anything on the way through. The two kernel-buffer knobs are the exception: null
-/// there is a real value meaning "leave the socket at the operating system's own size".
-/// </para>
+/// Provides the transport's settings the app tunes and the client uses, held by reference down to the session's
+/// configuration in each process, so no layer restates them.
 /// </summary>
+/// <remarks>
+/// Every setting has its own default. The two kernel-buffer settings are the exception: <see langword="null"/> there
+/// leaves the socket at the OS's own size.
+/// </remarks>
 public class ClientTransportOptions
 {
+    /// <summary>
+    /// Gets or sets how long a session may go without reaching its server, after an error, before it ends. The default
+    /// is 3 days.
+    /// </summary>
     public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
+
+    /// <summary>
+    /// Gets or sets how long the session's first request to the server may take, its connection included, before the
+    /// server's own request timeout takes over; and how long a TCP connection the client opens outside the tunnel may
+    /// take. The default is 30 seconds.
+    /// </summary>
     public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
-    public TimeSpan UnstableTimeout { get; set; } = TimeSpan.FromSeconds(60); // connect timeout before pause
-    public TimeSpan AutoWaitTimeout { get; set; } = TimeSpan.FromSeconds(30); // auto resume after pause
+
+    /// <summary>
+    /// Gets or sets how long the client tries to reach its server, unstable, before it waits. The default is 60
+    /// seconds.
+    /// </summary>
+    public TimeSpan UnstableTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>Gets or sets how long the client waits before it tries again. The default is 30 seconds.</summary>
+    public TimeSpan AutoWaitTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>Gets or sets how long a query of a server's status may take. The default is 5 seconds.</summary>
     public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
-    // Per-platform transport buffer sizes. Low-memory clients (e.g. the iOS Network Extension
-    // under the ~50 MB jetsam limit) lower these. The three below are the client's alone, so they
-    // carry their own default rather than deferring to a shared constant.
+    /// <summary>
+    /// Gets or sets the buffer sizes of a TCP connection the client forwards. The default is about 8 KB (8,191 bytes)
+    /// each way.
+    /// </summary>
+    // a low-memory client, as the iOS network extension under its memory limit, lowers it
     public TransferBufferSize StreamForwardingBufferSize { get; set; } = new(0xFFFF / 8, 0xFFFF / 8); // 8KB/8KB
+
+    /// <summary>Gets or sets the buffer sizes of forwarded UDP's sockets. The default is 1 MB each way.</summary>
     public TransferBufferSize UdpForwardingBufferSize { get; set; } = new(1024 * 1024, 1024 * 1024);
 
-    // Kernel buffer of the UDP socket carrying the udp channel to the server.
+    /// <summary>
+    /// Gets or sets the kernel buffer sizes of the UDP socket of the UDP channel to the server. The default is 1 MB each
+    /// way.
+    /// </summary>
     public TransferBufferSize UdpChannelBufferSize { get; set; } = new(1024 * 1024, 1024 * 1024);
 
+    /// <summary>
+    /// Gets or sets the buffer sizes of a packet channel's connection. The default is about 256 KB each way.
+    /// </summary>
     public TransferBufferSize PacketChannelBufferSize { get; set; } = TransportDefaults.ConnectionPacketBufferSize;
 
-    // How many packet channels the client asks the server for (the server caps it in turn, see
-    // ClientSessionBuilder). Each is a full transport connection — socket, TLS state and a coalescing
-    // buffer pair — so it is a throughput/memory trade, which is why it belongs to the preset rather
-    // than to the user: TCP packet mode multiplexes every tunneled flow over these, and upload spreads
-    // across them by source port. Applies to TCP only; UDP is single-channel by design (ClientSession).
+    /// <summary>
+    /// Gets or sets the most packet channels the client keeps over TCP or QUIC, which the server may lower. The default
+    /// is 8.
+    /// </summary>
+    /// <remarks>
+    /// Over TCP, each is a whole connection, with its TLS and buffers, so the count trades memory for throughput: packet
+    /// mode carries every tunneled flow over these, and upload spreads across them by source port. Over QUIC, each is a
+    /// stream, and streams may share a connection. UDP has one channel.
+    /// </remarks>
     public int MaxPacketChannelCount { get; set; } = TransportDefaults.MaxPacketChannelCount;
 
-    // Null on these two means "leave the socket at the system default" — a real value, not "unset".
-    // Kernel buffer for every managed TCP socket except the packet channels below.
+    /// <summary>
+    /// Gets or sets the kernel buffer sizes of the client's TCP sockets, but those of the packet channels it connects
+    /// directly, or <see langword="null"/> for the OS's own.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
 
-    // Kernel buffer for the TCP packet channels to the VPN server, which each carry every tunneled
-    // flow multiplexed together and so size independently of the per-flow sockets above. Null does
-    // NOT inherit TcpKernelBufferSize: it means the OS default, so a memory-constrained client can
-    // hold the per-flow sockets small while leaving the tunnel free to autotune.
+    /// <summary>
+    /// Gets or sets the kernel buffer sizes of the TCP packet channels to the server, or <see langword="null"/> for the
+    /// OS's own, not <see cref="TcpKernelBufferSize"/>'s, so the tunnel's sockets can autotune while the others stay
+    /// small. A packet channel through a proxy keeps <see cref="TcpKernelBufferSize"/>'s, as the proxy makes its socket.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? TcpPacketChannelKernelBufferSize { get; set; }
 
-    // Per-platform UDP forwarder scaling. Low-memory clients cap the direct-UDP socket fleet and the
-    // per-forwarder packet queue so a post-kill reconnect flow-storm stays bounded.
+    /// <summary>Gets or sets the most of a session's UDP forwarding workers. The default is 100.</summary>
     public int MaxUdpClientCount { get; set; } = TransportDefaults.MaxUdpClientCount;
+
+    /// <summary>Gets or sets the most of a session's DNS forwarding workers. The default is 70.</summary>
     public int MaxUdpDnsClientCount { get; set; } = TransportDefaults.MaxUdpDnsClientCount;
+
+    /// <summary>Gets or sets the packets a UDP forwarder's queue holds. The default is 200.</summary>
     public int UdpForwardingQueueCapacity { get; set; } = TransportDefaults.PacketForwardingQueueCapacity;
 
     /// <summary>
-    /// The ordinary transport: every knob left null so each core component applies its own default.
-    /// What every host runs unless something constrains it — Windows, Linux, macOS, Android, and an
-    /// iOS app running on an Apple Silicon Mac. It is named for asking nothing unusual rather than
-    /// for wanting a lot of memory: <see cref="LimitedMemory"/> is the exception, this is the norm.
+    /// Gets a new instance of the ordinary transport, every setting at its own default: what every host runs unless
+    /// something constrains it — Windows, Linux, macOS, Android, and an iOS app running on an Apple Silicon Mac.
     /// </summary>
+    /// <remarks>
+    /// It is named for asking nothing unusual rather than for wanting a lot of memory: <see cref="LimitedMemory"/> is
+    /// the exception, this is the norm.
+    /// </remarks>
     public static ClientTransportOptions NormalMemory => new();
 
     /// <summary>
-    /// The constrained preset for a host that runs network code inside a memory-capped process —
-    /// today the iOS/tvOS Network Extension under its ~52 MB jetsam limit. Every value here was
-    /// measured against that cap; see the per-knob notes. Nothing else needs it: the limit is the
-    /// platform's, not a property of the device, which is why an Apple Silicon Mac running the same
-    /// iOS binary takes <see cref="NormalMemory"/> instead.
+    /// Gets a new instance of the constrained preset, for a host that runs network code inside a memory-capped process
+    /// — today the iOS/tvOS Network Extension under its ~52 MB jetsam limit.
     /// </summary>
+    /// <remarks>
+    /// Every value was measured against that cap. Nothing else needs it: the limit is the platform's, not a property of
+    /// the device, which is why an Apple Silicon Mac running the same iOS binary takes <see cref="NormalMemory"/>
+    /// instead.
+    /// </remarks>
     public static ClientTransportOptions LimitedMemory => new() {
         // Shrink the transport coalescing buffers to keep memory usage low; these flow to the
         // extension via vpn.config. Desktop keeps the 256 KB default. 64 KB holds ~45 MTU packets
@@ -132,6 +174,9 @@ public class ClientTransportOptions
     /// (<c>NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac</c>), and it assigns the preset itself.
     /// </para>
     /// </summary>
+    /// <returns>
+    /// A new <see cref="LimitedMemory"/> preset on iOS and tvOS; otherwise, a new <see cref="NormalMemory"/> one.
+    /// </returns>
     public static ClientTransportOptions ForCurrentPlatform()
     {
         // Apple mobile runs its network code inside a memory-capped Network Extension.

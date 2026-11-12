@@ -12,22 +12,36 @@ using VpnHood.Net.VpnAdapters.LinuxTun;
 
 namespace VpnHood.Core.Client.Devices.Linux;
 
-// The kill switch's block on Linux: an nftables table of ours for both families (inet), replaced whole by one
-// `nft -f`, a transaction with no gap - nft, not iptables, for one table over both families, one transaction and
-// sets for the ranges. It sits beside ufw's, firewalld's and Docker's tables, and a drop in any table wins, so ours
-// only adds drops. The output chain lets out the tunnel's interface by name (first, so a tunnel packet costs one
-// compare, and a name matches a tun made later), loopback, the service by its cgroup, DHCP and NDP, an
-// out-of-tunnel plan's resolvers, then blocks DNS - a LAN router's too - then lets out the device-level split and
-// blocks the rest. The kernel runs the table for every outbound packet while the switch is on, a cost accepted for
-// the switch: eBPF hooks at connect would be more work and miss unconnected UDP. A blocked TCP connect is reset, so it fails at once: of a dropped SYN the kernel only sends
-// another, and the app hangs till its own timeout (seen on Ubuntu 26.04); a dropped UDP send fails at once
-// (EPERM). The forward chain does the same for forwarded traffic (Docker, libvirt), which would otherwise go
-// around it; its DNS rules too, or a container's lookups reach the LAN's router (seen with Docker on Ubuntu 26.04).
-// The kernel keeps the table through a crash, not a reboot, so a block also goes to a file that a boot unit of
-// its own loads before the network comes up. That copy leaves the service's rule out: nft resolves a cgroup when
-// it loads the rule, and the service's is not there yet; the service is let out again at its next block. The names
-// are the SDK's, so every app built on VpnHood shares the one block; the table's comment names the app whose block
-// it is by its storage folder, which an update keeps. Needs root: the service.
+/// <summary>
+/// Represents the kill switch's block on Linux: an nftables table of ours for both IP versions (<c>inet</c>), replaced
+/// whole by one <c>nft -f</c>, a transaction with no gap.
+/// </summary>
+/// <param name="owner">The app's storage folder, which names the app whose block it is and an update keeps.</param>
+/// <remarks>
+/// <para>
+/// nft, not iptables, for one table over both IP versions, one transaction, and sets for the ranges. It sits beside
+/// ufw's, firewalld's and Docker's tables, and a drop in any table wins, so ours only adds drops. The output chain lets
+/// out the tunnel's interface by name (first, so a tunnel packet costs one compare, and a name matches a tun made
+/// later), loopback, the service by its cgroup, DHCP and NDP, and an out-of-tunnel plan's resolvers; then it blocks
+/// DNS, a LAN router's too; then it lets out the device-level split and blocks the rest. The kernel runs the table for
+/// every outbound packet while the switch is on, a cost accepted for the switch: eBPF hooks at connect would be more
+/// work and miss unconnected UDP.
+/// </para>
+/// <para>
+/// A blocked TCP connect is reset, so it fails at once: of a dropped SYN the kernel only sends another, and the app
+/// hangs till its own timeout (seen on Ubuntu 26.04); a dropped UDP send fails at once (EPERM). The forward chain does
+/// the same for forwarded traffic (Docker, libvirt), which would otherwise go around it; its DNS rules too, or a
+/// container's lookups reach the LAN's router (seen with Docker on Ubuntu 26.04).
+/// </para>
+/// <para>
+/// The kernel keeps the table through a crash, not a reboot, so a block also goes to a file that a boot unit of its
+/// own loads before the network comes up, where systemd runs; without it, the block does not outlast a reboot. That
+/// copy leaves the service's rule out: nft resolves a cgroup when it loads the rule, and the service's is not there
+/// yet; the service is let out again at its next block. The names are the
+/// SDK's, so every app built on VpnHood shares the one block; the table's comment names the app whose block it is. It
+/// needs root: the service.
+/// </para>
+/// </remarks>
 public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
 {
     private const string TableName = "vpnhood_kill_switch";
@@ -46,12 +60,28 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
     private readonly string _ownerTag =
         "app " + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(owner)))[..16];
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Without root, it cannot read the table and answers <see langword="false"/>. Where the table is gone but its boot
+    /// copy is this app's, as after a reboot before the boot unit has loaded it, it answers <see langword="true"/> though
+    /// no filtering runs.
+    /// </remarks>
     public async Task<bool> IsBlocking(CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
         return await GetOwnerTag(cancellationToken).Vhc() == _ownerTag;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It also writes the block's boot copy and, where systemd runs and it is missing, the boot unit that loads it.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">
+    /// nftables (<c>nft</c>) is not installed, or the service is in no cgroup v2 group of its own.
+    /// </exception>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// <c>nft</c> refused the table, or <c>systemctl</c> the boot unit.
+    /// </exception>
     public async Task Block(VpnKillSwitchRules rules, CancellationToken cancellationToken)
     {
         var nftPath = FindNft() ??
@@ -75,6 +105,11 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
             tunName, rules.PassIpRanges.Count, cgroupPath);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It removes the table and its boot copy. Without root, it does nothing: a process of a person's could not have
+    /// put a block up.
+    /// </remarks>
     public async Task Unblock(bool anyApp, CancellationToken cancellationToken)
     {
         // only root reads or changes it, and a block a process of a person's could not have put up is no

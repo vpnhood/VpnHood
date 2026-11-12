@@ -1,9 +1,13 @@
 namespace VpnHood.Core.Client.Devices.Ios.Extensions;
 
-// iOS counterpart of AndroidUtils.JavaExceptionToApiException: turns a native NSError into a managed
-// exception. Apple puts the actionable reason (an underlying framework code, a server message) in
-// userInfo and the NSUnderlyingError chain, never in Code/LocalizedDescription, so the whole chain is
-// flattened into the message while the NSError itself stays reachable via the inner NSErrorException.
+/// <summary>
+/// Provides the reading of a native <c>NSError</c>: its description, whether it is a cancel, and the managed exception
+/// it becomes; the iOS counterpart of <c>AndroidUtils.JavaExceptionToApiException</c>.
+/// </summary>
+/// <remarks>
+/// An error may carry more detail — an underlying framework code, a server message — in its userInfo or its
+/// underlying errors; <c>Describe</c> includes the error and up to three underlying errors.
+/// </remarks>
 public static class NsErrorExtensions
 {
     private const string UnderlyingErrorKey = "NSUnderlyingError";
@@ -19,11 +23,14 @@ public static class NsErrorExtensions
     private const string CocoaErrorDomain = "NSCocoaErrorDomain";
     private const int UserCancelledError = 3072;
 
+    /// <summary>Provides an error's description, in one line.</summary>
+    /// <param name="error">The error.</param>
     extension(NSError error)
     {
         /// <summary>
         /// Flattens the error with its userInfo and its NSUnderlyingError chain into a single line.
         /// </summary>
+        /// <returns>The line.</returns>
         public string Describe()
         {
             var parts = new List<string>();
@@ -50,7 +57,7 @@ public static class NsErrorExtensions
         /// True when the error is one of Apple's generic user-cancelled errors. A framework-specific
         /// cancel (ASAuthorizationError.Canceled, …) is NOT covered; its caller must check its own code.
         /// </summary>
-        public bool IsUserCancelled => error.Domain switch {
+        internal bool IsUserCancelled => error.Domain switch {
             UrlErrorDomain => error.Code == UrlErrorCancelled,
             CocoaErrorDomain => error.Code == UserCancelledError,
             _ => false
@@ -64,7 +71,7 @@ public static class NsErrorExtensions
         /// is decided by the caller's token, never by the exception type, and an OperationCanceled
         /// thrown with no token cancelled is swallowed as a benign abort by the layers above.
         /// </summary>
-        public NSErrorException ToException()
+        internal NSErrorException ToException()
         {
             return new NSErrorException(error);
         }

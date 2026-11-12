@@ -17,6 +17,14 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Manager;
 
+/// <summary>
+/// Manages the VPN service from the app's process: starts it with its options, follows its state, and sends it the
+/// app's requests.
+/// </summary>
+/// <remarks>
+/// The service runs in a process of its own, as the platform's VPN extension, or, in a head that runs both halves, in
+/// the app's own process; it reports its state in a status file in its config folder and in each answer.
+/// </remarks>
 public class VpnServiceManager : IDisposable
 {
     private const int VpnServiceUnreachableThreshold = 1; // after this count we stop the service
@@ -40,10 +48,26 @@ public class VpnServiceManager : IDisposable
     private ConnectionInfo? _lastConnectionInfo;
     private readonly Job _updateConnectionInfoJob;
 
+    /// <summary>
+    /// Occurs when the connection's state, or whether its adapter has started, changes; raised on the thread pool.
+    /// </summary>
     public event EventHandler? StateChanged;
+
+    /// <summary>Occurs once a started service took a reconfigure, with its settings.</summary>
     public event EventHandler<ClientReconfigureParams>? Reconfigured;
+
+    /// <summary>Gets the path of the VPN service's log, in its config folder; each start deletes the last one.</summary>
     public string LogFilePath => Path.Combine(_device.VpnServiceConfigFolder, ClientOptions.VpnLogFileName);
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VpnServiceManager"/> class for a device's VPN service: it makes the
+    /// service's config folder, moves the service's old files there, and reads the last status.
+    /// </summary>
+    /// <param name="device">The device, whose VPN service this manages.</param>
+    /// <param name="eventWatcherInterval">
+    /// How often to refresh the connection's info in the background, for <see cref="StateChanged"/>, or
+    /// <see langword="null"/> for no refresh after the first, which runs at the job runner's next tick.
+    /// </param>
     public VpnServiceManager(IDevice device, TimeSpan? eventWatcherInterval)
     {
         Directory.CreateDirectory(device.VpnServiceConfigFolder);
@@ -60,6 +84,9 @@ public class VpnServiceManager : IDisposable
             eventWatcherInterval ?? TimeSpan.MaxValue, nameof(UpdateConnectionInfoJob));
     }
 
+    /// <summary>
+    /// Gets the connection's info as last known; reading it starts a refresh in the background, at most one a second.
+    /// </summary>
     public ConnectionInfo ConnectionInfo {
         get {
             _ = TryRefreshConnectionInfo(false, CancellationToken.None);
@@ -67,10 +94,39 @@ public class VpnServiceManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets a value indicating whether a start is under way or the connection is started
+    /// (<see cref="VpnHood.Core.Client.VpnServices.Abstractions.ConnectionInfo.IsStarted"/>).
+    /// </summary>
     public bool IsStarted => _startState.IsInitializing || ConnectionInfo.IsStarted();
 
-    // uiContext: the caller's window, which asks the person for the VPN permission when the OS needs that
-    // (Android); null when it has none, and then a missing permission fails.
+    /// <summary>
+    /// Starts the VPN service with options, after it tries to stop one already started, and waits until it is
+    /// connected.
+    /// </summary>
+    /// <param name="uiContext">
+    /// The caller's window, which asks the person for the VPN permission where the OS needs that (Android), or
+    /// <see langword="null"/> where it has none, and then a missing permission fails.
+    /// </param>
+    /// <param name="serviceOptions">The options, which it saves for the service to read.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the service is connected.</returns>
+    /// <remarks>
+    /// The OS's permission may take 2 minutes; once the device has started the service, the service has 20 seconds to
+    /// say it is up; the connect itself has no time limit here. Under a debugger, both limits become the debugger's
+    /// timeout, a day by default. With <see cref="ClientOptions.UseNullCapture"/>, no permission is asked.
+    /// </remarks>
+    /// <exception cref="VpnServiceTimeoutException">The service did not say it is up in 20 seconds.</exception>
+    /// <exception cref="VpnServiceException">The service ended without a connection, and without an error.</exception>
+    /// <exception cref="IOException">
+    /// The options could not be saved, as where the service still holds the file after 2 seconds.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="Exception">
+    /// The connect failed: the service's error, as <see cref="ClientExceptionConverter"/> makes it; or the device's,
+    /// where it could not ask for the permission or start the service, as Android's <see cref="TimeoutException"/> for a
+    /// prompt not answered in time, or whose wait was canceled.
+    /// </exception>
     public async Task Start(IUiContext? uiContext, VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         // before the start: the stop waits for an older start's Disposed, which it writes only while it owns the state
@@ -120,22 +176,45 @@ public class VpnServiceManager : IDisposable
     }
 
     /// <summary>
-    /// True when a previous session has left a configuration the VPN service can start from.
+    /// Gets a value indicating whether a connect has left options the VPN service can start from.
     /// </summary>
     public bool IsConfigured => _serviceOptionsFile.Exists;
 
-    // No server to start with: a start without the app then fails, as before the first connect, rather
-    // than reach a server the app no longer has.
+    /// <summary>
+    /// Deletes the saved options, so a start without the app fails, as before the first connect, rather than reach a
+    /// server the app no longer has.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the options are gone.</returns>
+    /// <exception cref="IOException">
+    /// The file could not be reached, as where the service still holds it after 2 seconds.
+    /// </exception>
+    /// <exception cref="UnauthorizedAccessException">The file may not be deleted.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task ClearConfiguration(CancellationToken cancellationToken)
     {
         return _serviceOptionsFile.Delete(cancellationToken);
     }
 
     /// <summary>
-    /// Start the VPN service from its last persisted configuration without touching it — the same
-    /// bootstrap always-on uses. Check IsConfigured before calling.
+    /// Starts the VPN service with its saved options, unchanged, as always-on does, and waits until it is connected.
     /// </summary>
-    // uiContext: the caller's window, as Start takes it.
+    /// <param name="uiContext">The caller's window, as <see cref="Start"/> takes it.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the service is connected.</returns>
+    /// <remarks>Check <see cref="IsConfigured"/> first; the rest is as <see cref="Start"/>.</remarks>
+    /// <exception cref="InvalidOperationException">There are no saved options, or they cannot be read.</exception>
+    /// <exception cref="ObjectDisposedException">The manager is disposed.</exception>
+    /// <exception cref="VpnServiceTimeoutException">The service did not say it is up in 20 seconds.</exception>
+    /// <exception cref="VpnServiceException">The service ended without a connection, and without an error.</exception>
+    /// <exception cref="IOException">
+    /// The options could not be saved again, as where the service still holds the file after 2 seconds.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="Exception">
+    /// The connect failed: the service's error, as <see cref="ClientExceptionConverter"/> makes it; or the device's,
+    /// where it could not ask for the permission or start the service.
+    /// </exception>
     public async Task StartFromLastConfig(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -217,6 +296,15 @@ public class VpnServiceManager : IDisposable
         VhLogger.Instance.LogDebug("The VpnService has established a connection.");
     }
 
+    /// <summary>
+    /// Refreshes the connection's info now: from the service's status file, and from its answer while it is started.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task that completes once the info is refreshed. Where the service cannot be reached, its info becomes
+    /// <see cref="ClientState.Disposed"/>, or <see cref="ClientState.None"/> while a stop runs; any other failure is
+    /// logged, and the last info stays.
+    /// </returns>
     public Task RefreshState(CancellationToken cancellationToken) =>
         TryRefreshConnectionInfo(true, cancellationToken);
 
@@ -372,13 +460,29 @@ public class VpnServiceManager : IDisposable
                ?? throw new VpnServiceUnreachableException("VpnService returned an empty response.");
     }
 
-    /// <summary>
-    /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
-    /// No exception will be thrown
-    /// </summary>
-
+    /// <summary>Gets a value indicating whether a stop is under way.</summary>
     public bool IsStopping => _stopLock.IsLocked;
     private readonly AsyncLock _stopLock = new();
+
+    /// <summary>
+    /// Asks the VPN service to disconnect, if it is started, and waits until it says it has ended, which it does once it
+    /// has let go of its resources, or can no longer be reached, which counts as its end.
+    /// </summary>
+    /// <param name="timeout">
+    /// How long the request to disconnect may take, or <see langword="null"/> for 5 seconds; the wait for the end
+    /// takes up to 5 seconds more.
+    /// </param>
+    /// <returns>
+    /// A task whose result is <see langword="true"/> if the service has ended, or had, by its word or as it can no longer
+    /// be reached; otherwise, <see langword="false"/>, which it logs.
+    /// </returns>
+    /// <remarks>
+    /// It throws only for a bad timeout, and a second call while one runs waits for it. The wait's 5 seconds start once
+    /// the request has ended, but where the request used up its whole time, the wait ends at once.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="timeout"/> is negative, other than infinite, or too long.
+    /// </exception>
     public async Task<bool> TryStop(TimeSpan? timeout = null)
     {
         // Initialize cll this method, so it must be finished to make sure the service is not interrupted
@@ -444,10 +548,30 @@ public class VpnServiceManager : IDisposable
         _lastConnectionInfo = connectionInfo;
     }
 
+    /// <summary>Gets a value indicating whether a reconfigure is being sent to the service.</summary>
     public bool IsReconfiguring { get; private set; }
 
-    // The saved options, connected or not, which a later start without the app runs with; then a
-    // running session, at once, with the part it takes live.
+    /// <summary>
+    /// Saves options made again from the app's settings, connected or not, for a later start without the app, where a
+    /// connect has saved options before (<see cref="IsConfigured"/>); then, where the service is started, sends it at
+    /// once the part a session takes live.
+    /// </summary>
+    /// <param name="serviceOptions">
+    /// The options; the saved plan and always-on mark are kept (<see cref="VpnServiceOptionsFile.Update"/>).
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the service took them, or they are saved where it is not started.</returns>
+    /// <remarks>
+    /// A start that is still bringing the service up takes them from the saved options, so a request that cannot reach
+    /// the service then is no error.
+    /// </remarks>
+    /// <exception cref="Exception">The service refused them: its error, as <see cref="ClientExceptionConverter"/> makes it.</exception>
+    /// <exception cref="VpnServiceNotReadyException">The service cannot take requests.</exception>
+    /// <exception cref="VpnServiceUnreachableException">The service cannot be reached.</exception>
+    /// <exception cref="IOException">
+    /// The saved options could not be read or written, as where the service still holds the file after 2 seconds.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task Reconfigure(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         await _serviceOptionsFile.Update(serviceOptions, cancellationToken).Vhc();
@@ -484,11 +608,31 @@ public class VpnServiceManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Tells the VPN service the app is about to show the ad the session requires, so the session waits for it.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the service took it.</returns>
+    /// <exception cref="Exception">The service refused it: its error, as <see cref="ClientExceptionConverter"/> makes it.</exception>
+    /// <exception cref="VpnServiceNotReadyException">The service cannot take requests.</exception>
+    /// <exception cref="VpnServiceUnreachableException">The service cannot be reached.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task SetWaitForAd(CancellationToken cancellationToken)
     {
         return SendRequest(new ApiSetWaitForAdRequest(), cancellationToken);
     }
 
+    /// <summary>Tells the VPN service the ad the session waits for was shown.</summary>
+    /// <param name="adResult">The ad's result.</param>
+    /// <param name="isRewarded">
+    /// <see langword="true"/> if it was a rewarded ad, whose data the service sends the server where it has any.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the service took it.</returns>
+    /// <exception cref="Exception">The service refused it: its error, as <see cref="ClientExceptionConverter"/> makes it.</exception>
+    /// <exception cref="VpnServiceNotReadyException">The service cannot take requests.</exception>
+    /// <exception cref="VpnServiceUnreachableException">The service cannot be reached.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task SetAdOk(AdResult adResult, bool isRewarded, CancellationToken cancellationToken)
     {
         return SendRequest(
@@ -499,6 +643,14 @@ public class VpnServiceManager : IDisposable
             cancellationToken);
     }
 
+    /// <summary>Tells the VPN service the ad the session waits for could not be shown.</summary>
+    /// <param name="ex">The error the ad failed with.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the service took it.</returns>
+    /// <exception cref="Exception">The service refused it: its error, as <see cref="ClientExceptionConverter"/> makes it.</exception>
+    /// <exception cref="VpnServiceNotReadyException">The service cannot take requests.</exception>
+    /// <exception cref="VpnServiceUnreachableException">The service cannot be reached.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task SetAdFailed(Exception ex, CancellationToken cancellationToken)
     {
         return SendRequest(new ApiAdFailedRequest {
@@ -511,6 +663,7 @@ public class VpnServiceManager : IDisposable
         await RefreshConnectionInfo(false, cancellationToken).Vhc();
     }
 
+    /// <summary>Stops following the VPN service, which goes on running until it is stopped.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

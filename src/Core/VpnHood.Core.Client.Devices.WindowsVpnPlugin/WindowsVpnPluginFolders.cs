@@ -3,13 +3,19 @@ using Windows.Storage;
 
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 
-// The package's LocalState, which the app and its VPN host share: the one folder both reach, the VPN host
-// running in an AppContainer. Without package identity there is no LocalState, no profile and no plug-in.
+/// <summary>
+/// Provides the package's LocalState, which the app and its VPN host share: the one folder both reach, the VPN host
+/// running in an AppContainer.
+/// </summary>
+/// <remarks>Without package identity there is no LocalState, no profile and no plug-in.</remarks>
 public static class WindowsVpnPluginFolders
 {
     private const int AppModelErrorNoPackage = 15700;
 
-    // LocalState itself: the app's storage, which holds the VPN service's folder as a WindowsDevice's does
+    /// <summary>
+    /// Gets LocalState itself: the app's storage, which holds the VPN service's folder as a Windows device's storage does.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The process does not run from the package.</exception>
     public static string LocalFolder {
         get {
             if (!IsPackaged)
@@ -20,11 +26,14 @@ public static class WindowsVpnPluginFolders
         }
     }
 
-    // the VPN service's files - its options, status and log - and the proxies, together: nothing backs up
-    // a desktop app's data
+    /// <summary>
+    /// Gets the folder of the VPN service's files — its options, status and log — and the proxies, together:
+    /// <c>vpn-service</c> under <see cref="LocalFolder"/>.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The process does not run from the package.</exception>
     public static string VpnServiceFolder => Path.Combine(LocalFolder, "vpn-service");
 
-    public static bool IsPackaged {
+    private static bool IsPackaged {
         get {
             var length = 0;
             return GetCurrentPackageFullName(ref length, null) != AppModelErrorNoPackage;

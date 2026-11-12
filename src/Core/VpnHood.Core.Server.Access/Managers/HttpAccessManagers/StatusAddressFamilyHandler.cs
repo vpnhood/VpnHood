@@ -7,10 +7,15 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 
-// Sends a server's status calls over the given address families in turn, each on a new connection: the
-// access manager sees the address a call comes from, so it learns when one of the server's addresses changes.
-// A family that does not connect in time gives way to the other inside the connect, before anything is sent:
-// a status carries usage, and must never go twice. Every other call goes over a pooled connection, as usual.
+/// <summary>
+/// Represents the HTTP handler that sends a server's status calls over the given IP versions in turn, each on a new
+/// connection: the access manager sees the address a call comes from, so it learns when one of the server's addresses
+/// changes.
+/// </summary>
+/// <remarks>
+/// An IP version that does not connect within 5 seconds gives way to the other inside the connect, before anything is
+/// sent: a status carries usage, and must never go twice. Every other call goes over a pooled connection, as usual.
+/// </remarks>
 public sealed class StatusAddressFamilyHandler : HttpMessageHandler
 {
     // short of the system's own connect timeout (about 20 s on Windows, 2 minutes on Linux), as a family
@@ -21,7 +26,14 @@ public sealed class StatusAddressFamilyHandler : HttpMessageHandler
     private readonly HttpMessageInvoker _statusInvoker;
     private uint _connectCount;
 
-    // IPv4 alone sends every status over IPv4, and over IPv6 only where IPv4 does not connect
+    /// <summary>Initializes a new instance of the <see cref="StatusAddressFamilyHandler"/> class.</summary>
+    /// <param name="addressFamilies">
+    /// The IP versions to take in turn: IPv4 alone sends every status over IPv4, and over IPv6 only where IPv4 does not
+    /// connect.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="addressFamilies"/> is empty, or names other than IPv4 and IPv6.
+    /// </exception>
     public StatusAddressFamilyHandler(IReadOnlyList<AddressFamily> addressFamilies)
     {
         if (addressFamilies.Count == 0 || addressFamilies.Any(x =>
@@ -36,6 +48,8 @@ public sealed class StatusAddressFamilyHandler : HttpMessageHandler
         });
     }
 
+    /// <inheritdoc/>
+    /// <remarks>A status goes over the next IP version on a new connection; any other call over a pooled one.</remarks>
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
@@ -86,6 +100,7 @@ public sealed class StatusAddressFamilyHandler : HttpMessageHandler
         }
     }
 
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing)
     {
         if (disposing) {

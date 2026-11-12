@@ -9,9 +9,15 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
-// A loopback-TCP IMessageListener. It binds a loopback TCP listener, generates an API key
-// and publishes both into the shared config folder (vpn.api.json) so the app-side
-// TcpMessageClient can discover and authenticate against it.
+/// <summary>
+/// Represents the VPN service's side of the loopback TCP channel: it listens on an IPv4 loopback port the system picks,
+/// makes a 128-bit key, and publishes both in the config folder, as <c>vpn.api.json</c>, for
+/// <see cref="TcpMessageClient"/> to find.
+/// </summary>
+/// <remarks>
+/// Each message goes as its length, a little-endian 32-bit integer, then its bytes, up to 16,777,215 bytes; a
+/// connection's first message must be the key.
+/// </remarks>
 public sealed class TcpMessageListener : IMessageListener
 {
     private const int MaxConsecutiveAcceptErrors = 5;
@@ -24,9 +30,17 @@ public sealed class TcpMessageListener : IMessageListener
     private MessageHandler? _messageHandler;
     private int _disposed;
 
+    /// <summary>Gets the endpoint it listens on now, which changes where it has to listen anew.</summary>
     public IPEndPoint ApiEndPoint { get; private set; }
     private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TcpMessageListener"/> class, listening at once, and publishes its
+    /// endpoint and key.
+    /// </summary>
+    /// <param name="configFolder">The VPN service's config folder.</param>
+    /// <exception cref="System.Net.Sockets.SocketException">It could not listen.</exception>
+    /// <exception cref="IOException">It could not publish its file.</exception>
     public TcpMessageListener(string configFolder)
     {
         _apiFilePath = TcpMessageTransport.GetApiFilePath(configFolder);
@@ -67,6 +81,11 @@ public sealed class TcpMessageListener : IMessageListener
         File.Move(tempPath, _apiFilePath, overwrite: true);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It accepts until the token is canceled or the listener is disposed; after 5 accepts fail in a row, it tries to
+    /// listen anew, on a new port, and to publish it.
+    /// </remarks>
     public async Task Start(MessageHandler messageHandler, CancellationToken cancellationToken)
     {
         _messageHandler = messageHandler;
@@ -161,6 +180,7 @@ public sealed class TcpMessageListener : IMessageListener
         }
     }
 
+    /// <summary>Stops listening and tries to delete the published file.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)

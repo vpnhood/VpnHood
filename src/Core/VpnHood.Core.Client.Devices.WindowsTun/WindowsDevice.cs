@@ -6,10 +6,29 @@ using VpnHood.Net.Quic.MsQuic;
 
 namespace VpnHood.Core.Client.Devices.WindowsTun;
 
-// serviceName: the Windows service the daemon runs as, whose processes the kill switch's block lets out; null in a run
-// as the person (dev), whose block lets out none of its processes.
-// vpnHostPath: the VPN host the daemon starts at each connect (WindowsVpnHost); null for a device that starts the VPN
-// service itself, in a head that runs both halves in its one process (WindowsInProcessDevice).
+/// <summary>
+/// Represents a Windows machine as the VPN app's daemon sees it, with WinTun: the VPN service runs in a VPN host process
+/// the daemon starts at each connect, and the kill switch's block is the Windows Filtering Platform's
+/// (<see cref="WindowsVpnKillSwitch"/>).
+/// </summary>
+/// <param name="storageFolder">The app's storage, with the VPN service's folder under it; the kill switch's owner.</param>
+/// <param name="isDebugMode">
+/// <see langword="true"/> to offer the split by app with test entries, as a debug build does.
+/// </param>
+/// <param name="serviceName">
+/// The Windows service the daemon runs as, whose processes the kill switch's block lets out; <see langword="null"/> in a
+/// run as the person (dev), whose block lets out none of its processes.
+/// </param>
+/// <param name="vpnHostPath">
+/// The VPN host the daemon starts at each connect (<c>WindowsVpnHost</c>); <see langword="null"/> for a device that
+/// starts the VPN service itself, in a head that runs both halves in its one process (<c>WindowsInProcessDevice</c>).
+/// </param>
+/// <remarks>
+/// With a VPN host, it makes a Windows job object that ends the host with the daemon.
+/// </remarks>
+/// <exception cref="System.ComponentModel.Win32Exception">
+/// Windows could not make or set up the VPN host's job object.
+/// </exception>
 public class WindowsDevice(string storageFolder, bool isDebugMode, string? serviceName = null, string? vpnHostPath = null)
     : IDevice
 {
@@ -17,25 +36,51 @@ public class WindowsDevice(string storageFolder, bool isDebugMode, string? servi
         ? null
         : new WindowsVpnHostProcess(vpnHostPath, storageFolder, serviceName);
 
+    /// <inheritdoc/>
     public bool IsBindProcessToVpnSupported => false;
+
+    /// <inheritdoc/>
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
-    // as Chrome says it here, whose NT version reads 10.0 on Windows 11 too
+    /// <inheritdoc/>
+    /// <remarks>As Chrome says it here, whose NT version reads 10.0 on Windows 11 too.</remarks>
     public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
         Platform = $"Windows NT {Environment.OSVersion.Version.ToString(2)}" +
                    (Environment.Is64BitOperatingSystem ? "; Win64; x64" : ""),
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: false)
     };
+
+    /// <inheritdoc/>
     public string VpnServiceConfigFolder { get; } = GetVpnServiceConfigFolder(storageFolder);
-    public string VpnServiceDataFolder => VpnServiceConfigFolder; // nothing backs up a desktop app's data
+
+    /// <inheritdoc/>
+    /// <remarks>It is the same folder as the config folder.</remarks>
+    public string VpnServiceDataFolder => VpnServiceConfigFolder;
+
+    /// <inheritdoc/>
+    /// <remarks>Only in debug mode, with test entries.</remarks>
     public bool IsExcludeAppsSupported => isDebugMode;
+
+    /// <inheritdoc/>
+    /// <remarks>Only in debug mode, with test entries.</remarks>
     public bool IsIncludeAppsSupported => isDebugMode;
+
+    /// <inheritdoc/>
     public bool IsQuicSupported => MsQuicClient.IsSupported;
+
+    /// <inheritdoc/>
     public bool IsAlwaysOnSupported => true;
+
+    /// <inheritdoc/>
     public IVpnKillSwitch KillSwitch { get; } = new WindowsVpnKillSwitch(owner: storageFolder, serviceName);
+
+    /// <inheritdoc/>
     public bool IsTv => false;
+
+    /// <inheritdoc/>
     public bool IsWaitingForVpnPermission => false;
 
+    /// <inheritdoc/>
     public DeviceMemInfo MemInfo {
         get {
             var gcMemoryInfo = GC.GetGCMemoryInfo();
@@ -46,6 +91,8 @@ public class WindowsDevice(string storageFolder, bool isDebugMode, string? servi
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>In debug mode it gives 60 test entries; otherwise it throws <see cref="NotSupportedException"/>.</remarks>
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
     {
         return Task.FromResult(InstalledApps);
@@ -69,40 +116,63 @@ public class WindowsDevice(string storageFolder, bool isDebugMode, string? servi
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Windows asks nothing here: it completes at once.</remarks>
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        // no need to request vpn service on windows
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It starts the VPN host process, after it ends the last one if that still runs; a derived device that runs the
+    /// service in its own process starts it there.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The device has no VPN host, and no override starts the service.</exception>
     public virtual Task StartVpnService(CancellationToken cancellationToken)
     {
         return _vpnHostProcess?.Start(cancellationToken) ??
                throw new InvalidOperationException("This device has no VPN host to start the VPN service in.");
     }
 
-    // The VPN service's folder in the app's storage, where the VPN host finds it too.
+    /// <summary>Gets the VPN service's folder in the app's storage, where the VPN host finds it too.</summary>
+    /// <param name="storageFolder">The app's storage.</param>
+    /// <returns>The folder: <c>vpn-service</c> under <paramref name="storageFolder"/>.</returns>
     public static string GetVpnServiceConfigFolder(string storageFolder)
     {
         return Path.Combine(storageFolder, "vpn-service");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is a loopback TCP client (<see cref="TcpMessageClient"/>).</remarks>
     public IMessageClient CreateMessageClient()
     {
         return new TcpMessageClient(VpnServiceConfigFolder);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Windows does not support it here, so it always throws <see cref="NotSupportedException"/>.</remarks>
     public void BindProcessToVpn(bool value)
     {
         throw new NotSupportedException();
     }
 
+    /// <summary>
+    /// Has the VPN host killed, if it runs, without waiting for its exit, where <paramref name="disposing"/> is set.
+    /// </summary>
+    /// <param name="disposing">
+    /// <see langword="true"/> when called from <see cref="Dispose()"/>; <see langword="false"/> from a finalizer.
+    /// </param>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
             _vpnHostProcess?.Dispose();
     }
 
+    /// <summary>
+    /// Has the VPN host killed, if it runs, without waiting for its exit: the quick close, as its graceful end is its
+    /// session's, which the app's disconnect asks for before this.
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);

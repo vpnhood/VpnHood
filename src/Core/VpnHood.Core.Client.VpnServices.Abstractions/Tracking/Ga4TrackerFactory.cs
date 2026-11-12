@@ -5,12 +5,21 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
-// The library's own tracker: GA4 over its tag endpoint, to the measurement id it is given.
+/// <summary>
+/// Represents the library's own tracker factory: GA4 over its tag endpoint, to the measurement ID it is given.
+/// </summary>
 public class Ga4TrackerFactory : ITrackerFactory
 {
-    // Null sends nothing: a build that names no id collects nothing by design (an iOS head, a fork's).
+    /// <summary>
+    /// Gets the GA4 measurement ID, or <see langword="null"/>, which sends nothing: a build that names no ID collects
+    /// nothing by design, as an iOS head or a fork's.
+    /// </summary>
     public string? MeasurementId { get; init; }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A tracker made switched on sends a session start at once. With no measurement ID, it is one that sends nothing.
+    /// </remarks>
     public ITracker CreateTracker(TrackerCreateParams createParams)
     {
         if (string.IsNullOrEmpty(MeasurementId))

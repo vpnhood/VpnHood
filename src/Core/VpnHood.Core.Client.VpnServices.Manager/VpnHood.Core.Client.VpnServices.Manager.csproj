@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>Manages the VpnHood service from another process by communicating with VpnHoodService.</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

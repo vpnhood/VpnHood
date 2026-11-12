@@ -8,22 +8,38 @@ using Windows.Foundation.Collections;
 
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 
-// The app's end of the VPN host's control channel, the package's app service. Opening it makes Windows run the
-// service's task in the VPN host, which keeps the host running while the connection stays open.
-public sealed class WindowsVpnPluginAppServiceClient : IMessageClient
+/// <summary>
+/// Represents the app's end of the VPN host's control channel, the package's app service.
+/// </summary>
+/// <remarks>
+/// Opening it makes Windows run the service's task in the VPN host, which keeps the host running while the connection
+/// stays open.
+/// </remarks>
+internal sealed class WindowsVpnPluginAppServiceClient : IMessageClient
 {
     private readonly AsyncLock _sendLock = new();
     private AppServiceConnection? _connection;
     private bool _disposed;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The VPN host closes the connection when its session ends, or Windows when it ends the service's task, so a
+    /// request that fails on the open connection is sent once more on a new one.
+    /// </remarks>
+    /// <exception cref="VpnServiceNotReadyException">
+    /// Windows holds the package's VPN profile disconnected, so no VPN host has a session.
+    /// </exception>
+    /// <exception cref="VpnServiceUnreachableException">
+    /// The app service could not be opened, or did not answer on a new connection.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">The client is disposed.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<Memory<byte>> SendAsync(Memory<byte> request, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         using var scopeLock = await _sendLock.LockAsync(cancellationToken).Vhc();
         var message = new ValueSet { [WindowsVpnPluginAppService.MessageKey] = request.ToArray() };
 
-        // The VPN host closes the connection when its session ends, or Windows when it ends the service's task:
-        // a failure on the open one opens another, once.
         if (_connection is { } connection) {
             try {
                 return await SendCore(connection, message, cancellationToken).Vhc();
@@ -98,6 +114,7 @@ public sealed class WindowsVpnPluginAppServiceClient : IMessageClient
         _connection = null;
     }
 
+    /// <summary>Closes the connection to the app service.</summary>
     public void Dispose()
     {
         if (_disposed)

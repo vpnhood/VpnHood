@@ -18,13 +18,23 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.Devices.Android;
 
+/// <summary>
+/// Represents an Android device as the VPN app sees it: the VPN service is the app's own VpnService, in a process of its
+/// own in Release builds, which the app starts and reaches through a binder.
+/// </summary>
 public class AndroidDevice : IDevice
 {
-    // The VPN service as the app reaches it without referencing it (AndroidVpnService): its Java name, which the
-    // service's [Service] attribute pins - the generated default hashes the namespace and the assembly name, so it is
-    // the name the service shipped under - its process, in Release builds, and the action that connects it.
+    /// <summary>
+    /// The VPN service's Java name, as the app reaches it without referencing it (<c>AndroidVpnService</c>): the
+    /// service's <c>[Service]</c> attribute pins it, as the generated default hashes the namespace and the assembly name,
+    /// so it is the name the service shipped under.
+    /// </summary>
     public const string VpnServiceJavaName = "crc64198439f88d18e1a7.AndroidVpnService";
+
+    /// <summary>The suffix of the VPN service's process, in Release builds: <c>:vpnhood_process</c>.</summary>
     public const string VpnServiceProcessName = ":vpnhood_process";
+
+    /// <summary>The action of the intent that connects the VPN service: <c>connect</c>.</summary>
     public const string VpnServiceActionConnect = "connect";
 
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
@@ -32,23 +42,56 @@ public class AndroidDevice : IDevice
     private volatile bool _isWaitingForVpnPermission;
     private readonly AndroidInstalledApps _installedApps = new();
 
+    /// <inheritdoc/>
     public bool IsBindProcessToVpnSupported => true;
+
+    /// <inheritdoc/>
     public bool IsExcludeAppsSupported => true;
+
+    /// <inheritdoc/>
     public bool IsIncludeAppsSupported => true;
+
+    /// <inheritdoc/>
     public bool IsQuicSupported => AndroidQuicClient.IsSupported;
-    public bool IsAlwaysOnSupported => false; // the system's
-    public IVpnKillSwitch? KillSwitch => null; // the system's, "Block connections without VPN"
+
+    /// <inheritdoc/>
+    /// <remarks>Always-on is the system's here.</remarks>
+    public bool IsAlwaysOnSupported => false;
+
+    /// <inheritdoc/>
+    /// <remarks>None: the kill switch is the system's, its "Block connections without VPN".</remarks>
+    public IVpnKillSwitch? KillSwitch => null;
+
+    /// <inheritdoc/>
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+
+    /// <inheritdoc/>
+    /// <remarks>As Chrome says it: Android's release and the model, and "Mobile" on a phone.</remarks>
     public DeviceUserAgentInfo UserAgentInfo { get; } = new() {
         Platform = $"Linux; Android {Build.VERSION.Release}",
         Model = Build.Model,
         Browser = DeviceUserAgentInfo.GetChromeBrowser(isMobile: AndroidUtils.IsPhone())
     };
+
+    /// <inheritdoc/>
+    /// <remarks>It is <see cref="GetVpnServiceConfigFolder"/>'s.</remarks>
     public string VpnServiceConfigFolder => GetVpnServiceConfigFolder();
+
+    /// <inheritdoc/>
+    /// <remarks>It is <see cref="GetVpnServiceDataFolder"/>'s.</remarks>
     public string VpnServiceDataFolder => GetVpnServiceDataFolder();
+
+    /// <inheritdoc/>
     public bool IsTv => AndroidUtils.IsTv();
+
+    /// <inheritdoc/>
     public bool IsWaitingForVpnPermission => _isWaitingForVpnPermission;
 
+    /// <summary>Creates the device, in any process but the VPN service's, as the app's or the tile's.</summary>
+    /// <returns>The device.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// This is the VPN service's process, Android gave this process no name, or it named no cache folder for the app.
+    /// </exception>
     public static AndroidDevice Create()
     {
         if (IsVpnServiceProcess)
@@ -58,14 +101,22 @@ public class AndroidDevice : IDevice
         return new AndroidDevice();
     }
 
-    // the VPN service's own files: Android never puts the no-backup folder in a backup or a transfer
+    /// <summary>
+    /// Gets the folder of the VPN service's own files: <c>vpn-service</c> in the app's no-backup folder, which Android
+    /// never puts in a backup or a transfer.
+    /// </summary>
+    /// <returns>The folder's path.</returns>
+    /// <exception cref="InvalidOperationException">Android names no no-backup folder for the app.</exception>
     public static string GetVpnServiceConfigFolder()
     {
         return Path.Combine(Application.Context.NoBackupFilesDir?.AbsolutePath ??
                             throw new InvalidOperationException("Android named no no-backup folder for the app."), "vpn-service");
     }
 
-    // the person's proxies, beside the app's files, which travel with a backup
+    /// <summary>
+    /// Gets the folder of the person's proxies: <c>vpn-service</c> beside the app's files, which travel with a backup.
+    /// </summary>
+    /// <returns>The folder's path.</returns>
     public static string GetVpnServiceDataFolder()
     {
         return Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData),
@@ -118,6 +169,7 @@ public class AndroidDevice : IDevice
         }
     }
 
+    /// <inheritdoc/>
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
         // prepare vpn service
@@ -125,10 +177,13 @@ public class AndroidDevice : IDevice
         return PrepareVpnService(androidUiContext?.ActivityEvent, timeout, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It starts the VPN service with the connect action, as a foreground service from Android 8. It asks no
+    /// permission: <see cref="RequestVpnService"/> does, which a null capture skips, as it would end another app's VPN.
+    /// </remarks>
     public Task StartVpnService(CancellationToken cancellationToken)
     {
-        // do not call RequestVpnService for NullCapture. It will close other VPN connections.
-        // start service
         var intent = CreateVpnServiceIntent(VpnServiceActionConnect);
         intent.PutExtra("manual", true);
         var res = OperatingSystem.IsAndroidVersionAtLeast(26)
@@ -146,6 +201,8 @@ public class AndroidDevice : IDevice
             _grantPermissionTaskSource.TrySetResult(e.ResultCode == Result.Ok);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Android's own figures, from its activity manager.</remarks>
     public DeviceMemInfo? MemInfo {
         get {
             var activityManager = (ActivityManager?)Application.Context.GetSystemService(Context.ActivityService);
@@ -165,6 +222,8 @@ public class AndroidDevice : IDevice
         }
     }
 
+    /// <summary>Gets this process's name: Android's word for it from Android 9, else the kernel's copy of it.</summary>
+    /// <exception cref="InvalidOperationException">Android gave this process no name.</exception>
     public static string CurrentProcessName {
         get {
             // Both answers come from inside the process: Android 9 and later say it; the kernel's copy of
@@ -178,14 +237,25 @@ public class AndroidDevice : IDevice
         }
     }
 
+    /// <summary>
+    /// Gets a value indicating whether this process is the VPN service's, by its name (<see cref="VpnServiceProcessName"/>).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Android gave this process no name.</exception>
     public static bool IsVpnServiceProcess => CurrentProcessName.Contains(VpnServiceProcessName);
 
-    // The app's own process is the one named after the package. Every other - the VPN service's, the
-    // tile's, any a library declares - carries a suffix, so a head must not rename its application's
-    // process ([Application(Process = ...)]).
+    /// <summary>
+    /// Gets a value indicating whether this process is the app's own: the one named after the package.
+    /// </summary>
+    /// <remarks>
+    /// Every other process — the VPN service's, the tile's, any a library declares — carries a suffix, so a head must not
+    /// rename its application's process (<c>[Application(Process = ...)]</c>).
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The process, or the app's context, has no name.</exception>
     public static bool IsMainProcess => CurrentProcessName == (Application.Context.PackageName
         ?? throw new InvalidOperationException("The Android context has no package name."));
 
+    /// <inheritdoc/>
+    /// <remarks>It is a binder client, with a dormant binding to the VPN service.</remarks>
     public IMessageClient CreateMessageClient()
     {
         return new AndroidMessageClient();
@@ -205,6 +275,7 @@ public class AndroidDevice : IDevice
         }
     }
 
+    /// <inheritdoc/>
     public void BindProcessToVpn(bool value)
     {
         var connectivityManager =
@@ -231,6 +302,7 @@ public class AndroidDevice : IDevice
         connectivityManager.BindProcessToNetwork(network);
     }
 
+    /// <summary>Does nothing: Android owns the VPN service's lifetime.</summary>
     public void Dispose()
     {
     }

@@ -9,9 +9,12 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
-// A loopback-TCP IMessageClient. It keeps a single persistent connection to the
-// TcpMessageListener and transparently reconnects when the connection drops. The endpoint
-// and API key are discovered from the bootstrap file written by the listener.
+/// <summary>
+/// Represents the app's side of the loopback TCP channel to the VPN service: one connection to
+/// <see cref="TcpMessageListener"/>, kept, and made again when it drops, to the endpoint and with the key the listener
+/// published in the config folder.
+/// </summary>
+/// <param name="configFolder">The VPN service's config folder, where the listener publishes its endpoint and key.</param>
 public sealed class TcpMessageClient(string configFolder) : IMessageClient
 {
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
@@ -21,6 +24,17 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
     private TcpClient? _tcpClient;
     private bool _disposed;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A request that fails on the kept connection is sent once more on a new one. A connect may take 5 seconds.
+    /// </remarks>
+    /// <exception cref="VpnServiceNotReadyException">The listener's file is missing or cannot be read.</exception>
+    /// <exception cref="VpnServiceUnreachableException">
+    /// The service cannot be reached, or the connection failed before its answer; an answer that never comes is waited
+    /// for until the token is canceled.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">The client is disposed.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<Memory<byte>> SendAsync(Memory<byte> request, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -137,6 +151,7 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
         _tcpClient = null;
     }
 
+    /// <summary>Closes the connection.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

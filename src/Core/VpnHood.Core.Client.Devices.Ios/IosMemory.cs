@@ -54,12 +54,25 @@ public sealed class IosMemory : VhMemory
     private const int PhysFootprintOffset = 144;  // the exact number iOS jetsam enforces
 
     /// <summary>A single phys_footprint reading (bytes). All fields come from one TASK_VM_INFO snapshot.</summary>
+    /// <param name="footprint">The process's footprint, in bytes.</param>
+    /// <param name="internal">The anonymous dirty memory, in bytes.</param>
+    /// <param name="compressed">The compressed anonymous pages, in bytes.</param>
+    /// <param name="external">The file-backed memory, in bytes.</param>
     public readonly struct FootprintInfo(long footprint, long @internal, long compressed, long external)
     {
-        public long Footprint { get; } = footprint;   // phys_footprint — the number jetsam enforces
-        public long Internal { get; } = @internal;     // anonymous dirty (malloc/heap/stacks/buffers)
-        public long Compressed { get; } = compressed;  // compressed anonymous pages
-        public long External { get; } = external;      // file-backed (code/dylibs/AOT — not in footprint)
+        /// <summary>Gets the process's footprint (<c>phys_footprint</c>), in bytes: the number jetsam enforces.</summary>
+        public long Footprint { get; } = footprint;
+
+        /// <summary>Gets the anonymous dirty memory — malloc, the heap, stacks, buffers — in bytes.</summary>
+        public long Internal { get; } = @internal;
+
+        /// <summary>Gets the compressed anonymous pages, in bytes, which the footprint counts.</summary>
+        public long Compressed { get; } = compressed;
+
+        /// <summary>
+        /// Gets the file-backed memory — code, dylibs, AOT — in bytes, which the footprint does not count.
+        /// </summary>
+        public long External { get; } = external;
     }
 
     /// <summary>
@@ -79,6 +92,10 @@ public sealed class IosMemory : VhMemory
     // mach task_info read.
     private static long? _totalMemory;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The footprint is this process's, read fresh; the total is the device's, read once; the used memory is not read.
+    /// </remarks>
     public override VhMemoryInfo GetInfo()
     {
         var footprint = TryRead(out var vm) && vm.Footprint > 0 ? vm.Footprint : (long?)null;
@@ -96,6 +113,8 @@ public sealed class IosMemory : VhMemory
     }
 
     /// <summary>Reads a fresh phys_footprint snapshot. Returns false if the mach call fails.</summary>
+    /// <param name="info">The reading, or the default where the call fails.</param>
+    /// <returns><see langword="true"/> if the call succeeded; otherwise, <see langword="false"/>.</returns>
     public static bool TryRead(out FootprintInfo info)
     {
         info = default;
@@ -112,6 +131,7 @@ public sealed class IosMemory : VhMemory
     }
 
     /// <summary>Returns the number of open process file descriptors, including sockets.</summary>
+    /// <returns>The count, or -1 where it cannot be read.</returns>
     public static int TryReadFileDescriptorCount()
     {
         try {
@@ -128,6 +148,7 @@ public sealed class IosMemory : VhMemory
     /// Names a fd leak's owner class at a glance (e.g. leaked SQLite connections are vnodes, leaked
     /// sockets are sock). Returns "?" on failure.
     /// </summary>
+    /// <returns>The summary, or <c>?</c> where it cannot be read.</returns>
     public static string TryReadFileDescriptorSummary()
     {
         try {
@@ -169,6 +190,7 @@ public sealed class IosMemory : VhMemory
     /// Bytes this process can still allocate before jetsam (<c>os_proc_available_memory</c>). -1 on failure;
     /// 0 can mean either "no budget applies" or "budget exhausted" — read it together with the footprint.
     /// </summary>
+    /// <returns>The bytes, or -1 where they cannot be read.</returns>
     public static long TryReadAvailableMemory()
     {
         try {
@@ -180,6 +202,7 @@ public sealed class IosMemory : VhMemory
     }
 
     /// <summary>Device boot time (UTC) from <c>kern.boottime</c>. Newer than a log line = the device rebooted.</summary>
+    /// <returns>The boot time, or <see langword="null"/> where it cannot be read.</returns>
     public static DateTime? TryReadBootTimeUtc()
     {
         try {
@@ -204,6 +227,7 @@ public sealed class IosMemory : VhMemory
     /// dirtied@36, is_submap@48) were verified on-device (iPhone 11, arm64, 16 KB pages) in the 2026-07
     /// diagnostic runs. infoCnt 19 = V2 count; falls back to 16 (V0) for older kernels.
     /// </remarks>
+    /// <returns>The census, as one log line's payload.</returns>
     public static string ReadRegionCensus()
     {
         try {

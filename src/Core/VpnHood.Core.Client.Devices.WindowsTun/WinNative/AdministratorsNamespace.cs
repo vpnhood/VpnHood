@@ -4,11 +4,14 @@ using System.Security.Principal;
 
 namespace VpnHood.Core.Client.Devices.WindowsTun.WinNative;
 
-// A private namespace whose boundary names Administrators: SYSTEM and an elevated administrator may
-// make it and enter it, a standard user can do neither, so a name in it cannot be taken first the way
-// one in the Global namespace can. The caller names it: the boundary's name, the same namespace in
-// every session whichever process made it, and this process's prefix for it, under which an object in
-// it is named Name(...).
+/// <summary>
+/// Represents a private namespace whose boundary descriptor names the Administrators group, made with the default
+/// security, meant to keep a standard user from taking a name in it first, as one can in the Global namespace.
+/// </summary>
+/// <remarks>
+/// The caller names it: the boundary's name, the same namespace in every session whichever process made it, and this
+/// process's prefix for it, under which an object in it is named by <see cref="Name"/>.
+/// </remarks>
 public sealed class AdministratorsNamespace : IDisposable
 {
     private const int ErrorAlreadyExists = 183;
@@ -26,6 +29,10 @@ public sealed class AdministratorsNamespace : IDisposable
         _handle = handle;
     }
 
+    /// <summary>Makes the namespace, or enters it where another process made it first.</summary>
+    /// <param name="name">The namespace's name, which is both its boundary's and this process's prefix for it.</param>
+    /// <returns>The namespace, open in this process.</returns>
+    /// <exception cref="Win32Exception">Windows refused the boundary or the namespace, as for a standard user.</exception>
     public static AdministratorsNamespace Open(string name)
     {
         var boundary = CreateBoundary(name);
@@ -38,6 +45,9 @@ public sealed class AdministratorsNamespace : IDisposable
         }
     }
 
+    /// <summary>Gets an object's name in the namespace.</summary>
+    /// <param name="objectName">The object's own name.</param>
+    /// <returns>The namespace's prefix, a backslash, and the object's name.</returns>
     public string Name(string objectName)
     {
         return $@"{_name}\{objectName}";
@@ -82,6 +92,7 @@ public sealed class AdministratorsNamespace : IDisposable
         throw new Win32Exception(error, "Could not name Administrators in the namespace's boundary.");
     }
 
+    /// <summary>Closes this process's handle on the namespace and deletes its boundary descriptor.</summary>
     public void Dispose()
     {
         ClosePrivateNamespace(_handle, 0);

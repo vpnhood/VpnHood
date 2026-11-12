@@ -3,6 +3,7 @@
 		<Description>VpnHood client device provider for Android: the app's side, and what its VPN service shares</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

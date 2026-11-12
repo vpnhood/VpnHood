@@ -5,8 +5,24 @@ using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
+/// <summary>
+/// Provides the conversion of an error the VPN service reported back into the exception it stands for.
+/// </summary>
 public static class ClientExceptionConverter
 {
+    /// <summary>
+    /// Makes the exception an error stands for, where it is one of the client's or the service's that the app handles
+    /// by type, with the error's data.
+    /// </summary>
+    /// <param name="apiError">The error.</param>
+    /// <returns>The exception, or <see langword="null"/> where the error's type is not one of them.</returns>
+    /// <exception cref="ArgumentException">A session's error carries no response.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A session's error carries a response that is not JSON.</exception>
+    /// <exception cref="FormatException">An endpoint in a session's error's response is not valid.</exception>
+    /// <remarks>
+    /// A <see cref="ServerAddressChangedException"/> made here has no
+    /// <see cref="ServerAddressChangedException.NewAddresses"/>: they stay in the service's process.
+    /// </remarks>
     public static Exception? ApiErrorToException(ApiError apiError)
     {
         Exception? exception = null;

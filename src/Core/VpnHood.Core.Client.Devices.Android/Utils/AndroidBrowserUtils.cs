@@ -2,6 +2,9 @@ using Android.Content;
 
 namespace VpnHood.Core.Client.Devices.Android.Utils;
 
+/// <summary>
+/// Provides whether a web page can be opened in an external browser on the device.
+/// </summary>
 public static class AndroidBrowserUtils
 {
     // Android TV ships a placeholder in place of a browser. It ANSWERS an https view — so resolving
@@ -11,7 +14,11 @@ public static class AndroidBrowserUtils
     // page, and must not be told it cannot.
     private const string TvStubsPackage = "com.android.tv.frameworkpackagestubs";
 
-    /// <summary>Whether an ordinary web page can be handed to an external browser on this device.</summary>
+    /// <summary>Determines whether an ordinary web page can be handed to an external browser on this device.</summary>
+    /// <returns>
+    /// <see langword="true"/> if an app other than Android TV's placeholder opens an https page; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
     public static bool IsExternalBrowserAvailable()
     {
         var packageManager = Application.Context.PackageManager;

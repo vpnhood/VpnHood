@@ -8,7 +8,7 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
 // Shared low-level helpers for the loopback-TCP message transport (listener + client).
 // The transport carries opaque length-framed blobs: [int32 little-endian length][content].
-public static class TcpMessageTransport
+internal static class TcpMessageTransport
 {
     public const int MaxMessageLength = 0xFFFFFF; // 16 MB
 
@@ -54,7 +54,7 @@ public static class TcpMessageTransport
 
 // The TCP-internal bootstrap info written by the listener and read by the client.
 // It is a transport implementation detail and never crosses the IMessage* abstractions.
-public class TcpApiBootstrap
+internal class TcpApiBootstrap
 {
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint ApiEndPoint { get; init; }

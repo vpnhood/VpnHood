@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood client device provider for Linux: the app's side, and what its VPN host shares</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
   <ItemGroup>

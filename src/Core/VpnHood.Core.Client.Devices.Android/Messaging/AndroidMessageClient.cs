@@ -9,20 +9,24 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Android.Messaging;
 
-// Binder-based IMessageClient. It keeps a single dormant binding (no AutoCreate) to
-// AndroidVpnService, so it never keeps the VPN service process alive by itself; the binding
-// connects whenever the service is started and reconnects automatically after a restart (on
-// Android 7 the next send binds again: OnServiceDisconnected).
-// Discovery, endpoints and API keys do not exist here — the binder is obtained by component.
-//
-// Requests are oneway transactions correlated by requestId, and the response arrives on our reply
-// binder as another oneway transaction, so no thread blocks while a request handler runs and the
-// service never transacts synchronously into this process (which the system would kill while it is
-// frozen). The transport imposes no request deadline — request duration belongs to the caller's
-// token; only connection establishment has a timeout. Nothing is left pending: the service answers
-// every request it accepts, even when it fails, and service death fails the rest through the
-// disconnect callbacks.
-public sealed class AndroidMessageClient : IMessageClient
+/// <summary>
+/// Represents the app's side of the binder channel to the Android VPN service: one dormant binding, which never keeps the
+/// service's process alive by itself, and which connects whenever the service is started and again after a restart.
+/// </summary>
+/// <remarks>
+/// <para>
+/// There is no discovery, endpoint or key here: the binder comes by the service's component. Requests are oneway
+/// transactions matched by an ID, and each answer comes on the client's reply binder as another, so no thread blocks
+/// while a request runs, and the service never calls into this process synchronously, which Android would kill while
+/// it is frozen.
+/// </para>
+/// <para>
+/// Only the binding has a timeout, 4 seconds; a request's time is the caller's token's. The service tries to answer
+/// every request it takes, even one that fails, and the service's death fails the rest; a request whose answer could
+/// not be delivered waits until the token is canceled or the binding drops.
+/// </para>
+/// </remarks>
+internal sealed class AndroidMessageClient : IMessageClient
 {
     private const string BindingDiedMessage = "VpnService binding has died.";
     private const string DisposedMessage = "VpnService message client has been disposed.";
@@ -36,6 +40,7 @@ public sealed class AndroidMessageClient : IMessageClient
     private bool _disposed;
     private int _lastRequestId;
 
+    /// <summary>Initializes a new instance of the <see cref="AndroidMessageClient"/> class, not yet bound.</summary>
     public AndroidMessageClient()
     {
         _serviceConnection = new MessageServiceConnection(this);
@@ -51,6 +56,17 @@ public sealed class AndroidMessageClient : IMessageClient
             _ = tcs.Task.Exception; // observe faults left behind by detached or timed-out waiters
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="VpnServiceUnreachableException">
+    /// The service could not be bound, did not take the request, failed it, or died or was let go before its answer.
+    /// </exception>
+    /// <exception cref="VpnServiceNotReadyException">Android has ended the service, as at the end of a session.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The request is longer than the channel carries (<see cref="AndroidMessageTransport.MaxBlobLength"/>); or, looking
+    /// for why the service ended, Android gave no package or activity manager, or no no-backup folder.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">The client is disposed.</exception>
+    /// <exception cref="System.OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<Memory<byte>> SendAsync(Memory<byte> request, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -70,8 +86,6 @@ public sealed class AndroidMessageClient : IMessageClient
         try {
             SendRequest(binder, requestId, request);
 
-            // No transport deadline: service death fails pending requests through the disconnect
-            // callbacks, and otherwise the caller's token controls the wait.
             return await tcs.Task.WaitAsync(cancellationToken).Vhc();
         }
         finally {
@@ -164,6 +178,7 @@ public sealed class AndroidMessageClient : IMessageClient
                 FailWaiter(tcs, message);
     }
 
+    /// <summary>Lets the service go, and fails the requests still waiting for their answers.</summary>
     public void Dispose()
     {
         TaskCompletionSource<IBinder> binderTcs;

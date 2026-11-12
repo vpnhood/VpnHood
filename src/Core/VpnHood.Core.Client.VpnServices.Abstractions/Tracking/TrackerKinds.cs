@@ -1,14 +1,21 @@
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 
-// The kinds of tracker an engine may make (TrackerFactoryInfo.Kind), each with its settings' shape. An engine
-// reports the kinds it has (VpnEngineFeatures.TrackerKinds).
+/// <summary>
+/// Provides the kinds of tracker an engine may make (<see cref="VpnHood.Core.Client.Abstractions.TrackerFactoryInfo.Kind"/>),
+/// each with its settings' shape; an engine reports the kinds it has (<see cref="VpnEngineFeatures.TrackerKinds"/>).
+/// </summary>
 public static class TrackerKinds
 {
-    // GA4's own protocol, which an engine in any language may speak: { "MeasurementId": "G-..." }, where no id
-    // sends nothing
+    /// <summary>
+    /// GA4's own protocol, which an engine in any language may speak: <c>ga4</c>, with the settings
+    /// <c>{ "MeasurementId": "G-..." }</c>, where no ID sends nothing.
+    /// </summary>
     public const string Ga4 = "ga4";
 
-    // a .NET factory that a .NET engine makes from its type and its public properties:
-    // { "Type": "<assembly-qualified name>", "Settings": { ... } }; an engine in another language has none
+    /// <summary>
+    /// A .NET factory that a .NET engine makes from its type and its public properties: <c>dotnet</c>, with the settings
+    /// <c>{ "Type": "&lt;assembly-qualified name&gt;", "Settings": { ... } }</c>; an engine in another language has
+    /// none.
+    /// </summary>
     public const string DotNet = "dotnet";
 }

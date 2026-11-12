@@ -12,13 +12,22 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Ios;
 
+/// <summary>
+/// Represents an iPhone, iPad or Apple TV as the VPN app sees it: the VPN service runs in the app's Network Extension,
+/// its packet tunnel provider, which iOS starts.
+/// </summary>
 public class IosDevice : IDevice
 {
     private NETunnelProviderManager _vpnManager = new();
 
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
     private const string VpnServiceDataFolderKey = "VpnServiceDataFolder";
-    public const string VpnServiceConfigFolderName = "vpn-service-config"; // the extension's too (IosVpnService)
+
+    /// <summary>
+    /// The name of the VPN service's config folder in the shared container, the extension's too (<c>IosVpnService</c>):
+    /// <c>vpn-service-config</c>.
+    /// </summary>
+    public const string VpnServiceConfigFolderName = "vpn-service-config";
     private const string VpnServiceDataFolderName = "vpn-service";
 
     // NEVPNProtocol.ServerAddress is a REQUIRED field (SaveToPreferences fails / the Settings entry is
@@ -31,6 +40,10 @@ public class IosDevice : IDevice
     private readonly string _providerBundleId;
     private readonly string _localizedDescription;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IosDevice"/> class, with the VPN service's folders in the shared
+    /// container, the config folder marked to stay out of backups.
+    /// </summary>
     /// <param name="providerBundleId">
     /// The Network Extension's bundle identifier (the Packet Tunnel Provider appex bundle id).
     /// </param>
@@ -44,6 +57,12 @@ public class IosDevice : IDevice
     /// LocalApplicationData is a different path in each process.
     /// </param>
     /// <param name="localizedDescription">The VPN configuration name shown in iOS Settings.</param>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="sharedContainerPath"/> or <paramref name="localizedDescription"/> is empty.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="sharedContainerPath"/> or <paramref name="localizedDescription"/> is <see langword="null"/>.
+    /// </exception>
     public IosDevice(
         string providerBundleId,
         string sharedContainerPath,
@@ -67,22 +86,58 @@ public class IosDevice : IDevice
         VhLogger.Instance.LogInformation("IosDevice created. VpnServiceConfigFolder={Folder}", VpnServiceConfigFolder);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <see cref="VpnServiceConfigFolderName"/> in the shared container, marked to stay out of backups; a mark that cannot
+    /// be set is only logged.
+    /// </remarks>
     public string VpnServiceConfigFolder { get; }
+
+    /// <inheritdoc/>
+    /// <remarks><c>vpn-service</c> in the shared container, which on tvOS is among the caches.</remarks>
     public string VpnServiceDataFolder { get; }
+
     internal NETunnelProviderManager VpnManager => _vpnManager;
 
+    /// <inheritdoc/>
     public bool IsBindProcessToVpnSupported => false;
+
+    /// <inheritdoc/>
     public bool IsQuicSupported => IosQuicClient.IsSupported;
+
+    /// <inheritdoc/>
     public bool IsExcludeAppsSupported => false;
+
+    /// <inheritdoc/>
     public bool IsIncludeAppsSupported => false;
+
+    /// <inheritdoc/>
     public bool IsAlwaysOnSupported => false;
+
+    /// <inheritdoc/>
     public IVpnKillSwitch? KillSwitch => null;
+
+    /// <inheritdoc/>
     public string OsInfo { get; } = $"{UIDevice.CurrentDevice.SystemName}: {UIDevice.CurrentDevice.Model}, {(OperatingSystem.IsTvOS() ? "tvOS" : "iOS")}: {UIDevice.CurrentDevice.SystemVersion}";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// As Safari says it, which names no model; an Apple TV, which has no Safari, as its own media player says it.
+    /// </remarks>
     public DeviceUserAgentInfo UserAgentInfo { get; } = CreateUserAgentInfo();
+
+    /// <inheritdoc/>
     public bool IsTv => OperatingSystem.IsTvOS();
-    public bool IsWaitingForVpnPermission => false; // RequestVpnService asks nothing here
+
+    /// <inheritdoc/>
+    /// <remarks><see cref="RequestVpnService"/> asks nothing here.</remarks>
+    public bool IsWaitingForVpnPermission => false;
+
+    /// <inheritdoc/>
+    /// <remarks>Not known here: <see langword="null"/>.</remarks>
     public DeviceMemInfo? MemInfo => null;
-    public static bool IsVpnServiceProcess => true; // iOS always runs in the VPN service process.
+
+    internal static bool IsVpnServiceProcess => true; // iOS always runs in the VPN service process.
 
     // as Safari says it, which names no model: "(iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15
     // (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", an iPad "iPad; CPU OS 18_0 like Mac OS X";
@@ -101,21 +156,41 @@ public class IosDevice : IDevice
         };
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <see langword="true"/> throws <see cref="NotSupportedException"/>; <see langword="false"/> does nothing.
+    /// </remarks>
     public void BindProcessToVpn(bool value)
     {
         if (value)
             throw new NotSupportedException("Binding process to VPN is not supported on iOS.");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// iOS gives an ordinary VPN app no split by app, per-app VPN being for managed devices, so it always throws
+    /// <see cref="NotSupportedException"/>.
+    /// </remarks>
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) =>
         throw new NotSupportedException("VPN filtering (App Filter) is not supported for regular iOS VPN apps");
 
-
+    /// <inheritdoc/>
+    /// <remarks>
+    /// iOS needs nothing here: it completes at once, and iOS asks the person, the first time, when the start saves the
+    /// VPN configuration.
+    /// </remarks>
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        return Task.CompletedTask; // not needed for iOS, as VPN service is managed by the system.
+        return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It stops a tunnel iOS still runs, waiting up to 4 seconds for its end, saves the VPN configuration, which points
+    /// the extension at the service's folders, and starts the tunnel, saving the configuration again and retrying once
+    /// where the start fails. It returns once iOS reports the tunnel connecting, or after 2 seconds.
+    /// </remarks>
+    /// <exception cref="Foundation.NSErrorException">iOS could not save the VPN configuration or start the tunnel.</exception>
     public async Task StartVpnService(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(
@@ -245,10 +320,13 @@ public class IosDevice : IDevice
             throw error.ToException();
     }
 
+    /// <summary>Does nothing: iOS owns the tunnel's lifetime.</summary>
     public void Dispose()
     {
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It sends each request to the running tunnel as a provider message.</remarks>
     public IMessageClient CreateMessageClient()
     {
         return new IosMessageClient(this);

@@ -14,20 +14,37 @@ using VpnHood.Net.VpnAdapters.WinTun;
 
 namespace VpnHood.Core.Client.Devices.WindowsTun;
 
-// The kill switch's block on Windows: the Windows Filtering Platform's own filters, under a provider and a
-// sublayer of ours. They are persistent: the Base Filtering Engine keeps them through a crash of the service and
-// loads them at boot, before any app starts, so the block holds through both: a crash lifting it would defeat
-// its purpose. Not a dynamic session's, which the engine deletes with its process: WireGuard for Windows uses one,
-// and its block goes with a crash. The connect and accept layers (ALE) judge a connection once, nothing per packet;
-// the forward layers judge what Windows routes itself, which would otherwise go around the block. They have no port
-// field, so DNS routed to an address of the split passes. A known limit: WinNAT's traffic - WSL2's NAT mode, so
-// Docker Desktop's too - is seen by no WFP layer (a block at the forward, IP packet, transport, connect and vSwitch
-// layers stopped none of it, seen on Windows Server 2025 with WSL 3.0.3), so it goes into the tunnel while one is
-// up and around the block while none is. The Hyper-V firewall could stop it only while the service runs, never
-// after a crash. The keys are the SDK's, so every app built on VpnHood shares the one block; the provider's data
-// names the app whose block it is by its storage folder, which an update keeps, where the exe's folder changes.
-// Needs an administrator: the service, which runs as SYSTEM. serviceName: the service whose processes the block lets
-// out; null in a run as the person, whose block lets out none of its processes.
+/// <summary>
+/// Represents the kill switch's block on Windows: the Windows Filtering Platform's own filters, under a provider and a
+/// sublayer of ours.
+/// </summary>
+/// <param name="owner">
+/// The app's storage folder, which names the app whose block it is and an update keeps, where the exe's folder changes.
+/// </param>
+/// <param name="serviceName">
+/// The service whose processes the block lets out; <see langword="null"/> in a run as the person, whose block lets out
+/// none of its processes.
+/// </param>
+/// <remarks>
+/// <para>
+/// The filters are persistent: the Base Filtering Engine keeps them through a crash of the service and restores them
+/// when it starts at boot, so the block holds through both, as a crash lifting it would defeat its purpose. They are
+/// not boot-time filters, so they hold once the engine has started. Not a dynamic session's, which the engine deletes
+/// with its process: WireGuard for Windows uses one, and its block goes with a crash.
+/// </para>
+/// <para>
+/// The connect and accept layers (ALE) judge a flow at its start, and again where Windows reauthorizes it, nothing per
+/// packet; the forward layers judge what
+/// Windows routes itself, which would otherwise go around the block. They have no port field, so DNS routed to an
+/// address of the split passes. A known limit: WinNAT's traffic — WSL2's NAT mode, so Docker Desktop's too — is seen by
+/// no WFP layer (seen on Windows Server 2025 with WSL 3.0.3), so it goes into the tunnel while one is up and around the
+/// block while none is. The Hyper-V firewall could stop it only while the service runs, never after a crash.
+/// </para>
+/// <para>
+/// The keys are the SDK's, so every app built on VpnHood shares the one block; the provider's data names the app whose
+/// block it is. It needs an administrator: the service, which runs as SYSTEM.
+/// </para>
+/// </remarks>
 public sealed class WindowsVpnKillSwitch(string owner, string? serviceName) : IVpnKillSwitch
 {
     private static readonly Guid ProviderKey = new("7e45054d-79d4-41a8-9bc4-f1409b25dcfe");
@@ -62,6 +79,9 @@ public sealed class WindowsVpnKillSwitch(string owner, string? serviceName) : IV
     // one change at a time in this process; the engine's transaction keeps other processes' apart
     private static readonly Lock ChangeLock = new();
 
+    /// <inheritdoc/>
+    /// <remarks>It runs at once; the token is not watched.</remarks>
+    /// <exception cref="Win32Exception">The filtering engine could not be opened or read.</exception>
     public Task<bool> IsBlocking(CancellationToken cancellationToken)
     {
         lock (ChangeLock) {
@@ -75,6 +95,9 @@ public sealed class WindowsVpnKillSwitch(string owner, string? serviceName) : IV
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It runs at once, in one transaction of the filtering engine; the token is not watched.</remarks>
+    /// <exception cref="Win32Exception">The filtering engine refused a change, as without an administrator.</exception>
     public Task Block(VpnKillSwitchRules rules, CancellationToken cancellationToken)
     {
         lock (ChangeLock) {
@@ -101,6 +124,9 @@ public sealed class WindowsVpnKillSwitch(string owner, string? serviceName) : IV
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It runs at once, in one transaction of the filtering engine; the token is not watched.</remarks>
+    /// <exception cref="Win32Exception">The filtering engine refused a change, as without an administrator.</exception>
     public Task Unblock(bool anyApp, CancellationToken cancellationToken)
     {
         lock (ChangeLock) {

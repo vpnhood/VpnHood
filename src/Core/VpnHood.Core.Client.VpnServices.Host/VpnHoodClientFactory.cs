@@ -12,16 +12,33 @@ using VpnHood.Net.Toolkit.Extensions;
 namespace VpnHood.Core.Client.VpnServices.Host;
 
 /// <summary>
-/// The default VpnHoodClient composition: resolves <see cref="VpnServiceOptions"/> into the services the
-/// client needs (split-db filter gates, proxy connector, tracker) and constructs the client.
-/// <see cref="Create"/> is the skeleton and each step is virtual, so a derived factory replaces a single
-/// piece and inherits the rest. The host obtains the factory per connection via
-/// <see cref="IVpnServiceHandler.CreateClientFactory"/>, composes the NetFilter and keeps ownership of
-/// the created client. The filter pipes are self-updating (their stages re-read the filter folder
-/// manifests when Reconfigure rolls down them), so nothing here is retained for live updates.
+/// Represents the default composition of a <see cref="VpnHoodClient"/>: it turns <see cref="VpnServiceOptions"/> into
+/// the services the client needs — the split filters, the proxy connector, the tracker — and makes the client.
 /// </summary>
+/// <remarks>
+/// <see cref="Create"/> is the skeleton and each step is virtual, so a derived factory replaces a single piece and
+/// inherits the rest. The host gets the factory for each connection from
+/// <see cref="IVpnServiceHandler.CreateClientFactory"/>, composes the client's filter, and keeps ownership of the made
+/// client. The filters update themselves — their stages read the filter folders' manifests again when a reconfigure
+/// rolls down them — so nothing here is kept for live updates.
+/// </remarks>
 public class VpnHoodClientFactory
 {
+    /// <summary>Makes the client for a connection.</summary>
+    /// <param name="clientParams">What the host prepared for the connection.</param>
+    /// <param name="netFilter">The client's filter, which the host composed and the client owns once it is made.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the client.</returns>
+    /// <exception cref="FormatException">The access key is not one.</exception>
+    /// <exception cref="NotSupportedException">The access key's version is not 4.</exception>
+    /// <exception cref="System.Text.Json.JsonException">The access key's JSON is not valid.</exception>
+    /// <exception cref="InvalidDataException">The access key's JSON is <c>null</c>.</exception>
+    /// <exception cref="OverflowException">A duration in the access key is out of range.</exception>
+    /// <exception cref="InvalidOperationException">The access key has no farm secret.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// The options' longest packet channel life, where finite, is below their shortest.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public virtual async Task<VpnHoodClient> Create(VpnHoodClientParams clientParams, NetFilter netFilter,
         CancellationToken cancellationToken)
     {
@@ -37,14 +54,29 @@ public class VpnHoodClientFactory
             knownHostAddresses: clientParams.KnownHostAddresses);
     }
 
-    // The filter the split-ip gates chain over: it is evaluated first and its veto wins. Null means no
-    // filter under the gates; a derived factory overrides this to put its own policy under them.
+    /// <summary>
+    /// Makes the filter the split-IP gates chain over, which is evaluated first and whose veto wins: a derived factory's
+    /// own policy under the gates. By default there is none.
+    /// </summary>
+    /// <param name="clientParams">What the host prepared for the connection.</param>
+    /// <returns>The filter, or <see langword="null"/> for none under the gates.</returns>
     protected virtual IIpFilter? CreateInnerIpFilter(VpnHoodClientParams clientParams) => null;
 
-    // the domain twin of CreateInnerIpFilter
+    /// <summary>
+    /// Makes the domain filter under the split-domain gates. Unlike the IP one (<see cref="CreateInnerIpFilter"/>), it
+    /// comes second: it hears only of a domain the gates leave to it, so a gate's include wins over its block. By
+    /// default there is none.
+    /// </summary>
+    /// <param name="clientParams">What the host prepared for the connection.</param>
+    /// <returns>The filter, or <see langword="null"/> for none under the gates.</returns>
     protected virtual IDomainFilter? CreateInnerDomainFilter(VpnHoodClientParams clientParams) => null;
 
-    // no default mapper; an injection point for derived factories (e.g. tests map fake ips to mock servers)
+    /// <summary>
+    /// Makes the mapper of the client's destinations, a derived factory's, as tests map fake addresses to mock servers.
+    /// By default there is none.
+    /// </summary>
+    /// <param name="clientParams">What the host prepared for the connection.</param>
+    /// <returns>The mapper, or <see langword="null"/> for none.</returns>
     public virtual IIpMapper? CreateIpMapper(VpnHoodClientParams clientParams) => null;
 
     // Builds the ip filter pipe the client filters with. Each split-ip db (country, via-app) is a lean
@@ -53,7 +85,7 @@ public class VpnHoodClientFactory
     // manifest (the app rewrites it before signaling a reconfigure), so when the Reconfigure command
     // rolls down the pipe the stage finds the current signature-versioned dbs there and swaps its own
     // gates — no db path ever travels through vpn.config or the reconfigure request.
-    public async Task<IIpFilter> CreateIpFilter(VpnHoodClientParams clientParams,
+    internal async Task<IIpFilter> CreateIpFilter(VpnHoodClientParams clientParams,
         CancellationToken cancellationToken)
     {
         return await SqliteIpFilterChain.Create(CreateInnerIpFilter(clientParams),
@@ -61,7 +93,7 @@ public class VpnHoodClientFactory
             autoDisposeNextFilter: true, cancellationToken).Vhc();
     }
 
-    public async Task<IDomainFilter> CreateDomainFilter(VpnHoodClientParams clientParams,
+    internal async Task<IDomainFilter> CreateDomainFilter(VpnHoodClientParams clientParams,
         CancellationToken cancellationToken)
     {
         return await SqliteDomainFilterChain.Create(CreateInnerDomainFilter(clientParams),
@@ -69,8 +101,14 @@ public class VpnHoodClientFactory
             autoDisposeNextFilter: true, cancellationToken).Vhc();
     }
 
-    // External proxies. Simple mode is the lightweight path (no store); Managed mode uses the shared SQLite
-    // endpoint store that the app process also reads/writes. Null means no proxy: connections go direct.
+    /// <summary>
+    /// Makes the connector of the person's proxies: a simple one for a single proxy, without a store; a managed one over
+    /// the SQLite store the app's process shares; or none, so connections go direct.
+    /// </summary>
+    /// <param name="clientParams">What the host prepared for the connection.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the connector, or <see langword="null"/> for none.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected virtual async Task<IProxyConnector?> CreateProxyConnector(VpnHoodClientParams clientParams,
         CancellationToken cancellationToken)
     {
@@ -88,7 +126,13 @@ public class VpnHoodClientFactory
         };
     }
 
-    // The app's trackers, made again here from their factories' types: null when there are none.
+    /// <summary>
+    /// Makes the app's trackers again in this process, from their factories' types
+    /// (<see cref="VpnHood.Core.Client.Abstractions.ClientOptions.TrackerFactoryInfos"/>), switched on or off as
+    /// <see cref="VpnHood.Core.Client.Abstractions.ClientOptions.AllowAnonymousTracker"/> says.
+    /// </summary>
+    /// <param name="clientParams">What the host prepared for the connection.</param>
+    /// <returns>The tracker, or <see langword="null"/> where there are none.</returns>
     protected virtual ITracker? CreateTracker(VpnHoodClientParams clientParams)
     {
         var clientOptions = clientParams.ServiceOptions.ClientOptions;

@@ -3,11 +3,17 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Ios.Utils;
 
-// A folder that stays on this iPhone: iOS leaves a folder carrying the do-not-back-up flag, and all in
-// it, out of iCloud and computer backups and a transfer to a new iPhone. A folder made anew has lost
-// the flag, so it is set at each start.
+/// <summary>
+/// Provides a folder marked to stay on this iPhone: it carries the do-not-back-up flag, which asks iOS to leave it, and
+/// all in it, out of iCloud and computer backups and a transfer to a new iPhone.
+/// </summary>
 public static class IosNoBackupFolder
 {
+    /// <summary>
+    /// Makes a folder where it is missing, and sets its do-not-back-up flag, as a folder made anew has lost it; a flag
+    /// that cannot be set is logged.
+    /// </summary>
+    /// <param name="folderPath">The folder's path.</param>
     public static void Create(string folderPath)
     {
         Directory.CreateDirectory(folderPath);

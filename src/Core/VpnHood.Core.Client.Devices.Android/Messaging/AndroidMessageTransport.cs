@@ -3,43 +3,58 @@ using Android.OS;
 
 namespace VpnHood.Core.Client.Devices.Android.Messaging;
 
-// Shared contract of the binder-based VpnService message channel. The channel carries the same
-// opaque request/response blobs as the other IMessageListener/IMessageClient transports; framing
-// and serialization stay in ApiController / VpnServiceManager.
-//
-// Every transaction is oneway: a request carries a requestId, the client's reply binder and the
-// request blob; the service dispatches the handler and returns immediately, then answers on the
-// reply binder. Nothing may be sent to the app synchronously — the system kills a frozen (cached)
-// process that receives a synchronous transaction, and the app is frozen exactly while it waits for
-// a reply. A oneway transaction is buffered until the app thaws instead. No thread on either side
-// blocks while a request handler runs. Public, as its two ends live in two projects: the app's client here
-// (AndroidMessageClient), the VPN service's listener on the VPN service's side (AndroidMessageListener).
+/// <summary>
+/// Provides the contract of the binder channel between the app and its Android VPN service, which both ends use: the
+/// app's client (<c>AndroidMessageClient</c>) and the service's listener (<c>AndroidMessageListener</c>).
+/// </summary>
+/// <remarks>
+/// It carries the same request and answer bytes as the other channels. Every transaction is oneway: a request carries
+/// its ID, the client's reply binder and its bytes, and the service answers on the reply binder. Nothing may go to the
+/// app synchronously: Android kills a frozen process that receives a synchronous transaction, and the app may be
+/// frozen, as a cached process, while it waits for a reply, while a oneway transaction waits until it thaws. No thread
+/// on either side blocks while a request runs.
+/// </remarks>
 public static class AndroidMessageTransport
 {
     private const int DefaultMaxIpcSize = 64 * 1024;
     private const int ParcelOverheadAllowance = 4 * 1024;
+
+    /// <summary>The longest error message a failed answer carries: 4,096 characters.</summary>
     public const int MaxErrorMessageLength = 4 * 1024;
 
-    // Leave room for the interface token, request metadata and Binder bookkeeping.
+    /// <summary>
+    /// The longest request or answer, in bytes: the IPC size Android suggests, 64 KB before Android 11, less 4 KB for the
+    /// interface token, the request's own data and Binder's bookkeeping.
+    /// </summary>
     public static readonly int MaxBlobLength =
         (OperatingSystem.IsAndroidVersionAtLeast(30)
             ? IBinder.SuggestedMaxIpcSizeBytes
             : DefaultMaxIpcSize) - ParcelOverheadAllowance;
 
-    // OnBind action that selects the message channel; any other action (especially the system's
-    // android.net.VpnService) must fall through to VpnService.OnBind
+    /// <summary>
+    /// The action of the bind that selects the channel; any other, as the system's <c>android.net.VpnService</c>, must
+    /// go on to <c>VpnService.OnBind</c>.
+    /// </summary>
     public const string BindAction = "com.vpnhood.core.vpnservice.MESSAGE";
 
-    // parcel interface token verified on both sides of each transaction
+    /// <summary>The interface token each transaction's parcel carries, which both sides check.</summary>
     public const string InterfaceToken = "com.vpnhood.core.vpnservice.IMessageTransport";
 
-    // client -> service, oneway: [requestId:int, replyBinder:IBinder, request:byte[]] (IBinder.FIRST_CALL_TRANSACTION)
+    /// <summary>
+    /// The code of a request, client to service, oneway: its ID, the reply binder and its bytes
+    /// (<c>IBinder.FIRST_CALL_TRANSACTION</c>).
+    /// </summary>
     public const int RequestTransactionCode = 1;
 
-    // service -> client reply binder, oneway: [requestId:int, success:int, response:byte[] | errorMessage:string]
+    /// <summary>
+    /// The code of an answer, service to the client's reply binder, oneway: the request's ID, whether it succeeded, and
+    /// its bytes or its error message.
+    /// </summary>
     public const int ReplyTransactionCode = 2;
 
-    // writes a blob without cloning when the memory is array-backed (the parcel copies it anyway)
+    /// <summary>Writes bytes to a parcel, without a copy of its own where the memory is an array's.</summary>
+    /// <param name="data">The parcel.</param>
+    /// <param name="blob">The bytes.</param>
     public static void WriteBlob(Parcel data, Memory<byte> blob)
     {
         if (MemoryMarshal.TryGetArray<byte>(blob, out var segment))

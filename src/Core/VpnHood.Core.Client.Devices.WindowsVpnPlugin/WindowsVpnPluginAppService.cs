@@ -1,12 +1,14 @@
 namespace VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 
-// The package's app service, the VPN host's control channel, as both its ends name it: the app's client
-// (WindowsVpnPluginAppServiceClient) and the VPN host's listener (WindowsVpnPluginAppServiceListener).
+/// <summary>
+/// Provides the names of the package's app service, the VPN host's control channel, as both its ends use them: the app's
+/// client (<see cref="WindowsVpnPluginAppServiceClient"/>) and the VPN host's listener.
+/// </summary>
 public static class WindowsVpnPluginAppService
 {
-    // the package manifest's uap:AppService Name
+    /// <summary>The app service's name, as the package manifest's <c>uap:AppService</c> gives it: <c>VpnService</c>.</summary>
     public const string Name = "VpnService";
 
-    // the one value of each message
+    /// <summary>The key of each message's one value, its bytes: <c>Message</c>.</summary>
     public const string MessageKey = "Message";
 }

@@ -9,18 +9,27 @@ namespace VpnHood.Core.Client.Abstractions;
 // refused by the server's word.
 // Serialized by name (settings.json and vpn.config): the stored value stays readable and adding a mode can
 // never reinterpret a saved one.
-// A name this side does not know reads as Block: fail-closed: a mode this side does not know never sends
-// traffic around the tunnel.
+/// <summary>
+/// Specifies what happens to traffic that wants the tunnel and is for a destination the server does not route: outside
+/// its ranges, or of an IP version it does not carry.
+/// </summary>
+/// <remarks>
+/// The user's own exclusions and blocks always win. In JSON it is a name; a name this version does not know reads as
+/// <see cref="Block"/>, which never sends traffic around the tunnel.
+/// </remarks>
 [JsonConverter(typeof(JsonStringEnumFallbackConverter<SplitUnsupportedIpMode>))]
 [JsonEnumFallback(SplitUnsupportedIpMode.Block)]
 public enum SplitUnsupportedIpMode
 {
-    // Unsupported destinations connect directly, outside the VPN. Keeps everything working (the classic
-    // behavior) at the cost of a leak: an observer sees the traffic the server declined. This is the default.
+    /// <summary>
+    /// The traffic goes directly, outside the VPN: everything keeps working, and an observer sees the traffic the
+    /// server declined.
+    /// </summary>
     Exclude,
 
-    // Unsupported destinations are dropped, never sent around the tunnel — fail-closed. Also requires the
-    // adapter to capture them (the capture set ignores the server's adapter ranges in this mode): an
-    // uncaptured packet is routed by the OS and can not be blocked.
+    /// <summary>
+    /// The traffic is dropped, never sent around the tunnel. The adapter then captures it, whatever the server's adapter
+    /// ranges say, as a packet it does not capture cannot be blocked.
+    /// </summary>
     Block
 }

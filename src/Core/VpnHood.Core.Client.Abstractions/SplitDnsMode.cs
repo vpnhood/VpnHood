@@ -9,18 +9,32 @@ namespace VpnHood.Core.Client.Abstractions;
 // to exclude. That is why the default keeps all of it inside.
 // Serialized by name (settings.json and vpn.config): the stored value stays readable and adding a mode can
 // never reinterpret a saved one.
-// A name this side does not know reads as IncludeAll: the mode that leaks no DNS query.
+/// <summary>
+/// Specifies where DNS may go, whatever the other splits say.
+/// </summary>
+/// <remarks>
+/// A resolver reached around the tunnel shows the local network every name the user looks up, and lets it answer, so
+/// the default keeps DNS inside. In JSON it is a name; a name this version does not know reads as
+/// <see cref="IncludeAll"/>.
+/// </remarks>
 [JsonConverter(typeof(JsonStringEnumFallbackConverter<SplitDnsMode>))]
 [JsonEnumFallback(SplitDnsMode.IncludeAll)]
 public enum SplitDnsMode
 {
-    // Every DNS query goes through the tunnel, past any split that would push it out. A query the server
-    // can not deliver dies at the server rather than being sent around the tunnel: a dead query is a
-    // visible failure, a leaked one is silent. Include or drop, never leak. Whether the local network is
-    // captured at all remains the device include set's business. This is the default.
+    /// <summary>
+    /// DNS the tunnel captures goes through it, past any split that would send it out, though a filter's block still
+    /// drops it; a query the server cannot deliver fails there rather than going around the tunnel. The default.
+    /// </summary>
+    /// <remarks>
+    /// DNS is told by its destination port: 53, or 853 for DNS over TLS or QUIC. DNS over HTTPS, on port 443, cannot be
+    /// told from other HTTPS and follows the splits. What the device's ranges leave uncaptured, as the local network may
+    /// be, never reaches the tunnel.
+    /// </remarks>
     IncludeAll,
 
-    // No DNS rule at all: DNS follows the same splits as any other traffic. Leaks whatever they exclude —
-    // kept as the escape hatch for a setup the forcing breaks.
+    /// <summary>
+    /// No rule for DNS: it follows the splits as any traffic does, and leaks what they exclude. A way out for a setup the
+    /// default breaks.
+    /// </summary>
     DefaultRoute
 }

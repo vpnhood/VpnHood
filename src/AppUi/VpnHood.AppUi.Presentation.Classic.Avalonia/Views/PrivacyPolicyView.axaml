@@ -29,7 +29,7 @@
         </Button>
       </StackPanel>
       <controls:SettingsToggleItem x:Name="TrackerItem" Margin="0,16,0,0" IsVisible="False" />
-      <Button x:Name="AcceptButton" Classes="pill btn3 block" Margin="0,16,0,0" Click="OnAcceptClick"
+      <Button x:Name="AcceptButton" Classes="btn-main block" Margin="0,16,0,0" Click="OnAcceptClick"
               Content="{Binding AcceptAndContinue, Source={x:Static res:Strings.Current}}" />
     </StackPanel>
     <!-- a box between the title and Accept rather than the page's scroller: it keeps to the inset.

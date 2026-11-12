@@ -24,8 +24,8 @@
         <Border x:Name="StepsCard" Classes="card-on-grad" Padding="16,12" IsVisible="False">
           <StackPanel Spacing="10">
             <StackPanel x:Name="Steps" Spacing="8" />
-            <Button x:Name="ActionButton" Classes="pill btn1 block" IsVisible="False" Click="OnActionClick" />
-            <Button x:Name="SkipButton" Classes="pill btn2 block" IsVisible="False" Click="OnSkipClick"
+            <Button x:Name="ActionButton" Classes="btn-main block" IsVisible="False" Click="OnActionClick" />
+            <Button x:Name="SkipButton" Classes="btn-text block" IsVisible="False" Click="OnSkipClick"
                     Content="{Binding Skip, Source={x:Static res:Strings.Current}}" />
           </StackPanel>
         </Border>
@@ -44,7 +44,7 @@
         <Border x:Name="PremiumCard" Classes="card-on-grad" Padding="16,12" IsVisible="False">
           <StackPanel Spacing="12">
             <TextBlock Classes="body-medium" TextWrapping="Wrap" Text="{Binding GoPremiumAndUnlockFeatures, Source={x:Static res:Strings.Current}}" />
-            <Button x:Name="PremiumButton" Classes="pill btn1 block" Click="OnPremiumClick">
+            <Button x:Name="PremiumButton" Classes="btn-main block" Click="OnPremiumClick">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Crown}" />
                 <TextBlock Text="{Binding GoPremium, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />

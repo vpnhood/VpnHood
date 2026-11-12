@@ -140,13 +140,13 @@
                 </Button>
               </Grid>
               <Grid ColumnDefinitions="*,*" Margin="16,0">
-                <Button x:Name="AddButton" Classes="tonal-highlight pill block" Margin="0,0,4,0" Click="OnAddClick">
+                <Button x:Name="AddButton" Classes="btn-secondary block" Margin="0,0,4,0" Click="OnAddClick">
                   <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                     <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Plus}" VerticalAlignment="Center" />
                     <TextBlock Classes="body-small" Text="{Binding Add, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
                   </StackPanel>
                 </Button>
-                <Button x:Name="AddListButton" Grid.Column="1" Classes="tonal-highlight pill block" Margin="4,0,0,0" Click="OnAddListClick">
+                <Button x:Name="AddListButton" Grid.Column="1" Classes="btn-secondary block" Margin="4,0,0,0" Click="OnAddListClick">
                   <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                     <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.PlaylistPlus}" VerticalAlignment="Center" />
                     <TextBlock Classes="body-small" Text="{Binding AddList, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />

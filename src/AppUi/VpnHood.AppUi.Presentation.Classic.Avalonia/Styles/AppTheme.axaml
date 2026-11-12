@@ -655,21 +655,6 @@
     <Setter Property="Opacity" Value="0.6" />
   </Style>
 
-  <!-- Add server (btn-style-2, tonal): the product's second colour on a wash of itself -->
-  <Style Selector="Button.tonal">
-    <Setter Property="Background" Value="{StaticResource BtnStyle2TonalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource BtnStyle2Brush}" />
-    <Setter Property="BorderThickness" Value="2" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="CornerRadius" Value="20" />
-    <Setter Property="MinHeight" Value="40" />
-    <Setter Property="Padding" Value="16,6" />
-    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-  </Style>
-  <Style Selector="Button.tonal:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
-  </Style>
-
   <!-- a location group's header: the title with a rule and a chevron -->
   <Style Selector="ToggleButton.group-header">
     <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />
@@ -780,8 +765,8 @@
   </Style>
 
   <!-- ======================================================================================
-       The rest of the shapes, for the pages beyond the home: the button styles
-       (BtnStyle1..7, TonalIconBtn), the chips and alerts, the cards, the
+       The rest of the shapes, for the pages beyond the home: the button looks
+       and the icon buttons, the chips and alerts, the cards, the
        switch, the radio and check rows, the drawer, the dialogs and the snackbar.
        ====================================================================================== -->
 
@@ -834,45 +819,15 @@
     <Setter Property="Background" Value="{StaticResource BtnDisabledBrush}" />
     <Setter Property="Foreground" Value="{StaticResource OnBtnDisabledBrush}" />
   </Style>
-  <!-- BtnStyle1: flat, btn-style-1 -->
-  <Style Selector="Button.btn1">
-    <Setter Property="Background" Value="{StaticResource BtnStyle1Brush}" />
-    <Setter Property="Foreground" Value="{StaticResource OnBtnStyle1Brush}" />
-    <Setter Property="FontWeight" Value="Bold" />
-  </Style>
-  <!-- BtnStyle2: flat, btn-style-2 -->
-  <Style Selector="Button.btn2">
-    <Setter Property="Background" Value="{StaticResource BtnStyle2Brush}" />
-    <Setter Property="Foreground" Value="{StaticResource OnBtnStyle2Brush}" />
-  </Style>
-  <!-- BtnStyle3: flat, btn-style-3 -->
-  <Style Selector="Button.btn3">
-    <Setter Property="Background" Value="{StaticResource BtnStyle3Brush}" />
-    <Setter Property="Foreground" Value="{StaticResource OnBtnStyle3Brush}" />
-  </Style>
-  <!-- BtnStyle5: tonal, btn-style-5 (gray), comfortable -->
-  <Style Selector="Button.btn5">
-    <Setter Property="Background" Value="{StaticResource BtnStyle5TonalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource BtnStyle5Brush}" />
-  </Style>
   <!-- variant="text" in the highlight colour: a link-like button -->
   <Style Selector="Button.text-highlight">
     <Setter Property="Foreground" Value="{StaticResource HighlightBrush}" />
     <Setter Property="Padding" Value="8,4" />
   </Style>
-  <!-- variant="tonal" in the highlight colour -->
+  <!-- an icon button in the highlight colour on a wash of it (the proxies' reload) -->
   <Style Selector="Button.tonal-highlight">
     <Setter Property="Background" Value="{StaticResource HighlightTonalBrush}" />
     <Setter Property="Foreground" Value="{StaticResource HighlightBrush}" />
-  </Style>
-  <Style Selector="Button.tonal-error">
-    <Setter Property="Background" Value="{StaticResource ErrorTonalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
-  </Style>
-  <!-- the page's dark colour as text: white on the error red is 3.2:1 -->
-  <Style Selector="Button.flat-error">
-    <Setter Property="Background" Value="{StaticResource ErrorBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
   </Style>
   <Style Selector="Button.tonal-white">
     <Setter Property="Background" Value="{StaticResource WhiteTonalBrush}" />
@@ -1304,14 +1259,15 @@
   <Style Selector="Border.dialog.alert Button.alert-link">
     <Setter Property="Foreground" Value="{StaticResource OnDialogAlertBrush}" />
   </Style>
-  <Style Selector="Border.dialog.alert Button.dialog-action">
-    <Setter Property="Background" Value="{StaticResource DialogAlertBtnTonalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource DialogAlertBtnBrush}" />
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
-  </Style>
-  <Style Selector="Border.dialog.alert Button.dialog-action.flat">
+  <!-- Main and Secondary on the light card: the looks' light colours would vanish on it, so here they
+       take the card's dark colour, filled or as a wash -->
+  <Style Selector="Border.dialog.alert Button.btn-main">
     <Setter Property="Background" Value="{StaticResource DialogAlertBtnBrush}" />
     <Setter Property="Foreground" Value="{StaticResource DialogAlertBrush}" />
+  </Style>
+  <Style Selector="Border.dialog.alert Button.btn-secondary">
+    <Setter Property="Background" Value="{StaticResource DialogAlertBtnTonalBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource DialogAlertBtnBrush}" />
   </Style>
   <Style Selector="Border.dialog.active">
     <Setter Property="Background" Value="{StaticResource ActiveBrush}" />
@@ -1338,7 +1294,7 @@
   </Style>
   <!-- the ring is white for dark cards; on a light card a text button's ring is in the card's words'
        colour, or it would not show -->
-  <Style Selector="Border.dialog.alert Button:not(.dialog-action):focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.dialog.alert Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderBrush" Value="{StaticResource OnDialogAlertBrush}" />
   </Style>
   <Style Selector="Border.dialog.active Button:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
@@ -1347,7 +1303,7 @@
   <!-- a white button (a store's sign-in) or a filled one on the light card: white or the card's
        colour would each match the fill or the card around it, so the ring is the accent a focused
        text box has -->
-  <Style Selector="Button.light:focus-visible /template/ ContentPresenter#PART_ContentPresenter, Border.dialog.alert Button.dialog-action:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Button.light:focus-visible /template/ ContentPresenter#PART_ContentPresenter, Border.dialog.alert Button.btn-main:focus-visible /template/ ContentPresenter#PART_ContentPresenter, Border.dialog.alert Button.btn-secondary:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BorderBrush" Value="{StaticResource HighlightBrush}" />
   </Style>
   <!-- the rows of a dialog's list (the badge dialog): a rule between them in the dialog's tone -->
@@ -1441,23 +1397,6 @@
   <Style Selector="Border.update-notice ProgressBar">
     <Setter Property="Foreground" Value="{StaticResource HighlightBrush}" />
     <Setter Property="Background" Value="{StaticResource WhiteTonalBrush}" />
-  </Style>
-  <!-- the way forward filled in the highlight with the page's dark colour as text, as on the snackbar;
-       the others white on white at 16%. The ring's room is kept, so the focus moves nothing. -->
-  <Style Selector="Border.update-notice Button.update-btn">
-    <Setter Property="Background" Value="{StaticResource HighlightBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource BackgroundBrush}" />
-    <Setter Property="FontSize" Value="14" />
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="MinHeight" Value="40" />
-    <Setter Property="CornerRadius" Value="20" />
-    <Setter Property="Padding" Value="16,6" />
-  </Style>
-  <Style Selector="Border.update-notice Button.update-btn.secondary">
-    <Setter Property="Background" Value="{StaticResource WhiteTonalBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource OnBackgroundBrush}" />
-    <Setter Property="FontWeight" Value="Normal" />
   </Style>
 
   <!-- the feature pages: the gradient sheet, the image, the numbered steps.

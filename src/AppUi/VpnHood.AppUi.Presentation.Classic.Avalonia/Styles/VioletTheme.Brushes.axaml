@@ -41,7 +41,6 @@
   <SolidColorBrush x:Key="CountDownWarningBrush" Color="{StaticResource Red100}" />
   <SolidColorBrush x:Key="CountDownWarningTonalBrush" Color="#29ff7070" />
   <SolidColorBrush x:Key="GoPremiumBtnBrush" Color="{StaticResource Cream100}" />
-  <SolidColorBrush x:Key="GoPremiumBtnTonalBrush" Color="#29e7b481" />
   <SolidColorBrush x:Key="OnGoPremiumBtnBrush" Color="{StaticResource Purple500}" />
   <SolidColorBrush x:Key="PromotePremiumBorderBrush" Color="{StaticResource Purple200}" />
   <SolidColorBrush x:Key="PromotePremiumColorPremiumBrush" Color="{StaticResource Green200}" />
@@ -49,18 +48,12 @@
   <SolidColorBrush x:Key="PromotePremiumColorFreeBrush" Color="{StaticResource Purple200}" />
   <SolidColorBrush x:Key="OnPromotePremiumColorFreeBrush" Color="{StaticResource Purple500}" />
   <SolidColorBrush x:Key="PremiumFeaturesIconBrush" Color="{StaticResource Purple200}" />
-  <SolidColorBrush x:Key="PremiumCodeBtnBrush" Color="{StaticResource Purple200}" />
-  <SolidColorBrush x:Key="PremiumCodeBtnTonalBrush" Color="#297b7afe" />
-  <SolidColorBrush x:Key="PurchaseSubscriptionBtnBrush" Color="{StaticResource Green200}" />
-  <SolidColorBrush x:Key="OnPurchaseSubscriptionBtnBrush" Color="{StaticResource Purple600}" />
   <SolidColorBrush x:Key="SuppressSnackbarBrush" Color="{StaticResource Cream100}" />
   <SolidColorBrush x:Key="OnSuppressSnackbarBrush" Color="{StaticResource Gray800}" />
   <SolidColorBrush x:Key="UpdateSnackbarAlertBrush" Color="{StaticResource Purple200}" />
   <SolidColorBrush x:Key="UpdateSnackbarAlertTonalBrush" Color="#297b7afe" />
   <SolidColorBrush x:Key="UpdateSnackbarWarningBrush" Color="{StaticResource Cream100}" />
   <SolidColorBrush x:Key="UpdateSnackbarWarningTonalBrush" Color="#29e7b481" />
-  <SolidColorBrush x:Key="BtnOnUpdateSnackbarBrush" Color="{StaticResource Purple500}" />
-  <SolidColorBrush x:Key="BtnOnUpdateSnackbarTonalBrush" Color="#29150e3d" />
   <SolidColorBrush x:Key="ConnectionSpeedBrush" Color="{StaticResource Purple200}" />
   <SolidColorBrush x:Key="TotalBandwidthBrush" Color="{StaticResource Purple200}" />
   <SolidColorBrush x:Key="ExpireDateAlertBrush" Color="{StaticResource Purple100}" />
@@ -108,16 +101,8 @@
   <SolidColorBrush x:Key="OnBtnDangerBrush" Color="{StaticResource Purple500}" />
   <SolidColorBrush x:Key="BtnDisabledBrush" Color="{StaticResource Purple300}" />
   <SolidColorBrush x:Key="OnBtnDisabledBrush" Color="#ffffff" />
-  <SolidColorBrush x:Key="BtnStyle1Brush" Color="{StaticResource Green200}" />
-  <SolidColorBrush x:Key="OnBtnStyle1Brush" Color="{StaticResource Purple500}" />
   <SolidColorBrush x:Key="BtnStyle2Brush" Color="{StaticResource Purple150}" />
-  <SolidColorBrush x:Key="BtnStyle2TonalBrush" Color="#299796fe" />
   <SolidColorBrush x:Key="OnBtnStyle2Brush" Color="{StaticResource Purple500}" />
-  <SolidColorBrush x:Key="BtnStyle3Brush" Color="{StaticResource Cream100}" />
-  <SolidColorBrush x:Key="OnBtnStyle3Brush" Color="{StaticResource Purple500}" />
-  <SolidColorBrush x:Key="BtnStyle5Brush" Color="{StaticResource Gray300}" />
-  <SolidColorBrush x:Key="BtnStyle5TonalBrush" Color="#29eaeaea" />
-  <SolidColorBrush x:Key="OnBtnStyle5Brush" Color="#ffffff" />
   <SolidColorBrush x:Key="SwitchBtnBrush" Color="{StaticResource Purple150}" />
   <SolidColorBrush x:Key="SwitchBtnTonalBrush" Color="#299796fe" />
   <SolidColorBrush x:Key="ConnectionCircleBorderBrush" Color="{StaticResource Cream100}" />

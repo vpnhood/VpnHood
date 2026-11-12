@@ -158,8 +158,7 @@ public partial class AccountView : UserControl, IPage
         glyph.Classes.Add("mdi");
         var text = new TextBlock { Text = s.ShowCode, VerticalAlignment = VerticalAlignment.Center };
         var show = new Button { Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { glyph, text } } };
-        show.Classes.Add("pill");
-        show.Classes.Add("tonal-highlight");
+        show.Classes.Add("btn-secondary");
         show.Click += async (_, _) => {
             try {
                 await ShowCode(CancellationToken.None);

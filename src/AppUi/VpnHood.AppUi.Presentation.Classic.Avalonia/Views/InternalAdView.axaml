@@ -12,9 +12,9 @@
       <Button x:Name="CountButton" Classes="pill small tonal-white" Click="OnCloseClick" />
     </Grid>
     <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,12,*" Margin="0,16,0,0">
-      <Button x:Name="CloseButton" Classes="pill btn2 block" IsEnabled="False" Click="OnCloseClick"
+      <Button x:Name="CloseButton" Classes="btn-text block" IsEnabled="False" Click="OnCloseClick"
               Content="{Binding Close, Source={x:Static res:Strings.Current}}" />
-      <Button x:Name="LearnMoreButton" Grid.Column="2" Classes="pill btn1 block" IsEnabled="False" Click="OnLearnMoreClick"
+      <Button x:Name="LearnMoreButton" Grid.Column="2" Classes="btn-main block" IsEnabled="False" Click="OnLearnMoreClick"
               Content="{Binding LearnMore, Source={x:Static res:Strings.Current}}" />
     </Grid>
     <Image ui:AppImage.Source="images/premium-servers.webp" Stretch="Uniform" MaxWidth="600" />

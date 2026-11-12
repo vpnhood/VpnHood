@@ -71,7 +71,7 @@
       <StackPanel MaxWidth="720">
 
         <!-- Add server: the key field on a device that can type one, the phone on a TV -->
-        <Button x:Name="AddServerButton" Classes="tonal" Click="OnAddServerClick" Margin="0,0,0,20"
+        <Button x:Name="AddServerButton" Classes="btn-secondary" Click="OnAddServerClick" Margin="0,0,0,20"
                 HorizontalAlignment="Stretch" IsVisible="{Binding CanAddServer}">
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
             <TextBlock Classes="mdi" FontSize="20" Text="{Binding AddServerGlyph}" VerticalAlignment="Center" />

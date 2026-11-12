@@ -154,13 +154,13 @@
           </StackPanel>
           <!-- where the app updates itself: Update downloads the package, its progress, then Install -->
           <StackPanel Classes="update-actions" Spacing="8">
-            <Button x:Name="UpdateDownloadButton" Classes="update-btn" Click="OnUpdateDownloadClick" Content="{Binding UpdateNow, Source={x:Static res:Strings.Current}}" />
-            <Button x:Name="UpdateInstallButton" Classes="update-btn" Click="OnUpdateInstallClick" Content="{Binding Install, Source={x:Static res:Strings.Current}}" />
-            <Button x:Name="UpdateStoreButton" Classes="update-btn" Click="OnUpdateStoreClick" Content="{Binding UpdateFromGooglePlay, Source={x:Static res:Strings.Current}}" />
-            <Button x:Name="UpdateDirectButton" Classes="update-btn" Click="OnUpdateDirectClick" Content="{Binding UpdateFromDirectLink, Source={x:Static res:Strings.Current}}" />
-            <Button x:Name="UpdateNoStoreButton" Classes="update-btn secondary" Click="OnUpdateNoStoreClick" Content="{Binding DoNotHaveAccessToGooglePlay, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateDownloadButton" Classes="btn-main block" Click="OnUpdateDownloadClick" Content="{Binding UpdateNow, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateInstallButton" Classes="btn-main block" Click="OnUpdateInstallClick" Content="{Binding Install, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateStoreButton" Classes="btn-main block" Click="OnUpdateStoreClick" Content="{Binding UpdateFromGooglePlay, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateDirectButton" Classes="btn-main block" Click="OnUpdateDirectClick" Content="{Binding UpdateFromDirectLink, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateNoStoreButton" Classes="btn-secondary block" Click="OnUpdateNoStoreClick" Content="{Binding DoNotHaveAccessToGooglePlay, Source={x:Static res:Strings.Current}}" />
             <StackPanel x:Name="UpdateAlternative" Spacing="4" IsVisible="False">
-              <Button Classes="update-btn secondary" Click="OnUpdateDirectClick" Content="{Binding UpdateFromAlternativeLink, Source={x:Static res:Strings.Current}}" />
+              <Button Classes="btn-secondary block" Click="OnUpdateDirectClick" Content="{Binding UpdateFromAlternativeLink, Source={x:Static res:Strings.Current}}" />
               <TextBlock Classes="body-small" TextAlignment="Center" Opacity="0.6" Text="{Binding UpdateFromAlternativeLinkNotice, Source={x:Static res:Strings.Current}}" />
             </StackPanel>
           </StackPanel>
@@ -169,7 +169,7 @@
             <TextBlock x:Name="UpdateCurrentText" Classes="body-small" Opacity="0.6" />
             <TextBlock x:Name="UpdateNewText" Classes="body-small" />
           </StackPanel>
-          <Button x:Name="UpdateLaterButton" Classes="update-btn secondary update-later" Click="OnUpdateLaterClick" Content="{Binding Later, Source={x:Static res:Strings.Current}}" />
+          <Button x:Name="UpdateLaterButton" Classes="btn-text update-later" Click="OnUpdateLaterClick" Content="{Binding Later, Source={x:Static res:Strings.Current}}" />
         </Grid>
       </Border>
     </Panel>

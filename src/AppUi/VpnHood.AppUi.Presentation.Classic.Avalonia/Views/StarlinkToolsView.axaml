@@ -26,7 +26,7 @@
               <!-- the address and its Find button read left to right in every language -->
               <Grid ColumnDefinitions="*,Auto" FlowDirection="LeftToRight">
                 <TextBox x:Name="LocalBox" AutomationProperties.Name="{Binding StarlinkModeLocal, Source={x:Static res:Strings.Current}}" Classes="outlined" PlaceholderText="192.0.2.1" hosting:NativeTextInput.IsPreferred="True" />
-                <Button Grid.Column="1" Classes="btn2 small pill" Margin="8,0,0,0" Click="OnFindClick"
+                <Button Grid.Column="1" Classes="btn-secondary" Margin="8,0,0,0" Click="OnFindClick"
                         Content="{Binding StarlinkFind, Source={x:Static res:Strings.Current}}" />
               </Grid>
               <controls:OptionRow x:Name="AutoFindRow" IsCheckBox="True" IsChecked="True" Clicked="OnAutoFindClick" />

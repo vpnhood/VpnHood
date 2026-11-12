@@ -6,7 +6,7 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling;
 
-public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
+internal class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
 {
     private readonly ReadBufferedStream _stream = new(stream, true, bufferSize);
     private readonly Memory<byte> _minHeader = new byte[20];

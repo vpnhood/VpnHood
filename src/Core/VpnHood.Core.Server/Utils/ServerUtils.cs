@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Server.Utils;
 
-public static class ServerUtils
+internal static class ServerUtils
 {
     public static int GetFreeUdpPort(AddressFamily addressFamily, int? start)
     {

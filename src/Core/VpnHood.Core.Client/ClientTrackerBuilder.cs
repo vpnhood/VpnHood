@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Client;
 
-public static class ClientTrackerBuilder
+internal static class ClientTrackerBuilder
 {
     public static TrackEvent BuildConnectionSucceeded(string? serverLocation,
         bool isIpV6Supported, bool hasRedirected, IPEndPoint endPoint, string? adNetworkName)

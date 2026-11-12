@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.Streams;
 namespace VpnHood.Core.Tunneling.Utils;
 
 // ReSharper disable once UnusedType.Global
-public class StreamDecoratorAsyncStreamTracker(Stream sourceStream, bool leaveOpen)
+internal class StreamDecoratorAsyncStreamTracker(Stream sourceStream, bool leaveOpen)
     : StreamDecoratorAsync(sourceStream, leaveOpen)
 {
     public string LogPrefix { get; set; } = "";

@@ -1,0 +1,6 @@
+is_global = true
+
+# CsWinRT's generated projection is public and has no doc comments, and the compiler gives a generated file only this
+# global config: the docs gate is off there, and .editorconfig keeps it on in this library's own files
+# (VhApiDocsGeneratedApi, Directory.Build.targets).
+dotnet_diagnostic.CS1591.severity = none

@@ -9,8 +9,13 @@
 /// </summary>
 public sealed class BillingException : Exception
 {
+    /// <summary>Gets the failure's code.</summary>
     public BillingErrorCode Code { get; }
 
+    /// <summary>Initializes a new instance of the <see cref="BillingException"/> class.</summary>
+    /// <param name="code">The failure's code.</param>
+    /// <param name="message">The store's own message.</param>
+    /// <param name="innerException">The store's error, or <see langword="null"/>.</param>
     public BillingException(BillingErrorCode code, string message, Exception? innerException = null)
         : base(message, innerException)
     {

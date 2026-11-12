@@ -6,7 +6,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Dtos;
 
-public class Session
+internal class Session
 {
     public required ulong SessionId { get; init; }
     public required string TokenId { get; init; }

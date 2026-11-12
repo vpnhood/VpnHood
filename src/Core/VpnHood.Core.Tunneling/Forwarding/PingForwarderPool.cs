@@ -9,7 +9,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
+internal class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
 {
     private readonly IPacketForwarderCallbacks? _packetForwarderCallbacks;
     private readonly List<PingForwarder> _pingForwarders = [];

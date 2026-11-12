@@ -6,7 +6,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class UdpForwarderPoolOptions
+internal class UdpForwarderPoolOptions
 {
     public required ISocketFactory SocketFactory { get; set; }
     public required IPacketForwarderCallbacks? PacketForwarderCallbacks { get; set; }

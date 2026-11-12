@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>The core of VpnHood server. It can listen and accept connections from VpnHood clients</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -16,6 +17,7 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="VpnHood.Test" />
 		<InternalsVisibleTo Include="VpnHood.Test.KestrelParity" />
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
 	</ItemGroup>
 
 </Project>

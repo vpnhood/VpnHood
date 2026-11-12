@@ -6,6 +6,10 @@ using VpnHood.Net.Toolkit.Streams;
 
 namespace VpnHood.Core.Tunneling.DatagramMessaging;
 
+/// <summary>
+/// Provides packet messages: a channel's own messages to its peer, as UDP packets to <c>255.255.255.255</c> among the
+/// packets it carries.
+/// </summary>
 public static class PacketMessageHandler
 {
     private static readonly IPEndPoint NoneEndPoint = new(IPAddress.None, 0);
@@ -16,7 +20,7 @@ public static class PacketMessageHandler
         throw new ArgumentException("Could not detect version code for this datagram message.");
     }
 
-    public static IpPacket CreateMessage(IPacketMessage request)
+    internal static IpPacket CreateMessage(IPacketMessage request)
     {
         // building request
         using var mem = new MemoryStream();
@@ -27,13 +31,17 @@ public static class PacketMessageHandler
         return ipPacket;
     }
 
-    // a packet message with no message, which a UDP receiver drops unread: for a datagram that only has to arrive
+    /// <summary>
+    /// Creates a packet message with no message, which a UDP channel's peer drops unread: for a datagram that only has to
+    /// arrive.
+    /// </summary>
+    /// <returns>The packet.</returns>
     public static IpPacket CreateEmptyMessage()
     {
         return PacketBuilder.BuildUdp(NoneEndPoint, NoneEndPoint, []);
     }
 
-    public static bool IsPacketMessage(IpPacket ipPacket)
+    internal static bool IsPacketMessage(IpPacket ipPacket)
     {
         return ipPacket.Protocol == IpProtocol.Udp && (
             // Compatibility (2025-07): a client before 7.2.728 sends its packet messages to 255.255.255.255; drop
@@ -42,7 +50,7 @@ public static class PacketMessageHandler
             IPAddress.Any.SpanEquals(ipPacket.DestinationAddressSpan));
     }
 
-    public static IPacketMessage? ReadMessage(IpPacket ipPacket)
+    internal static IPacketMessage? ReadMessage(IpPacket ipPacket)
     {
         if (!IsPacketMessage(ipPacket))
             return null;

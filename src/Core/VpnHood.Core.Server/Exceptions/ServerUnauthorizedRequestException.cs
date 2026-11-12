@@ -3,7 +3,7 @@ using VpnHood.Core.Tunneling.Messaging;
 
 namespace VpnHood.Core.Server.Exceptions;
 
-public class ServerUnauthorizedAccessException : UnauthorizedAccessException
+internal class ServerUnauthorizedAccessException : UnauthorizedAccessException
 {
     public IPEndPointPair IpEndPointPair { get; }
     public string? TokenId { get; }

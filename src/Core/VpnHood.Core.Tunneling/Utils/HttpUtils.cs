@@ -4,12 +4,22 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.Utils;
 
+/// <summary>Provides the reading of an HTTP response's header off a stream, as a client reads its server's.</summary>
 public static class HttpUtils
 {
-    public const string HttpRequestKey = "HTTP_REQUEST";
-    public const int MaxHeaderSize = 128 * 1024; // 128 KB
+    internal const string HttpRequestKey = "HTTP_REQUEST";
+    internal const int MaxHeaderSize = 128 * 1024; // 128 KB
 
-    public static async Task<MemoryStream> ReadHeadersAsync(Stream stream,
+    /// <summary>Reads an HTTP header off a stream, up to and with the blank line that ends it.</summary>
+    /// <param name="stream">The stream.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="maxLength">The longest header it takes, in bytes. The default is 128 KB.</param>
+    /// <returns>
+    /// A task whose result is the header, at its start: empty where the stream ended before anything came.
+    /// </returns>
+    /// <exception cref="Exception">The stream ended inside the header, or the header is longer than allowed.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    internal static async Task<MemoryStream> ReadHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = MaxHeaderSize)
     {
         // read header
@@ -44,6 +54,18 @@ public static class HttpUtils
         }
     }
 
+    /// <summary>Reads an HTTP response's header off a stream: its status and headers, with no body.</summary>
+    /// <param name="stream">The stream.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="maxLength">The longest header it takes, in bytes. The default is 128 KB.</param>
+    /// <returns>A task whose result is the response.</returns>
+    /// <exception cref="Exception">
+    /// The stream ended, before the header or inside it; the header is longer than allowed; or it is not an HTTP
+    /// response's.
+    /// </exception>
+    /// <exception cref="FormatException">The status code is not a number.</exception>
+    /// <exception cref="OverflowException">The status code is out of an integer's range.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<HttpResponseMessage> ReadResponse(Stream stream, CancellationToken cancellationToken,
         int maxLength = MaxHeaderSize)
     {
@@ -73,7 +95,7 @@ public static class HttpUtils
     }
 
 
-    public static async Task<Dictionary<string, string>?> ParseHeadersAsync(Stream stream,
+    internal static async Task<Dictionary<string, string>?> ParseHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = MaxHeaderSize) //128 KB 
     {
         using var memStream = await ReadHeadersAsync(stream, cancellationToken, maxLength).Vhc();

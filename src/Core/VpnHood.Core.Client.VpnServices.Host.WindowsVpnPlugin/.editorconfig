@@ -1,0 +1,5 @@
+[*.cs]
+
+# The docs gate in this library's own files (VhApiDocsGeneratedApi, Directory.Build.targets): a public member without a
+# doc comment fails the build. CsWinRT's generated projection has none, and the compiler gives it only .globalconfig.
+dotnet_diagnostic.CS1591.severity = error

@@ -5,7 +5,7 @@ using VpnHood.Net.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 
-public class AdapterSocketFactory(ISocketFactory socketFactory, IVpnAdapter vpnAdapter) : ISocketFactory
+internal class AdapterSocketFactory(ISocketFactory socketFactory, IVpnAdapter vpnAdapter) : ISocketFactory
 {
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {

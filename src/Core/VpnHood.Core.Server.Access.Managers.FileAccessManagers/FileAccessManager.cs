@@ -17,23 +17,47 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 
+/// <summary>
+/// Represents an access manager on the server's own file system: its access keys and sessions in files, in a storage
+/// folder, for a server that runs without a remote access manager.
+/// </summary>
+/// <remarks>
+/// It makes the server's certificate where the folder has none, and its secret where neither the options nor the folder
+/// have one, and the server token its access keys carry. A derived manager reads the storage with
+/// <see cref="LoadStorage"/> and passes it to the constructor.
+/// </remarks>
 public class FileAccessManager : IAccessManager
 {
     private const string ServerLocationFileName = "server_location";
     private ServerToken _serverToken;
-    public FileAccessManagerOptions ServerConfig { get; }
-    public string StoragePath { get; }
-    public SessionService SessionService { get; }
-    public string CertsFolderPath => GetCertsFolderPath(StoragePath);
-    public string SessionsFolderPath => GetSessionsFolderPath(StoragePath);
-    public X509Certificate2 DefaultCert { get; }
-    public ServerStatus? ServerStatus { get; private set; }
-    public ServerInfo? ServerInfo { get; private set; }
+    internal FileAccessManagerOptions ServerConfig { get; }
+    internal string StoragePath { get; }
+    internal SessionService SessionService { get; }
+    internal string CertsFolderPath => GetCertsFolderPath(StoragePath);
+    internal string SessionsFolderPath => GetSessionsFolderPath(StoragePath);
+    internal X509Certificate2 DefaultCert { get; }
+    internal ServerStatus? ServerStatus { get; private set; }
+    internal ServerInfo? ServerInfo { get; private set; }
+    /// <summary>Gets the manager's access keys.</summary>
     public AccessTokenService AccessTokenService { get; }
 
-    // A manager over its storage folder, whose files are read here, as a constructor can't wait on them. The server
-    // token carries the server's location: the network is asked for it once, when the settings allow, and the token
-    // goes without it otherwise.
+    /// <summary>Makes a manager over a storage folder, whose files it reads here, as a constructor cannot wait on them.</summary>
+    /// <param name="storagePath">The storage folder, which it makes where it is missing.</param>
+    /// <param name="options">
+    /// The options; where they have no server secret, the one read or made in the folder goes into them.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the manager.</returns>
+    /// <remarks>
+    /// The server token carries the server's location: where the options allow and the folder keeps none, the network
+    /// is asked for it, and a failure goes without it until the next creation tries again; a location kept is used
+    /// either way.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="storagePath"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Exception">
+    /// The public endpoints are missing or one is an "any" address, or the certificate has no subject.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<FileAccessManager> Create(string storagePath, FileAccessManagerOptions options,
         CancellationToken cancellationToken)
     {
@@ -41,7 +65,18 @@ public class FileAccessManager : IAccessManager
         return new FileAccessManager(storage);
     }
 
-    // a derived manager's Create reads the storage here; the server secret read or made goes into the options
+    /// <summary>Reads a storage folder for a manager, as a derived manager's own <c>Create</c> does.</summary>
+    /// <param name="storagePath">The storage folder, which it makes where it is missing.</param>
+    /// <param name="options">
+    /// The options; where they have no server secret, the one read or made in the folder goes into them.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is what it read.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="storagePath"/> is <see langword="null"/>.</exception>
+    /// <exception cref="Exception">
+    /// The public endpoints are missing or one is an "any" address, or the certificate has no subject.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected static async Task<FileAccessManagerStorage> LoadStorage(string storagePath,
         FileAccessManagerOptions options, CancellationToken cancellationToken)
     {
@@ -74,6 +109,12 @@ public class FileAccessManager : IAccessManager
         }
     }
 
+    /// <summary>Initializes a new instance of the <see cref="FileAccessManager"/> class over what its storage gave.</summary>
+    /// <param name="storage">What <see cref="LoadStorage"/> read, which the manager owns.</param>
+    /// <remarks>
+    /// UDP is on unless the options set its endpoints: on the TCP endpoints' addresses, on the port the server keeps.
+    /// </remarks>
+    /// <exception cref="Exception">The certificate has no host name.</exception>
     protected FileAccessManager(FileAccessManagerStorage storage)
     {
         StoragePath = storage.StoragePath;
@@ -102,7 +143,7 @@ public class FileAccessManager : IAccessManager
     private static string GetCertsFolderPath(string storagePath) => Path.Combine(storagePath, "certificates");
     private static string GetSessionsFolderPath(string storagePath) => Path.Combine(storagePath, "sessions");
 
-    public async Task ClearCache(CancellationToken cancellationToken)
+    internal async Task ClearCache(CancellationToken cancellationToken)
     {
         _serverToken = await GetAndUpdateServerToken(StoragePath, ServerConfig, DefaultCert, cancellationToken).Vhc();
     }
@@ -214,6 +255,9 @@ public class FileAccessManager : IAccessManager
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It adds the sessions' usage to their access keys.</remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public virtual async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus, CancellationToken cancellationToken)
     {
         ServerStatus = serverStatus;
@@ -223,6 +267,13 @@ public class FileAccessManager : IAccessManager
         return result;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It gives the options as the configuration, with the UDP and QUIC endpoints of port 0 on ports the server found
+    /// free, and those left without one omitted. The UDP port it keeps in the storage folder and uses again as it is, so
+    /// a firewall rule made for it holds across restarts.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public virtual async Task<ServerConfig> Server_Configure(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
         ServerInfo = serverInfo;
@@ -267,12 +318,15 @@ public class FileAccessManager : IAccessManager
         return udpPort;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It has no ACME challenges: it always throws.</remarks>
+    /// <exception cref="KeyNotFoundException">Always: the manager has no challenges.</exception>
     public virtual Task<string> Acme_GetHttp01KeyAuthorization(string token, CancellationToken cancellationToken)
     {
         throw new KeyNotFoundException("This server does not support HTTP-01 challenge.");
     }
 
-    public async Task<Token> CreateToken(CancellationToken cancellationToken, int maxClientCount = 1,
+    internal async Task<Token> CreateToken(CancellationToken cancellationToken, int maxClientCount = 1,
         string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null,
         AdRequirement adRequirement = AdRequirement.None)
     {
@@ -288,6 +342,9 @@ public class FileAccessManager : IAccessManager
     }
 
 
+    /// <summary>Gets an access key as a client takes it, with the server token.</summary>
+    /// <param name="accessToken">The access key as the manager keeps it.</param>
+    /// <returns>The access key.</returns>
     public Token GetToken(AccessToken accessToken)
     {
         return new Token {
@@ -300,7 +357,7 @@ public class FileAccessManager : IAccessManager
         };
     }
 
-    public static bool ValidateRequest(SessionRequestEx sessionRequestEx,
+    internal static bool ValidateRequest(SessionRequestEx sessionRequestEx,
         [NotNullWhen(true)] AccessTokenData? accessTokenData)
     {
         if (accessTokenData == null)
@@ -311,6 +368,13 @@ public class FileAccessManager : IAccessManager
         return encryptClientId.SequenceEqual(sessionRequestEx.EncryptedClientId);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A premium code takes the access key <see cref="GetAccessTokenIdFromAccessCode"/> gives for it, and one that gives
+    /// none is refused, as this manager's own does for every code. Where the options allow, the answer carries the access
+    /// key the client connected with, with the manager's current server token.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx, CancellationToken cancellationToken)
     {
         // validate token
@@ -357,11 +421,24 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
+    /// <summary>Gets the ID of the access key a premium code stands for.</summary>
+    /// <param name="accessCode">The premium code.</param>
+    /// <returns>
+    /// The access key's ID, or <see langword="null"/> where it stands for none, which refuses the code; this manager's
+    /// always gives <see langword="null"/>.
+    /// </returns>
     protected virtual string? GetAccessTokenIdFromAccessCode(string accessCode)
     {
         return null;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The server's endpoint and the client's IP are not checked; the session is marked as used.</remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="System.Text.Json.JsonException">
+    /// The access key's file holds malformed JSON, or JSON that cannot be read as an access key.
+    /// </exception>
+    /// <exception cref="InvalidDataException">The access key's file holds <c>null</c>.</exception>
     public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,
         IPAddress? clientIp, CancellationToken cancellationToken)
     {
@@ -396,6 +473,9 @@ public class FileAccessManager : IAccessManager
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>A session whose access key is gone is left out, and one that fails is logged and left out.</remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<SessionResponseEx[]> Session_GetAll(CancellationToken cancellationToken)
     {
         // read all sessions
@@ -421,6 +501,8 @@ public class FileAccessManager : IAccessManager
     }
 
 
+    /// <inheritdoc/>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData, CancellationToken cancellationToken)
     {
         return Session_AddUsage(new SessionUsage {
@@ -431,6 +513,8 @@ public class FileAccessManager : IAccessManager
         }, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public virtual Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic, CancellationToken cancellationToken)
     {
         return Session_AddUsage(new SessionUsage {
@@ -441,6 +525,12 @@ public class FileAccessManager : IAccessManager
         }, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A session's failure, but a cancel, is logged and answered with an access error; the sessions suppressed meanwhile
+    /// that the list leaves out are answered too.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<Dictionary<ulong, SessionResponse>> Session_AddUsages(SessionUsage[] sessionUsages, CancellationToken cancellationToken)
     {
         var ret = new Dictionary<ulong, SessionResponse>();
@@ -489,6 +579,14 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
+    /// <summary>
+    /// Adds a session's usage to its access key, closes the session where the usage carries an error, and checks its
+    /// ad's data where it has some.
+    /// </summary>
+    /// <param name="sessionUsage">The session's usage.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the session's answer.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected virtual async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage, 
         CancellationToken cancellationToken)
     {
@@ -534,13 +632,16 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
+    /// <summary>Checks a rewarded ad's data.</summary>
+    /// <param name="adData">The ad's data.</param>
+    /// <returns><see langword="true"/> where the ad is valid; this manager takes every ad.</returns>
     protected virtual bool IsValidAd(string? adData)
     {
         return true; // this server does not validate ad at server side
     }
 
 
-    public string GetCertFilePath(IPEndPoint ipEndPoint)
+    internal string GetCertFilePath(IPEndPoint ipEndPoint)
     {
         return Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
     }
@@ -556,6 +657,8 @@ public class FileAccessManager : IAccessManager
         return X509CertificateLoader.LoadPkcs12(buf, password, X509KeyStorageFlags.Exportable);
     }
 
+    /// <summary>Releases the manager's sessions and certificate.</summary>
+    /// <param name="disposing"><see langword="true"/> where it is called from <see cref="Dispose()"/>.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing) {
@@ -564,6 +667,7 @@ public class FileAccessManager : IAccessManager
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         Dispose(true);

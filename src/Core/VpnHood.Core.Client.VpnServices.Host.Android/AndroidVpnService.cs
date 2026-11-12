@@ -20,6 +20,15 @@ using VpnHood.Core.Client.VpnServices.Host.Android.Messaging;
 namespace VpnHood.Core.Client.VpnServices.Host.Android;
 
 // VPN requires TypeSystemExempted:  https://developer.android.com/about/versions/14/changes/fgs-types-required#system-exempted
+/// <summary>
+/// Represents the VPN service on Android: Android's own VpnService, which runs the VPN service's host, in a process of
+/// its own in Release builds, shows its notification, and answers the app over a binder.
+/// </summary>
+/// <remarks>
+/// The app starts it to connect, and Android starts it by itself for always-on; it promotes itself to the foreground
+/// at once, as Android requires, and a refused promotion ends the start. The app reaches it by its Java name
+/// (<see cref="AndroidDevice.VpnServiceJavaName"/>).
+/// </remarks>
 [Service(
     // the name the app starts it and binds to it by (AndroidDevice.VpnServiceJavaName)
     Name = AndroidDevice.VpnServiceJavaName,
@@ -38,14 +47,26 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     private readonly Lock _notificationLock = new();
     private readonly AndroidMessageListener _messageListener = new();
     private volatile int _lastStartId = -1; // -1: no start yet, and a stop then stops all
-    public const string ActionDisconnect = "disconnect";
 
+    /// <summary>
+    /// The action of the intent that disconnects the service, as its notification's button sends it:
+    /// <c>disconnect</c>.
+    /// </summary>
+    internal const string ActionDisconnect = "disconnect";
+
+    /// <summary>Initializes a new instance of the <see cref="AndroidVpnService"/> class, as Android makes it.</summary>
     public AndroidVpnService()
     {
         VhLogger.Instance.LogInformation(
             "AndroidVpnService has bee constructed. ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It promotes the service to the foreground first, and ends the start where Android refuses. The connect action
+    /// connects anew; no action, or Android's own, connects as the system's always-on start; the disconnect action
+    /// disconnects.
+    /// </remarks>
     [return: GeneratedEnum]
     public override StartCommandResult OnStartCommand(Intent? intent,
         [GeneratedEnum] StartCommandFlags flags, int startId)
@@ -81,8 +102,12 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         };
     }
 
-    // the message listener claims only its own bind action; everything else (especially the
-    // system's android.net.VpnService bind that establishes the VPN) goes to the base VpnService
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The app's message channel gets its binder for its own bind action; any other bind, as the system's
+    /// <c>android.net.VpnService</c> one that sets the VPN up, goes to the base.
+    /// </remarks>
+    /// <returns>The binder for the bind, or <see langword="null"/> where there is none.</returns>
     public override global::Android.OS.IBinder? OnBind(Intent? intent)
     {
         return _messageListener.TryBind(intent) ?? base.OnBind(intent);
@@ -145,13 +170,19 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         StopSelf(_lastStartId);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is the default one.</remarks>
     public VpnHoodClientFactory CreateClientFactory()
     {
         return new VpnHoodClientFactory();
     }
 
+    /// <inheritdoc/>
     public bool CanReconnect => true;
 
+    /// <inheritdoc/>
+    /// <remarks>It is AndroidTun's, on this service.</remarks>
+    /// <exception cref="ArgumentOutOfRangeException">The settings' queue capacity is less than 1.</exception>
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {
@@ -165,6 +196,11 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         });
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It shows the state in the foreground notification, promoting the service first where it is not yet; a refused
+    /// promotion is logged.
+    /// </remarks>
     public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
         TryShowNotification(connectionInfo);
@@ -234,6 +270,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It takes the service out of the foreground and removes its notification.</remarks>
     public void StopNotification()
     {
         lock (_notificationLock) {
@@ -249,6 +287,11 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Where the service has a host, it disconnects with a <see cref="VpnServiceRevokedException"/>, as the system or
+    /// another VPN app took the VPN; otherwise the base handles it.
+    /// </remarks>
     public override void OnRevoke()
     {
         if (_vpnServiceHost != null) {
@@ -260,6 +303,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         base.OnRevoke();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It removes the notification and ends the host and the message channel.</remarks>
     public override void OnDestroy()
     {
         VhLogger.Instance.LogDebug("VpnService is destroying.");

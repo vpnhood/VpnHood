@@ -4,7 +4,7 @@ namespace VpnHood.Core.Tunneling.Channels;
 // not go in again, so a copy of a datagram cannot hand its packets up twice. A ring of 64-bit words, as WireGuard's
 // (RFC 6479): moving up clears only the words it passes, and the window is a word short of the ring, the one being
 // filled. Not thread-safe: its channel's receive serializes it
-public sealed class ReplayWindow
+internal sealed class ReplayWindow
 {
     private const int WordCount = 128; // 8192 bits, as WireGuard's
     public const int Size = (WordCount - 1) * 64;

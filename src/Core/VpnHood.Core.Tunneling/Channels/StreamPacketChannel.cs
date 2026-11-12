@@ -12,6 +12,16 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
+/// <summary>
+/// Represents a packet channel on a stream connection: packets go out back to back on the stream, and the ones read
+/// from it go up.
+/// </summary>
+/// <remarks>
+/// Its own close, by its lifespan's end or its owner, makes it <see cref="PacketChannelState.Disconnecting"/> and tells
+/// the peer with a close message behind the packets already queued; the peer's close makes it Disconnecting too, with
+/// no answer. It then goes after its grace, in which what is on its way still arrives, unless the channel manager ends
+/// it sooner, and its graceful close releases its connection, which a reusable one may survive.
+/// </remarks>
 public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
 {
     private readonly TimeSpan? _lifespan;
@@ -29,13 +39,25 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
     private readonly Job _checkLifetimeJob;
     private readonly AsyncLock _disposeLock = new();
 
+    /// <inheritdoc/>
+    /// <remarks>It is the type's name and the channel's ID.</remarks>
     protected override string Name { get; }
 
+    /// <inheritdoc/>
     public string ChannelId { get; }
+
+    /// <inheritdoc/>
     public DateTime RequestTime { get; }
+
+    /// <inheritdoc/>
     public DateTime LastActivityTime => PacketStat.LastActivityTime;
+
+    /// <inheritdoc/>
     public Traffic Traffic => new(PacketStat.SentBytes, PacketStat.ReceivedBytes);
 
+    /// <summary>Initializes a new instance of the <see cref="StreamPacketChannel"/> class.</summary>
+    /// <param name="options">The options.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The options' queue capacity is less than 1.</exception>
     public StreamPacketChannel(StreamPacketChannelOptions options)
         : base(new PacketTransportOptions {
             AutoDisposePackets = options.AutoDisposePackets,
@@ -54,6 +76,7 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
         _checkLifetimeJob = new Job(CheckLifetime, nameof(StreamPacketChannel));
     }
 
+    /// <inheritdoc/>
     public PacketChannelState State {
         get {
             if (IsDisposed)
@@ -70,6 +93,7 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
         }
     }
 
+    /// <inheritdoc/>
     public DateTime? CloseTime {
         get {
             var closeTicks = Volatile.Read(ref _closeTicks);
@@ -77,6 +101,10 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Its read's end, by its peer or a failure, starts its graceful close.</remarks>
+    /// <exception cref="ObjectDisposedException">The channel is disposed.</exception>
+    /// <exception cref="InvalidOperationException">The channel is already started.</exception>
     public void Start()
     {
         if (IsDisposed)
@@ -150,9 +178,11 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
         return default;
     }
 
-    // Starts the channel's close, as its lifespan's end does, where Dispose would end it at once: it goes after its
-    // grace, in which what is on its way still arrives. One already closing or gone is left as it is, with no throw,
-    // as its owner's list may still hold a disposed channel
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It closes as its lifespan's end does, where <see cref="Dispose"/> would end it at once. One already gone is left
+    /// with no throw, as its owner's list may still hold it.
+    /// </remarks>
     public void Close()
     {
         if (IsDisposed || IsDisposing || !TryStartClose())
@@ -179,6 +209,11 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
     }
 
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A packet message is the channel's own: a close message starts its close, and any other it drops, as one from a
+    /// newer peer.
+    /// </remarks>
     protected override void OnPacketReceived(IpPacket ipPacket)
     {
         if (!PacketMessageHandler.IsPacketMessage(ipPacket)) {
@@ -213,6 +248,12 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
             ChannelId, PacketStat.CreatedTime, _lifespan);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It writes the packets back to back through its send buffer, and a packet larger than the buffer, or a lone one,
+    /// as it is.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The channel is disposed.</exception>
     protected override async ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -289,6 +330,7 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
         }
     }
 
+    /// <inheritdoc/>
     protected override void DisposeManaged()
     {
         _cancellationTokenSource.TryCancel();
@@ -297,14 +339,21 @@ public class StreamPacketChannel : PacketTransport, IStreamPacketChannel
         base.DisposeManaged();
     }
 
-    // the quick close: its connection closes at once too, with no reuse. One during a graceful close cuts that close's
-    // wait for the connection short
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The quick close: the channel stops at once and asks its connection to close, with no reuse, without waiting for
+    /// it.
+    /// </remarks>
     public override void Dispose()
     {
         base.Dispose();
         _streamConnection.Dispose();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The graceful close: the channel stops, then releases its connection. A second call waits for the first one's end.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end

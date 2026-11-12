@@ -15,8 +15,16 @@ using VpnHood.Core.Client.Devices.Ios;
 
 namespace VpnHood.Core.Client.VpnServices.Host.Ios;
 
-// The Objective-C class name MUST match NSExtensionPrincipalClass in the Extension's Info.plist.
-// The host Network Extension may subclass this type and register it under the expected ObjC name.
+/// <summary>
+/// Represents the VPN service on iOS and tvOS: the Network Extension's packet tunnel provider, which runs the VPN
+/// service's host and answers the app over the provider's app messages.
+/// </summary>
+/// <remarks>
+/// An extension subclasses it in its own assembly and registers the subclass under the name its Info.plist gives in
+/// <c>NSExtensionPrincipalClass</c>, as the heads' <c>PacketTunnelProvider</c> does: under CoreCLR's registrar, an
+/// Info.plist that names <c>IosVpnService</c> itself crashes the extension at its launch, as nothing of the extension's
+/// own loads this assembly.
+/// </remarks>
 [Register("IosVpnService")]
 public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 {
@@ -43,9 +51,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
     private const string VpnServiceDataFolderKey = "VpnServiceDataFolder";
 
-    /// Called by IosVpnAdapter.AdapterOpen after SetTunnelNetworkSettings succeeds (error == null)
-    /// or fails (error != null). Safe to call multiple times — only the first call wins.
-    public void CompleteStartTunnel(NSError? error)
+    // Called by IosVpnAdapter.AdapterOpen after SetTunnelNetworkSettings succeeds (error == null)
+    // or fails (error != null). Safe to call multiple times — only the first call wins.
+    private void CompleteStartTunnel(NSError? error)
     {
         if (Interlocked.Exchange(ref _completionFired, true))
             return;
@@ -54,13 +62,13 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         try { handler?.Invoke(error!); } catch { /* ignore */ }
     }
 
-    /// Resolves the VPN service config folder:
-    /// 1. ProviderConfiguration["VpnServiceConfigFolder"] — set by the App in IosDevice.StartVpnService.
-    ///    This is the App-Group shared-container path; an App-Group container is mounted at the SAME
-    ///    absolute path in both the App and Extension processes, so the App passes the resolved path
-    ///    verbatim and the Extension does not need the App Group id to re-derive it.
-    /// 2. LocalApplicationData — per-process fallback (IPC will NOT work with this).
-    public string ResolveConfigFolder()
+    // Resolves the VPN service config folder:
+    // 1. ProviderConfiguration["VpnServiceConfigFolder"] — set by the App in IosDevice.StartVpnService.
+    //    This is the App-Group shared-container path; an App-Group container is mounted at the SAME
+    //    absolute path in both the App and Extension processes, so the App passes the resolved path
+    //    verbatim and the Extension does not need the App Group id to re-derive it.
+    // 2. LocalApplicationData — per-process fallback (IPC will NOT work with this).
+    private string ResolveConfigFolder()
     {
         // Path passed explicitly by the App via ProviderConfiguration.
         var proto = ProtocolConfiguration as NETunnelProviderProtocol;
@@ -103,11 +111,20 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         return (configFolder, sharedFolder);
     }
 
-    // Called by the .NET iOS runtime when ObjC creates the extension instance.
     // [Export("init")] is intentionally absent: iOS uses NEPacketTunnelProvider's init,
     // and .NET iOS wraps the resulting ObjC handle here. Adding [Export("init")] caused
     // a null function-pointer in the ObjC dispatch table → EXC_BAD_ACCESS / CODE-SIGNING:
     // Invalid Page at 0x0 inside -[PacketTunnelProvider init].
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IosVpnService"/> class, as the .NET iOS runtime makes it for the
+    /// extension's Objective-C object.
+    /// </summary>
+    /// <param name="handle">The Objective-C object's handle.</param>
+    /// <remarks>
+    /// It first sends .NET's console output to nothing, as an extension has no reader of its standard output and a
+    /// write would block once the pipe fills, then adds Apple's unified log (os_log) as the log's sink, under the
+    /// extension's bundle identifier.
+    /// </remarks>
     protected IosVpnService(NativeHandle handle) : base(handle)
     {
         // Redirect .NET Console to null FIRST — before any other Console access.
@@ -120,6 +137,19 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         VhLogger.AddProvider(new IosOsLogLoggerProvider(OsLogSubsystem));
     }
 
+    /// <inheritdoc/>
+    /// <param name="options">The options iOS starts the tunnel with, which it does not read.</param>
+    /// <param name="startTunnelCompletionHandler">
+    /// The handler that tells iOS the start's outcome: <see langword="null"/>, or the error it failed with.
+    /// </param>
+    /// <remarks>
+    /// It starts the extension's memory guard, then makes the VPN service's host off the main thread, which connects.
+    /// iOS hears of a successful start only once the adapter has applied the tunnel's network settings; it hears of a
+    /// failure where the host cannot be made or the settings cannot be applied.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The VPN service's folder, from an older app's configuration, has no parent folder.
+    /// </exception>
     public override void StartTunnel(
         NSDictionary<NSString, NSObject>? options, Action<NSError> startTunnelCompletionHandler)
     {
@@ -163,6 +193,14 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         });
     }
 
+    /// <inheritdoc/>
+    /// <param name="messageData">The app's message.</param>
+    /// <param name="completionHandler">The handler that takes the answer to the app.</param>
+    /// <remarks>
+    /// It hands the message on without blocking, and answers through the completion handler; the answer is
+    /// <see langword="null"/> where the service has not started yet or could not handle the message, which the app
+    /// reads as an unreachable service.
+    /// </remarks>
     public override void HandleAppMessage(NSData? messageData, Action<NSData>? completionHandler)
     {
         // CRITICAL: do NOT block here. iOS may deliver app messages on the provider/main thread, and
@@ -174,6 +212,14 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         _ = _messageListener.ProcessAppMessage(messageData, completionHandler, CancellationToken.None);
     }
 
+    /// <inheritdoc/>
+    /// <param name="reason">Why iOS stops the tunnel.</param>
+    /// <param name="completionHandler">The handler that tells iOS the stop has ended.</param>
+    /// <remarks>
+    /// It disconnects, then calls the completion handler. Where iOS stops it for another VPN, a configuration turned off
+    /// or removed, a logout or a user switch, the disconnect carries a <see cref="VpnServiceRevokedException"/>, which
+    /// the app shows.
+    /// </remarks>
     public override void StopTunnel(NEProviderStopReason reason, Action completionHandler)
     {
         VhLogger.Instance.LogWarning("iOS requested StopTunnel. Reason: {Reason}", reason);
@@ -198,12 +244,15 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         };
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is the default one.</remarks>
     public VpnHoodClientFactory CreateClientFactory()
     {
         return new VpnHoodClientFactory();
     }
 
-    // the extension's tunnel outlives an adapter: a new one applies its settings to it anew
+    /// <inheritdoc/>
+    /// <remarks>The extension's tunnel outlives an adapter: a new one applies its settings to it anew.</remarks>
     public bool CanReconnect => true;
 
     private async Task StopTunnelAsync(Action completionHandler, Exception? stopException)
@@ -220,6 +269,12 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It is IosTun's, on this provider, and completes the tunnel's start for iOS once its settings apply. Where debug
+    /// logging is on, it also starts the memory diagnostics.
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">The settings' queue capacity is less than 1.</exception>
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         // Diagnostics hooks — no-ops unless debug logging is on (the gates follow VhLogger.MinLogLevel,
@@ -238,16 +293,20 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         }, CompleteStartTunnel);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>iOS has no foreground notification for it: it does nothing.</remarks>
     public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
-        // iOS does not support foreground notifications and does not need to show one.
     }
 
+    /// <inheritdoc/>
+    /// <remarks>iOS has no foreground notification for it: it does nothing.</remarks>
     public void StopNotification()
     {
-        // iOS does not support foreground notifications and does not need to show one.
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It cancels the tunnel from the provider's side.</remarks>
     public void StopSelf()
     {
         CancelTunnel(null);

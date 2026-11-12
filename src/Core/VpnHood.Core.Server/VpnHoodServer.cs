@@ -30,6 +30,15 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
+/// <summary>
+/// Represents a VPN server: it takes its configuration from its access manager, listens for clients, and carries their
+/// sessions, until it is disposed.
+/// </summary>
+/// <remarks>
+/// Once started, it asks the access manager for its configuration until it has one, pausing after failures, then sends
+/// it its status at the configuration's interval, by default every 2 minutes, which may ask for a new configuration. A
+/// configuration of its own (<see cref="ServerOptions.Config"/>) overrides the settings it sets.
+/// </remarks>
 public class VpnHoodServer : IAsyncDisposable, IDisposable
 {
     private readonly bool _autoDisposeAccessManager;
@@ -60,12 +69,20 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private readonly TimeSpan _serverHostDisposeTimeout;
     private readonly AsyncLock _disposeLock = new();
 
-    public ServerHost ServerHost { get; }
+    internal ServerHost ServerHost { get; }
+    /// <summary>Gets the server's version: this assembly's.</summary>
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version ?? new Version();
-    public SessionManager SessionManager { get; }
-    public ServerState State { get; private set; } = ServerState.NotStarted;
-    public IAccessManager AccessManager { get; }
 
+    /// <summary>Gets the server's sessions.</summary>
+    public SessionManager SessionManager { get; }
+    internal ServerState State { get; private set; } = ServerState.NotStarted;
+    internal IAccessManager AccessManager { get; }
+
+    /// <summary>Initializes a new instance of the <see cref="VpnHoodServer"/> class.</summary>
+    /// <param name="accessManager">The access manager, which the server disposes with itself.</param>
+    /// <param name="options">The options.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="accessManager"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidProgramException">The options' VPN adapter has no NAT for IPv4.</exception>
     public VpnHoodServer(IAccessManager accessManager, ServerOptions options)
     {
         if (options.SocketFactory == null)
@@ -119,7 +136,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         });
     }
 
-    public async ValueTask ConfigureAndSendStatus(CancellationToken cancellationToken)
+    internal async ValueTask ConfigureAndSendStatus(CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposing, this);
         using var scope = VhLogger.Instance.BeginScope("Server");
@@ -139,6 +156,18 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         }
     }
 
+    /// <summary>
+    /// Starts the server: it recovers the sessions it had before a restart, then configures itself and sends its status
+    /// to the access manager, and keeps doing so.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task that completes once the first attempt at the configuration has run; a failure of the recovery or of the
+    /// configuration is logged, not thrown.
+    /// </returns>
+    /// <exception cref="ObjectDisposedException">The server is disposed.</exception>
+    /// <exception cref="Exception">The server has started already.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task Start(CancellationToken cancellationToken)
     {
         using var scope = VhLogger.Instance.BeginScope("Server");
@@ -571,7 +600,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         return endPointStatuses.Any(x => x is { Protocol: ChannelProtocol.Tcp, Error: null });
     }
 
-    public async Task<ServerStatus> GetStatus(CancellationToken cancellationToken)
+    internal async Task<ServerStatus> GetStatus(CancellationToken cancellationToken)
     {
         var swapMemoryInfo = await TryGetSwapMemoryInfo(cancellationToken).Vhc();
         var systemInfo = _systemInfoProvider.GetSystemInfo();
@@ -634,10 +663,15 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         }
     }
 
-    // The quick close: it waits for nothing, so the sessions' usage since their last sync is lost, and the host's
-    // close goes on alone. It may come while the graceful close runs, so it takes none of its locks, and each part
-    // guards its own close; the job's cancels the status upload and configuration that close may wait for. The
-    // graceful close ends with it, for what is local
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The quick close: it waits for no peer, so the sessions' usage since their last sync is lost, and the host's close
+    /// goes on alone. It tries at once to take off the addresses the server added to the machine, logging a failure,
+    /// and one being added meanwhile is taken off once added; the access manager is disposed too.
+    /// </remarks>
+    // It may come while the graceful close runs, so it takes none of its locks, and each part guards its own close; the
+    // job's cancels the status upload and configuration that close may wait for. The graceful close ends with it, for
+    // what is local
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))
@@ -661,6 +695,13 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The graceful close: it starts the host's close, gives a status upload under way up to 7 seconds, waits for the
+    /// configuration and the upload under way to end, and for the host's close, whose own limit lets it go on alone,
+    /// tries a last sync of the sessions' usage, logging a failure and going on, then releases the rest as
+    /// <see cref="Dispose"/> does. A second call waits for the first one's end.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end. No early return after it: after a quick close, the steps below

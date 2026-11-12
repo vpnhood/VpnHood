@@ -8,6 +8,7 @@ namespace VpnHood.AppLib.Abstractions.Billing;
 /// </summary>
 public enum BillingErrorCode
 {
+    /// <summary>A failure with no bucket of its own; the store's message goes with it.</summary>
     Unknown,
 
     /// <summary>The person closed the store's payment flow; not an error to show.</summary>

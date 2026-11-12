@@ -4,7 +4,7 @@ using VpnHood.Net.Packets.Extensions;
 
 namespace VpnHood.Core.Tunneling.Utils;
 
-public static class TunnelUtils
+internal static class TunnelUtils
 {
     public const int TestPortMin = 49150;
     public const int TestPortMax = 49190;

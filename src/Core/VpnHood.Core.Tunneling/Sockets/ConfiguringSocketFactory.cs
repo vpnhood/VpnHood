@@ -6,18 +6,34 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Sockets;
 
-// Decorator that delegates creation to an inner factory and then applies the common post-creation
-// config (keep-alive, no-delay and the kernel send/receive buffer sizes) to the returned TcpClient.
-// Centralizes the config so inner factories only have to create/protect sockets.
+/// <summary>
+/// Provides the sockets of another factory, with the common settings on its TCP clients: keep-alive, no delay, and the
+/// kernel's send and receive buffer sizes.
+/// </summary>
+/// <param name="inner">The factory that makes the sockets.</param>
+/// <remarks>It keeps those settings in one place, so the inner factories only make and protect sockets.</remarks>
 public class ConfiguringSocketFactory(ISocketFactory inner) : ISocketFactory
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether the TCP clients send keep-alives; where <see langword="false"/>, a
+    /// client keeps its own setting.
+    /// </summary>
     public bool KeepAlive { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the TCP clients send without Nagle's delay.</summary>
     public bool NoDelay { get; set; }
 
-    // Class-level default applied when CreateTcpClient is not given per-call options.
-    // Settable so the size can be adjusted at runtime (e.g. server reconfiguration).
+    /// <summary>
+    /// Gets or sets the kernel's send and receive buffer sizes for a TCP client asked for without options of its own,
+    /// or <see langword="null"/> for the system's. It may change at any time, as a server's reconfiguration does.
+    /// </summary>
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Options given win as a whole: a <see langword="null"/> kernel buffer size in them means the system's, not this
+    /// factory's.
+    /// </remarks>
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {
         // Per-call options win as a whole: a caller that passes them has decided this socket's sizing,
@@ -36,11 +52,15 @@ public class ConfiguringSocketFactory(ISocketFactory inner) : ISocketFactory
         return tcpClient;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is the inner factory's, as it is.</remarks>
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
         return inner.CreateUdpClient(addressFamily);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is the inner factory's, as it is.</remarks>
     public Socket CreateUdpSocket(AddressFamily addressFamily)
     {
         return inner.CreateUdpSocket(addressFamily);

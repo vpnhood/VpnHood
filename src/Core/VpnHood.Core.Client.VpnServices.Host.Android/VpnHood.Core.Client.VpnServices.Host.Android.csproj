@@ -3,6 +3,7 @@
 		<Description>VpnHood's VPN service on Android: the VPN service's half, which runs the engine</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

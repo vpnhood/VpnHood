@@ -11,9 +11,12 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
 
+/// <summary>
+/// Provides a file access manager's sessions, each in a file of its own, which outlive a restart of the server.
+/// </summary>
 public class SessionService : IDisposable
 {
-    public bool IsUnitTest { get; }
+    internal bool IsUnitTest { get; }
     private const string SessionFileExtension = "session";
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
@@ -24,11 +27,11 @@ public class SessionService : IDisposable
     private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new();
     private readonly Lock _fileLock = new();
     private readonly Job _cleanupSessionsJob;
-    public ConcurrentDictionary<ulong, Session> Sessions { get; }
+    internal ConcurrentDictionary<ulong, Session> Sessions { get; }
 
 
     // the previous sessions are read here, as a constructor can't wait on their files
-    public static async Task<SessionService> Create(string sessionsFolderPath, bool isUnitTest,
+    internal static async Task<SessionService> Create(string sessionsFolderPath, bool isUnitTest,
         CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(sessionsFolderPath);
@@ -107,7 +110,7 @@ public class SessionService : IDisposable
     }
 
     // saved so a restart keeps it; under the file lock, so the cleanup either sees the use or has removed the session
-    public void UpdateLastUsedTime(ulong sessionId)
+    internal void UpdateLastUsedTime(ulong sessionId)
     {
         lock (_fileLock) {
             if (!Sessions.TryGetValue(sessionId, out var session))
@@ -118,12 +121,12 @@ public class SessionService : IDisposable
         }
     }
 
-    public string? FindTokenIdFromSessionId(ulong sessionId)
+    internal string? FindTokenIdFromSessionId(ulong sessionId)
     {
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
 
-    public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx, AccessTokenData accessTokenData)
+    internal SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx, AccessTokenData accessTokenData)
     {
         //increment session id using atomic operation
         Interlocked.Increment(ref _lastSessionId);
@@ -202,7 +205,7 @@ public class SessionService : IDisposable
         }
     }
 
-    public SessionResponseEx GetSessionResponse(ulong sessionId, AccessTokenData accessTokenData,
+    internal SessionResponseEx GetSessionResponse(ulong sessionId, AccessTokenData accessTokenData,
         IPEndPoint? hostEndPoint, bool? isValidAd = null)
     {
         // check existence
@@ -228,7 +231,7 @@ public class SessionService : IDisposable
         return ret;
     }
 
-    public ulong[] ResetUpdatedSessions()
+    internal ulong[] ResetUpdatedSessions()
     {
         lock (_updatedSessionIds) {
             var sessionIds = _updatedSessionIds.Select(x => x.Key).ToArray();
@@ -358,7 +361,7 @@ public class SessionService : IDisposable
         };
     }
 
-    public void CloseSession(ulong sessionId, SessionErrorCode errorCode)
+    internal void CloseSession(ulong sessionId, SessionErrorCode errorCode)
     {
         if (!Sessions.TryGetValue(sessionId, out var session) || !session.IsAlive)
             return; // an ended session keeps its end
@@ -370,6 +373,8 @@ public class SessionService : IDisposable
         Save(session);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It stops the cleanup of old sessions.</remarks>
     public void Dispose()
     {
         _cleanupSessionsJob.Dispose();

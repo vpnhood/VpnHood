@@ -13,14 +13,19 @@ namespace VpnHood.AppLib.Abstractions.Billing;
 /// </summary>
 public static class StoreIds
 {
+    /// <summary>Google Play: <c>googleplay</c>.</summary>
     public const string GooglePlay = "googleplay";
+
+    /// <summary>Apple's App Store: <c>appstore</c>.</summary>
     public const string AppStore = "appstore";
+
+    /// <summary>The Microsoft Store: <c>microsoft</c>.</summary>
     public const string Microsoft = "microsoft";
 
     /// <summary>
-    /// The direct-download distribution channel — not a store: no billing provider carries this id.
-    /// It names the backend's app registration for such builds, and the backend serves priced web
-    /// plans (checkout on the website) only to apps registered under it.
+    /// The direct-download distribution channel, which sells on the website: the web billing provider
+    /// carries this id. It names the backend's app registration for such builds, and the backend
+    /// serves priced web plans (checkout on the website) only to apps registered under it.
     /// </summary>
     public const string Web = "web";
 }

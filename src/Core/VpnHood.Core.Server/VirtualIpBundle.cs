@@ -4,7 +4,7 @@ using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.Core.Server;
 
-public class VirtualIpBundle
+internal class VirtualIpBundle
 {
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress IpV4 { get; set; }

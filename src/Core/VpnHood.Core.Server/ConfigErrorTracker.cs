@@ -36,7 +36,7 @@ namespace VpnHood.Core.Server;
 ///
 /// This class is designed to be called from a single thread and is not thread-safe.
 /// </summary>
-public class ConfigErrorTracker
+internal class ConfigErrorTracker
 {
     /// <summary>The duration after which persistent errors cause the tracker to pause retries.</summary>
     public TimeSpan StrikeDuration { get; }

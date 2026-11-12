@@ -26,7 +26,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
-public class ServerHost : IAsyncDisposable
+internal class ServerHost : IAsyncDisposable
 {
     private readonly HashSet<IStreamConnection> _connections = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();

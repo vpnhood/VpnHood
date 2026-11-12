@@ -6,6 +6,10 @@ using static VpnHood.Core.Server.Http01ChallengeHandler;
 
 namespace VpnHood.Core.Server;
 
+/// <summary>
+/// Provides a server's HTTP-01 challenge listeners: one on port 80 of each of its addresses, which answers ACME's
+/// challenges for the server's certificate and redirects the other requests it accepts to HTTPS.
+/// </summary>
 public class Http01ChallengeService : IDisposable
 {
     private readonly Http01KeyAuthorizationFunc _keyAuthorizationFunc;
@@ -15,9 +19,17 @@ public class Http01ChallengeService : IDisposable
     private readonly Lock _servicesLock = new(); // a configuration's start may meet the server's quick close
     private bool _disposed;
 
-    public bool ThrottleRequests => _throttleRequests;
+    internal bool ThrottleRequests => _throttleRequests;
 
-    // a port 80 of its own, as one that only answers challenges has
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Http01ChallengeService"/> class, with a port 80 of its own, as one that
+    /// only answers challenges has.
+    /// </summary>
+    /// <param name="keyAuthorizationFunc">The method that gives a challenge token's key authorization.</param>
+    /// <param name="throttleRequests">
+    /// <see langword="true"/>, the default, to answer one challenge at a time from each IPv4 address or IPv6 /64, across
+    /// the process; another that comes meanwhile is not answered as a challenge.
+    /// </param>
     public Http01ChallengeService(Http01KeyAuthorizationFunc keyAuthorizationFunc, bool throttleRequests = true)
         : this(keyAuthorizationFunc, new UnauthenticatedConnections(), throttleRequests)
     {
@@ -32,7 +44,16 @@ public class Http01ChallengeService : IDisposable
         _throttleRequests = throttleRequests;
     }
 
-    // port 80 on each address, redirecting to HTTPS's own port
+    /// <summary>
+    /// Starts a listener on port 80 of each address, which redirects to HTTPS's own port, 443; the listeners it had stop
+    /// first.
+    /// </summary>
+    /// <param name="ipAddresses">The addresses.</param>
+    /// <returns>The number of listeners that started; one that could not is logged.</returns>
+    /// <exception cref="ObjectDisposedException">The service is disposed.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="ipAddresses"/>, or one of its addresses, is <see langword="null"/>.
+    /// </exception>
     public int Start(IEnumerable<IPAddress> ipAddresses)
     {
         return Start(ipAddresses.Select(x => new IPEndPoint(x, 443)));
@@ -40,7 +61,7 @@ public class Http01ChallengeService : IDisposable
 
     // port 80 on the address of each of the server's TLS endpoints, redirecting there; to 443 where the server
     // listens on it, as a web server's HTTPS port
-    public int Start(IEnumerable<IPEndPoint> tlsEndPoints)
+    internal int Start(IEnumerable<IPEndPoint> tlsEndPoints)
     {
         lock (_servicesLock) {
             ObjectDisposedException.ThrowIf(_disposed, this);
@@ -69,7 +90,7 @@ public class Http01ChallengeService : IDisposable
         }
     }
 
-    public void Stop()
+    internal void Stop()
     {
         lock (_servicesLock) {
             if (!_disposed)
@@ -85,6 +106,8 @@ public class Http01ChallengeService : IDisposable
         _services.Clear();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It stops the listeners; calling it again does nothing.</remarks>
     public void Dispose()
     {
         lock (_servicesLock) {

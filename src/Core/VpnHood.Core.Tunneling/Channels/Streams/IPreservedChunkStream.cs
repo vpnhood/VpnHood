@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Tunneling.Channels.Streams;
 
-public interface IPreservedChunkStream
+internal interface IPreservedChunkStream
 {
     int PreserveWriteBufferLength { get; }
     // The writer may overwrite both the reserved prefix and payload, including on failure.

@@ -17,7 +17,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
+internal class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPool
 {
     private readonly IPacketForwarderCallbacks? _packetForwarderCallbacks;
     private readonly ISocketFactory _socketFactory;

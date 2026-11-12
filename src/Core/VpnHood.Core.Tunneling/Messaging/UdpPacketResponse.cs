@@ -3,7 +3,7 @@ using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Tunneling.Messaging;
 
-public class UdpPacketResponse
+internal class UdpPacketResponse
     : SessionResponse
 {
     public required byte[][] PacketBuffers { get; init; }

@@ -6,11 +6,21 @@ using Windows.ApplicationModel.Background;
 
 namespace VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin;
 
-// What Windows activates in the VPN host when the app opens the package's app service, its control channel to the VPN
-// service. A run lasts as long as its connection, and keeps the host running meanwhile, which Windows freezes between
-// VPN events otherwise.
+/// <summary>
+/// Represents what Windows activates in the VPN host when the app opens the package's app service, its control channel
+/// to the VPN service.
+/// </summary>
+/// <remarks>
+/// A run lasts as long as its connection, and keeps the host running meanwhile, which Windows freezes between VPN events
+/// otherwise.
+/// </remarks>
 public sealed class VpnAppServiceTask : IBackgroundTask
 {
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It serves the app's connection in the background until it closes or Windows ends it, and holds the run open
+    /// meanwhile; a failure is logged.
+    /// </remarks>
     public void Run(IBackgroundTaskInstance taskInstance)
     {
         var deferral = taskInstance.GetDeferral();

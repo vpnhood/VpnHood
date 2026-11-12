@@ -148,7 +148,7 @@ public class SessionUsageTest : TestBase
 
         // the access manager closes the session in a reply
         AddTraffic(session, sent: 1000, received: 2000);
-        await server.SessionManager.ApplySessionResponses(new Dictionary<ulong, SessionResponse> {
+        await ((ISessionResponseHandler)server.SessionManager).ApplySessionResponses(new Dictionary<ulong, SessionResponse> {
             [session.SessionId] = new() { ErrorCode = SessionErrorCode.SessionSuppressedBy }
         }, Stopwatch.GetTimestamp(), TestCt);
         Assert.IsTrue(session.IsDisposed);

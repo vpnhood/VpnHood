@@ -1,3 +1,3 @@
 ﻿namespace VpnHood.Core.Tunneling.DatagramMessaging;
 
-public class ClosePacketMessage : IPacketMessage;
+internal class ClosePacketMessage : IPacketMessage;

@@ -8,9 +8,10 @@ using VpnHood.Core.Tunneling.Exceptions;
 // ReSharper disable UnusedMember.Global
 namespace VpnHood.Core.Tunneling.Utils;
 
+/// <summary>Provides the logging of packets, by their protocol, where the log takes trace lines.</summary>
 public static class PacketLogger
 {
-    public static void LogPackets(IReadOnlyList<IpPacket> ipPackets, string operation)
+    internal static void LogPackets(IReadOnlyList<IpPacket> ipPackets, string operation)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
@@ -19,6 +20,17 @@ public static class PacketLogger
         }
     }
 
+    /// <summary>
+    /// Logs a packet with a message, under its protocol's event ID; it does nothing unless the log takes trace lines.
+    /// </summary>
+    /// <param name="ipPacket">The packet.</param>
+    /// <param name="message">The message.</param>
+    /// <param name="logLevel">The line's level. The default is <see cref="LogLevel.Trace"/>.</param>
+    /// <param name="exception">The error to log with it, or <see langword="null"/>.</param>
+    /// <param name="eventId">
+    /// The event ID, or <see langword="null"/> for the packet's protocol's, or the packet's own for a fragment or another
+    /// protocol. A line with a <see cref="Exceptions.NetFilterException"/> takes the filter's event ID whatever this says.
+    /// </param>
     public static void LogPacket(IpPacket ipPacket, string message, LogLevel logLevel = LogLevel.Trace,
         Exception? exception = null, EventId? eventId = null)
     {
@@ -81,7 +93,7 @@ public static class PacketLogger
         }
     }
 
-    public static string Format(IpPacket ipPacket)
+    internal static string Format(IpPacket ipPacket)
     {
         return VhLogger.FormatIpPacket(ipPacket.ToString());
     }

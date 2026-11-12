@@ -8,7 +8,7 @@ using VpnHood.Core.Tunneling.Messaging;
 
 namespace VpnHood.Core.Server.Exceptions;
 
-public class ServerSessionException : SessionException, ISelfLog
+internal class ServerSessionException : SessionException, ISelfLog
 {
     public IPEndPoint RemoteEndPoint { get; }
     public string? TokenId { get; }

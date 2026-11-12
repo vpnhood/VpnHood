@@ -10,6 +10,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Connections;
 
+/// <summary>Represents a TCP connection as a stream connection.</summary>
 public sealed class TcpStreamConnection : IStreamConnection
 {
     private readonly TcpClient _tcpClient;
@@ -17,6 +18,15 @@ public sealed class TcpStreamConnection : IStreamConnection
     private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TcpStreamConnection"/> class, on the TCP client's own stream.
+    /// </summary>
+    /// <param name="tcpClient">The connected TCP client, which the connection owns.</param>
+    /// <param name="connectionName">The connection's name, which its logs carry.</param>
+    /// <param name="isServer"><see langword="true"/> for the server's side of the connection.</param>
+    /// <param name="connectionId">The connection's ID, or <see langword="null"/> for a new one.</param>
+    /// <exception cref="ObjectDisposedException">The TCP client has no socket: it is closed.</exception>
+    /// <exception cref="InvalidOperationException">The TCP client's socket has no local or remote endpoint.</exception>
     public TcpStreamConnection(TcpClient tcpClient,
         string connectionName, bool isServer, string? connectionId = null)
     {
@@ -34,6 +44,16 @@ public sealed class TcpStreamConnection : IStreamConnection
         VhTypeTracker.Track(Stream, $"NetworkStream.{connectionName}");
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TcpStreamConnection"/> class, on a stream over the TCP client's.
+    /// </summary>
+    /// <param name="tcpClient">The connected TCP client, which the connection owns.</param>
+    /// <param name="stream">The stream to read and write through, over the client's, which the connection owns.</param>
+    /// <param name="connectionName">The connection's name, which its logs carry.</param>
+    /// <param name="isServer"><see langword="true"/> for the server's side of the connection.</param>
+    /// <param name="connectionId">The connection's ID, or <see langword="null"/> for a new one.</param>
+    /// <exception cref="ObjectDisposedException">The TCP client has no socket: it is closed.</exception>
+    /// <exception cref="InvalidOperationException">The TCP client's socket has no local or remote endpoint.</exception>
     public TcpStreamConnection(TcpClient tcpClient, Stream stream,
         string connectionName, bool isServer, string? connectionId = null)
         : this(tcpClient, connectionName: connectionName, isServer: isServer, connectionId: connectionId)
@@ -42,19 +62,35 @@ public sealed class TcpStreamConnection : IStreamConnection
         VhTypeTracker.Track(stream, $"{stream.GetType().Name}.{connectionName}");
     }
 
+    /// <inheritdoc/>
     public string ConnectionName { get; }
+
+    /// <inheritdoc/>
     public bool IsServer { get; }
+
+    /// <inheritdoc/>
+    /// <remarks>It asks the TCP client's socket.</remarks>
     public bool Connected => VhUtils.IsTcpClientHealthy(_tcpClient);
+
+    /// <inheritdoc/>
     public Stream Stream { get; }
+
+    /// <inheritdoc/>
     public IPEndPoint LocalEndPoint { get; }
+
+    /// <inheritdoc/>
     public IPEndPoint RemoteEndPoint { get; }
+
+    /// <inheritdoc/>
     public bool RequireHttpResponse { get; set; }
 
-    // reuse lives in the ReusableStreamConnection above
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: reuse is the reusable connection's, over this one.</remarks>
     public void PreventReuse()
     {
     }
 
+    /// <inheritdoc/>
     public string ConnectionId {
         get;
         set {
@@ -67,14 +103,25 @@ public sealed class TcpStreamConnection : IStreamConnection
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is the ID, the name and the side: <c>id:name:server</c> or <c>id:name:client</c>.</remarks>
     public override string ToString()
     {
         var role = IsServer ? "server" : "client";
         return $"{ConnectionId}:{ConnectionName}:{role}";
     }
 
-    // Closing with unread data can discard an already-written reply. Read what has arrived, as a web server's
-    // input pipe does, with both a byte and time bound so a sender cannot prolong the close.
+    /// <summary>
+    /// Reads off what has arrived, before a close: up to 1 MB, for up to a tenth of a second, until the connection is
+    /// quiet for 10 milliseconds or its peer has closed it.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the drain ends.</returns>
+    /// <remarks>
+    /// A close with unread data can discard a reply already written, so it reads what has arrived, as a web server's
+    /// input pipe does, bounded in bytes and time so a sender cannot prolong the close.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task DrainArrived(CancellationToken cancellationToken)
     {
         using var totalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -104,8 +151,11 @@ public sealed class TcpStreamConnection : IStreamConnection
         }
     }
 
-    // a close with a reset rather than a FIN, as a server closes that gives up on its peer. The socket closes on its
-    // own first: the client's and the stream's close would shut it down, which sends a FIN whatever its linger
+    /// <summary>
+    /// Closes the connection with a reset rather than a FIN, as a server does that gives up on its peer.
+    /// </summary>
+    // The socket closes on its own first: the client's and the stream's close would shut it down, which sends a FIN
+    // whatever its linger
     public void Reset()
     {
         if (Interlocked.Exchange(ref _disposed, true))
@@ -142,6 +192,8 @@ public sealed class TcpStreamConnection : IStreamConnection
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It closes the stream and the TCP client at once.</remarks>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))
@@ -154,6 +206,11 @@ public sealed class TcpStreamConnection : IStreamConnection
             ConnectionId);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It closes the stream gracefully, then the TCP client, which a failure of the stream's close skips; a second call
+    /// waits for the first one's end.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end. One after a quick close returns: that close leaves nothing

@@ -5,7 +5,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host.Android;
 
-public sealed class AndroidVpnNotification : IDisposable
+internal sealed class AndroidVpnNotification : IDisposable
 {
     private string _sessionName;
     private VpnServiceLocalization _localization;

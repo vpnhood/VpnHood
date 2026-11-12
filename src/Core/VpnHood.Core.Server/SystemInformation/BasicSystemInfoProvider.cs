@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Server.SystemInformation;
 
-public class BasicSystemInfoProvider : ISystemInfoProvider
+internal class BasicSystemInfoProvider : ISystemInfoProvider
 {
     public SystemInfo GetSystemInfo()
     {

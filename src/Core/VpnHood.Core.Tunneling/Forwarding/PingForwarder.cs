@@ -10,7 +10,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Forwarding;
 
-public class PingForwarder()
+internal class PingForwarder()
     : SinglePacketTransport(new PacketTransportOptions {
             // a request's payload goes out as a ping and the request to no one, so each one sent is disposed
             AutoDisposePackets = true,

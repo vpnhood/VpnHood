@@ -10,7 +10,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
-public class HttpStream : ChunkStream
+internal class HttpStream : ChunkStream
 {
     private readonly byte[] _newLineBytes = [.. "\r\n"u8];
 
@@ -227,9 +227,9 @@ public class HttpStream : ChunkStream
     }
 
     private bool _keepOpen;
-    public override bool CanReuse => !_hasError && !_isConnectionClosed;
+    internal override bool CanReuse => !_hasError && !_isConnectionClosed;
 
-    public override async Task<ChunkStream> CreateReuse()
+    internal override async Task<ChunkStream> CreateReuse()
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);

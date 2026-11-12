@@ -12,7 +12,7 @@ namespace VpnHood.Core.Client.VpnServices.Host.Ios;
 // category, so unified-log lines are filterable by both subsystem (the extension) and category;
 // creating a handle is cheap (a value bound to subsystem/category, nothing to release). Without the
 // time, which os_log stamps on each entry.
-public sealed class IosOsLogLoggerProvider(string subsystem, bool includeScopes = true)
+internal sealed class IosOsLogLoggerProvider(string subsystem, bool includeScopes = true)
     : TextLoggerProvider(name => new OsLogLogger(new OSLogHandle(subsystem, name)), includeTime: false,
         includeScopes: includeScopes)
 {

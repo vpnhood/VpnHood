@@ -3,26 +3,40 @@ using VpnHood.Core.Tunneling.Cryptography;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-// A session's UDP datagram: version(1) | sessionId(8) | seq(8) | tag(16) | ciphertext, sealed with AES-GCM under the
-// session's key, with sessionId|seq as its associated data. The version byte is written as 0 and not read: it is not
-// in the associated data, so it must go in there before it may mean anything
+/// <summary>
+/// Provides a session's UDP datagram: a version byte, the session's ID (8 bytes), the sequence number (8) and the tag
+/// (16), then the payload, sealed with AES-GCM under the session's key, with the session's ID and the sequence number as
+/// its associated data.
+/// </summary>
+/// <remarks>
+/// The version byte is written as 0 and not read: it is not in the associated data, so it must go in there before it
+/// may mean anything.
+/// </remarks>
 public static class UdpDatagram
 {
-    // the first protocol of this scheme, with the server-reply bit and the freshness mark: a client takes no UDP from a
-    // server below it, and a server seals a session below it the legacy way
+    /// <summary>
+    /// The first protocol of this scheme, 14, with the server's own nonces and the freshness mark: a client takes no UDP
+    /// from a server below it, and a server seals a session below it the legacy way.
+    /// </summary>
     public const int MinProtocolVersion = 14;
 
-    // Compatibility (2026-10): the first protocol of the legacy way; a session below it has no UDP, as before protocol
-    // 14, since its client speaks an older one. Drop with the legacy way, once MinClientProtocolVersion is 14
+    /// <summary>The first protocol of the legacy scheme, 11: a session below it has no UDP.</summary>
+    // Compatibility (2026-10): drop with the legacy way, once MinClientProtocolVersion is 14
     public const int MinLegacyProtocolVersion = 11;
 
     private const int SessionIdOffset = 1;
     private const int SeqOffset = SessionIdOffset + 8;
     private const int TagOffset = SeqOffset + 8;
     private const int AssociatedDataLength = 16; // sessionId | seq
-    public const int TagLength = 16;
+    internal const int TagLength = 16;
+
+    /// <summary>The length of a datagram's header, before its payload: 33 bytes.</summary>
     public const int HeaderLength = TagOffset + TagLength;
 
+    /// <summary>Reads a datagram's session ID, which is not sealed.</summary>
+    /// <param name="datagram">The datagram.</param>
+    /// <returns>The session's ID.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="datagram"/> is shorter than 9 bytes.</exception>
     public static ulong ReadSessionId(ReadOnlySpan<byte> datagram)
     {
         return BinaryPrimitives.ReadUInt64LittleEndian(datagram.Slice(SessionIdOffset, 8));

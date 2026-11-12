@@ -10,6 +10,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.Access.Managers.FileAccessManagers.Services;
 
+/// <summary>Provides a file access manager's access keys, each in a file of its own beside its usage.</summary>
 public class AccessTokenService
 {
     private const string FileExtAccessToken = ".token2";
@@ -17,7 +18,7 @@ public class AccessTokenService
     private readonly ConcurrentDictionary<string, AccessTokenData> _items = new();
     private readonly string _storagePath;
 
-    public AccessTokenService(string storagePath)
+    internal AccessTokenService(string storagePath)
     {
         _storagePath = storagePath;
     }
@@ -40,6 +41,19 @@ public class AccessTokenService
         return Path.Combine(_storagePath, tokenId + FileExtAccessTokenUsage);
     }
 
+    /// <summary>Makes an access key, with a new ID and secret, and writes it to its file.</summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="maxClientCount">The most devices that may use it at once, or 0 for no limit. The default is 1.</param>
+    /// <param name="tokenName">Its name, or <see langword="null"/>.</param>
+    /// <param name="maxTrafficByteCount">Its traffic quota, in bytes, or 0, the default, for none.</param>
+    /// <param name="expirationTime">When it expires, in UTC, or <see langword="null"/>, the default, for never.</param>
+    /// <param name="maxSpeedMbps">
+    /// Its speed limits each way, in megabits a second, or <see langword="null"/>, the default, for none.
+    /// </param>
+    /// <param name="adRequirement">The ad it asks for (<see cref="AccessToken.AdRequirement"/>). The default is none.</param>
+    /// <returns>A task whose result is the access key.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="IOException">The file could not be written.</exception>
     public async Task<AccessToken> Create(
         CancellationToken cancellationToken,
         int maxClientCount = 1,
@@ -74,7 +88,7 @@ public class AccessTokenService
         return accessToken;
     }
 
-    public async Task<AccessTokenData[]> List(CancellationToken cancellationToken)
+    internal async Task<AccessTokenData[]> List(CancellationToken cancellationToken)
     {
         var files = Directory.GetFiles(_storagePath, "*" + FileExtAccessToken);
         var tokenItems = new List<AccessTokenData>();
@@ -88,12 +102,25 @@ public class AccessTokenService
         return [.. tokenItems];
     }
 
+    /// <summary>Counts the access keys, by their files.</summary>
+    /// <returns>A task whose result is the count.</returns>
     public Task<int> GetTotalCount()
     {
         var files = Directory.GetFiles(_storagePath, "*" + FileExtAccessToken);
         return Task.FromResult(files.Length);
     }
 
+    /// <summary>Gets an access key with its usage, from the cache or else from its files.</summary>
+    /// <param name="tokenId">The access key's ID.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the access key with its usage.</returns>
+    /// <exception cref="KeyNotFoundException">There is no such access key.</exception>
+    /// <exception cref="System.Text.Json.JsonException">
+    /// The access key's file holds malformed JSON, or JSON that cannot be read as an access key.
+    /// </exception>
+    /// <exception cref="InvalidDataException">The access key's file holds <c>null</c>.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="tokenId"/> has a character no file name may.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<AccessTokenData> Get(string tokenId, CancellationToken cancellationToken)
     {
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
@@ -138,7 +165,7 @@ public class AccessTokenService
         return accessTokenData;
     }
 
-    public async Task<AccessTokenData> Update(string tokenId, string tokenName, CancellationToken cancellationToken)
+    internal async Task<AccessTokenData> Update(string tokenId, string tokenName, CancellationToken cancellationToken)
     {
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
 
@@ -154,7 +181,7 @@ public class AccessTokenService
     }
 
 
-    public async Task<AccessTokenData?> Find(string tokenId, CancellationToken cancellationToken)
+    internal async Task<AccessTokenData?> Find(string tokenId, CancellationToken cancellationToken)
     {
         try {
             return await Get(tokenId, cancellationToken).Vhc();
@@ -171,7 +198,7 @@ public class AccessTokenService
 
     private static string GetTokenLockName(string tokenId) => $"token_{tokenId}";
 
-    public async Task AddUsage(string tokenId, Traffic traffic, CancellationToken cancellationToken)
+    internal async Task AddUsage(string tokenId, Traffic traffic, CancellationToken cancellationToken)
     {
         //lock tokenId
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
@@ -191,7 +218,7 @@ public class AccessTokenService
         accessTokenData.Usage = usage;
     }
 
-    public async Task Delete(string tokenId, CancellationToken cancellationToken)
+    internal async Task Delete(string tokenId, CancellationToken cancellationToken)
     {
         // validate is it exists
         _ = await Find(tokenId, cancellationToken).Vhc()

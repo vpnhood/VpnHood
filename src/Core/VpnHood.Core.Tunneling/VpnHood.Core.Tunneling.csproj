@@ -2,10 +2,12 @@
 	<PropertyGroup>
 		<Description>Provides tunnelling classes and protocols shared between VpnHood.Core.Client and VpnHood.Core.Server</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="VpnHood.Test" />
+		<InternalsVisibleTo Include="VpnHood.Test.KestrelParity" />
 	</ItemGroup>
 
 	<ItemGroup>

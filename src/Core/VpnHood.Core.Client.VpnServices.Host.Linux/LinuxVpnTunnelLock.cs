@@ -6,11 +6,15 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.VpnServices.Host.Linux;
 
-// The machine's one tunnel on Linux: a lock file in a folder under /run that only root may enter, which
-// every app built on VpnHood shares, and beside it a socket on which the holder hears an app ask it to let
-// go; a plain user can reach neither. flock ends with its process, as the holder's tun does, so a crash
-// leaves nothing in the next app's way.
-public sealed class LinuxVpnTunnelLock : IVpnTunnelLock
+/// <summary>
+/// Represents the machine's one tunnel on Linux: a lock file in a folder under <c>/run</c>, which every app built on
+/// VpnHood shares, and beside it a socket on which the holder hears an app ask it to let go.
+/// </summary>
+/// <remarks>
+/// It makes the folder for root alone, so a plain user can reach neither; a folder that is already there is taken as it
+/// is. flock ends with its process, as the holder's tun does, so a crash leaves nothing in the next app's way.
+/// </remarks>
+internal sealed class LinuxVpnTunnelLock : IVpnTunnelLock
 {
     private const string FolderPath = "/run/vpnhood-tunnel";
     private const int WouldBlock = 11;
@@ -19,6 +23,14 @@ public sealed class LinuxVpnTunnelLock : IVpnTunnelLock
     private static readonly TimeSpan AskInterval = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan LetGoTimeout = TimeSpan.FromSeconds(30);
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Where another app holds it, it asks that app to let go each tenth of a second, and stops asking once 30 seconds
+    /// have passed; a single ask has no time limit of its own.
+    /// </remarks>
+    /// <exception cref="UnauthorizedAccessException">The process may not use the folder: it is not root.</exception>
+    /// <exception cref="IOException">The lock file or the socket's file could not be used.</exception>
+    /// <exception cref="System.Net.Sockets.SocketException">The socket could not be bound.</exception>
     public async Task<IDisposable> Take(IVpnTunnelHolder holder, CancellationToken cancellationToken)
     {
         // root's alone: only root's services ask, and nobody else may look in

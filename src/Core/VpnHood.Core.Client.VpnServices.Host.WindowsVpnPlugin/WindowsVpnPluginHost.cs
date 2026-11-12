@@ -6,14 +6,25 @@ using VpnHood.Core.Client.Devices.WindowsVpnPlugin;
 
 namespace VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin;
 
-// The VPN host's whole Main, which a head's VPN host exe calls on its MTA thread. Windows starts the exe as
-// the package's background-task server; a plain console host or a direct COM registration does not activate
-// the VPN background task, CoreApplication.RunWithActivationFactories does.
+/// <summary>
+/// Provides the VPN host's whole Main, which a head's VPN host executable calls on its MTA thread.
+/// </summary>
+/// <remarks>
+/// Windows starts the executable as the package's background-task server; a plain console host or a direct COM
+/// registration does not activate the VPN background task, <c>CoreApplication.RunWithActivationFactories</c> does.
+/// </remarks>
 public static class WindowsVpnPluginHost
 {
     private const string LogFileName = "vpn-host.log";
     private const string ServerNameArgument = "-ServerName:";
 
+    /// <summary>
+    /// Runs the VPN host: the server of the package's VPN task and app service, with its own log,
+    /// <c>vpn-host.log</c>; or, where a person launched its entry in Start, a view that opens the app for Quick Launch.
+    /// </summary>
+    /// <param name="args">The command line Windows gives, with the server's name where it starts the server.</param>
+    /// <exception cref="InvalidOperationException">The process has no path.</exception>
+    /// <exception cref="Exception">The server failed; the error is logged first.</exception>
     public static void Run([ReadOnlyArray] string[] args)
     {
         // A person's launch of the VPN host's own entry in Start, Quick Launch (the package's manifest): Windows starts

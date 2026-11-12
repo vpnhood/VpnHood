@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Tunneling.DatagramMessaging;
 
-public enum PacketMessageCode : byte
+internal enum PacketMessageCode : byte
 {
     ClosePacketChannel
 }

@@ -20,8 +20,9 @@ public class TrafficMeter : IDisposable
     /// <summary>
     /// The interval used to calculate the current speed.
     /// </summary>
-    public TimeSpan SpeedInterval { get; init; } = TimeSpan.FromSeconds(2);
+    internal TimeSpan SpeedInterval { get; init; } = TimeSpan.FromSeconds(2);
 
+    /// <summary>Initializes a new instance of the <see cref="TrafficMeter"/> class, with no limit.</summary>
     public TrafficMeter()
     {
         _sent = new TrafficMeterItem { SpeedInterval = SpeedInterval };
@@ -68,11 +69,13 @@ public class TrafficMeter : IDisposable
     /// <summary>
     /// A turn at each limit (bytes): what a sender or a receiver charges between two waits.
     /// </summary>
-    public Traffic TurnLength => new(_sent.TurnLength, _received.TurnLength);
+    internal Traffic TurnLength => new(_sent.TurnLength, _received.TurnLength);
 
     /// <summary>
     /// Reports sent bytes to the traffic meter. This method is thread-safe.
     /// </summary>
+    /// <param name="bytes">The bytes.</param>
+    /// <exception cref="ObjectDisposedException">The meter is disposed.</exception>
     public void OnSent(long bytes)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -83,6 +86,8 @@ public class TrafficMeter : IDisposable
     /// <summary>
     /// Reports received bytes to the traffic meter. This method is thread-safe.
     /// </summary>
+    /// <param name="bytes">The bytes.</param>
+    /// <exception cref="ObjectDisposedException">The meter is disposed.</exception>
     public void OnReceived(long bytes)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -93,6 +98,14 @@ public class TrafficMeter : IDisposable
     /// <summary>
     /// Charges bytes to the send limit, and waits while the session is past it.
     /// </summary>
+    /// <param name="bytes">The bytes.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes after the delay this charge calls for.</returns>
+    /// <remarks>
+    /// It completes at once where the debt is below 20 milliseconds, otherwise after the debt's time, at most a day;
+    /// other charges meanwhile may leave the session past its limit.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public ValueTask ThrottleSendAsync(long bytes, CancellationToken cancellationToken)
     {
         return _sent.ThrottleAsync(bytes, cancellationToken);
@@ -101,7 +114,7 @@ public class TrafficMeter : IDisposable
     /// <summary>
     /// Charges bytes to the send limit without waiting, for a sender that waits once per turn.
     /// </summary>
-    public void ChargeSend(long bytes)
+    internal void ChargeSend(long bytes)
     {
         _sent.Charge(bytes);
     }
@@ -109,6 +122,14 @@ public class TrafficMeter : IDisposable
     /// <summary>
     /// Charges bytes to the receive limit, and waits while the session is past it.
     /// </summary>
+    /// <param name="bytes">The bytes.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes after the delay this charge calls for.</returns>
+    /// <remarks>
+    /// It completes at once where the debt is below 20 milliseconds, otherwise after the debt's time, at most a day;
+    /// other charges meanwhile may leave the session past its limit.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public ValueTask ThrottleReceiveAsync(long bytes, CancellationToken cancellationToken)
     {
         return _received.ThrottleAsync(bytes, cancellationToken);
@@ -118,11 +139,17 @@ public class TrafficMeter : IDisposable
     /// For a receiver that cannot wait: charges bytes to the receive limit, or returns true, charging nothing,
     /// when they are past it and should be dropped.
     /// </summary>
+    /// <param name="bytes">The bytes.</param>
+    /// <returns>
+    /// <see langword="true"/> where the bytes are past the limit and should be dropped; otherwise,
+    /// <see langword="false"/>, and they are charged.
+    /// </returns>
     public bool ShouldThrottleReceive(long bytes)
     {
         return _received.ShouldThrottle(bytes);
     }
 
+    /// <summary>Releases the meter, which then takes no more traffic.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

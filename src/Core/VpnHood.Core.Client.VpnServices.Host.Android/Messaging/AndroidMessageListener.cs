@@ -15,7 +15,7 @@ namespace VpnHood.Core.Client.VpnServices.Host.Android.Messaging;
 // Exported=false and guarded by BIND_VPN_SERVICE (a signature permission only the system holds),
 // while our own processes bind through the same-uid exemption. The uid check below is defense in
 // depth so a future manifest change cannot silently open the channel.
-public sealed class AndroidMessageListener : IMessageListener
+internal sealed class AndroidMessageListener : IMessageListener
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private MessageHandler? _messageHandler;

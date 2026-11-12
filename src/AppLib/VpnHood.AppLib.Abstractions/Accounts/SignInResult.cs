@@ -6,6 +6,7 @@ namespace VpnHood.AppLib.Abstractions.Accounts;
 /// </summary>
 public record SignInResult
 {
+    /// <summary>Gets where the sign-in stands.</summary>
     public required SignInState State { get; init; }
 
     /// <summary>

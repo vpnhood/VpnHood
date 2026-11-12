@@ -4,19 +4,31 @@ using System.Text.Json;
 
 namespace VpnHood.Core.Tunneling.ProbeResistance;
 
-// Proves possession of the farm key before either an HTTP body or a WebSocket upgrade is accepted.
-// This is shared by TCP and QUIC, and runs only when a stream opens, never for its packets.
+/// <summary>
+/// Provides the proof that a request's client holds the server farm's secret, which the server asks for before it
+/// takes an HTTP body or a WebSocket upgrade: a JSON Web Token, signed with HS256 by a key derived from the secret.
+/// </summary>
+/// <param name="farmSecret">The server farm's secret, which the access key carries; at least 16 bytes.</param>
+/// <remarks>TCP and QUIC share it, and it runs only when a stream opens, never for the stream's packets.</remarks>
+/// <exception cref="ArgumentNullException"><paramref name="farmSecret"/> is <see langword="null"/>.</exception>
+/// <exception cref="ArgumentException"><paramref name="farmSecret"/> is shorter than 16 bytes.</exception>
 public sealed class RequestProof(byte[] farmSecret)
 {
+    /// <summary>The HTTP protocol version a proof is for: 15.</summary>
     public const int ProtocolVersion = 15;
-    public const string Purpose = "vpnhood-request";
+
+    internal const string Purpose = "vpnhood-request";
+
+    /// <summary>How long a proof holds from its issue: 5 minutes.</summary>
     public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(5);
+
+    /// <summary>How far the client's clock may be from the server's: 30 seconds either way.</summary>
     public static readonly TimeSpan ClockTolerance = TimeSpan.FromSeconds(30);
     private const int MaxTokenLength = 2048;
     private const string Header = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
     private readonly byte[] _signingKey = DeriveSigningKey(farmSecret);
 
-    public static byte[] DeriveSigningKey(byte[] farmSecret)
+    internal static byte[] DeriveSigningKey(byte[] farmSecret)
     {
         ArgumentNullException.ThrowIfNull(farmSecret);
         if (farmSecret.Length < 16)
@@ -28,6 +40,13 @@ public sealed class RequestProof(byte[] farmSecret)
             info: "VpnHood.Protocol15.RequestProof.HS256"u8.ToArray());
     }
 
+    /// <summary>Creates a proof, issued now.</summary>
+    /// <param name="protocolVersion">The protocol version, which must be <see cref="ProtocolVersion"/>.</param>
+    /// <param name="now">The time, by the client's clock as the server's would read it.</param>
+    /// <returns>The proof, as a JSON Web Token.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="protocolVersion"/> is not <see cref="ProtocolVersion"/>.
+    /// </exception>
     public string Create(int protocolVersion, DateTimeOffset now)
     {
         if (protocolVersion != ProtocolVersion)
@@ -45,6 +64,14 @@ public sealed class RequestProof(byte[] farmSecret)
         return signedText + "." + Encode(signature);
     }
 
+    /// <summary>
+    /// Verifies a proof: its signature, its header and fields, and that it was issued within <see cref="Lifetime"/>
+    /// before now, give or take <see cref="ClockTolerance"/>.
+    /// </summary>
+    /// <param name="token">The proof.</param>
+    /// <param name="protocolVersion">The protocol version, which must be <see cref="ProtocolVersion"/>.</param>
+    /// <param name="now">The time.</param>
+    /// <returns><see langword="true"/> if the proof holds; otherwise, <see langword="false"/>.</returns>
     public bool Verify(string token, int protocolVersion, DateTimeOffset now)
     {
         if (protocolVersion != ProtocolVersion || string.IsNullOrEmpty(token) || token.Length > MaxTokenLength)

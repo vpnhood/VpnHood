@@ -7,11 +7,16 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Tunneling;
 
-// A tunnel with a send limit. The session's packets wait in its queue, one for all its channels, and leave it at
-// the limit: the session's bottleneck, sharing the limit with its forwarding streams. The queue takes its turns at the
-// limit as one more stream, so beside busy streams all its packets together get a stream's share. It holds about
-// a quarter second of the limit, at least a new connection's first burst, in lanes by flow that take turns, so a
-// flow that floods fills only its own lane
+/// <summary>
+/// Represents a tunnel with a send limit: the session's packets wait in its queue, one for all its channels, and leave
+/// it at the limit.
+/// </summary>
+/// <remarks>
+/// The queue is the session's bottleneck, sharing the limit with its forwarding streams: it takes its turns at the
+/// limit as one more stream, so beside busy streams all its packets together get a stream's share. It holds about a
+/// quarter second of the limit, at least a new connection's first burst, in lanes by flow that take turns, so a flow
+/// that floods fills only its own lane.
+/// </remarks>
 public class ThrottledTunnel : Tunnel
 {
     private const int MinQueueCapacity = 32;
@@ -25,12 +30,21 @@ public class ThrottledTunnel : Tunnel
     private long _turnBytes;
 
     // the packets the queue dropped: a full queue's oldest, and those it held at the end
-    public long QueueDroppedPackets => _throttleQueue.DroppedPackets;
+    internal long QueueDroppedPackets => _throttleQueue.DroppedPackets;
 
-    // the packets waiting for their turn; the base queues none, as it passes each on
+    /// <inheritdoc/>
+    /// <remarks>It is the packets waiting for their turn; the base queues none, as it passes each on.</remarks>
     public override int QueueLength => _throttleQueue.QueueLength;
 
-    // the session's meter, which it owns: the limit the packets are paced to, shared with its forwarding streams
+    /// <summary>Initializes a new instance of the <see cref="ThrottledTunnel"/> class.</summary>
+    /// <param name="options">The options.</param>
+    /// <param name="trafficMeter">
+    /// The session's meter: the send limit the tunnel's packets are paced to, shared with the session's forwarding
+    /// streams. The session disposes it.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// The options' most packet channels is less than 1, or <paramref name="trafficMeter"/> has no send limit.
+    /// </exception>
     public ThrottledTunnel(TunnelOptions options, TrafficMeter trafficMeter)
         : base(options)
     {
@@ -46,9 +60,11 @@ public class ThrottledTunnel : Tunnel
             MinQueueCapacity, PacketTransportOptions.DefaultQueueCapacity));
     }
 
-    // Hands the packet to the queue, whose turn routes it; so it completes at once and never routes the packet
-    // itself, as the base requires. The queue refuses, and drops, a packet only once the tunnel is being disposed:
-    // a tunnel stays open until its session closes it
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It hands the packet to the queue, whose turn routes it, so it completes at once and never routes the packet
+    /// itself, as the base requires. The queue refuses, and drops, a packet only once the tunnel is being disposed.
+    /// </remarks>
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         _throttleQueue.SendPacketQueued(ipPackets[0]);
@@ -95,6 +111,8 @@ public class ThrottledTunnel : Tunnel
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It ends the queue first, which drops the packets it holds, then the tunnel.</remarks>
     protected override void DisposeManaged()
     {
         // the queue first, so its loop takes no packet for a closing channel, then the wait it may be in

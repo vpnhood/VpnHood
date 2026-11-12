@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Tunneling.Forwarding;
 
-public interface IPacketForwarderPool : IPacketTransport
+internal interface IPacketForwarderPool : IPacketTransport
 {
     public int ClientCount { get; }
     public int RemoteEndPointCount { get; }

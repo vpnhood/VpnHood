@@ -30,7 +30,7 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
-public class Session : IDisposable
+internal class Session : IDisposable
 {
     private const double ReceiveSpeedGrace = 1.2;
     private readonly IAccessManager _accessManager;

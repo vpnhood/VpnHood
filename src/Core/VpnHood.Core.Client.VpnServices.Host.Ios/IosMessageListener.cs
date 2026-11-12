@@ -12,7 +12,7 @@ namespace VpnHood.Core.Client.VpnServices.Host.Ios;
 // impossible (a message arrives before the host has started), it answers nil — the app-side
 // IosMessageClient surfaces that as VpnServiceUnreachableException, the same semantics as a refused
 // TCP connection on other platforms.
-public sealed class IosMessageListener : IMessageListener
+internal sealed class IosMessageListener : IMessageListener
 {
     private MessageHandler? _messageHandler;
 

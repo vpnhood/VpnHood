@@ -21,7 +21,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
 
-public class ServerFinder(
+internal class ServerFinder(
     ISocketFactory socketFactory,
     byte[] farmSecret,
     string? serverLocation,

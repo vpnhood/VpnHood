@@ -28,6 +28,10 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
+/// <summary>
+/// Represents a server's sessions: it makes them for the clients, keeps their usage, and syncs it with the access
+/// manager.
+/// </summary>
 public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHandler
 {
     private bool _disposing; // a close has begun, either one
@@ -47,24 +51,24 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     private readonly VirtualIpManager _virtualIpManager;
     private byte[] _serverSecret;
 
-    public NetFilter NetFilter { get; set; }
-    public Version ServerVersion { get; }
-    public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
-    public TrackingOptions TrackingOptions { get; set; } = new();
-    public SessionOptions SessionOptions { get; set; } = new();
-    public ITracker? Tracker { get; }
+    internal NetFilter NetFilter { get; set; }
+    internal Version ServerVersion { get; }
+    internal ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
+    internal TrackingOptions TrackingOptions { get; set; } = new();
+    internal SessionOptions SessionOptions { get; set; } = new();
+    internal ITracker? Tracker { get; }
     // Whether TCP packets of the version have a way out now: the adapter carries the version and its NAT
     // translates it. WinNAT translates no IPv6; an adapter on a host whose address of the version is not
     // up yet, or one down after a failed restart, carries none.
-    public bool IsVpnAdapterSupported(IpVersion ipVersion) =>
+    internal bool IsVpnAdapterSupported(IpVersion ipVersion) =>
         _vpnAdapter != null && _vpnAdapter.IsNatSupported(ipVersion) && _vpnAdapter.IsIpVersionSupported(ipVersion);
 
-    public IpNetwork VirtualIpNetworkV4 => _virtualIpManager.IpNetworkV4;
-    public IpNetwork VirtualIpNetworkV6 => _virtualIpManager.IpNetworkV6;
+    internal IpNetwork VirtualIpNetworkV4 => _virtualIpManager.IpNetworkV4;
+    internal IpNetwork VirtualIpNetworkV6 => _virtualIpManager.IpNetworkV6;
 
     internal RequestProof RequestProof { get; private set; }
 
-    public byte[] ServerSecret {
+    internal byte[] ServerSecret {
         get => _serverSecret;
         set {
             // Derive once when configuration changes, rather than on each incoming TCP stream.
@@ -182,7 +186,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         return session;
     }
 
-    public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair,
+    internal async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair,
         int protocolVersion, IPAddress clientIp, CancellationToken cancellationToken)
     {
         // validate the token
@@ -233,6 +237,10 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         return sessionResponseEx;
     }
 
+    /// <summary>
+    /// Logs the sessions' counts: the active, idle and dead ones and all of them, with their TCP channels and UDP
+    /// connections.
+    /// </summary>
     public void Report()
     {
         var totalCount = Sessions.Count;
@@ -268,7 +276,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         ], cancellationToken);
     }
 
-    public async Task RecoverSessions(CancellationToken cancellationToken)
+    internal async Task RecoverSessions(CancellationToken cancellationToken)
     {
         // recover all sessions
         var responseExs = await _accessManager.Session_GetAll(cancellationToken).Vhc();
@@ -503,13 +511,13 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         await RemoveSessions(deadSessions, cancellationToken).Vhc();
     }
 
-    public async Task RemoveSessions(Session[] sessions, CancellationToken cancellationToken)
+    internal async Task RemoveSessions(Session[] sessions, CancellationToken cancellationToken)
     {
         foreach (var session in sessions)
             await RemoveSession(session, cancellationToken).Vhc();
     }
 
-    public async Task RemoveSession(Session session, CancellationToken cancellationToken)
+    internal async Task RemoveSession(Session session, CancellationToken cancellationToken)
     {
         DisposeSession(session); // its virtual IPs go back with it
 
@@ -525,7 +533,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
             await _sessionLocalService.Remove(session.SessionId, cancellationToken).Vhc();
     }
 
-    public Session? GetSessionById(ulong sessionId)
+    internal Session? GetSessionById(ulong sessionId)
     {
         Sessions.TryGetValue(sessionId, out var session);
         return session;
@@ -551,8 +559,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         }
     }
 
-    public Task ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses, long requestTimestamp,
-        CancellationToken cancellationToken)
+    Task ISessionResponseHandler.ApplySessionResponses(Dictionary<ulong, SessionResponse> sessionResponses,
+        long requestTimestamp, CancellationToken cancellationToken)
     {
         // update sessions from the result of access manager; a closed session keeps its code, a stale reply is skipped
         foreach (var responsePair in sessionResponses) {
@@ -578,12 +586,12 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         await RemoveDisposedSessions(cancellationToken).Vhc(); // remove dead sessions
     }
 
-    public Task<int> Sync(CancellationToken cancellationToken)
+    internal Task<int> Sync(CancellationToken cancellationToken)
     {
         return Sync(false, cancellationToken);
     }
 
-    public async Task<int> Sync(bool force, CancellationToken cancellationToken)
+    internal async Task<int> Sync(bool force, CancellationToken cancellationToken)
     {
         CollectSessionUsages(force);
         var sessionResponses = await _usageReporter.SendUsages(force, cancellationToken).Vhc();
@@ -594,7 +602,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         return 0;
     }
 
-    public async Task CloseSession(ulong sessionId, CancellationToken cancellationToken)
+    internal async Task CloseSession(ulong sessionId, CancellationToken cancellationToken)
     {
         var session = GetSessionById(sessionId)
                       ?? throw new KeyNotFoundException($"Could not find Session. SessionId: {sessionId}");
@@ -622,12 +630,19 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     /// <summary>Gets the session that holds a virtual IP.</summary>
     /// <param name="virtualIpAddress">The virtual IP, as a packet from the internet names its destination.</param>
     /// <returns>The session, or <see langword="null"/> when no session holds the IP.</returns>
-    public Session? GetSessionByVirtualIp(IpAddressValue virtualIpAddress)
+    internal Session? GetSessionByVirtualIp(IpAddressValue virtualIpAddress)
     {
         return _virtualIpManager.FindSession(virtualIpAddress);
     }
 
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The graceful close: the sessions stop but stay open with the access manager, so they recover after a restart; it
+    /// tries a last sync of their usage, which is asked to stop after 7 seconds, logging a failure and going on; then
+    /// the rest is released as <see cref="Dispose"/> does. A call waits for an earlier graceful close, and after a
+    /// quick close it cleans up nothing more.
+    /// </remarks>
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end. One after a quick close returns, unlike the server's and the
@@ -660,7 +675,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         Dispose();
     }
 
-    // the quick close: a last sync under way ends, and every member's close is sync
+    /// <inheritdoc/>
+    /// <remarks>The quick close: the sessions close at once, and a last sync under way is asked to stop.</remarks>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

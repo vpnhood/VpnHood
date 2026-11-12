@@ -14,8 +14,13 @@ namespace VpnHood.AppLib.Abstractions.Accounts;
 /// </summary>
 public static class AuthProviders
 {
+    /// <summary>The ID of the sign-in with Google.</summary>
     public const string Google = "google";
+
+    /// <summary>The ID of the sign-in with Apple.</summary>
     public const string Apple = "apple";
+
+    /// <summary>The ID of the sign-in with Microsoft.</summary>
     public const string Microsoft = "microsoft";
 
     /// <summary>

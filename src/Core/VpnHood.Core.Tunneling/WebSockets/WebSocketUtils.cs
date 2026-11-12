@@ -7,6 +7,7 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.WebSockets;
 
+/// <summary>Provides the parts of the WebSocket protocol the client and the server share.</summary>
 public static class WebSocketUtils
 {
     internal static void MaskPayload(Span<byte> payload, ReadOnlySpan<byte> key, int offset)
@@ -15,11 +16,13 @@ public static class WebSocketUtils
             payload[i] ^= key[(offset + i) & 3];
     }
 
-    // the close status of RFC 6455's registry for a server that can't serve for now: "Try Again Later"
+    /// <summary>
+    /// The close status of RFC 6455's registry for a server that cannot serve for now, "Try Again Later": 1013.
+    /// </summary>
     public const ushort CloseStatusTryAgainLater = 1013;
 
     // a server's frame is unmasked
-    public static ReadOnlyMemory<byte> BuildServerCloseFrame(ushort closeStatus)
+    internal static ReadOnlyMemory<byte> BuildServerCloseFrame(ushort closeStatus)
     {
         var buffer = new byte[4];
         buffer[0] = 0x88; // FIN bit + opcode 8 (Close)
@@ -28,7 +31,7 @@ public static class WebSocketUtils
         return buffer;
     }
 
-    public static Span<byte> BuildWebSocketFrameHeader(
+    internal static Span<byte> BuildWebSocketFrameHeader(
         Span<byte> buffer, long payloadLength, bool closeConnection = false)
     {
         // Always ensure buffer is large enough for worst case (64-bit length)
@@ -70,7 +73,7 @@ public static class WebSocketUtils
         return buffer[..offset];
     }
 
-    public static Span<byte> BuildWebSocketFrameHeader(
+    internal static Span<byte> BuildWebSocketFrameHeader(
         Span<byte> buffer, long payloadLength, scoped ReadOnlySpan<byte> maskKey, bool closeConnection = false)
     {
         // Always ensure buffer is large enough for worst case (64-bit length + mask)
@@ -119,7 +122,7 @@ public static class WebSocketUtils
         return buffer[..offset];
     }
 
-    public static async Task<WebSocketHeader> ReadWebSocketHeader(Stream stream, Memory<byte> buffer,
+    internal static async Task<WebSocketHeader> ReadWebSocketHeader(Stream stream, Memory<byte> buffer,
         CancellationToken cancellationToken)
     {
         if (buffer.Length < 14)
@@ -201,6 +204,12 @@ public static class WebSocketUtils
     }
 
 
+    /// <summary>
+    /// Computes the <c>Sec-WebSocket-Accept</c> value of a server's upgrade response, from its request's
+    /// <c>Sec-WebSocket-Key</c>.
+    /// </summary>
+    /// <param name="secWebSocketKey">The request's key.</param>
+    /// <returns>The value.</returns>
     public static string ComputeWebSocketAccept(string secWebSocketKey)
     {
         var combined = secWebSocketKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";

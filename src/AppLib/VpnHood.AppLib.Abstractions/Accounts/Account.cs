@@ -1,5 +1,6 @@
 namespace VpnHood.AppLib.Abstractions.Accounts;
 
+/// <summary>Represents the signed-in person's account, as the account backend gives it.</summary>
 public class Account
 {
     /// <summary>
@@ -9,7 +10,12 @@ public class Account
     /// </summary>
     public required string UserId { get; set; }
 
+    /// <summary>Gets or sets the person's name, or <see langword="null"/>.</summary>
     public string? Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the person's email address, or <see langword="null"/> where the account's identity carries none.
+    /// </summary>
     public string? Email { get; set; }
 
     /// <summary>The store subscription serving this account, or null when none does.</summary>
@@ -19,8 +25,8 @@ public class Account
     /// THE one code this account serves, or null when it serves none. The backend ranks everything
     /// the account holds — whatever is being paid for right now first, then the best of the rest —
     /// and recomputes the winner on every read, so the app is handed a code and never a list, and
-    /// never picks (keyring plan §2). Its expiry is what some device last reported and is advisory;
-    /// only an access-server refusal ends use of a credential.
+    /// never picks. Its expiry is the backend's and is advisory; only an access-server refusal ends
+    /// use of a credential.
     /// </summary>
     public AccessCodeInfo? AccessCodeInfo { get; set; }
 

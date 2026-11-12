@@ -296,7 +296,7 @@ public class TestHelper : IDisposable
         return new TestDevice(this, _ => new TestNullVpnAdapter());
     }
 
-    public UdpForwarderPoolOptions CreateUdpForwarderPoolOptions(IPacketForwarderCallbacks callbacks)
+    internal UdpForwarderPoolOptions CreateUdpForwarderPoolOptions(IPacketForwarderCallbacks callbacks)
     {
         var forwarderPool = new UdpForwarderPoolOptions {
             PacketForwarderCallbacks = callbacks,

@@ -10,8 +10,14 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-// A UDP socket for sessions' datagrams: it hands each one it receives to its handler, and sends the sealed ones it is
-// given. A server's listener serves every session; a client's socket serves its own
+/// <summary>
+/// Represents a UDP socket for sessions' datagrams: it hands each one it receives to its handler, and sends the sealed
+/// ones it is given.
+/// </summary>
+/// <remarks>
+/// A server's listener serves every session; a client's socket serves its own. A datagram shorter than a header never
+/// reaches the handler, and a socket that fails beyond use disposes the transmitter.
+/// </remarks>
 public sealed class UdpChannelTransmitter : IDisposable
 {
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
@@ -25,9 +31,16 @@ public sealed class UdpChannelTransmitter : IDisposable
     private bool _isSendBufferSizeCustomized;
     private bool _isReceivedBufferSizeCustomized;
 
+    /// <summary>Gets the socket's local endpoint.</summary>
     public IPEndPoint LocalEndPoint { get; }
+
+    /// <summary>Gets a value indicating whether the transmitter is in use: it is not disposed.</summary>
     public bool Connected => !_disposed;
 
+    /// <summary>Initializes a new instance of the <see cref="UdpChannelTransmitter"/> class, which reads at once.</summary>
+    /// <param name="udpClient">The bound UDP client, which the transmitter owns.</param>
+    /// <param name="handler">The handler that takes each datagram received.</param>
+    /// <exception cref="InvalidOperationException">The UDP client's socket is not bound.</exception>
     public UdpChannelTransmitter(UdpClient udpClient, IUdpDatagramHandler handler)
     {
         _udpClient = udpClient;
@@ -36,6 +49,10 @@ public sealed class UdpChannelTransmitter : IDisposable
         Task.Run(ReadLoopAsync);
     }
 
+    /// <summary>
+    /// Gets or sets the socket's send and receive buffer sizes. A size above zero is set; any other gives back the
+    /// system's default where a size was set before.
+    /// </summary>
     public TransferBufferSize? BufferSize {
         get => new(_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
         set {
@@ -61,7 +78,17 @@ public sealed class UdpChannelTransmitter : IDisposable
         }
     }
 
-    // sessions send at once: each seals in a buffer of its own, and the socket takes concurrent sends
+    /// <summary>Sends a sealed datagram.</summary>
+    /// <param name="datagram">The datagram.</param>
+    /// <param name="remoteEndPoint">The endpoint it goes to.</param>
+    /// <returns>A task that completes once the socket has sent the datagram.</returns>
+    /// <remarks>
+    /// Sessions send at once: each seals in a buffer of its own, and the socket takes concurrent sends. A failure is
+    /// thrown. While the transmitter is in use, an ordinary one is logged, the first of each report period as a warning
+    /// with its error and the others at the debug level; a socket in a state beyond use is logged as an error and
+    /// disposes the transmitter.
+    /// </remarks>
+    /// <exception cref="Exception">The socket sent less than the whole datagram.</exception>
     public async Task SendAsync(ReadOnlyMemory<byte> datagram, IPEndPoint remoteEndPoint)
     {
         try {
@@ -129,6 +156,7 @@ public sealed class UdpChannelTransmitter : IDisposable
         }
     }
 
+    /// <summary>Closes the socket, which ends the reading; a socket that fails to close is logged.</summary>
     public void Dispose()
     {
         // before the socket's close: the receive loop takes a failure after it as the close's own

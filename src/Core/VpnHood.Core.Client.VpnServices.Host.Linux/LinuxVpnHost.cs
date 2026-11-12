@@ -6,16 +6,31 @@ using VpnHood.Core.Client.Devices.Linux;
 
 namespace VpnHood.Core.Client.VpnServices.Host.Linux;
 
-// The VPN host's whole Main, which a head's VPN host binary calls: the VPN service in a process of its own, with
-// Core and nothing of the app, as the phones and the Store run it. The daemon starts it at a connect
-// (LinuxVpnHostProcess) and it ends with its session; the app reaches it as it reaches any VPN service, over the
-// channel and the files in the storage's VPN service folder. It is in the unit's cgroup, so the kill switch lets
-// it out as it does the daemon, and the unit's stop reaches it with the daemon's.
+/// <summary>
+/// Provides the VPN host's whole Main, which a head's VPN host binary calls: the VPN service in a process of its own,
+/// with Core and nothing of the app, as the phones and the Store run it.
+/// </summary>
+/// <remarks>
+/// The daemon starts it at a connect, and it ends with its session; the app reaches it as it reaches any VPN service,
+/// over the channel and the files in the storage's VPN service folder. It is in the unit's cgroup, so the kill switch
+/// lets it out as it does the daemon, and the unit's stop reaches it with the daemon's.
+/// </remarks>
 public static class LinuxVpnHost
 {
     // A signal's graceful close, within the daemon's own (DesktopHost), which leaves its quick one the rest.
     private static readonly TimeSpan SignalGracefulCloseTimeout = TimeSpan.FromSeconds(8);
 
+    /// <summary>Runs the VPN host: it connects with the saved options, and returns once the session has ended.</summary>
+    /// <param name="args">The command line, as the daemon writes it (<c>LinuxVpnHostArgs</c>).</param>
+    /// <returns>
+    /// A task whose result is the exit code: 0 once the session has ended, or 2 where the command line is no VPN host's.
+    /// </returns>
+    /// <remarks>
+    /// Its lines go to the journal where stdout is the journal, else to the console, from its first line on, and also
+    /// to the VPN service's own log once that opens. A SIGTERM, SIGINT or SIGHUP ends the session as a disconnect does:
+    /// gracefully for up to 8 seconds, then at once.
+    /// </remarks>
+    /// <exception cref="Exception">The VPN service could not be made or run; the error is logged first.</exception>
     public static async Task<int> Run(IReadOnlyList<string> args)
     {
         if (LinuxVpnHostArgs.TryParse(args) is not { } hostArgs) {

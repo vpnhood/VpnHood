@@ -3,7 +3,7 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Server.NetProtection;
 
-public class NetScanDetector(int itemLimit, TimeSpan itemTimeout) : IDisposable
+internal class NetScanDetector(int itemLimit, TimeSpan itemTimeout) : IDisposable
 {
     private readonly TimeoutDictionary<IpAddressValue, NetworkIpAddressItem> _networkIpAddresses = new(itemTimeout);
 

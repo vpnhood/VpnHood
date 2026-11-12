@@ -13,14 +13,21 @@ namespace VpnHood.Core.Client;
 public class ClientSocketFactory(ISocketFactory socketFactory, IQuicClientFactory? quicClientFactory)
     : IClientSocketFactory
 {
+    /// <inheritdoc/>
     public IQuicClientFactory? QuicClientFactory => quicClientFactory;
 
+    /// <inheritdoc/>
+    /// <remarks>It is the socket factory's.</remarks>
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null) =>
         socketFactory.CreateTcpClient(ipEndPoint, options);
 
+    /// <inheritdoc/>
+    /// <remarks>It is the socket factory's.</remarks>
     public UdpClient CreateUdpClient(AddressFamily addressFamily) =>
         socketFactory.CreateUdpClient(addressFamily);
 
+    /// <inheritdoc/>
+    /// <remarks>It is the socket factory's.</remarks>
     public Socket CreateUdpSocket(AddressFamily addressFamily) =>
         socketFactory.CreateUdpSocket(addressFamily);
 }

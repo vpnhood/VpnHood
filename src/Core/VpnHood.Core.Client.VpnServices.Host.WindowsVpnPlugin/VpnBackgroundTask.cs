@@ -5,9 +5,16 @@ using Windows.Networking.Vpn;
 
 namespace VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin;
 
-// What Windows activates in the VPN host when the profile connects: one finite run per VPN event.
+/// <summary>
+/// Represents what Windows activates in the VPN host when the profile connects: one finite run per VPN event.
+/// </summary>
 public sealed class VpnBackgroundTask : IBackgroundTask
 {
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It hands the VPN event to the plug-in, and, after a disconnect, waits up to 15 seconds for the session's close
+    /// before the run ends; a failure is logged.
+    /// </remarks>
     public void Run(IBackgroundTaskInstance taskInstance)
     {
         var deferral = taskInstance.GetDeferral();

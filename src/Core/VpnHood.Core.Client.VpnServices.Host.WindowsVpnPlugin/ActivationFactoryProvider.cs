@@ -5,9 +5,14 @@ using WinRT;
 
 namespace VpnHood.Core.Client.VpnServices.Host.WindowsVpnPlugin;
 
-// The factories the VPN host hands Windows (CoreApplication.RunWithActivationFactories).
+/// <summary>
+/// Provides the activation factories the VPN host hands Windows (<c>CoreApplication.RunWithActivationFactories</c>).
+/// </summary>
 public sealed class ActivationFactoryProvider : IGetActivationFactory
 {
+    /// <inheritdoc/>
+    /// <remarks>It gives the factories of the classes this component authors.</remarks>
+    /// <exception cref="TypeLoadException">The component has no such class.</exception>
     public object GetActivationFactory(string activatableClassId)
     {
         VhLogger.Instance.LogInformation("Windows asked for the activation factory of {ClassId}.", activatableClassId);

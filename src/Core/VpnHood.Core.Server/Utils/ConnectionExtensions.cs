@@ -10,7 +10,7 @@ using VpnHood.Core.Tunneling.WebSockets;
 
 namespace VpnHood.Core.Server.Utils;
 
-public static class ConnectionExtensions
+internal static class ConnectionExtensions
 {
     extension(IStreamConnection streamConnection)
     {

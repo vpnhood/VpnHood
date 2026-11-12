@@ -18,11 +18,13 @@ public class Subscription
     /// <summary>When the subscription began.</summary>
     public DateTime? CreatedTime { get; set; }
 
+    /// <summary>Gets or sets when the current period ends, or <see langword="null"/>.</summary>
     public DateTime? ExpirationTime { get; set; }
 
     /// <summary>What the STORE charged for the current period — not a catalogue price.</summary>
     public decimal? PriceAmount { get; set; }
 
+    /// <summary>Gets or sets the currency of <see cref="PriceAmount"/>, or <see langword="null"/>.</summary>
     public string? PriceCurrency { get; set; }
 
     /// <summary>
@@ -32,6 +34,10 @@ public class Subscription
     /// </summary>
     public string? BillingPeriod { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the subscription renews at the period's end, or
+    /// <see langword="null"/> where that is not known.
+    /// </summary>
     public bool? IsAutoRenew { get; set; }
 
     /// <summary>

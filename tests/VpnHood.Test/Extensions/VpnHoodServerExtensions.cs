@@ -4,7 +4,7 @@ using VpnHood.Net.Toolkit.Exceptions;
 
 namespace VpnHood.Test.Extensions;
 
-public static class VpnHoodServerExtensions
+internal static class VpnHoodServerExtensions
 {
     extension(VpnHoodServer server)
     {

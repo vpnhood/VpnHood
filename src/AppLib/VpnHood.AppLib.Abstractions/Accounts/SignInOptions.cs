@@ -1,10 +1,18 @@
 namespace VpnHood.AppLib.Abstractions.Accounts;
 
+/// <summary>Represents a sign-in: its method, with the credentials or the second step's code.</summary>
 public record SignInOptions
 {
-    /// <summary>The identity provider to sign in with — one of AppDescriptor.AuthProviderIds (see AuthProviders).</summary>
+    /// <summary>
+    /// The sign-in method — one of <see cref="IAuthenticationProvider.ProviderIds"/> (see <see cref="AuthProviders"/>).
+    /// </summary>
     public required string ProviderId { get; init; }
+    /// <summary>
+    /// Gets the email address, for the password sign-in's first step, or <see langword="null"/>.
+    /// </summary>
     public string? UserName { get; init; }
+
+    /// <summary>Gets the password, for the password sign-in's first step, or <see langword="null"/>.</summary>
     public string? Password { get; init; }
 
     /// <summary>

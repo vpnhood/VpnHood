@@ -3,9 +3,14 @@
   <!-- A library whose whole public API is documented sets VhApiDocsComplete in its csproj, and from then on a
        missing or broken doc comment fails its build, in every target framework. Read here, not in the props:
        those come before the project body and cannot see the property. CS1591 must never be in NoWarn as well,
-       because NoWarn beats WarningsAsErrors. -->
+       because NoWarn beats WarningsAsErrors.
+       A library whose source generator adds public members, as a C#/WinRT component's projection does, sets
+       VhApiDocsGeneratedApi too, and keeps an .editorconfig and a .globalconfig in its folder: the compiler gives a
+       generated file only the global config, where CS1591 is off, and the library's own files the .editorconfig,
+       where it is an error. CS1591 in WarningsAsErrors would beat both, so there it is left out. -->
   <PropertyGroup Condition="'$(VhApiDocsComplete)' == 'true'">
-    <WarningsAsErrors>$(WarningsAsErrors);CS0419;CS1570;CS1571;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1589;CS1590;CS1591;CS1592;CS1658;CS1710;CS1711;CS1712;CS1723;CS1734;CS1735</WarningsAsErrors>
+    <WarningsAsErrors>$(WarningsAsErrors);CS0419;CS1570;CS1571;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1589;CS1590;CS1592;CS1658;CS1710;CS1711;CS1712;CS1723;CS1734;CS1735</WarningsAsErrors>
+    <WarningsAsErrors Condition="'$(VhApiDocsGeneratedApi)' != 'true'">$(WarningsAsErrors);CS1591</WarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(VhApiDocsComplete)' != 'true'">
     <NoWarn>$(NoWarn);CS1591</NoWarn>

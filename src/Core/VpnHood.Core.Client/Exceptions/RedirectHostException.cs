@@ -6,7 +6,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Exceptions;
 
-public class RedirectHostException(SessionResponse sessionResponse)
+internal class RedirectHostException(SessionResponse sessionResponse)
     : SessionException(sessionResponse)
 {
     public ServerToken[]? RedirectServerTokens => SessionResponse.RedirectServerTokens;

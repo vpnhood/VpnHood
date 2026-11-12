@@ -13,8 +13,14 @@ using static VpnHood.Core.Server.Http01ChallengeHandler;
 
 namespace VpnHood.Core.Server;
 
-// port 80 of an address the server listens on; httpsPort is the server's TLS port there, where it redirects. Its
-// connections count with the server's that haven't proven a key, as none of them proves one
+/// <summary>
+/// Represents an HTTP-01 challenge listener on port 80 of one of the server's addresses: it answers ACME's challenges
+/// for the server's certificate, and redirects the other requests it accepts to the server's TLS port there.
+/// </summary>
+/// <remarks>
+/// Its connections count with the server's that have not proven a key, as none of them proves one. A
+/// <see cref="Http01ChallengeService"/> makes it.
+/// </remarks>
 public class Http01ChallengeHandler : IDisposable
 {
     private readonly IPAddress _ipAddress;
@@ -24,9 +30,13 @@ public class Http01ChallengeHandler : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private TcpListener? _tcpListener;
     private bool _disposed;
-    public bool IsStarted { get; private set; }
-    public bool ThrottleRequests { get; set; } = true;
+    internal bool IsStarted { get; private set; }
+    internal bool ThrottleRequests { get; set; } = true;
 
+    /// <summary>Represents the method that gives the key authorization of an ACME HTTP-01 challenge's token.</summary>
+    /// <param name="token">The challenge's token.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the key authorization.</returns>
     public delegate Task<string> Http01KeyAuthorizationFunc(string token, CancellationToken cancellationToken);
 
     internal Http01ChallengeHandler(IPAddress ipAddress, int httpsPort, Http01KeyAuthorizationFunc keyAuthorizationFunc,
@@ -38,7 +48,7 @@ public class Http01ChallengeHandler : IDisposable
         _unauthenticatedConnections = unauthenticatedConnections;
     }
 
-    public void Start()
+    internal void Start()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (IsStarted) throw new InvalidOperationException("The HTTP-01 Challenge Service has already been started.");
@@ -167,6 +177,8 @@ public class Http01ChallengeHandler : IDisposable
         return true;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It stops the listener.</remarks>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

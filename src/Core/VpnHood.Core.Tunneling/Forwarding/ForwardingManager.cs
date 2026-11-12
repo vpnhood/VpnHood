@@ -11,6 +11,11 @@ using VpnHood.Core.Tunneling.Exceptions;
 
 namespace VpnHood.Core.Tunneling.Forwarding;
 
+/// <summary>
+/// Represents what sends a session's packets on to their destinations through the device's own network: UDP through
+/// UDP sockets, pings through pings, and TCP connections through the stream forwarding channels it is given.
+/// </summary>
+/// <remarks>The replies come back as received packets. A server forwards its sessions' packets so, as a client does what it bypasses.</remarks>
 public class ForwardingManager : PassthroughPacketTransport
 {
     private readonly List<StreamForwardingChannel> _streamForwardingChannels = [];
@@ -19,17 +24,28 @@ public class ForwardingManager : PassthroughPacketTransport
     private readonly Job _cleanupJob;
     private Traffic _removedChannelsTraffic = new();
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the manager forwards IPv6; otherwise, it drops IPv6 packets. The default
+    /// is <see langword="true"/>.
+    /// </summary>
     public bool IsIpV6Supported { get; set; } = true;
-    public int PingClientCount => _pingForwarderPool?.ClientCount ?? 0;
+
+    internal int PingClientCount => _pingForwarderPool?.ClientCount ?? 0;
+
+    /// <summary>Gets the number of UDP sockets, closed ones not swept yet among them.</summary>
     public int UdpClientCount => _udpForwarderPool.ClientCount;
 
-    public int TcpConnectionCount {
+    internal int TcpConnectionCount {
         get {
             lock (_streamForwardingChannels)
                 return _streamForwardingChannels.Count;
         }
     }
 
+    /// <summary>
+    /// Gets what the manager has forwarded: its packets, and the bytes of its stream forwarding channels, the ended ones
+    /// too.
+    /// </summary>
     public Traffic Traffic {
         get {
             lock (_streamForwardingChannels) {
@@ -45,6 +61,9 @@ public class ForwardingManager : PassthroughPacketTransport
     }
 
 
+    /// <summary>Initializes a new instance of the <see cref="ForwardingManager"/> class.</summary>
+    /// <param name="socketFactory">The factory that makes its UDP sockets.</param>
+    /// <param name="options">The options.</param>
     public ForwardingManager(ISocketFactory socketFactory, ForwardingManagerOptions options)
     {
         var udpForwarderPoolOptions = new UdpForwarderPoolOptions {
@@ -85,6 +104,11 @@ public class ForwardingManager : PassthroughPacketTransport
         OnPacketReceived(ipPacket);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>A UDP packet goes to its UDP socket, and an ICMP one to a ping.</remarks>
+    /// <exception cref="PacketDropException">The packet is IPv6, which the manager does not forward.</exception>
+    /// <exception cref="NotSupportedException">The packet is a ping, which the manager does not forward.</exception>
+    /// <exception cref="Exception">The packet is neither UDP nor ICMP.</exception>
     protected override void SendPacket(IpPacket ipPacket)
     {
         if (ipPacket.IsV6 && !IsIpV6Supported)
@@ -113,7 +137,7 @@ public class ForwardingManager : PassthroughPacketTransport
         return default;
     }
 
-    public void CleanupChannels()
+    internal void CleanupChannels()
     {
         lock (_streamForwardingChannels) {
             // Only Disposed channels are swept: a dead-but-undisposed channel disposes itself via its own
@@ -130,6 +154,11 @@ public class ForwardingManager : PassthroughPacketTransport
         }
     }
 
+    /// <summary>Takes a stream forwarding channel and starts it; the manager disposes it at its own end.</summary>
+    /// <param name="channel">The channel.</param>
+    /// <param name="disposeOnFail"><see langword="true"/> to dispose the channel where it cannot be taken.</param>
+    /// <exception cref="ObjectDisposedException">The manager is disposed.</exception>
+    /// <exception cref="InvalidOperationException">The channel is already started.</exception>
     public void AddChannel(StreamForwardingChannel channel, bool disposeOnFail)
     {
         try {
@@ -149,6 +178,8 @@ public class ForwardingManager : PassthroughPacketTransport
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It closes its UDP sockets, its pings and its channels at once.</remarks>
     protected override void DisposeManaged()
     {
         _cleanupJob.Dispose();

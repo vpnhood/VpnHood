@@ -13,6 +13,15 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
+/// <summary>
+/// Represents a channel that forwards one TCP connection: it passes the bytes both ways between the connection and a
+/// tunnel connection, within the session's speed limits.
+/// </summary>
+/// <remarks>
+/// Either way's end ends the channel and both its connections: a host that half-closes, shutting its send side to wait
+/// for the reply, loses the rest of the reply. Its graceful close ends the tunnel connection's logical stream with its
+/// peer, so a reusable connection can carry the next request.
+/// </remarks>
 public class StreamForwardingChannel : IStreamForwardingChannel
 {
     private bool _disposed;
@@ -36,10 +45,26 @@ public class StreamForwardingChannel : IStreamForwardingChannel
     private readonly CancellationToken _throttleCancellationToken;
     private bool IsDisposed => _disposed;
 
+    /// <inheritdoc/>
     public DateTime LastActivityTime { get; private set; } = FastDateTime.UtcNow;
+
+    /// <inheritdoc/>
     public string ChannelId { get; }
     private readonly TrafficMeter? _trafficMeter;
 
+    /// <summary>Initializes a new instance of the <see cref="StreamForwardingChannel"/> class.</summary>
+    /// <param name="channelId">The channel's ID.</param>
+    /// <param name="orgStreamConnection">
+    /// The connection it forwards, which it owns: an app's, on the client, or the one to the destination, on the server.
+    /// </param>
+    /// <param name="tunnelStreamConnection">The tunnel connection that carries it, which it owns.</param>
+    /// <param name="tunnelBufferSize">
+    /// The sizes of its buffers toward and from the tunnel, each from 2048 to 81,920 bytes.
+    /// </param>
+    /// <param name="trafficMeter">
+    /// The meter that counts its bytes and holds it to the session's speed limits, or <see langword="null"/>.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">A buffer size is out of its range.</exception>
     public StreamForwardingChannel(string channelId, IStreamConnection orgStreamConnection, IStreamConnection tunnelStreamConnection,
         TransferBufferSize tunnelBufferSize, TrafficMeter? trafficMeter = null)
     {
@@ -68,6 +93,7 @@ public class StreamForwardingChannel : IStreamForwardingChannel
         });
     }
 
+    /// <inheritdoc/>
     public Traffic Traffic {
         get {
             lock (_trafficLock)
@@ -75,6 +101,8 @@ public class StreamForwardingChannel : IStreamForwardingChannel
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is never <see cref="PacketChannelState.Disconnecting"/>.</remarks>
     public PacketChannelState State {
         get {
             if (IsDisposed)
@@ -86,6 +114,10 @@ public class StreamForwardingChannel : IStreamForwardingChannel
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It passes the bytes both ways in the background, and closes gracefully once either way ends.</remarks>
+    /// <exception cref="ObjectDisposedException">The channel is disposed.</exception>
+    /// <exception cref="InvalidOperationException">The channel is already started.</exception>
     public void Start()
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -329,6 +361,8 @@ public class StreamForwardingChannel : IStreamForwardingChannel
         return default;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It is the channel's ID.</remarks>
     public override string ToString()
     {
         return ChannelId;
@@ -350,8 +384,11 @@ public class StreamForwardingChannel : IStreamForwardingChannel
         return true;
     }
 
-    // the quick close: its connections close at once too, with no reuse. One during a graceful close cuts that close's
-    // wait for them short
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The quick close: the channel stops at once and asks its connections to close, with no reuse, without waiting for
+    /// them.
+    /// </remarks>
     public void Dispose()
     {
         TryStop();
@@ -359,6 +396,8 @@ public class StreamForwardingChannel : IStreamForwardingChannel
         _tunnelStreamConnection.Dispose();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It releases both connections; a second call waits for the first one's end.</remarks>
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end. One after a quick close returns: that close has closed the

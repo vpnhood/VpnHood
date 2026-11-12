@@ -18,7 +18,9 @@ public class SessionStatus
     /// <summary>Gets the traffic the tunnel carried in this session.</summary>
     public required Traffic SessionTraffic { get; init; }
 
-    /// <summary>Gets the traffic the client sent around the tunnel in this session, by the splits.</summary>
+    /// <summary>
+    /// Gets the traffic the client sent around the tunnel in this session, by the splits and while it waited for an ad.
+    /// </summary>
     public required Traffic SessionSplitTraffic { get; init; }
 
     /// <summary>
@@ -33,14 +35,14 @@ public class SessionStatus
     public required Traffic TotalTraffic { get; init; }
 
     /// <summary>
-    /// Gets how many TCP connections the client forwarded through the tunnel, and QUIC flows a domain rule kept in it,
-    /// in this session.
+    /// Gets how many TCP connections the client forwarded through the tunnel in this session, and QUIC flows whose
+    /// domain name the client read and the domain filter included or left to the default.
     /// </summary>
     public required int StreamTunnelledCount { get; init; }
 
     /// <summary>
-    /// Gets how many TCP connections the client sent around the tunnel, and QUIC flows a domain rule left out of it, in
-    /// this session.
+    /// Gets how many TCP connections the client sent around the tunnel in this session, and QUIC flows whose domain name
+    /// the client read and the domain filter excluded.
     /// </summary>
     public required int StreamPassthruCount { get; init; }
 
@@ -57,7 +59,8 @@ public class SessionStatus
     public required int WaitingCount { get; init; }
 
     /// <summary>
-    /// Gets the packet channels open now; the UDP channel counts as one while it carries the packets.
+    /// Gets the packet channels the tunnel holds now, a closed one not cleaned up yet among them; the UDP channel counts
+    /// as one while it is open.
     /// </summary>
     public required int PacketChannelCount { get; init; }
 
@@ -84,7 +87,8 @@ public class SessionStatus
     public required int UserReviewRecommended { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether the device was seen sending DNS over TLS or QUIC, to port 853, in this session.
+    /// Gets a value indicating whether the device sent traffic to port 853 in this session, the port of DNS over TLS and
+    /// over QUIC; the payload is not read.
     /// </summary>
     public required bool IsSecureDnsDetected { get; init; }
 

@@ -2,7 +2,12 @@
 	<PropertyGroup>
 		<Description>VpnHood's VPN service on Linux: the VPN host's half, which runs the engine</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Linux\VpnHood.Core.Client.Devices.Linux.csproj" />

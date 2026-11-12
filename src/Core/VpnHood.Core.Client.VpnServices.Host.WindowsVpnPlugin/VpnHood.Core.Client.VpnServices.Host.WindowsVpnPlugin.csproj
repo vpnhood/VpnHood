@@ -10,6 +10,8 @@
 		     the service and its listener are internal. -->
 		<CsWinRTComponent>true</CsWinRTComponent>
 		<CsWinRTWindowsMetadata>C:\Windows\System32\WinMetadata</CsWinRTWindowsMetadata>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<VhApiDocsGeneratedApi>true</VhApiDocsGeneratedApi>
 	</PropertyGroup>
 
 	<ItemGroup>

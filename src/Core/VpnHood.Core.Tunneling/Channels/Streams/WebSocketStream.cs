@@ -12,6 +12,14 @@ using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
+/// <summary>
+/// Represents a stream in WebSocket frames over another stream, binary frames for its data and an empty final one for
+/// its end, so the other stream can go on to carry the next stream.
+/// </summary>
+/// <remarks>
+/// Its graceful close, <see cref="DisposeAsync"/>, ends it with its peer; one that cannot carry the next stream, as its
+/// peer ended it or a read, a write or its end failed, closes its source instead.
+/// </remarks>
 public class WebSocketStream : ChunkStream, IPreservedChunkStream
 {
     private readonly bool _isServer;
@@ -32,14 +40,31 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private readonly Lock _closeStreamLock = new();
     private readonly AsyncLock _disposeLock = new();
     private bool _disposed;
-    public override bool CanReuse => !_isConnectionClosed && _exception == null && _frameWriter.Failure == null;
+    internal override bool CanReuse => !_isConnectionClosed && _exception == null && _frameWriter.Failure == null;
+
+    /// <summary>
+    /// Gets the length a buffer for <see cref="WritePreservedAsync"/> keeps free before its data, for the frame's
+    /// header.
+    /// </summary>
     public int PreserveWriteBufferLength => ChunkHeaderLength;
+
+    /// <summary>Gets a value indicating whether the client's frames are masked as the WebSocket standard has it.</summary>
     public bool UsesStandardMasking => _useStandardMasking;
     internal bool HasWrittenInitialPadding => _frameWriter.HasWrittenInitialPadding;
 
-    // the status the peer's close frame carried, if it carried one
+    /// <summary>Gets the status the peer's close frame carried, or <see langword="null"/> where it carried none.</summary>
     public ushort? CloseStatus { get; private set; }
 
+    /// <summary>Initializes a new instance of the <see cref="WebSocketStream"/> class.</summary>
+    /// <param name="sourceStream">
+    /// The stream that carries the frames, which a close leaves open where the stream can carry the next one.
+    /// </param>
+    /// <param name="streamId">The stream's ID, which its logs carry.</param>
+    /// <param name="useBuffer"><see langword="true"/> to read the source through a small read buffer.</param>
+    /// <param name="isServer"><see langword="true"/> for the server's side of the stream.</param>
+    /// <param name="useStandardMasking">
+    /// <see langword="true"/> to mask the client's frames as the WebSocket standard has it.
+    /// </param>
     public WebSocketStream(Stream sourceStream, string streamId, bool useBuffer, bool isServer,
         bool useStandardMasking = false)
         : base(useBuffer
@@ -59,12 +84,23 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         _frameWriter = new WebSocketFrameWriter(SourceStream, isServer, useStandardMasking);
     }
 
+    /// <summary>Turns on the padding of the stream's first writes, which hides their lengths.</summary>
+    /// <exception cref="ObjectDisposedException">The stream is disposed.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The stream's masking is not the standard one, or it has written already.
+    /// </exception>
     public void EnableInitialPadding()
     {
         ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
         _frameWriter.EnableInitialPadding();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It reads the data of the binary frames; the stream's end frame, or the peer's close, ends it.</remarks>
+    /// <exception cref="ObjectDisposedException">The stream is disposed.</exception>
+    /// <exception cref="InvalidOperationException">A frame is longer than the stream reads.</exception>
+    /// <exception cref="InvalidDataException">The frames break the WebSocket protocol.</exception>
+    /// <exception cref="Exception">The source ended inside a frame.</exception>
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
@@ -132,6 +168,12 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         return bytesRead;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It writes the data as one binary frame, and nothing for none; a failure, but a token already canceled when it is
+    /// called, leaves the stream unable to carry the next.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The stream is disposed.</exception>
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
@@ -151,6 +193,21 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
     }
 
+    /// <summary>
+    /// Writes data as one binary frame; with no padding, its header goes in the room the buffer keeps free before the
+    /// data, so the frame goes out without a copy. With no data, it writes nothing.
+    /// </summary>
+    /// <param name="buffer">
+    /// The buffer: <see cref="PreserveWriteBufferLength"/> bytes of room, then the data. The write may overwrite both,
+    /// even when it fails.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the write ends.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="ObjectDisposedException">The stream is disposed.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="buffer"/> is shorter than <see cref="PreserveWriteBufferLength"/>.
+    /// </exception>
     public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -287,7 +344,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
     }
 
-    public override async Task<ChunkStream> CreateReuse()
+    internal override async Task<ChunkStream> CreateReuse()
     {
         // try to close stream if it is not closed yet
         await DisposeAsync().Vhc();
@@ -368,7 +425,15 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
     }
 
-    // the server's only, as a client's frame must be masked
+    /// <summary>Writes a close frame with a status, which ends the connection, not just the stream.</summary>
+    /// <param name="closeStatus">The status.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the frame is written; with the connection already closed, at once.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="ObjectDisposedException">The stream is disposed.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The stream is the client's: only the server writes a close status, as a client's frame must be masked.
+    /// </exception>
     public async ValueTask WriteClose(ushort closeStatus, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -391,7 +456,8 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
     }
 
-    // it leaves the source to its owner: closing that synchronously waits for a QUIC stream's peer
+    /// <inheritdoc/>
+    /// <remarks>It leaves the source to its owner: closing that synchronously waits for a QUIC stream's peer.</remarks>
     protected override void Dispose(bool disposing)
     {
         _disposed = true; // don't return if already disposed. DisposeAsync may call set this
@@ -399,6 +465,11 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         base.Dispose(disposing);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It ends the stream with its peer where it can carry the next one, and closes the source where it cannot. A second
+    /// call waits for the first one's end.
+    /// </remarks>
     public override async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end, as its close of the logical stream writes to the source

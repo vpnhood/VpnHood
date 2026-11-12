@@ -2,12 +2,21 @@
 
 namespace VpnHood.AppLib.Abstractions;
 
-// Translated words for the text the app draws for itself, given to AppResources by a head that has
-// them. The app library is a skeleton and names no source of its own, so without one it speaks the
-// English of its resources. Asked per word, so a language chosen while the app runs is answered.
+/// <summary>
+/// Represents the translated words for the text the app draws for itself, which a head that has them gives the app.
+/// </summary>
+/// <remarks>
+/// The app library names no source of its own, so without one it speaks the English of its resources. It is asked per
+/// word, so a language chosen while the app runs is answered.
+/// </remarks>
 public interface IStringProvider
 {
-    // By the key the locale files use (CONNECT, MSG_UNSUPPORTED_CONTENT); null if it has neither
-    // the key nor the language, and the caller keeps its own word.
+    /// <summary>Gets a word in a language.</summary>
+    /// <param name="culture">The language.</param>
+    /// <param name="key">The word's key, as the locale files have it, as <c>CONNECT</c>.</param>
+    /// <returns>
+    /// The word, or <see langword="null"/> where the provider has neither the key nor the language, and the caller keeps
+    /// its own.
+    /// </returns>
     string? GetString(CultureInfo culture, string key);
 }

@@ -2,7 +2,14 @@
 	<PropertyGroup>
 		<Description>Light access manager using OS file system</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.Test" />
+		<InternalsVisibleTo Include="VpnHood.Test.KestrelParity" />
+		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\Net\VpnHood.Net.IpLocations\VpnHood.Net.IpLocations.csproj" />

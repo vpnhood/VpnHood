@@ -2,24 +2,28 @@
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
+/// <summary>
+/// Provides the base of a stream that carries its data in chunks over another stream, so its end is marked and the
+/// other stream can go on to carry the next stream.
+/// </summary>
 public abstract class ChunkStream : StreamDecoratorAsync
 {
-    public abstract bool CanReuse { get; }
-    public abstract Task<ChunkStream> CreateReuse();
-    public int ReusedCount { get; }
-    public int ReadChunkCount { get; protected set; }
-    public int WroteChunkCount { get; protected set; }
-    public string StreamId { get; internal set; }
+    internal abstract bool CanReuse { get; }
+    internal abstract Task<ChunkStream> CreateReuse();
+    internal int ReusedCount { get; }
+    internal int ReadChunkCount { get; set; }
+    internal int WroteChunkCount { get; set; }
+    internal string StreamId { get; set; }
 
 
-    protected ChunkStream(Stream sourceStream, string streamId)
+    private protected ChunkStream(Stream sourceStream, string streamId)
         : base(sourceStream, leaveOpen: true)
     {
         StreamId = streamId;
         ReusedCount = 0;
     }
 
-    protected ChunkStream(Stream sourceStream, string streamId, int reusedCount)
+    private protected ChunkStream(Stream sourceStream, string streamId, int reusedCount)
         : base(sourceStream, true)
     {
         StreamId = streamId;

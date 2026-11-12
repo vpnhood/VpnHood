@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Tunneling.Utils;
 
-public static class SocketUtils
+internal static class SocketUtils
 {
     public static bool IsInvalidUdpStateException(Exception ex)
     {

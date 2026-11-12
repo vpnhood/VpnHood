@@ -7,7 +7,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Server;
 
-public class NetConfigurationService(INetConfigurationProvider netConfigurationProvider) : IDisposable
+internal class NetConfigurationService(INetConfigurationProvider netConfigurationProvider) : IDisposable
 {
     private readonly ConcurrentDictionary<IPAddress, string> _ipAddresses = [];
     private readonly Lock _closeLock = new();

@@ -119,8 +119,9 @@
 	     gives what is drawn from it the name its platform and the library ask for.
 
 	       icon_background.svg   the icon's background, full bleed
-	       icon_foreground.svg   its logo at full size: Android draws it at 70%, inside what every
-	                             launcher's mask shows; iOS, which shows the whole square, whole
+	       icon_foreground.svg   its logo at full size: Android draws it at 64%, so what lies within 154
+	                             of the middle of its 324 stays inside the 66 dp no launcher's mask cuts;
+	                             iOS, which shows the whole square, whole
 	       icon_monochrome.svg   the logo in one colour, which the system paints: Android's notifications,
 	                             Quick Settings tile and themed icon (android/mipmap-anydpi-v33)
 	       banner.svg            the wide banner, 16:9: Android TV's, and an Apple TV's top shelf
@@ -132,7 +133,7 @@
 		<AppIcon Condition="'$(AppIcon)' == '' And '$(VhAppPlatform)' == 'ios'">ic_launcher</AppIcon>
 	</PropertyGroup>
 	<ItemGroup Condition="'$(_VhAppIconsDir)' != '' And '$(VhAppPlatform)' == 'android'">
-		<MauiIcon Include="$(_VhAppIconsDir)icon_background.svg" Link="ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)icon_foreground.svg" ForegroundScale="0.7" />
+		<MauiIcon Include="$(_VhAppIconsDir)icon_background.svg" Link="ic_launcher.svg" ForegroundFile="$(_VhAppIconsDir)icon_foreground.svg" ForegroundScale="0.64" />
 		<MauiImage Include="$(_VhAppIconsDir)icon_monochrome.svg" Link="notification.svg" BaseSize="24,24" />
 		<MauiImage Include="$(_VhAppIconsDir)icon_monochrome.svg" Link="ic_launcher_monochrome.svg" BaseSize="44,44" />
 		<MauiImage Include="$(_VhAppIconsDir)banner.svg" Link="ic_banner.svg" BaseSize="160,90" />

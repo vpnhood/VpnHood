@@ -45,7 +45,8 @@ internal static class PageRoutes
         ["/statistics"] = host => new StatisticsView(host),
         ["/privacy-policy"] = host => new PrivacyPolicyView(host),
         ["/purchase-subscription"] = host => new PurchaseSubscriptionView(host, null),
-        ["/user/account"] = host => new AccountView(host)
+        ["/user/account"] = host => new AccountView(host),
+        ["/remote-access"] = host => new PairingView(host)
     };
 
     // Drawn for a store's reviewers only - the App Store's subscription screenshot - and never in a

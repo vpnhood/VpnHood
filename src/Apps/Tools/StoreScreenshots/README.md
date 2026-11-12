@@ -59,6 +59,7 @@ empty lists.
 
 `/menu` and `/diagnose-finished` are no pages: each is the app's own control, the menu and the
 message a diagnosis ends with, shown as a page (`ControlPage`), for a picture of it alone.
+`/remote-access` is a TV's Remote Access screen, with a sample address (`FakeAppApi`).
 
 ## The website
 

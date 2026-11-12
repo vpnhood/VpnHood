@@ -64,7 +64,16 @@ internal sealed class FakeAppApi(StoreFixture fixture) : IAppApi
     public Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.SetUserReview");
     public Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.InternalAdDismiss");
     public Task InternalAdError(string errorMessage, CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.InternalAdError");
-    public Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.GetRemoteAccess");
-    public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.StartRemoteAccess");
-    public Task StopRemoteAccess(CancellationToken cancellationToken) => throw UnmockedCalls.Record("App.StopRemoteAccess");
+    // the Remote Access screen (/remote-access): an address of a home network with a made-up
+    // pairing token, and no device connected yet, as the screen first shows
+    private static readonly RemoteAccessState RemoteAccess = new() {
+        IsActive = true,
+        IsAlwaysOn = false,
+        Urls = [new Uri("http://192.168.1.20:9090/?pair=k7Qm2xVd")],
+        ConnectedDevices = []
+    };
+
+    public Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken) => Task.FromResult(RemoteAccess);
+    public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken) => Task.FromResult(RemoteAccess);
+    public Task StopRemoteAccess(CancellationToken cancellationToken) => Task.CompletedTask;
 }

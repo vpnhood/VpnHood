@@ -3,7 +3,10 @@ using VpnHood.Net.Toolkit.Converters;
 
 namespace VpnHood.Core.Proxies.Management.Abstractions;
 
-// A name this side does not know reads as None: no proxy.
+/// <summary>
+/// Specifies which proxies the VPN connects through.
+/// </summary>
+/// <remarks>In JSON it is a name; a name this version does not know reads as <see cref="None"/>.</remarks>
 [JsonConverter(typeof(JsonStringEnumFallbackConverter<ProxyMode>))]
 [JsonEnumFallback(ProxyMode.None)]
 public enum ProxyMode

@@ -6,18 +6,35 @@ namespace VpnHood.Core.Filtering.Abstractions;
 // port IS the whole DNS signal available to it — and it is deliberately protocol-agnostic: 53 is plain DNS
 // over both udp and tcp, 853 is DNS-over-TLS (tcp) and its quic variant. DoH is absent on purpose: on 443
 // it is indistinguishable from any other https flow, so no port test can find it.
+/// <summary>
+/// Provides the destination ports that tell DNS flows to a filter, which sees only a flow's protocol and destination.
+/// </summary>
+/// <remarks>
+/// DNS over HTTPS has no port of its own: on port 443, no port test can tell it from any other HTTPS flow.
+/// </remarks>
 public static class DnsPorts
 {
+    /// <summary>The port of plain DNS, over UDP and TCP: 53.</summary>
     public const int Dns = 53;
+
+    /// <summary>The port of DNS over TLS, on TCP, and of DNS over QUIC, on UDP: 853.</summary>
     public const int DnsOverTls = 853;
 
-    // True for every real DNS transport pair: 53 carries DNS over both udp (classic) and tcp (truncation
-    // fallback), 853 carries DoT over tcp and DoQ (RFC 9250) over udp — a protocol check would add nothing
-    // except the temptation to narrow this to udp/53 + tcp/853 and thereby miss tcp-fallback DNS and DoQ.
+    /// <summary>Determines whether a port is one of DNS's, over UDP or TCP.</summary>
+    /// <param name="port">The destination port.</param>
+    /// <returns><see langword="true"/> if the port is 53 or 853; otherwise, <see langword="false"/>.</returns>
+    // No protocol check: one would invite narrowing it to udp/53 and tcp/853, which misses TCP's fallback and DoQ
     public static bool IsDnsPort(int port) => port is Dns or DnsOverTls;
 
-    // Secure DNS is 853 on either transport: DoT over tcp, DoQ (RFC 9250) over udp. Unlike IsDnsPort this
-    // one DOES take the protocol — anything else on 853 is not DNS at all.
+    /// <summary>
+    /// Determines whether a flow is secure DNS: DNS over TLS, on TCP port 853, or DNS over QUIC (RFC 9250), on UDP
+    /// port 853.
+    /// </summary>
+    /// <param name="protocol">The flow's protocol.</param>
+    /// <param name="port">The destination port.</param>
+    /// <returns>
+    /// <see langword="true"/> if the flow is TCP or UDP to port 853; otherwise, <see langword="false"/>.
+    /// </returns>
     public static bool IsSecureDns(IpProtocol protocol, int port) =>
         protocol is IpProtocol.Tcp or IpProtocol.Udp && port is DnsOverTls;
 }

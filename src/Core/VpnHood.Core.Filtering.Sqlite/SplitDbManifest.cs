@@ -11,10 +11,22 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // Writing also sweeps: this class owns the folder's db inventory, so any db-family file it does not
 // list is superseded and gets deleted on a best-effort basis — a file still open elsewhere survives
 // the sweep and is retried on the next write.
+/// <summary>
+/// Provides the manifest of a filter folder: the list of the split databases active in it, in manifest order, which
+/// an IP chain asks in turn and a domain chain the other way round.
+/// </summary>
+/// <remarks>
+/// The app writes it after building the databases, and the VPN service's filter chains read it
+/// (<see cref="SqliteIpFilterChain"/>, <see cref="SqliteDomainFilterChain"/>): a database file in the folder means
+/// nothing unless the manifest lists it. A write also deletes the folder's database files it does not list.
+/// </remarks>
 public static class SplitDbManifest
 {
+    /// <summary>The name of the folder of split IP databases, under the VPN service's configuration folder.</summary>
     // the filter folders under IDevice.VpnServiceConfigFolder — the one location both processes read
     public const string IpFiltersFolderName = "ip-filters";
+
+    /// <summary>The name of the folder of split domain databases, under the VPN service's configuration folder.</summary>
     public const string DomainFiltersFolderName = "domain-filters";
     private const string ManifestFileName = "manifest.json";
 
@@ -22,8 +34,18 @@ public static class SplitDbManifest
     // meet each wait the other out
     private static readonly TimeSpan SharingTimeout = TimeSpan.FromSeconds(2);
 
-    // Absolute db paths in gate order; a missing manifest means "no splits configured" — fail-closed:
-    // no gates means everything tunnels, nothing leaks around. A corrupt manifest throws (fail loud).
+    /// <summary>Reads a folder's manifest.</summary>
+    /// <param name="folderPath">The folder.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is the paths of the databases it lists, each the folder as given joined with a file name,
+    /// in the order the writer gave them; none when the folder has no manifest. An IP chain asks the databases in that
+    /// order, a domain chain the other way round.
+    /// </returns>
+    /// <remarks>While the manifest is being replaced, it tries again for up to 2 seconds.</remarks>
+    /// <exception cref="System.Text.Json.JsonException">The manifest is not valid JSON.</exception>
+    /// <exception cref="InvalidDataException">The manifest is the JSON <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<string[]> Read(string folderPath, CancellationToken cancellationToken)
     {
         var manifestPath = Path.Combine(folderPath, ManifestFileName);
@@ -37,10 +59,22 @@ public static class SplitDbManifest
         return data.DbFiles.Select(fileName => Path.Combine(folderPath, fileName)).ToArray();
     }
 
-    // Publish the current db set (replaced whole, so a concurrent Read never sees a torn file, over a temp
-    // file of its own, so two writers never meet on one), then sweep superseded db-family files. Every path
-    // must live inside folderPath: the manifest names files, not locations, so a Read from either process
-    // resolves against its own folder view.
+    /// <summary>
+    /// Writes a folder's manifest, replacing the old one whole, then deletes the folder's database files it does not
+    /// list.
+    /// </summary>
+    /// <param name="folderPath">The folder, made if missing.</param>
+    /// <param name="dbPaths">The databases, in manifest order, each directly in the folder.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>
+    /// The manifest keeps file names only, so a reader in another process finds them in its own view of the folder.
+    /// Each file whose name holds <c>.db</c> and does not start with a listed file's name is deleted where it can be;
+    /// one that cannot be, as a file open elsewhere on Windows, stays until a later write. A listed database's
+    /// <c>-wal</c>, <c>-shm</c> and <c>.tmp</c> files start with its name, and stay.
+    /// </remarks>
+    /// <exception cref="ArgumentException">A database is not directly in the folder.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task Write(string folderPath, string[] dbPaths, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(folderPath);

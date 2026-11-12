@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>SQLite-backed IP range and domain filters (split-country, split-ip, split-domain) for VpnHood.</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -3,14 +3,31 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.Abstractions;
 
+/// <summary>
+/// Provides a stage of an IP filter pipe that remembers its next stage's verdict for each destination.
+/// </summary>
+/// <remarks>
+/// A verdict is remembered by the destination alone, whatever the flow's protocol, so the next stage's verdicts must
+/// not depend on the protocol. A verdict expires once it has gone unused for the timeout. When the next stage raises
+/// <see cref="Changed"/>, every remembered verdict is dropped, and the event is raised as this stage's own.
+/// </remarks>
 public class CachedIpFilter : IIpFilter
 {
     private readonly IIpFilter _nextFilter;
     private readonly bool _autoDisposeNextFilter;
     private readonly TimeoutDictionary<IpEndPointValue, TimeoutItem<FilterAction>> _cache;
 
+    /// <inheritdoc/>
     public event EventHandler? Changed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CachedIpFilter"/> class.
+    /// </summary>
+    /// <param name="nextFilter">The stage whose verdicts to remember.</param>
+    /// <param name="timeout">How long a verdict may go unused before it expires.</param>
+    /// <param name="autoDisposeNextFilter">
+    /// <see langword="true"/> to dispose <paramref name="nextFilter"/> with this stage.
+    /// </param>
     public CachedIpFilter(IIpFilter nextFilter, TimeSpan timeout, bool autoDisposeNextFilter = true)
     {
         _nextFilter = nextFilter;
@@ -25,6 +42,10 @@ public class CachedIpFilter : IIpFilter
         };
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The verdict remembered for the destination answers, whatever protocol asked for it first.
+    /// </remarks>
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
         if (_cache.TryGetValue(endPoint, out var cachedAction))
@@ -35,18 +56,21 @@ public class CachedIpFilter : IIpFilter
         return action;
     }
 
-    // nothing external to re-read here; invalidation comes back up via Changed if a stage below swaps
+    /// <inheritdoc/>
+    /// <remarks>It passes the call to the next stage.</remarks>
     public Task Reconfigure(CancellationToken cancellationToken) => _nextFilter.Reconfigure(cancellationToken);
 
-    // a cache holds no rules of its own
+    /// <inheritdoc/>
+    /// <value>The next stage's value: this stage holds no rule.</value>
     public bool IsEmpty => _nextFilter.IsEmpty;
 
-    // Drop EVERY cached verdict (Cleanup would only evict expired ones).
+    /// <summary>Drops every remembered verdict, expired or not.</summary>
     public void ClearCache()
     {
         _cache.RemoveAll();
     }
 
+    /// <summary>Releases the remembered verdicts, and disposes the next stage when this stage was made to.</summary>
     public void Dispose()
     {
         _cache.Dispose();

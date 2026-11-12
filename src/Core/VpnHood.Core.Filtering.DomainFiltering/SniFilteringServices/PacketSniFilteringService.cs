@@ -11,7 +11,7 @@ namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 /// Base class for protocol-specific SNI extraction services.
 /// Handles flow management, packet buffering, and domain filtering.
 /// </summary>
-public abstract class PacketSniFilteringService(
+internal abstract class PacketSniFilteringService(
     IDomainFilter domainFilter,
     TimeSpan flowTimeout,
     EventId? sniEventId)

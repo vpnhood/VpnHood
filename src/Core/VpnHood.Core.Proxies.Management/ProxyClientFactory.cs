@@ -8,8 +8,18 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Proxies.Management;
 
-public static class ProxyClientFactory
+/// <summary>
+/// Provides the clients of <c>VpnHood.Net.Proxies</c> for proxy endpoints.
+/// </summary>
+internal static class ProxyClientFactory
 {
+    /// <summary>Gets a proxy host's IP address: the host itself when it is one, or else one its DNS gives.</summary>
+    /// <param name="host">The host name or IP address.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the address, picked at random where DNS gives several.</returns>
+    /// <exception cref="Exception">DNS gave no address.</exception>
+    /// <exception cref="System.Net.Sockets.SocketException">DNS could not resolve the host.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<IPAddress> GetIpAddress(string host, CancellationToken cancellationToken)
     {
         // try parse the proxy address
@@ -25,6 +35,17 @@ public static class ProxyClientFactory
         return ipAddress;
     }
 
+    /// <summary>
+    /// Creates the client of a proxy endpoint's protocol, for the endpoint's address and credentials.
+    /// </summary>
+    /// <param name="proxyEndPoint">The endpoint; its host is resolved first, as <see cref="GetIpAddress"/> does.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the client.</returns>
+    /// <remarks>
+    /// A SOCKS4 client takes the user name alone. An HTTPS client accepts any certificate of the proxy, and names the
+    /// endpoint's host in its TLS handshake.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">The endpoint's protocol is not one of <see cref="ProxyProtocol"/>'s.</exception>
     public static async Task<IProxyClient> CreateProxyClient(ProxyEndPoint proxyEndPoint,
         CancellationToken cancellationToken)
     {

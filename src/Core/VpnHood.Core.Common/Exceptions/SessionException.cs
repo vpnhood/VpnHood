@@ -4,10 +4,26 @@ using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Common.Exceptions;
 
+/// <summary>
+/// The exception that is thrown when a server answers a session's request with an error, or a session ends with one.
+/// </summary>
+/// <remarks>
+/// The first two constructors put the response, as JSON, its error code and its
+/// <see cref="Messaging.SessionResponse.SuppressedBy"/> in the exception's <see cref="Exception.Data"/>, so an API error
+/// made of it can be turned back into it; the API error's constructor does not.
+/// </remarks>
 public class SessionException : Exception
 {
+    /// <summary>Gets the server's response.</summary>
     public SessionResponse SessionResponse { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionException"/> class with a server's response.
+    /// </summary>
+    /// <param name="sessionResponse">
+    /// The response, whose message is the exception's; a response with no message is given its error code's standard
+    /// one.
+    /// </param>
     public SessionException(SessionResponse sessionResponse)
         : base(sessionResponse.ErrorMessage ?? MessageFromErrorCode(sessionResponse.ErrorCode))
     {
@@ -21,6 +37,11 @@ public class SessionException : Exception
         // ReSharper restore VirtualMemberCallInConstructor
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionException"/> class with an error code.
+    /// </summary>
+    /// <param name="errorCode">The error code.</param>
+    /// <param name="message">The message, or <see langword="null"/> for the error code's standard one.</param>
     public SessionException(SessionErrorCode errorCode, string? message = null)
         : this(new SessionResponse {
             ErrorCode = errorCode,
@@ -29,6 +50,16 @@ public class SessionException : Exception
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionException"/> class from an API error that a
+    /// <see cref="SessionException"/> became, with the response its data carries.
+    /// </summary>
+    /// <param name="apiError">The API error.</param>
+    /// <exception cref="ArgumentException">
+    /// The API error is not one of a <see cref="SessionException"/>, or carries no response.
+    /// </exception>
+    /// <exception cref="JsonException">The response in the error's data is not valid JSON.</exception>
+    /// <exception cref="FormatException">An endpoint in the response is not valid.</exception>
     public SessionException(ApiError apiError)
         : base(apiError.Message)
     {

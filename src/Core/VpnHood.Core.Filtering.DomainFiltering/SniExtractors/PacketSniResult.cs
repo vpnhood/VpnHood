@@ -3,7 +3,7 @@ namespace VpnHood.Core.Filtering.DomainFiltering.SniExtractors;
 /// <summary>
 /// Result of SNI extraction from a packet.
 /// </summary>
-public readonly struct PacketSniResult
+internal readonly struct PacketSniResult
 {
     /// <summary>
     /// The extracted domain name, null if not found.

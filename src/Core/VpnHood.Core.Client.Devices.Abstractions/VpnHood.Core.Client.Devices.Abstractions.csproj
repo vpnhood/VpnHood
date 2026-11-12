@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood Device abstraction</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

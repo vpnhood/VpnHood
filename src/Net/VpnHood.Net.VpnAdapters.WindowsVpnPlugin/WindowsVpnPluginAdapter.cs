@@ -16,10 +16,27 @@ using Windows.Networking.Vpn;
 namespace VpnHood.Net.VpnAdapters.WindowsVpnPlugin;
 
 /// <summary>
-/// Bridges VpnHood's packet transport to a Windows.Networking.Vpn channel. Windows supplies
-/// outbound packets through Encapsulate; inbound VpnHood packets are injected through the direct
-/// VpnChannel receive-buffer APIs available on the minimum supported Windows version.
+/// Provides the VPN adapter of a Windows VPN plug-in, on the <see cref="VpnChannel"/> Windows gives the plug-in's
+/// connect: Windows owns the interface, and the adapter starts the channel with the addresses, routes, DNS servers
+/// and MTU a start gathers.
 /// </summary>
+/// <param name="vpnChannel">The channel Windows gave the plug-in's connect.</param>
+/// <param name="adapterSettings">The adapter's settings.</param>
+/// <remarks>
+/// <para>
+/// Windows hands the device's outgoing packets to the plug-in's <c>Encapsulate</c> callback, which passes them to
+/// <see cref="OnEncapsulate"/>; the adapter queues copies for its reader, and writes incoming packets into the
+/// channel's receive buffers. The channel's transport is a UDP socket connected to the VPN server's address, which
+/// carries no data. The MTU is at most 1,400 bytes. There is no NAT and no app filter.
+/// </para>
+/// <para>
+/// A close leaves the channel up: the plug-in stops it in Windows' <c>Disconnect</c>, as Windows takes a channel
+/// stopped by itself for a dropped connection and dials again.
+/// </para>
+/// </remarks>
+/// <exception cref="ArgumentOutOfRangeException">
+/// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
+/// </exception>
 public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
@@ -57,18 +74,46 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     private volatile bool _closed = true;
     private TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    /// <summary>
+    /// Gets a task that completes when the channel has started, at the end of a successful open, before the reader
+    /// starts and <see cref="TunVpnAdapter.Started"/> is raised; it is canceled when the adapter closes or is disposed
+    /// first.
+    /// </summary>
+    /// <remarks>
+    /// An open that finds the task completed or canceled makes a new one as it begins, so read the property again once
+    /// a later start has reached its open. A stop before any start does not cancel the task.
+    /// </remarks>
     public Task StartedTask => _started.Task;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>.</value>
     public override bool IsAppFilterSupported => false;
+
+    /// <inheritdoc/>
+    /// <remarks>Always <see langword="false"/>.</remarks>
     public override bool IsNatSupported(IpVersion ipVersion) => false;
 
-    // the VPN host's own sockets leave by the physical adapter, bound to its address
+    /// <inheritdoc/>
+    /// <value>Always <see langword="true"/>: the VPN host's own sockets leave by the physical adapter, bound to its address.</value>
     protected override bool IsSocketProtectedByBind => true;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="null"/>: there is no app filter.</value>
     protected override string? AppPackageId => null;
 
-    // Windows owns the interface, its addresses and their changes
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>: Windows owns the interface, its addresses and their changes.</value>
     protected override bool RestartAfterNetworkAddressChanged => false;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>.</value>
     protected override bool CheckAdapterInterfaceAfterNetworkChanged => false;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It makes no interface, as Windows owns it: it forgets the settings an earlier start gathered, sets the MTU back
+    /// to 1,400 bytes, and keeps the packet queue closed until the open.
+    /// </remarks>
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         _clientIpV4List.Clear();
@@ -81,6 +126,8 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps the address, not its network's prefix length, for the open, which hands it to Windows.</remarks>
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         (ipNetwork.IsV4 ? _clientIpV4List : _clientIpV6List)
@@ -88,12 +135,20 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps the route for the open, which hands it to Windows.</remarks>
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         _routes.Add(ipNetwork);
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It keeps the servers for the open, which makes them the servers of every domain. Each server the routes include
+    /// also gets a host route of its own in the channel, as Windows routes the physical adapter's DNS servers around
+    /// the channel by host routes while it is connected.
+    /// </remarks>
     protected override Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
         CancellationToken cancellationToken)
     {
@@ -102,30 +157,52 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps the MTU for the open, at most 1,400 bytes, the size tested with packets end to end.</remarks>
     protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         _mtu = Math.Min(mtu, WindowsMaxMtu);
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: Windows gives the channel's interface its metric, unless the VPN profile names one.</remarks>
     protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken) =>
         Task.CompletedTask;
 
+    /// <inheritdoc/>
+    /// <remarks>It writes the name to the channel's diagnostic log.</remarks>
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
     {
         vpnChannel.LogDiagnosticMessage($"Session: {sessionName}");
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: the adapter has no NAT.</exception>
     protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken) =>
         throw new NotSupportedException("NAT is not supported by the Windows VPN plug-in adapter.");
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: the adapter has no app filter.</exception>
     protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Application filtering is not implemented yet.");
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: the adapter has no app filter.</exception>
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("Application filtering is not implemented yet.");
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It associates a new UDP socket with the channel as its transport and connects it to the VPN server's address,
+    /// then starts the channel with the gathered addresses, routes, DNS servers and MTU, opens the packet queue, and
+    /// completes <see cref="StartedTask"/>. A packet Windows hands over during the channel's start is dropped.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The run's options name no VPN server address.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled while the socket was bound or connected.
+    /// </exception>
     protected override async Task AdapterOpen(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation("Starting the Windows VPN plug-in data path...");
@@ -191,6 +268,12 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         VhLogger.Instance.LogInformation("Windows VPN channel started. MTU: {Mtu}", _mtu);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It closes the packet queue, dropping the packets in it, waits up to a second for a batch being sent, which it
+    /// logs when the batch is late, cancels <see cref="StartedTask"/> if it has not completed, and disposes the
+    /// channel's transport socket. The channel stays up.
+    /// </remarks>
     protected override void AdapterClose()
     {
         ResetPacketQueue(open: false);
@@ -210,11 +293,14 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         catch (Exception ex) { VhLogger.Instance.LogDebug(ex, "Could not dispose the VPN transport."); }
     }
 
-    // Windows owns the interface and the channel.
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: Windows owns the interface and the channel.</remarks>
     protected override void AdapterRemove()
     {
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It cancels <see cref="StartedTask"/> if it has not completed.</remarks>
     // An adapter disposed before it started never starts: a session the server refused, say. The close, which
     // ends a start otherwise, runs only for a started adapter.
     protected override void DisposeManaged()
@@ -223,6 +309,25 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         base.DisposeManaged();
     }
 
+    /// <summary>
+    /// Takes the device's outgoing packets Windows hands to the plug-in's <c>Encapsulate</c> callback: it queues a copy
+    /// of each for the adapter's reader, and leaves the buffers in <paramref name="packets"/>, where Windows takes them
+    /// back.
+    /// </summary>
+    /// <param name="packets">
+    /// The packets, whose buffers stay in the list, in their order when the call reads them all.
+    /// </param>
+    /// <param name="encapsulatedPackets">
+    /// The list whose buffers Windows sends through the channel's transport; the adapter adds none.
+    /// </param>
+    /// <remarks>
+    /// While the adapter is not open, the packets are left to Windows unread. After copying a packet, the call checks
+    /// whether the adapter has closed or opened again since it began; if so, it discards the copy and leaves the rest
+    /// unread. A packet is dropped when the queue is full: it holds
+    /// <see cref="VpnHood.Net.PacketTransports.PacketTransportOptions.QueueCapacity"/> packets, or 256 if that is fewer
+    /// or not set; the first such drop of an open is logged. An empty buffer is skipped. Windows may call it after a
+    /// close or a disposal.
+    /// </remarks>
     public void OnEncapsulate(VpnPacketBufferList packets, VpnPacketBufferList encapsulatedPackets)
     {
         // Windows keeps calling Encapsulate until the channel fully stops, which can be after this
@@ -282,6 +387,11 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It takes the next packet from the queue <see cref="OnEncapsulate"/> fills. A packet longer than the buffer is
+    /// dropped, which is logged once an open, and the next is read.
+    /// </remarks>
     protected override int ReadPacket(byte[] buffer)
     {
         while (true) {
@@ -313,8 +423,20 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It waits up to a second for a packet to be queued; a close wakes it.</remarks>
     protected override void WaitForTunRead() => _readSignal.Wait(PollTimeoutMs);
 
+    /// <inheritdoc/>
+    /// <returns>
+    /// <see langword="true"/> if the channel took the packet, or the packet was dropped: one longer than the MTU, which
+    /// is logged once an open, or one Windows has no receive buffer for, which is logged once a run of such drops;
+    /// <see langword="false"/> if the adapter is not open.
+    /// </returns>
+    /// <remarks>
+    /// Windows' receive buffers run out when the VPN host falls behind, as while Windows freezes it between VPN events;
+    /// a dropped packet is lost, unless its sender, as TCP's does, sends it again.
+    /// </remarks>
     protected override bool WritePacket(IpPacket ipPacket)
     {
         // not open: no channel to take the packet, as a TUN's device before its start
@@ -374,6 +496,8 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         return true;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It sleeps a millisecond.</remarks>
     protected override void WaitForTunWrite() => Thread.Sleep(1);
 
     private void ResetPacketQueue(bool open)

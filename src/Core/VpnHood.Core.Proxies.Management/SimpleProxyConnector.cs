@@ -12,19 +12,29 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.Core.Proxies.Management;
 
 /// <summary>
-/// Lightweight connector for a single proxy endpoint (device proxy or a library-supplied proxy).
-/// No persistence, no auto-update, no rating/rotation — just connect through the given proxy.
+/// Provides the VPN's connections through one given proxy, such as the device's: nothing is saved, rated or updated.
 /// </summary>
+/// <param name="proxyEndPoint">The proxy.</param>
 public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
     : IProxyConnector
 {
     private readonly ProxySessionStatus _sessionStatus = new();
     private ProxyEndPoint _proxyEndPoint = proxyEndPoint; // mutable to support UpdateOptions
 
+    /// <inheritdoc/>
+    /// <value>Always <see langword="true"/>.</value>
     public bool IsEnabled => true;
-    public bool UseRecentSucceeded { get; set; } // single endpoint; ordering does not apply
+
+    /// <inheritdoc/>
+    /// <remarks>It changes nothing here: there is one proxy.</remarks>
+    public bool UseRecentSucceeded { get; set; }
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="null"/>: there is no check.</value>
     public ProgressStatus? Progress => null;
 
+    /// <inheritdoc/>
+    /// <remarks>It counts the one proxy by the outcome of its last connection.</remarks>
     public ProxyConnectorStatus Status {
         get {
             lock (_sessionStatus)
@@ -40,6 +50,25 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A failure is counted and thrown; a cancellation of <paramref name="cancellationToken"/> is not counted.
+    /// </remarks>
+    /// <exception cref="VpnHood.Net.Proxies.ProxyClientException">
+    /// The proxy refused the connection, or answered in a way the client does not take.
+    /// </exception>
+    /// <exception cref="UnauthorizedAccessException">A SOCKS5 proxy refused the credentials.</exception>
+    /// <exception cref="ProtocolViolationException">The proxy's answer broke its protocol.</exception>
+    /// <exception cref="ArgumentException">The endpoint's credentials are too long for its protocol.</exception>
+    /// <exception cref="System.Security.Authentication.AuthenticationException">The TLS handshake with an HTTPS proxy failed.</exception>
+    /// <exception cref="TimeoutException">The proxy took too long.</exception>
+    /// <exception cref="IOException">The connection to the proxy failed.</exception>
+    /// <exception cref="SocketException">The proxy's host could not be resolved or reached.</exception>
+    /// <exception cref="Exception">DNS gave no address for the proxy's host.</exception>
+    /// <exception cref="NotSupportedException">
+    /// The proxy's protocol, a SOCKS5 proxy's authentication method, or its reply's address type is not supported.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<TcpClient> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint,
         Action? onAttempt, CancellationToken cancellationToken)
     {
@@ -70,6 +99,8 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It counts a failure, whatever the connection.</remarks>
     public void RecordFailed(TcpClient tcpClient, Exception ex)
     {
         RecordFailed(ex);
@@ -95,12 +126,16 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: a connection's failure tells.</remarks>
     public Task CheckServers(ISocketFactory socketFactory, CancellationToken cancellationToken)
     {
         // a single proxy is used as-is; failures surface on connect
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It takes the options' proxy, when they give one.</remarks>
     public Task UpdateOptions(ProxyOptions proxyOptions, CancellationToken cancellationToken)
     {
         if (proxyOptions.ProxyEndPoint != null)
@@ -109,12 +144,16 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: nothing is saved.</remarks>
     public Task Flush(CancellationToken cancellationToken)
     {
         // nothing is persisted
         return Task.CompletedTask;
     }
 
+    /// <summary>Does nothing: the connector holds nothing to release.</summary>
+    /// <returns>A completed task.</returns>
     public ValueTask DisposeAsync()
     {
         return default;

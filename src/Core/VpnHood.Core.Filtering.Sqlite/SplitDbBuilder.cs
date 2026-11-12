@@ -10,25 +10,58 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // run in the app process (memory is fine there); the resulting file is opened read-only by the VpnService.
 // A crash never leaves a half-built db in place — the build targets a temp file that atomically replaces
 // the target (VPN connections are exclusive, so the target is never in use).
+/// <summary>
+/// Provides the build of a split database: a SQLite file of include, exclude and block sets, which a filter of this
+/// package reads.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Derive from <see cref="SplitIpDbBuilder"/> or <see cref="SplitDomainDbBuilder"/>, which give the schema. A build
+/// writes a new file beside the target, its path plus <c>.tmp</c>, with no journal: the rows in one transaction, the
+/// indexes after them, and the mark that the file is complete last. It then deletes the target and moves the new
+/// file to its path, so a crash never leaves a half-built database there.
+/// </para>
+/// <para>
+/// The target must not be open while it is replaced: give a changed source a new file name, from
+/// <see cref="GetSourceSignature"/>, so a running filter keeps the old file until it swaps.
+/// </para>
+/// </remarks>
 public abstract class SplitDbBuilder
 {
-    // Context identity, stored as the db's source_signature meta: must change iff the stored sets would
-    // change. Invoked on every EnsureAsync, so it must be cheap (compose of hashes/stat, never parse).
-    // Public so callers can derive signature-versioned file names (a changed source gets a NEW file, so
-    // a running VpnService can keep the old db open until it swaps); same value EnsureAsync compares.
+    /// <summary>
+    /// Gets the identity of the source of the sets, which a build stores in the database: it must change exactly when
+    /// the sets would.
+    /// </summary>
+    /// <returns>The identity, compared as a string.</returns>
+    /// <remarks>
+    /// <see cref="EnsureAsync"/> calls it every time, so keep it cheap: hashes and file sizes and times, never a
+    /// parse of the source.
+    /// </remarks>
     public abstract string GetSourceSignature();
 
-    protected abstract int SchemaVersion { get; }
-    protected abstract string CreateTablesSql { get; }
-    protected abstract string CreateIndexesSql { get; }
+    // the schema's, sealed by SplitIpDbBuilder and SplitDomainDbBuilder
+    private protected abstract int SchemaVersion { get; }
+    private protected abstract string CreateTablesSql { get; }
+    private protected abstract string CreateIndexesSql { get; }
 
     // Stream the context's rows into the db (via the schema's inserter, whose raw statements must be
     // finalized before this returns). Invoked only on the rebuild path, inside the bulk-insert transaction.
-    protected abstract Task InsertAsync(SqliteConnection connection, CancellationToken cancellationToken);
+    private protected abstract Task InsertAsync(SqliteConnection connection, CancellationToken cancellationToken);
 
-    // Reuse the db when its own meta matches the current source signature (no sidecar files), rebuild
-    // otherwise. The common case — every connect after the first with an unchanged source — returns at
-    // the meta check without touching the source at all.
+    /// <summary>
+    /// Builds the database at a path, unless the file there is complete, of this builder's schema version, and from
+    /// the same source signature.
+    /// </summary>
+    /// <param name="dbPath">The database's path.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>
+    /// A file that cannot be opened or read counts as out of date. With an unchanged source, it reads the database's
+    /// own record of its build and nothing of the source.
+    /// </remarks>
+    /// <exception cref="ArgumentException"><paramref name="dbPath"/> has no parent folder.</exception>
+    /// <exception cref="SqliteException">SQLite refused a row of the build.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task EnsureAsync(string dbPath, CancellationToken cancellationToken)
     {
         if (IsUpToDate(dbPath, GetSourceSignature()))
@@ -37,6 +70,20 @@ public abstract class SplitDbBuilder
         await BuildAsync(dbPath, cancellationToken).Vhc();
     }
 
+    /// <summary>
+    /// Builds the database at a path, replacing the file there.
+    /// </summary>
+    /// <param name="dbPath">The database's path; its folder is made if missing.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>
+    /// The target's <c>-wal</c>, <c>-shm</c> and <c>-journal</c> files are deleted with it. A build that fails before its
+    /// new file is complete leaves the target as it was, and the new file, which the next build deletes; as the target
+    /// is deleted before the new file is moved to its path, a failure between the two leaves neither there.
+    /// </remarks>
+    /// <exception cref="ArgumentException"><paramref name="dbPath"/> has no parent folder.</exception>
+    /// <exception cref="SqliteException">SQLite refused a row of the build.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task BuildAsync(string dbPath, CancellationToken cancellationToken)
     {
         SplitSqlite.EnsureInitialized();

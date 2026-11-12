@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<Description>SQLite-backed shared proxy endpoint store for VpnHood endpoint management.</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

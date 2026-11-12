@@ -2,11 +2,38 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Proxies.Management.Abstractions;
 
+/// <summary>
+/// Provides the merge of a downloaded list of proxy endpoints into a managed list, and the download.
+/// </summary>
 public static class ProxyEndPointUpdater
 {
+    /// <summary>The number of endpoints a merge keeps by default: 1,000.</summary>
     public const int DefaultMaxItemCount = 1000;
+
+    /// <summary>The penalty above which a used endpoint goes after the new ones by default: 50.</summary>
     public const int DefaultMaxPenalty = 50;
 
+    /// <summary>
+    /// Merges a new list of endpoints into the current one, in order of worth, and keeps the first ones.
+    /// </summary>
+    /// <param name="currentEndPointInfos">The current endpoints and their statuses.</param>
+    /// <param name="newEndPoints">The new endpoints.</param>
+    /// <param name="maxItemCount">How many endpoints to keep, or <see langword="null"/> for <see cref="DefaultMaxItemCount"/>.</param>
+    /// <param name="maxPenalty">
+    /// The penalty above which a used endpoint goes after the new ones, or <see langword="null"/> for
+    /// <see cref="DefaultMaxPenalty"/>.
+    /// </param>
+    /// <param name="removeDuplicateIps">
+    /// <see langword="true"/> to drop a new endpoint whose host, ignoring case, and protocol match a current one whose
+    /// last use succeeded.
+    /// </param>
+    /// <returns>
+    /// The merged list: the enabled current endpoints used with a penalty up to <paramref name="maxPenalty"/>, by
+    /// penalty; the new ones; the enabled current ones never used; the enabled current ones above the penalty; then the
+    /// disabled ones. An endpoint that comes twice as the same object is kept once; one that comes as two objects,
+    /// such as a new endpoint equal to a current one, is kept twice.
+    /// </returns>
+    /// <exception cref="ArgumentException"><paramref name="maxItemCount"/> is 0 or less.</exception>
     public static ProxyEndPoint[] Merge(
         IEnumerable<ProxyEndPointInfo> currentEndPointInfos,
         ProxyEndPoint[] newEndPoints,
@@ -86,6 +113,17 @@ public static class ProxyEndPointUpdater
         return filteredNewEndPoints;
     }
 
+    /// <summary>
+    /// Downloads a text and reads the proxy endpoints in it, as <see cref="ProxyEndPointParser.ExtractFromContent"/>
+    /// does.
+    /// </summary>
+    /// <param name="httpClient">The client to download with.</param>
+    /// <param name="url">The text's URL.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the endpoints found.</returns>
+    /// <exception cref="HttpRequestException">The download failed.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="NotSupportedException">An address found has a scheme that is no proxy protocol.</exception>
     public static async Task<ProxyEndPoint[]> LoadFromUrlAsync(
         HttpClient httpClient,
         Uri url,

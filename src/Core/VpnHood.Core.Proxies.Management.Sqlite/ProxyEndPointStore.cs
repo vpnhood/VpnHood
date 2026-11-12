@@ -9,11 +9,23 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.Core.Proxies.Management.Sqlite;
 
 /// <summary>
-/// SQLite-backed shared proxy endpoint store. The db file lives in a folder both the app and the
-/// VPN service process can access (on iOS the app-group container). Connections are opened per
-/// operation with pooling disabled so no file lock survives between operations — a suspended iOS
-/// process holding a lock on an app-group file is killed with 0xdead10cc.
+/// Provides the store of a managed proxy list in a SQLite file that the app and the VPN service share, as in an iOS
+/// app group's container.
 /// </summary>
+/// <param name="dbPath">The file's path; its folder is made if missing.</param>
+/// <remarks>
+/// <para>
+/// Each operation opens its own connection and closes it when it ends, so no lock on the file outlives it, but for a
+/// connection whose setup fails after its open, which is left to the GC: iOS kills a suspended process that holds a
+/// lock on a file of its app group. The file is in write-ahead-log mode, and each
+/// command waits up to 5 seconds for another process's lock. Within a store, operations run one at a time.
+/// </para>
+/// <para>
+/// The first operation makes the file and its tables. When its first open or check of the file fails for any reason,
+/// a lock or a cancellation included, or finds another schema version, the file is deleted and made again, empty.
+/// Passwords are stored as given, unencrypted.
+/// </para>
+/// </remarks>
 public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
 {
     private const int SchemaVersion = 1;
@@ -117,6 +129,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             cancellationToken, ("@version", SchemaVersion.ToString())).Vhc();
     }
 
+    /// <inheritdoc/>
     public async Task<ProxyEndPointRecord?> Get(string id, CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -128,6 +141,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         return await reader.ReadAsync(cancellationToken).Vhc() ? ReadRecord(reader) : null;
     }
 
+    /// <inheritdoc/>
     public async Task<int> Count(CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -149,6 +163,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         END
         """;
 
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<ProxyEndPointRecord>> List(CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -169,6 +184,11 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         return records;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Endpoints of equal state and quality come in the order they were added. An endpoint used whose last success and
+    /// last failure are at the same moment is in none of the groups, and is never listed.
+    /// </remarks>
     public async Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options,
         CancellationToken cancellationToken)
     {
@@ -239,6 +259,8 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         };
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It writes the records in one transaction.</remarks>
     public async Task Upsert(IReadOnlyList<ProxyEndPointRecord> records, bool keepExistingStatus,
         bool keepExistingEnabled, CancellationToken cancellationToken)
     {
@@ -298,6 +320,8 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         await command.ExecuteNonQueryAsync(cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It writes the statuses in one transaction.</remarks>
     public async Task UpdateStatuses(IReadOnlyList<ProxyEndPointInfo> infos, CancellationToken cancellationToken)
     {
         if (infos.Count == 0)
@@ -326,6 +350,8 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It deletes them in one transaction.</remarks>
     public async Task Delete(IReadOnlyList<string> ids, CancellationToken cancellationToken)
     {
         if (ids.Count == 0)
@@ -351,6 +377,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         }
     }
 
+    /// <inheritdoc/>
     public async Task DeleteAll(DeleteAllOptions options, CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -383,6 +410,8 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>An endpoint whose last success and last failure are at the same moment counts as failed here.</remarks>
     public async Task DisableAllFailed(CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -397,6 +426,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             """, cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
     public async Task SetCountryCode(string id, string? countryCode, CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -406,6 +436,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             cancellationToken, ("@countryCode", (object?)countryCode ?? DBNull.Value), ("@id", id)).Vhc();
     }
 
+    /// <inheritdoc/>
     public async Task ResetStatuses(CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -419,6 +450,8 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('queue_position', '0')", cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It reads the stored endpoints before its transaction, which then makes the changes.</remarks>
     public async Task Merge(IReadOnlyList<ProxyEndPoint> newEndPoints, int? maxItemCount, int? maxPenalty,
         bool removeDuplicateIps, CancellationToken cancellationToken)
     {
@@ -453,6 +486,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
     public async Task<long> GetQueuePosition(CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -463,6 +497,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             : 0L;
     }
 
+    /// <inheritdoc/>
     public async Task SetQueuePosition(long queuePosition, CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
@@ -512,8 +547,8 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         };
     }
 
+    /// <summary>Does nothing.</summary>
     public void Dispose()
     {
-        // connections are per-operation; nothing is held open
     }
 }

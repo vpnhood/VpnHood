@@ -18,6 +18,27 @@ using VpnHood.Net.VpnAdapters.LinuxTun.LinuxNative;
 
 namespace VpnHood.Net.VpnAdapters.LinuxTun;
 
+/// <summary>
+/// Provides the VPN adapter for Linux, on a TUN device of the process's own: it gives the interface its addresses,
+/// routes, MTU and DNS servers, and, for a server, NAT for IPv4 and IPv6 through iptables.
+/// </summary>
+/// <remarks>
+/// <para>
+/// It needs root, and runs <c>ip</c>, <c>sysctl</c>, <c>resolvectl</c> or <c>resolvconf</c>, <c>iptables</c> and
+/// <c>ip6tables</c>, <c>nft</c> and <c>udevadm</c> through bash; a canceled step stops waiting for its command, which
+/// runs on. The kernel removes the TUN device, with its routes and systemd-resolved's DNS servers for it, when the
+/// process ends, a crash included. A resolvconf entry and the DNS redirect stay, which <see cref="RemoveLeftovers"/>
+/// clears, and so do NAT rules, until a start adds NAT for their network on the same primary interface again.
+/// </para>
+/// <para>
+/// The interface's alias carries a tag made from the app's ID, when there is one (<see cref="VpnAdapterSettings.AppId"/>),
+/// which tells a start whose an interface of its name is. A TUN device of the name that carries the tag, or, from
+/// versions before tags, none, is taken for one the app left and removed unless a process is known to hold it: a
+/// device that is down shows no holder, and the app's single-instance lock is relied on. Any other interface of the
+/// name refuses the start. A start also turns on IPv4 and IPv6 forwarding for the whole host, and leaves it on. There
+/// is no app filter.
+/// </para>
+/// </remarks>
 public class LinuxTunVpnAdapter : TunVpnAdapter
 {
     // -1 (not 0) is the "closed" sentinel: fd 0 is a valid descriptor (stdin), so using it would let a
@@ -64,17 +85,53 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="true"/>: <see cref="BindSocketToIp"/> binds a socket to an interface.</value>
     protected override bool IsSocketProtectedByBind => true;
+
+    /// <inheritdoc/>
+    /// <value>
+    /// <see langword="false"/> until a start has found the interface of the host's default route;
+    /// <see langword="true"/> from then on.
+    /// </value>
     public override bool CanProtectSocket => !string.IsNullOrEmpty(_primaryAdapterName);
 
+    /// <inheritdoc/>
+    /// <remarks>Always <see langword="true"/>: iptables and ip6tables translate both IP versions.</remarks>
     public override bool IsNatSupported(IpVersion ipVersion) => true;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>.</value>
     public override bool IsAppFilterSupported => false;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="null"/>: there is no app filter.</value>
     protected override string? AppPackageId => null;
-    // A client takes a new network without a restart, whose teardown would let the host's traffic pass
-    // outside the tunnel for its seconds; a server restarts, as its NAT names the card it started on
+
+    /// <inheritdoc/>
+    /// <value>
+    /// <see langword="true"/> when the adapter uses NAT, as a server's does, whose rules name the interface it started
+    /// on; <see langword="false"/> for a client's, which takes a new network without a restart, whose teardown would
+    /// let the host's traffic pass outside the tunnel for its seconds.
+    /// </value>
     protected override bool RestartAfterNetworkAddressChanged => UseNat;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="true"/>.</value>
     protected override bool CheckAdapterInterfaceAfterNetworkChanged => true;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LinuxTunVpnAdapter"/> class.
+    /// </summary>
+    /// <param name="adapterSettings">
+    /// The adapter's settings, whose <see cref="VpnAdapterSettings.AdapterName"/> must be a valid interface name
+    /// (<see cref="IsValidAdapterName"/>), as <see cref="GetValidAdapterName"/> derives from any name.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
+    /// </exception>
+    /// <exception cref="ArgumentException">The adapter's name is not a valid interface name.</exception>
     public LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         : base(adapterSettings)
     {
@@ -90,8 +147,15 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         PrimaryNetworkChanged += (_, _) => ApplyDnsRedirect();
     }
 
-    // A set-down link stays listed but loses IFF_UP, and the kernel drops its routes; a fresh tun has the
-    // flag while its carrier may still read down (the kernel publishes it up to a second late)
+    /// <inheritdoc/>
+    /// <returns>
+    /// <see langword="true"/> if the interface is there and up; <see langword="false"/> if it is gone, or set down.
+    /// </returns>
+    /// <remarks>
+    /// It reads the interface's flags from sysfs: a link set down keeps its address, which the base's look finds,
+    /// while the kernel drops its routes. Its carrier is not consulted, as a new TUN device may report it down for up to
+    /// a second.
+    /// </remarks>
     protected override bool IsAdapterInterfaceEnabled()
     {
         try {
@@ -103,9 +167,16 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         }
     }
 
-    // A name the kernel takes: at most 15 characters, and none it refuses - whitespace, '/' or ':'.
-    // This keeps to letters, digits, '_', '-' and '.', and never starts with '-', which a command
-    // line would read as an option.
+    /// <summary>
+    /// Determines whether a name is one the adapter gives its interface: 1 to 15 characters, each an ASCII letter or
+    /// digit, <c>_</c>, <c>-</c> or <c>.</c>, not starting with <c>-</c>, and neither <c>.</c> nor <c>..</c>.
+    /// </summary>
+    /// <param name="name">The name.</param>
+    /// <returns><see langword="true"/> if the name is valid; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// The kernel refuses a longer name, and some characters; a name starting with <c>-</c> would read as an option
+    /// on a command line.
+    /// </remarks>
     public static bool IsValidAdapterName(string name)
     {
         return name.Length is > 0 and <= MaxAdapterNameLength &&
@@ -114,10 +185,17 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
                name.All(IsValidAdapterNameChar);
     }
 
-    // A valid name passes unchanged (VpnHoodClient, VpnHoodConnect, VpnHoodServer all are). Any other
-    // becomes its first ten valid characters, a dash and four hex digits of a hash of the whole name,
-    // so two long names that share a prefix still differ; the app id, not the name, decides whose
-    // a tun is.
+    /// <summary>
+    /// Derives a valid interface name (<see cref="IsValidAdapterName"/>) from any name.
+    /// </summary>
+    /// <param name="name">The name, such as the app's.</param>
+    /// <returns>
+    /// The name itself when it is valid; otherwise its first ten valid characters less any leading <c>-</c> or
+    /// <c>.</c>, a dash and the first four hex digits of the SHA-256 hash of the whole name, or <c>vh-</c> and those
+    /// digits when no character is left. The same name always gives the same result.
+    /// </returns>
+    // VpnHoodClient, VpnHoodConnect and VpnHoodServer pass unchanged. The hash keeps apart two long names that share
+    // a prefix; the app id, not the name, decides whose a tun is
     public static string GetValidAdapterName(string name)
     {
         if (IsValidAdapterName(name))
@@ -176,10 +254,21 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         return tun.Name == adapterName;
     }
 
-    // At the daemon's start, after its single-instance lock, rather than at the next connect: what a crashed
-    // run left. Its tun went with its process, but the resolvconf fallback's DNS entry outlives it, which
-    // would keep resolv.conf on the VPN's nameserver, and the kernel keeps the DNS redirect's tables. Nothing
-    // here throws but for a name the kernel refuses.
+    /// <summary>
+    /// Removes what an earlier run of the app left on the host: its resolvconf DNS entry and DNS redirect, when no
+    /// interface has the adapter's name, and every TUN device with a valid name that carries the app's tag as its alias
+    /// and that no process is known to hold.
+    /// </summary>
+    /// <param name="appId">The app's ID, as in <see cref="VpnAdapterSettings.AppId"/>.</param>
+    /// <param name="adapterName">The adapter's name, as in <see cref="VpnAdapterSettings.AdapterName"/>.</param>
+    /// <remarks>
+    /// Call it when the app starts, once no other instance of it can run, rather than at the next connect: a crashed
+    /// run's TUN device went with its process, but its resolvconf entry would keep <c>/etc/resolv.conf</c> on the VPN's
+    /// servers, and the kernel keeps the redirect's tables. The TUN devices go for versions that made them with
+    /// <c>ip tuntap</c>, which outlive their process. It needs root; a failure is logged, not thrown.
+    /// </remarks>
+    /// <exception cref="ArgumentException"><paramref name="adapterName"/> is not a valid interface name.</exception>
+    // At the daemon's start, after its single-instance lock
     public static void RemoveLeftovers(string appId, string adapterName)
     {
         if (!IsValidAdapterName(adapterName))
@@ -244,9 +333,13 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
               $"If that app is gone, remove it with: sudo ip link delete {tun.Name}";
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: LinuxTun has no app filter.</exception>
     protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: LinuxTun has no app filter.</exception>
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
@@ -274,7 +367,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         return mainInterface;
     }
 
-    public static string? FindInterfaceNameForIp(IPAddress ip)
+    private static string? FindInterfaceNameForIp(IPAddress ip)
     {
         var interfaces = NetworkInterface.GetAllNetworkInterfaces();
 
@@ -291,6 +384,25 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         return null; // not found
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It finds the interface of the host's first IPv4 default route, removes what this adapter's last run left, and
+    /// tries to keep NetworkManager off the interface with a udev rule under <c>/run</c>, without which a desktop
+    /// announces the VPN's coming and going as a network connection; a failure there is logged. Then it makes the TUN
+    /// device, after removing a TUN device of the name that the app left (see the class's remarks), writes the app's
+    /// tag as its alias, turns on IPv4 and IPv6 forwarding for the host, and sets the interface up.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The host has no IPv4 default route, or, with NAT, a multipath one or one whose interface has a name not valid
+    /// here; an interface of the adapter's name is not a TUN device, or is another app's or held by a process; or
+    /// <c>/dev/net/tun</c> could not be opened.
+    /// </exception>
+    /// <exception cref="PInvokeException">
+    /// The kernel refused the TUN device, as without CAP_NET_ADMIN, or its non-blocking mode.
+    /// </exception>
+    /// <exception cref="ExternalException">A command failed.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">bash could not be started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task AdapterAdd(CancellationToken cancellationToken)
     {
         // Get the primary adapter name
@@ -364,6 +476,22 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// It removes only what this adapter added: its resolvconf entry and DNS redirect, the TUN device it made, and its
+    /// NAT rules, each deleted by its spec, every copy of it, rather than by restoring a table, so other rules stay. The
+    /// specs name the current primary interface, so rules an earlier run added for another one stay too. A failure is
+    /// logged, not thrown.
+    /// </para>
+    /// <para>
+    /// Before the device's descriptor is freed, it waits up to a second for the reader to leave, which the device's
+    /// removal wakes, and up to a second plus twice <see cref="VpnAdapterSettings.MaxPacketSendDelay"/> for a batch
+    /// being sent, then 100 ms more for each that is late; a reader or sender that stops the adapter itself is not
+    /// waited for. When one does not leave in time, the descriptor stays taken until the process exits, which is
+    /// logged as an error.
+    /// </para>
+    /// </remarks>
     // Only what this adapter added: a start that was refused the name must not take down the tun,
     // or the DNS entry, of the owner that holds it.
     protected override void AdapterRemove()
@@ -406,6 +534,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The reader and the sender use a copy of the TUN device's descriptor, which <see cref="AdapterClose"/> retires.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The TUN device has not been made, or a stop has removed it.</exception>
+    /// <exception cref="PInvokeException">The descriptor could not be copied.</exception>
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Opening the TUN adapter...");
@@ -451,6 +585,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     // clearing; were the number closed, the next file the process opens could take it and get their read or
     // write. /dev/null takes the tun's place under it in one step (dup2), which gives a late read an end and a
     // late write a sink; AdapterRemove frees the number once both have left.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It puts <c>/dev/null</c> in the place of the reader's and the sender's descriptor, so a late read meets the end
+    /// of a file and a late write a sink, never a file that took the number; <see cref="AdapterRemove"/> frees it. When
+    /// <c>/dev/null</c> cannot be put there, which is logged, the descriptor stays the TUN device's until then.
+    /// </remarks>
     protected override void AdapterClose()
     {
         var fd = Interlocked.Exchange(ref _tunAdapterFd, InvalidFd);
@@ -498,6 +638,18 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         LinuxAPI.close(fd);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// After removing the rules it added before for the network, it adds three with <c>iptables</c>, or
+    /// <c>ip6tables</c> for IPv6: a masquerade of the network's traffic out of the primary interface, and two
+    /// forwarding rules between that interface and the tunnel's, the way back for related and established
+    /// connections only. Each command waits up to 5 seconds for the xtables lock another tool may hold. A canceled
+    /// start's command may still add its rule after the cleanup; the next start that adds NAT for the network on the same
+    /// primary interface removes it.
+    /// </remarks>
+    /// <exception cref="ExternalException">A command failed.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">bash could not be started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         // remove old NAT rule if any
@@ -549,12 +701,21 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             res = VhInvoker.TryInvoke("remove a NAT rule", LogLevel.Debug, () => ExecuteCommand($"{iptables} {rule}"));
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="ExternalException"><c>ip addr add</c> failed.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">bash could not be started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         await ExecuteCommandAsync($"ip addr add {ipNetwork} dev {AdapterName}",
             cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The route takes the metric <see cref="SetMetric"/> kept, if any.</remarks>
+    /// <exception cref="ExternalException"><c>ip route add</c> failed, as for a route the table has already.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">bash could not be started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var command = ipNetwork.IsV4
@@ -567,18 +728,29 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         await ExecuteCommandAsync(command, cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It keeps the metric for the routes the start adds next, of both IP versions, and changes no route already
+    /// there.
+    /// </remarks>
     protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         _metric = metric;
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing.</remarks>
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
     {
-        // Not supported. Ignore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It sets the interface's MTU, for both IP versions.</remarks>
+    /// <exception cref="ExternalException"><c>ip link set</c> failed.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">bash could not be started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         var command = $"ip link set dev {AdapterName} mtu {mtu}";
@@ -672,6 +844,29 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         ExecuteCommand($"ip link delete {AdapterName}");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// With no servers, it does nothing. Otherwise it gives them to systemd-resolved, through <c>resolvectl</c>, as
+    /// the interface's servers with the routing domain <c>~.</c>, which sends them every name no other link has a more
+    /// specific domain for; when that fails, it gives them to <c>resolvconf</c> as its exclusive entry, a command a
+    /// cancellation does not cut off, which needs a resolvconf with an exclusive mode, as openresolv's. Then, rather
+    /// than let DNS go around the tunnel, it fails when <c>/etc/resolv.conf</c> names no server, or any server but
+    /// these and systemd-resolved's stub, <c>127.0.0.53</c> or <c>127.0.0.54</c>.
+    /// </para>
+    /// <para>
+    /// While the servers are set, an nftables rule sends DNS over TCP or UDP port 53 that the host forwards, a
+    /// container's, to the VPN's first server of its IP version when it is for a network of the host's primary
+    /// interfaces or a server systemd-resolved knows, or refuses it where the VPN has no server of that version. DNS
+    /// that comes in by a primary interface, or is for one of its addresses, is left alone, and the host's own lookups
+    /// never meet the rule. A network change rewrites it; a failure is logged, as only forwarded DNS depends on it.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="Exception">
+    /// Neither <c>resolvectl</c> nor <c>resolvconf</c> took the servers, or <c>/etc/resolv.conf</c> does not use
+    /// them.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
     protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
         CancellationToken cancellationToken)
@@ -719,7 +914,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     // Every server in resolv.conf is systemd-resolved's stub or one of the VPN's. A file with none counts as
     // another server, as glibc then asks 127.0.0.1.
-    public static bool IsResolvConfOnVpnDns(string resolvConf, IEnumerable<IPAddress> dnsServers)
+    internal static bool IsResolvConfOnVpnDns(string resolvConf, IEnumerable<IPAddress> dnsServers)
     {
         var allowed = dnsServers.Select(x => x.ToString()).Concat(["127.0.0.53", "127.0.0.54"]).ToHashSet();
         var servers = GetNameservers(resolvConf).ToArray();
@@ -858,12 +1053,24 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
                 $"if command -v nft >/dev/null; then {LoadNftCommand(CreateDnsRedirectRemoval(adapterName))}; fi"));
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It polls the device's descriptor with no time limit, and polls again when a signal interrupts the poll; a stop's
+    /// removal of the device ends it. Before the first open, it returns at once.
+    /// </remarks>
+    /// <exception cref="PInvokeException">The poll failed.</exception>
     protected override void WaitForTunRead()
     {
         if (_pollFdReads != null)
             WaitForTun(_pollFdReads);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It polls the device's descriptor with no time limit, and polls again when a signal interrupts the poll. Before
+    /// the first open, it returns at once.
+    /// </remarks>
+    /// <exception cref="PInvokeException">The poll failed.</exception>
     protected override void WaitForTunWrite()
     {
         if (_pollFdWrites != null)
@@ -886,6 +1093,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         }
     }
 
+    /// <inheritdoc/>
+    /// <returns>
+    /// <see langword="true"/> if the device took the packet, also when it took only a part, which a TUN device should
+    /// never do, and which is logged; <see langword="false"/> if it cannot take it now, or the adapter is closed.
+    /// </returns>
+    /// <exception cref="PInvokeException">The write failed with another error.</exception>
     protected override bool WritePacket(IpPacket ipPacket)
     {
         var fd = _tunAdapterFd;
@@ -917,6 +1130,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         };
     }
 
+    /// <inheritdoc/>
+    /// <returns>The number of bytes read; 0 if no packet is ready, or a signal interrupted the read.</returns>
+    /// <exception cref="IOException">The adapter is closed.</exception>
+    /// <exception cref="PInvokeException">
+    /// The read failed, or read no bytes, as it does once a close has put <c>/dev/null</c> in the device's place.
+    /// </exception>
     protected override int ReadPacket(byte[] buffer)
     {
         var fd = _tunAdapterFd;
@@ -971,6 +1190,15 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         return tunDeviceFd;
     }
 
+    /// <summary>
+    /// Binds a socket to the interface that holds an address (<c>SO_BINDTODEVICE</c>), not to the address, so the
+    /// socket's traffic leaves by that interface rather than the tunnel. It is how
+    /// <see cref="TunVpnAdapter.ProtectSocket(Socket)"/> keeps a socket out of the tunnel here.
+    /// </summary>
+    /// <param name="socket">The socket, not bound yet.</param>
+    /// <param name="ipAddress">The host's primary address of the socket's IP version.</param>
+    /// <exception cref="InvalidOperationException">No interface holds the address.</exception>
+    /// <exception cref="PInvokeException">The kernel refused the option, as without CAP_NET_RAW.</exception>
     protected override void BindSocketToIp(Socket socket, IPAddress ipAddress)
     {
         var adapterName = FindInterfaceNameForIp(ipAddress);
@@ -995,18 +1223,25 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         return OsUtils.ExecuteShellCommandAsync(command, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// While the adapter still holds its TUN device, it removes it as <see cref="AdapterRemove"/> does, with its NAT
+    /// rules, also when the finalizer calls it, which no stop came before: a masquerade rule left for a deleted
+    /// interface can break the host's network.
+    /// </remarks>
     protected override void DisposeUnmanaged()
     {
-        // AdapterRemove closes the fd AND removes the NAT/forwarding iptables rules. On a normal Dispose
-        // that already happened via Stop(), but the finalizer path never runs Stop(), so we must clean
-        // NAT here too. A leftover MASQUERADE rule referencing a deleted interface can break the host
-        // network, so cleaning it (even on the finalizer thread) is the lesser evil versus leaking it.
         if (_tunAdapterFd != InvalidFd || _ownTunAdapterFd != InvalidFd)
             AdapterRemove();
 
         base.DisposeUnmanaged();
     }
 
+    /// <summary>Removes the TUN device of an adapter that was not disposed, as <see cref="DisposeUnmanaged"/> does.</summary>
+    /// <remarks>
+    /// The adapter's handlers on the host's network-change events keep it reachable until it is disposed, so dispose it
+    /// rather than count on this.
+    /// </remarks>
     ~LinuxTunVpnAdapter()
     {
         Dispose(false);

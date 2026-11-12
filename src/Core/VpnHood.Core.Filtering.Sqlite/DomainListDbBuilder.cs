@@ -7,6 +7,18 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // factories, invoked lazily — the signature on every EnsureAsync (so keep it cheap: hashes/stat, never
 // parse), the domain sets only on the rare rebuild path. An omitted or empty set leaves its table empty:
 // no force-include lane for include, nothing to match for exclude/block.
+/// <summary>
+/// Provides the build of a split domain database from plain lists of domain names.
+/// </summary>
+/// <param name="sourceSignatureFactory">Gives the source's signature (<see cref="SplitDbBuilder.GetSourceSignature"/>).</param>
+/// <param name="includesFactory">Gives the include set, or <see langword="null"/> to leave it empty.</param>
+/// <param name="excludesFactory">Gives the exclude set, or <see langword="null"/> to leave it empty.</param>
+/// <param name="blocksFactory">Gives the block set, or <see langword="null"/> to leave it empty.</param>
+/// <remarks>
+/// Each name is stored as <see cref="DomainUtils.NormalizeDomain"/> gives it, with its labels reversed; a blank one is
+/// dropped. The signature's factory runs at every <see cref="SplitDbBuilder.EnsureAsync"/>, so keep it cheap; the
+/// sets' factories run only when a build runs.
+/// </remarks>
 public class DomainListDbBuilder(
     Func<string> sourceSignatureFactory,
     Func<IReadOnlyList<string>>? includesFactory = null,
@@ -14,8 +26,14 @@ public class DomainListDbBuilder(
     Func<IReadOnlyList<string>>? blocksFactory = null)
     : SplitDomainDbBuilder
 {
+    /// <inheritdoc/>
+    /// <returns>What the signature's factory gives.</returns>
     public override string GetSourceSignature() => sourceSignatureFactory();
 
+    /// <inheritdoc/>
+    /// <remarks>It inserts each given set's names.</remarks>
+    /// <exception cref="Microsoft.Data.Sqlite.SqliteException">SQLite refused a row.</exception>
+    /// <exception cref="OperationCanceledException">The build's cancellation was requested.</exception>
     protected override Task InsertDomainsAsync(SplitDomainDbInserter inserter, CancellationToken cancellationToken)
     {
         InsertSet(inserter, FilterAction.Include, includesFactory);

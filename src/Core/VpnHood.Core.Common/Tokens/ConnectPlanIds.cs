@@ -4,11 +4,11 @@ using VpnHood.Net.Toolkit.Converters;
 namespace VpnHood.Core.Common.Tokens;
 
 /// <summary>
-/// The plan a client requests when starting a session. It tells the server how the user
-/// is entitled to connect (free, ad-supported, trial, or premium).
-/// See docs/connection-options.md for the product-level overview.
+/// Specifies the plan a client asks for when it starts a session, which tells the server how the user is entitled
+/// to connect: free, after an ad, on trial, or premium.
 /// </summary>
-// A name this side does not know reads as Normal: the plan with no ad and no premium.
+/// <remarks>In JSON it is a name; a name this version does not know reads as <see cref="Normal"/>.</remarks>
+// See docs/connection-options.md for the product-level overview.
 [JsonConverter(typeof(JsonStringEnumFallbackConverter<ConnectPlanId>))]
 [JsonEnumFallback(ConnectPlanId.Normal)]
 public enum ConnectPlanId

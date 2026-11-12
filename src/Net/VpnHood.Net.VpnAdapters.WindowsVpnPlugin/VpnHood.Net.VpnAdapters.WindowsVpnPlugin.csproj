@@ -3,6 +3,7 @@
 		<Description>VpnHood VpnAdapter for the Windows VPN plug-in platform</Description>
 		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
 		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

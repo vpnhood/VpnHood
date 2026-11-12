@@ -6,7 +6,7 @@ namespace VpnHood.Core.Filtering.DomainFiltering.SniExtractors;
 /// Shared TLS ClientHello parser for extracting SNI from TLS handshake data.
 /// Used by both TCP (TLS) and QUIC (which uses TLS 1.3 internally) SNI extractors.
 /// </summary>
-public static class TlsClientHelloParser
+internal static class TlsClientHelloParser
 {
     /// <summary>
     /// Extracts SNI from a TLS ClientHello message.

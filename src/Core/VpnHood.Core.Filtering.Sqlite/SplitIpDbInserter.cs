@@ -10,6 +10,13 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // bind/step/reset per row): the SqliteCommand path costs ~30µs/row on Android (Mono) vs ~1µs/row raw —
 // measured on an emulator, an all-countries build (618k rows) dropped from 16.3s to 0.65s. Created by
 // SplitIpDbBuilder on the build connection's handle, so the rows join the surrounding bulk-insert transaction.
+/// <summary>
+/// Inserts address ranges into a split IP database during its build.
+/// </summary>
+/// <remarks>
+/// <see cref="SplitIpDbBuilder"/> makes one for its <c>InsertRangesAsync</c>; the rows join the build's transaction.
+/// It checks the build's cancellation every 20,000 rows.
+/// </remarks>
 public sealed class SplitIpDbInserter : IDisposable
 {
     private const int CancellationCheckInterval = 20000;
@@ -26,7 +33,14 @@ public sealed class SplitIpDbInserter : IDisposable
         _cancellationToken = cancellationToken;
     }
 
-    // start/end are raw big-endian address bytes (4 for IPv4, 16 for IPv6), as serialized in the assets
+    /// <summary>Inserts a range into a set.</summary>
+    /// <param name="action">The set: <see cref="FilterAction.Include"/>, <see cref="FilterAction.Exclude"/> or <see cref="FilterAction.Block"/>.</param>
+    /// <param name="start">The range's first address, in network byte order: 4 bytes for IPv4, 16 for IPv6.</param>
+    /// <param name="end">The range's last address, of the same length.</param>
+    /// <remarks>The ranges of a set must not overlap (see <see cref="SplitIpDbBuilder"/>).</remarks>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="action"/> is <see cref="FilterAction.Default"/>.</exception>
+    /// <exception cref="SqliteException">SQLite refused the row.</exception>
+    /// <exception cref="OperationCanceledException">The build's cancellation was requested.</exception>
     public void Insert(FilterAction action, byte[] start, byte[] end)
     {
         if (start.Length == 4) {
@@ -53,6 +67,7 @@ public sealed class SplitIpDbInserter : IDisposable
             $"INSERT INTO {SplitIpDb.GetTableName(action, isV4)} (start_ip, end_ip) VALUES (?, ?)");
     }
 
+    /// <summary>Releases the inserter's statements.</summary>
     public void Dispose()
     {
         foreach (var statement in _statements)

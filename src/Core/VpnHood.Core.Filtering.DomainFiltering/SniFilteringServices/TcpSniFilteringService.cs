@@ -14,7 +14,7 @@ namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 /// evan if we establish our own handshake, we can not simulate the rest
 /// Use TcpStreamSniFilteringService instead, with TCP forwarding
 /// </summary>
-public class TcpSniFilteringService(
+internal class TcpSniFilteringService(
     IDomainFilter domainFilter,
     TimeSpan flowTimeout,
     EventId? sniEventId)

@@ -17,6 +17,27 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.Management;
 
+/// <summary>
+/// Provides the VPN's connections through a managed list of proxies, kept in an <see cref="IProxyEndPointStore"/>: it
+/// rates the endpoints by their successes and failures, rotates them, checks them, and may update the list from a
+/// URL.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A connection tries the enabled endpoints in turn, the one whose turn comes soonest first: an endpoint's next turn
+/// moves back by 3 for each point of its penalty. While any endpoint succeeded last, only the first of those that
+/// did not keeps its place, and the rest go to the end. When the first endpoint in that order did not succeed last,
+/// the endpoints are checked first: the unrated ones all, the others until one succeeds.
+/// </para>
+/// <para>
+/// A check connects through each enabled endpoint, up to 50 at a time, to <c>1.1.1.1:443</c>, with
+/// <see cref="ProxyOptions.VerifyTls"/> also through a TLS handshake with <c>one.one.one.one</c>, and records each
+/// outcome; once 10 have succeeded, it checks only those never rated. An endpoint whose check fails with a
+/// <see cref="VpnHood.Net.Proxies.ProxyClientException"/> of <see cref="System.Net.Sockets.SocketError.ProtocolNotSupported"/>
+/// or <see cref="System.Net.Sockets.SocketError.AccessDenied"/>, as an <see cref="System.Security.Authentication.AuthenticationException"/>
+/// in the check's TLS handshake becomes, is disabled. The statuses are saved to the store every 10 seconds, after a check, and at the disposal.
+/// </para>
+/// </remarks>
 public class ManagedProxyConnector : IProxyConnector
 {
     private ProxyEndPointEntry? _fastestEntry;
@@ -42,8 +63,14 @@ public class ManagedProxyConnector : IProxyConnector
     private const int CheckServerMaxDegreeOfParallelism = 50;
     private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(10);
 
+    /// <inheritdoc/>
+    /// <value><see langword="true"/> while the store has any endpoint, as last loaded.</value>
     public bool IsEnabled { get; private set; }
+
+    /// <inheritdoc/>
     public bool UseRecentSucceeded { get; set; }
+
+    /// <inheritdoc/>
     public ProgressStatus? Progress => _progressMonitor?.Progress;
 
     private ManagedProxyConnector(
@@ -67,9 +94,18 @@ public class ManagedProxyConnector : IProxyConnector
     }
 
     /// <summary>
-    /// Builds a connector with its working set already loaded, so IsEnabled and Status are accurate as soon
-    /// as it exists. Loading is async, hence a factory method rather than a constructor.
+    /// Creates a connector with its endpoints already loaded from the store, so <see cref="IsEnabled"/> and
+    /// <see cref="Status"/> hold from the start, and starts its update from a URL where the options ask for one.
     /// </summary>
+    /// <param name="proxyOptions">
+    /// The options; with <see cref="ProxyOptions.ResetStates"/>, the stored statuses are cleared first, which logs a
+    /// failure rather than throwing it.
+    /// </param>
+    /// <param name="store">The store of the endpoints, which the connector disposes with itself.</param>
+    /// <param name="serverCheckTimeout">How long a check of an endpoint may take, or <see langword="null"/> for 7 seconds.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the connector.</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<ManagedProxyConnector> Create(
         ProxyOptions proxyOptions,
         IProxyEndPointStore store,
@@ -91,6 +127,7 @@ public class ManagedProxyConnector : IProxyConnector
         return connector;
     }
 
+    /// <inheritdoc/>
     public ProxyConnectorStatus Status {
         get {
             lock (_sessionStatus)
@@ -109,6 +146,8 @@ public class ManagedProxyConnector : IProxyConnector
         }
     }
 
+    /// <summary>Gets the endpoints the connector holds, with their statuses.</summary>
+    /// <returns>The connector's own endpoint and status objects, which later connections update.</returns>
     public IReadOnlyList<ProxyEndPointInfo> GetEndPointInfos() =>
         _proxyEndPointEntries.Select(x => x.Info).ToArray();
 
@@ -128,6 +167,13 @@ public class ManagedProxyConnector : IProxyConnector
         IsEnabled = _proxyEndPointEntries.Length > 0;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It saves the statuses not saved yet, or, with <see cref="ProxyOptions.ResetStates"/>, clears the stored ones
+    /// instead, then loads the endpoints from the store again. The update from a URL starts again, with a download at
+    /// once, only when its URL or interval changed.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task UpdateOptions(ProxyOptions proxyOptions, CancellationToken cancellationToken)
     {
         _verifyTls = proxyOptions.VerifyTls;
@@ -157,6 +203,9 @@ public class ManagedProxyConnector : IProxyConnector
         return new ValueTask(Flush(cancellationToken));
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It saves the changed statuses and enabled states, and the queue position.</remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task Flush(CancellationToken cancellationToken)
     {
         var dirtyEntries = _proxyEndPointEntries.Where(x => x.IsDirty).ToArray();
@@ -262,6 +311,13 @@ public class ManagedProxyConnector : IProxyConnector
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It checks the enabled endpoints, the best first, and skips the rest of those already rated once 10 have
+    /// succeeded; see the class's remarks. What it recorded is saved even when it is canceled. The update from a URL
+    /// checks with the last factory a caller gave.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task CheckServers(ISocketFactory socketFactory, CancellationToken cancellationToken)
     {
         _lastSocketFactory = socketFactory;
@@ -428,6 +484,18 @@ public class ManagedProxyConnector : IProxyConnector
         return [.. GetOrderedEntriesQuery()];
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// One connection at a time chooses its order, and waits for the check that runs when the first endpoint did not
+    /// succeed last. Each success and failure is recorded, and reported to <paramref name="onAttempt"/>; a failure taken
+    /// for the caller's cancellation, any <see cref="OperationCanceledException"/> within the check timeout, is
+    /// neither, and a cancellation during the last attempt ends in the <see cref="SocketException"/>. With
+    /// <see cref="ProxyAutoUpdateOptions.RemoveDuplicateIps"/>, a success disables the other endpoints of its host and
+    /// protocol among those the connection could choose. The connector keeps the last socket factory for its checks.
+    /// </remarks>
+    /// <exception cref="SocketException">No endpoint could connect, with <see cref="SocketError.NetworkUnreachable"/>.</exception>
+    /// <exception cref="ObjectDisposedException">The connector was disposed.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<TcpClient> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint,
         Action? onAttempt, CancellationToken cancellationToken)
     {
@@ -533,6 +601,12 @@ public class ManagedProxyConnector : IProxyConnector
     private bool IsCallerCancellation(Exception ex, TimeSpan elapsed) =>
         ex is OperationCanceledException && elapsed < _serverCheckTimeout;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It counts once per connection: the endpoint's success is taken back and a failure recorded. A connection it did
+    /// not hand out changes nothing; for an <see cref="OperationCanceledException"/> within the check timeout after the
+    /// connection was made, the connection is forgotten with no failure recorded.
+    /// </remarks>
     public void RecordFailed(TcpClient tcpClient, Exception ex)
     {
         // counted once, against the proxy that made the connection
@@ -548,6 +622,10 @@ public class ManagedProxyConnector : IProxyConnector
         RecordFailed(handedOut.Entry, ex, checkMode: false);
     }
 
+    /// <summary>
+    /// Stops the update and the saving, saves the statuses not saved yet, logging a failure, and disposes the store.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public async ValueTask DisposeAsync()
     {
         // a second close waits for the first one's end, as its flush may still be under way

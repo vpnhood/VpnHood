@@ -3,8 +3,18 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.Tokens;
 
+/// <summary>
+/// Provides the comparison of server tokens.
+/// </summary>
 public static class ServerTokenExtensions
 {
+    /// <summary>Determines whether a server token is an update of another.</summary>
+    /// <param name="serverToken">The current token.</param>
+    /// <param name="newServerToken">The token that may replace it.</param>
+    /// <returns>
+    /// <see langword="true"/> if the new token differs from the current one other than in its creation time, and was
+    /// made no earlier; otherwise, <see langword="false"/>.
+    /// </returns>
     public static bool IsTokenUpdated(this ServerToken serverToken, ServerToken newServerToken)
     {
         // create first server token by removing its created time

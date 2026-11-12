@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description></Description>
+		<Description>VpnHood connectors through proxies: one given proxy, or a managed, rated list.</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

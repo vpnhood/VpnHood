@@ -11,10 +11,15 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.DomainFiltering;
 
-
-/// Note: TCP extraction by packet is useless service, because TCP SNI is come after TCP handshake, and it will be too late to exclude connection
-/// evan if we establish our own handshake, we can not simulate the rest
-/// Use TcpStreamSniFilteringService instead, with TCP forwarding
+/// <summary>
+/// Provides the client's filtering of flows by their domain names, which it reads from their TLS server names (SNI):
+/// a QUIC flow's from its first packets, and a TCP connection's from the first bytes of its stream.
+/// </summary>
+/// <remarks>
+/// A TCP connection's name comes after its handshake, too late to exclude it from its packets, so TCP is filtered by
+/// its stream alone, which the client's TCP forwarding hands over. The service filters nothing while
+/// <see cref="IsEnabled"/> is <see langword="false"/>.
+/// </remarks>
 public class DomainFilteringService : IDisposable
 {
     private static readonly TimeSpan UdpFlowTimeout = TimeSpan.FromMinutes(2);
@@ -24,10 +29,31 @@ public class DomainFilteringService : IDisposable
     private readonly EventId _sniEventId;
     private readonly int _tlsBufferSize;
     private readonly bool _trackObservations;
+
+    /// <summary>
+    /// Gets the record of the domain names seen, which is kept only when the service was made to track them.
+    /// </summary>
     public DomainObserver DomainObserver { get; }
+
+    /// <summary>Gets the counts of the TCP connections whose name was found, by verdict.</summary>
     public DomainObserverStat TcpStat { get; } = new();
+
+    /// <summary>Gets the counts of the QUIC flows whose name was found, by verdict.</summary>
     public DomainObserverStat QuicStat { get; } = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DomainFilteringService"/> class.
+    /// </summary>
+    /// <param name="domainFilter">The domain filter pipe that decides each name's verdict.</param>
+    /// <param name="sniEventId">
+    /// The event ID of the log entries of the names found: each QUIC flow's, and each name the observer records.
+    /// </param>
+    /// <param name="tlsBufferSize">
+    /// The size of the one read that takes a TCP stream's first bytes, which must hold its TLS ClientHello.
+    /// </param>
+    /// <param name="trackObservations">
+    /// <see langword="true"/> to record each name in <see cref="DomainObserver"/>.
+    /// </param>
     public DomainFilteringService(
         IDomainFilter domainFilter,
         EventId sniEventId,
@@ -42,9 +68,13 @@ public class DomainFilteringService : IDisposable
         DomainObserver = new DomainObserver(sniEventId);
     }
 
+    /// <summary>Occurs when <see cref="IsEnabled"/> changes.</summary>
     // a session's TCP forwarding, which a domain rule needs for a TCP connection's name, follows this (ClientSession)
     public event EventHandler? IsEnabledChanged;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the service filters. The default is <see langword="false"/>.
+    /// </summary>
     public bool IsEnabled {
         get;
         set {
@@ -54,6 +84,34 @@ public class DomainFilteringService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Decides what happens to a UDP packet by the server name of its QUIC flow, holding the flow's first packets back
+    /// until the name is found or given up on.
+    /// </summary>
+    /// <param name="ipPacket">The packet the device sent.</param>
+    /// <returns>
+    /// The verdict for the packet and for the flow's packets held before it, which the result releases; a result
+    /// with <see cref="PacketSniFilterResult.NeedMore"/> when the service holds the packet. A packet of another
+    /// protocol, or any packet while the service is off, gets <see cref="FilterAction.Default"/>.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// A flow is known by the packet's source address and port alone, whatever its destination: once decided, its
+    /// verdict answers every later packet from them, until a periodic sweep finds the flow unused for two minutes. A
+    /// flow whose first packets are not QUIC gets <see cref="FilterAction.Default"/>. A held packet is the service's
+    /// until a later result releases it: route nothing for a result that needs more, and route the released packets
+    /// before the packet given. A flow forgotten with packets held leaves them undisposed.
+    /// </para>
+    /// <para>
+    /// A flow whose name is found counts in <see cref="QuicStat"/>, and is recorded in <see cref="DomainObserver"/>
+    /// when the service tracks names.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">
+    /// The packet is disposed and the service is on, or the service is disposed and the packet is UDP while it is on.
+    /// </exception>
+    /// <exception cref="InvalidDataException">The UDP packet is a fragment.</exception>
+    /// <exception cref="ArgumentException">The UDP packet is malformed.</exception>
     public PacketSniFilterResult ProcessPacket(IpPacket ipPacket)
     {
         if (!IsEnabled)
@@ -81,6 +139,26 @@ public class DomainFilteringService : IDisposable
     }
 
 
+    /// <summary>
+    /// Decides what happens to a TCP connection by the server name in the TLS ClientHello its stream begins with.
+    /// </summary>
+    /// <param name="tlsStream">The connection's stream, from the device, not read yet.</param>
+    /// <param name="remoteEndPoint">
+    /// The connection's destination, which is logged with the name when the service tracks names.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result holds the verdict, the name, and the bytes read from the stream, which the caller must send
+    /// on before the rest of it. While the service is off, nothing is read and the verdict is
+    /// <see cref="FilterAction.Default"/>.
+    /// </returns>
+    /// <remarks>
+    /// It reads from the stream once, up to the buffer size the service was made with, and looks for the name in what
+    /// that read returned: a stream with no name there, as when the ClientHello comes in pieces, gets the verdict of a
+    /// null name. A name found counts in <see cref="TcpStat"/>, and is recorded in <see cref="DomainObserver"/> when
+    /// the service tracks names.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<StreamSniFilterResult> ProcessStream(Stream tlsStream, IPEndPoint remoteEndPoint,
         CancellationToken cancellationToken)
     {
@@ -111,6 +189,7 @@ public class DomainFilteringService : IDisposable
         return res;
     }
 
+    /// <summary>Releases the record of the QUIC flows.</summary>
     public void Dispose()
     {
         _quicSniService.Dispose();

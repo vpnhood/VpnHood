@@ -4,13 +4,32 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Common;
 
+/// <summary>
+/// Passes commands between runs of an app through a file: one run writes a command line to it, and another, watching
+/// it, gets the command's arguments.
+/// </summary>
+/// <param name="commandFilePath">The command file's path.</param>
 public class CommandListener(string commandFilePath) : IDisposable
 {
     private FileSystemWatcher? _fileSystemWatcher;
+
+    /// <summary>
+    /// Occurs when the command file is written, with its command line split into arguments, on the file watcher's
+    /// thread. A failure to read the file or of a handler is logged.
+    /// </summary>
     public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
+
+    /// <summary>Gets a value indicating whether the listener is watching the file.</summary>
     public bool IsStarted => _fileSystemWatcher != null;
+
+    /// <summary>Gets the command file's path.</summary>
     public string CommandFilePath => commandFilePath;
 
+    /// <summary>
+    /// Starts watching the command file, making its folder if missing, then deletes a command an earlier run left.
+    /// </summary>
+    /// <remarks>A failure to start is logged, and leaves the listener stopped or watching, as far as it got.</remarks>
+    /// <exception cref="Exception">The listener is started already.</exception>
     public void Start()
     {
         if (IsStarted)
@@ -53,6 +72,7 @@ public class CommandListener(string commandFilePath) : IDisposable
         }
     }
 
+    /// <summary>Stops watching the command file.</summary>
     public void Stop()
     {
         _fileSystemWatcher?.Dispose();
@@ -74,6 +94,8 @@ public class CommandListener(string commandFilePath) : IDisposable
         throw exception;
     }
 
+    /// <summary>Writes a command line to the command file, for the run that watches it.</summary>
+    /// <param name="command">The command line.</param>
     public void SendCommand(string command)
     {
         VhLogger.Instance.LogInformation("Broadcasting a command. Command: {Command}", command);
@@ -81,6 +103,8 @@ public class CommandListener(string commandFilePath) : IDisposable
         File.WriteAllText(commandFilePath, command);
     }
 
+    /// <summary>Writes a command line to the command file, as <see cref="SendCommand"/> does, logging a failure.</summary>
+    /// <param name="command">The command line.</param>
     public void TrySendCommand(string command)
     {
         try {
@@ -91,11 +115,14 @@ public class CommandListener(string commandFilePath) : IDisposable
         }
     }
 
+    /// <summary>Raises <see cref="CommandReceived"/>.</summary>
+    /// <param name="args">The command's arguments.</param>
     protected void OnCommand(string[] args)
     {
         CommandReceived?.Invoke(this, new CommandReceivedEventArgs(args));
     }
 
+    /// <summary>Stops watching the command file.</summary>
     public void Dispose()
     {
         _fileSystemWatcher?.Dispose();

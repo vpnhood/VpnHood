@@ -13,6 +13,15 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // lookups drain on the old ones first, so disposal never races a lookup — deletes the superseded db
 // files it had open and raises Changed so the caches above drop their verdicts. The permanent inner
 // (next) filter is never touched by a swap.
+/// <summary>
+/// Provides the stage of an IP filter pipe that holds a <see cref="SqliteIpFilter"/> for each database a folder's
+/// manifest lists, and swaps them when the manifest changes.
+/// </summary>
+/// <remarks>
+/// The next stage decides first, and its verdict stands unless it is <see cref="FilterAction.Default"/>; then the
+/// databases do, in the manifest's order, each only for what those before it left at
+/// <see cref="FilterAction.Default"/>. A swap never touches the next stage. See <see cref="SplitDbManifest"/>.
+/// </remarks>
 public sealed class SqliteIpFilterChain : IIpFilter
 {
     private readonly string _dbFolder;
@@ -25,9 +34,12 @@ public sealed class SqliteIpFilterChain : IIpFilter
     private string[] _dbPaths;
     private bool _disposed; // set with the close's swap, under the write lock
 
+    /// <inheritdoc/>
+    /// <remarks>It occurs after a swap of the databases, and when the next stage's event does.</remarks>
     public event EventHandler? Changed;
 
-    // no rules in any gate and none below ⇒ the pipe can never decide (re-checked by consumers on Changed)
+    /// <inheritdoc/>
+    /// <value><see langword="true"/> while every database's sets are empty and the next stage, if any, is empty too.</value>
     public bool IsEmpty {
         get {
             _swapLock.EnterReadLock();
@@ -43,7 +55,17 @@ public sealed class SqliteIpFilterChain : IIpFilter
         }
     }
 
-    // the chain of the dbs its folder's manifest lists now, which it reads first
+    /// <summary>
+    /// Creates the stage for a folder: it reads the folder's manifest and opens each database it lists.
+    /// </summary>
+    /// <param name="next">The stage that decides first, which no swap touches, or <see langword="null"/>.</param>
+    /// <param name="dbFolder">The folder of the manifest and its databases.</param>
+    /// <param name="autoDisposeNextFilter"><see langword="true"/> to dispose <paramref name="next"/> with this stage.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the stage.</returns>
+    /// <exception cref="System.Text.Json.JsonException">The manifest is not valid JSON.</exception>
+    /// <exception cref="InvalidDataException">The manifest is the JSON <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<SqliteIpFilterChain> Create(IIpFilter? next, string dbFolder,
         bool autoDisposeNextFilter, CancellationToken cancellationToken)
     {
@@ -69,6 +91,8 @@ public sealed class SqliteIpFilterChain : IIpFilter
     // the inner filter runs first and its veto wins; the gates only see traffic it passed as Default.
     // Composition-wise this equals chaining the gates directly over next (both consult next first),
     // but keeping next OUTSIDE the swap unit means a gate swap never touches it.
+    /// <inheritdoc/>
+    /// <remarks>The next stage decides first, then the databases, in the manifest's order.</remarks>
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
         var result = _next?.Process(protocol, endPoint) ?? FilterAction.Default;
@@ -84,6 +108,16 @@ public sealed class SqliteIpFilterChain : IIpFilter
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It reads the manifest again. When the list of databases has changed, it opens the new ones, swaps them in once
+    /// the lookups under way on the old ones have left, closes the old ones, tries to delete the files of those the new
+    /// list leaves out, and raises <see cref="Changed"/>; when a new database cannot be opened, the old ones stay and
+    /// the error is thrown. Then it passes the call to the next stage. A disposed stage takes no new databases.
+    /// </remarks>
+    /// <exception cref="System.Text.Json.JsonException">The manifest is not valid JSON.</exception>
+    /// <exception cref="InvalidDataException">The manifest is the JSON <c>null</c>.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task Reconfigure(CancellationToken cancellationToken)
     {
         // the chain closed meanwhile: nothing else follows
@@ -131,6 +165,10 @@ public sealed class SqliteIpFilterChain : IIpFilter
     // no Changed on teardown: the whole pipe is going away, nothing is left to invalidate.
     // _swapLock is intentionally not disposed: a lookup racing the pipe teardown may still enter
     // Process (and gets Default); the lock's wait handles are reclaimed by their finalizers
+    /// <summary>
+    /// Closes the databases, without raising <see cref="Changed"/>, and disposes the next stage when this stage was
+    /// made to. A lookup after it gets the next stage's verdict, or <see cref="FilterAction.Default"/>.
+    /// </summary>
     public void Dispose()
     {
         if (!TrySwap(null, close: true, out var gates))

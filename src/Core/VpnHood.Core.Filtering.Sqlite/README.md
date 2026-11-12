@@ -140,9 +140,9 @@ A non-empty include set vetoes non-members, so chained include sets compose as i
 
 Which sets are populated is probed once at construction (the db is immutable at runtime), so empty
 sets cost nothing per packet. Queries are single index seeks (`greatest start_ip <= addr`, then check
-its `end_ip`). Each thread gets its own read-only connection with lazily prepared statements
-(`Pooling=false`); the surrounding `CachedIpFilter` memoizes per endpoint, so the db sees only
-first-contact packets.
+its `end_ip`), so a set's ranges must not overlap. All threads share one read-only connection, opened
+with the gate and held until its disposal, with lazily prepared statements, one lookup at a time; the
+surrounding `CachedIpFilter` memoizes per endpoint, so the db sees only the cache's misses.
 
 ## Runtime filter — `SqliteDomainFilter`
 

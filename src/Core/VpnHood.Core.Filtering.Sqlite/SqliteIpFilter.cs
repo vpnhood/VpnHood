@@ -23,6 +23,23 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // opened EAGERLY and held for the gate's lifetime: it pins the db while the app's manifest sweep runs —
 // a locked file survives the sweep on Windows, and an already-open fd keeps working after the file is
 // unlinked on unix — so a live gate can never lose its db underneath itself.
+/// <summary>
+/// Provides a stage of an IP filter pipe that decides by the sets of a split IP database.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The next stage decides first, and its verdict stands unless it is <see cref="FilterAction.Default"/>. Then an
+/// address in the block set is blocked; one in the exclude set excluded; and, when the include set is not empty, one
+/// outside it is excluded too, so include sets chained this way meet. The rest get <see cref="FilterAction.Default"/>:
+/// the stage's own sets never give <see cref="FilterAction.Include"/>. An IPv4-mapped IPv6 address is looked up as
+/// IPv4.
+/// </para>
+/// <para>
+/// The database is opened read-only when the stage is made and held until its disposal, so it stays readable while a
+/// manifest write deletes its file; which of its sets have rows is read once then, as it does not change. All
+/// threads' lookups share its one connection, one at a time; a lookup after the disposal finds no member.
+/// </para>
+/// </remarks>
 public sealed class SqliteIpFilter : IIpFilter
 {
     private readonly IIpFilter? _next;
@@ -34,8 +51,18 @@ public sealed class SqliteIpFilter : IIpFilter
     private readonly Reader _sharedReader;
     private volatile bool _disposed;
 
+    /// <inheritdoc/>
+    /// <remarks>It occurs when the next stage's event does: the stage's own database does not change.</remarks>
     public event EventHandler? Changed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqliteIpFilter"/> class, and opens its database.
+    /// </summary>
+    /// <param name="next">The stage that decides first, or <see langword="null"/>.</param>
+    /// <param name="dbPath">The path of the split IP database.</param>
+    /// <param name="autoDisposeNextFilter">
+    /// <see langword="true"/> to dispose <paramref name="next"/> with this stage.
+    /// </param>
     public SqliteIpFilter(IIpFilter? next, string dbPath, bool autoDisposeNextFilter = true)
     {
         SplitSqlite.EnsureInitialized();
@@ -60,6 +87,8 @@ public sealed class SqliteIpFilter : IIpFilter
         _hasBlocks = HasRows(_sharedReader.Connection, FilterAction.Block);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The next stage decides first; see the class's remarks for the order of the sets.</remarks>
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
         var result = _next?.Process(protocol, endPoint) ?? FilterAction.Default;
@@ -130,13 +159,18 @@ public sealed class SqliteIpFilter : IIpFilter
         return (long)command.ExecuteScalar()! == 1;
     }
 
-    // this gate's own db is immutable (a new db means a new gate); just forward the command
+    /// <inheritdoc/>
+    /// <remarks>It passes the call to the next stage: its own database does not change.</remarks>
     public Task Reconfigure(CancellationToken cancellationToken) =>
         _next?.Reconfigure(cancellationToken) ?? Task.CompletedTask;
 
-    // all sets empty and nothing below ⇒ the pipe can never decide
+    /// <inheritdoc/>
+    /// <value>
+    /// <see langword="true"/> while the database's three sets are empty and the next stage, if any, is empty too.
+    /// </value>
     public bool IsEmpty => !(_hasIncludes || _hasExcludes || _hasBlocks) && (_next?.IsEmpty ?? true);
 
+    /// <summary>Closes the database, and disposes the next stage when this stage was made to.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

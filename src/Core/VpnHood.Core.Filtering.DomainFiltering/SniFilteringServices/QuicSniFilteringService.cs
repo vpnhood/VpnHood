@@ -11,7 +11,7 @@ namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 /// <summary>
 /// SNI extraction service for QUIC (UDP port 443) traffic.
 /// </summary>
-public class QuicSniFilteringService(
+internal class QuicSniFilteringService(
     IDomainFilter domainFilter,
     TimeSpan flowTimeout,
     EventId? sniEventId)

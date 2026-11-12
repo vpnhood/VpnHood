@@ -8,7 +8,7 @@ namespace VpnHood.Core.Filtering.DomainFiltering.SniExtractors.TlsStream;
 /// Stream-based TLS SNI extractor for TCP connections.
 /// Reads from a stream and extracts SNI from TLS ClientHello.
 /// </summary>
-public static class StreamSniExtractor
+internal static class StreamSniExtractor
 {
     public static async Task<StreamSniResult> ExtractSni(Stream tcpStream, EventId eventId, int streamHeaderBufferSize,
         CancellationToken cancellationToken)

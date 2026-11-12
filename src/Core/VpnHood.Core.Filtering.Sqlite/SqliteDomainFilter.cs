@@ -24,6 +24,22 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // the db while the app's manifest sweep runs — a locked file survives the sweep on Windows, and an
 // already-open fd keeps working after the file is unlinked on unix — so a live gate can never lose
 // its db underneath itself.
+/// <summary>
+/// Provides a stage of a domain filter pipe that decides by the sets of a split domain database.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Its own sets decide first: a name in the block set is blocked, one in the exclude set excluded, and one in the
+/// include set included, which sends its flows through the tunnel past every IP filter; any other name gets the next
+/// stage's verdict. An entry matches its domain and every subdomain: a lookup tries the name and each of its parent
+/// domains. Names are compared as <see cref="DomainUtils.NormalizeDomain"/> gives them.
+/// </para>
+/// <para>
+/// The database is opened read-only when the stage is made and held until its disposal, so it stays readable while a
+/// manifest write deletes its file; which of its sets have rows is read once then, as it does not change. All
+/// threads' lookups share its one connection, one at a time; a lookup after the disposal finds no member.
+/// </para>
+/// </remarks>
 public sealed class SqliteDomainFilter : IDomainFilter
 {
     private readonly IDomainFilter? _next;
@@ -35,8 +51,21 @@ public sealed class SqliteDomainFilter : IDomainFilter
     private readonly Reader _sharedReader;
     private volatile bool _disposed;
 
+    /// <inheritdoc/>
+    /// <remarks>It occurs when the next stage's event does: the stage's own database does not change.</remarks>
     public event EventHandler? Changed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SqliteDomainFilter"/> class, and opens its database.
+    /// </summary>
+    /// <param name="next">
+    /// The stage that decides the names the database's sets do not match, or <see langword="null"/> to give them
+    /// <see cref="FilterAction.Default"/>.
+    /// </param>
+    /// <param name="dbPath">The path of the split domain database.</param>
+    /// <param name="autoDisposeNextFilter">
+    /// <see langword="true"/> to dispose <paramref name="next"/> with this stage.
+    /// </param>
     public SqliteDomainFilter(IDomainFilter? next, string dbPath, bool autoDisposeNextFilter = true)
     {
         SplitSqlite.EnsureInitialized();
@@ -59,9 +88,18 @@ public sealed class SqliteDomainFilter : IDomainFilter
         _hasBlocks = HasRows(_sharedReader.Connection, FilterAction.Block);
     }
 
-    // all sets empty and nothing below ⇒ the pipe can never decide; lets the client skip SNI extraction
+    /// <inheritdoc/>
+    /// <value>
+    /// <see langword="true"/> while the database's three sets are empty and the next stage, if any, is empty too.
+    /// </value>
     public bool IsEmpty => !(_hasIncludes || _hasExcludes || _hasBlocks) && (_next?.IsEmpty ?? true);
 
+    /// <summary>Decides what happens to a flow for a domain name, by the database's sets, then by the next stage.</summary>
+    /// <param name="domain">The name, or <see langword="null"/>.</param>
+    /// <returns>
+    /// The verdict of the first set that matches the name, or else the next stage's; <see cref="FilterAction.Default"/>
+    /// for a null, empty or white-space name, which the next stage is not asked about.
+    /// </returns>
     public FilterAction Process(string? domain)
     {
         var normalizedDomain = DomainUtils.NormalizeDomain(domain);
@@ -118,10 +156,12 @@ public sealed class SqliteDomainFilter : IDomainFilter
         return (long)command.ExecuteScalar()! == 1;
     }
 
-    // this gate's own db is immutable (a new db means a new gate); just forward the command
+    /// <inheritdoc/>
+    /// <remarks>It passes the call to the next stage: its own database does not change.</remarks>
     public Task Reconfigure(CancellationToken cancellationToken) =>
         _next?.Reconfigure(cancellationToken) ?? Task.CompletedTask;
 
+    /// <summary>Closes the database, and disposes the next stage when this stage was made to.</summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true))

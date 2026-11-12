@@ -1,11 +1,19 @@
 namespace VpnHood.Core.Filtering.Abstractions;
 
-// Canonical domain-name form shared by every domain filter and the split-domain db builder: entries and
-// queries must normalize/invert identically or matching silently breaks across implementations.
+/// <summary>
+/// Provides the form of domain names that every domain filter and the domain-list database builder share, so that
+/// their entries and the names asked for match.
+/// </summary>
 public static class DomainUtils
 {
-    // Trimmed, lower-case, leading wildcard stripped ("*.example.com" → "example.com" — every entry matches
-    // itself and its subdomains anyway). An empty result means "no domain" and can never match.
+    /// <summary>
+    /// Normalizes a domain name: trimmed, in lower case, and without a leading <c>*.</c>, as an entry matches its
+    /// subdomains anyway.
+    /// </summary>
+    /// <param name="domain">The name, or <see langword="null"/>.</param>
+    /// <returns>
+    /// The normalized name; empty for a null, empty or white-space name, which matches nothing.
+    /// </returns>
     public static string NormalizeDomain(string? domain)
     {
         if (string.IsNullOrWhiteSpace(domain))
@@ -18,8 +26,12 @@ public static class DomainUtils
         return normalized;
     }
 
-    // Inverts domain parts: "www.google.com" -> "com.google.www". In this form an ancestor domain is an
-    // ordinal prefix of its subdomains (at a '.' boundary), which is what the filters' lookups rely on.
+    /// <summary>
+    /// Reverses the order of a domain name's labels: <c>www.example.com</c> becomes <c>com.example.www</c>, a form in
+    /// which a domain is an ordinal prefix of its subdomains, ending at a dot.
+    /// </summary>
+    /// <param name="domain">The name, as <see cref="NormalizeDomain"/> gives it.</param>
+    /// <returns>The name with its labels reversed.</returns>
     public static string InvertDomain(string domain)
     {
         var parts = domain.Split('.');

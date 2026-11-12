@@ -1,6 +1,6 @@
 namespace VpnHood.Net.VpnAdapters.IosTun.Utils;
 
-public static class ExceptionExtensions
+internal static class ExceptionExtensions
 {
     extension(Exception exception)
     {

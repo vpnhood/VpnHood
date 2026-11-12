@@ -17,6 +17,24 @@ using OsConstants = Android.Systems.OsConstants;
 
 namespace VpnHood.Net.VpnAdapters.AndroidTun;
 
+/// <summary>
+/// Provides the VPN adapter for Android, on the TUN interface that Android's <see cref="VpnService"/> gives an app: it
+/// describes the interface to a <see cref="VpnService.Builder"/>, establishes it, and reads and writes its packets
+/// through libc on its file descriptor.
+/// </summary>
+/// <param name="vpnService">
+/// The app's VPN service, which the user has allowed to run a VPN (<see cref="VpnService.Prepare(Context)"/>).
+/// </param>
+/// <param name="vpnAdapterSettings">The adapter's settings.</param>
+/// <remarks>
+/// The interface stays up when the device moves to other networks, which Android handles; from Android 10, it takes
+/// its meteredness from the networks under it. It has app filters, no NAT and no metric, and keeps a socket out of the
+/// tunnel with <see cref="VpnService.Protect(int)"/>. Its steps run at once, and take no notice of their cancellation
+/// tokens.
+/// </remarks>
+/// <exception cref="ArgumentOutOfRangeException">
+/// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
+/// </exception>
 public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings vpnAdapterSettings)
     : TunVpnAdapter(vpnAdapterSettings)
 {
@@ -37,12 +55,31 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
 
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>: Android moves the interface to the new network.</value>
     protected override bool RestartAfterNetworkAddressChanged => false;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>.</value>
     protected override bool CheckAdapterInterfaceAfterNetworkChanged => false;
+
+    /// <inheritdoc/>
+    /// <returns>Always <see langword="false"/>.</returns>
     public override bool IsNatSupported(IpVersion ipVersion) => false;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="true"/>.</value>
     public override bool IsAppFilterSupported => true;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>: a socket is protected with <see cref="VpnService.Protect(int)"/>.</value>
     protected override bool IsSocketProtectedByBind => false;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It starts the description of the interface: a non-blocking <see cref="VpnService.Builder"/> that, from Android
+    /// 10, takes its meteredness from the networks under it. The interface itself comes with <see cref="AdapterOpen"/>.
+    /// </remarks>
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         _builder = new VpnService.Builder(vpnService)
@@ -55,11 +92,20 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It closes the interface, as <see cref="AdapterClose"/> does.</remarks>
     protected override void AdapterRemove()
     {
         AdapterClose();
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It establishes the interface the builder describes, and sets its file descriptor non-blocking.</remarks>
+    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
+    /// <exception cref="Exception">
+    /// Android did not establish the interface, as when the app is not prepared to run a VPN or its VPN was revoked.
+    /// </exception>
+    /// <exception cref="PInvokeException">The file descriptor's flags could not be read or set.</exception>
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Establishing Android tun adapter...");
@@ -99,6 +145,11 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
             throw new PInvokeException("Failed to set TUN fd to non-blocking mode.", Marshal.GetLastWin32Error());
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It invalidates the file descriptor while no read or write is under way, then closes it, which ends the VPN. A
+    /// failure to close is logged as an error, and the descriptor's Java object is disposed all the same.
+    /// </remarks>
     protected override void AdapterClose()
     {
         if (_parcelFileDescriptor == null)
@@ -120,21 +171,45 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         _parcelFileDescriptor = null;
     }
 
+    /// <summary>
+    /// Keeps a socket's traffic out of the tunnel with <see cref="VpnService.Protect(int)"/>. Call it before the socket
+    /// connects.
+    /// </summary>
+    /// <param name="socket">The socket.</param>
+    /// <returns><see langword="true"/> if Android protected the socket; otherwise, <see langword="false"/>.</returns>
     public override bool ProtectSocket(Socket socket)
     {
         var ret = vpnService.Protect(socket.Handle.ToInt32());
         return ret;
     }
 
+    /// <summary>
+    /// Keeps a socket's traffic out of the tunnel, as <see cref="ProtectSocket(Socket)"/> does: the remote address does
+    /// not matter. Call it before the socket connects.
+    /// </summary>
+    /// <param name="socket">The socket.</param>
+    /// <param name="ipAddress">Not used.</param>
+    /// <returns><see langword="true"/> if Android protected the socket; otherwise, <see langword="false"/>.</returns>
     public override bool ProtectSocket(Socket socket, IPAddress ipAddress)
     {
         var ret = vpnService.Protect(socket.Handle.ToInt32());
         return ret;
     }
 
-    // .NET lists no DNS servers on Android, so the networks under the VPN give theirs, in the order Android prefers
-    // the networks, as a protected socket takes the best one. One Android has not validated is left out: a captive
-    // portal's resolver may answer every name with the portal's address.
+    /// <summary>
+    /// Gets the DNS servers of the networks under the VPN, as .NET lists none on Android: those of every network that
+    /// has the internet, is not a VPN, and that Android has validated.
+    /// </summary>
+    /// <returns>
+    /// The servers, without repeats, in this adapter's order of their networks' transports: Ethernet, Wi-Fi, USB,
+    /// satellite, Bluetooth, cellular, then the rest. A network whose link properties Android does not give is skipped,
+    /// and link-local IPv6 servers are left out, as their interface's scope is lost here.
+    /// </returns>
+    /// <remarks>
+    /// A network Android has not validated is left out: a captive portal's resolver may answer every name with the
+    /// portal's address.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Android gave no connectivity service.</exception>
     public override IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers()
     {
         var connectivityManager = vpnService.GetSystemService(Context.ConnectivityService) as ConnectivityManager ??
@@ -171,6 +246,9 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return rank < 0 ? PreferredTransports.Length : rank;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It adds the address to the builder, for <see cref="AdapterOpen"/>.</remarks>
+    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(_builder);
@@ -178,6 +256,9 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It adds the route to the builder, for <see cref="AdapterOpen"/>.</remarks>
+    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(_builder);
@@ -185,11 +266,16 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: Android has no NAT for an app.</exception>
     protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         throw new NotSupportedException("Android does not support NAT.");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It names the session on the builder, which Android shows in the VPN's settings and notification.</remarks>
+    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
@@ -198,12 +284,16 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: Android gives an app's VPN no metric.</remarks>
     protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        // ignore metric
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It sets the MTU on the builder, for both IP versions.</remarks>
+    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(_builder);
@@ -211,6 +301,9 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It adds the servers to the builder, for <see cref="AdapterOpen"/>.</remarks>
+    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(_builder);
@@ -220,9 +313,18 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <value>The app's package name.</value>
+    /// <exception cref="Exception">Android gave the service no application context.</exception>
     protected override string AppPackageId =>
         vpnService.ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It adds each app to the builder; one Android refuses, as an app that is not installed, is logged as an error and
+    /// left out.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
@@ -239,6 +341,12 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It adds each app to the builder; one Android refuses, as an app that is not installed, is logged as an error and
+    /// left out.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
@@ -255,6 +363,13 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It polls the file descriptor for up to a second at a time, so a reader whose adapter closed meanwhile wakes to
+    /// see it, and polls again when a signal interrupts it. It returns at once when the adapter was closed before the
+    /// wait began.
+    /// </remarks>
+    /// <exception cref="PInvokeException">The poll failed.</exception>
     protected override void WaitForTunRead()
     {
         var pollFds = _pollFdReads;
@@ -262,6 +377,13 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
             WaitForTun(pollFds);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It polls the file descriptor for up to a second at a time, so a writer whose adapter closed meanwhile wakes to
+    /// see it, and polls again when a signal interrupts it. It returns at once when the adapter was closed before the
+    /// wait began.
+    /// </remarks>
+    /// <exception cref="PInvokeException">The poll failed.</exception>
     protected override void WaitForTunWrite()
     {
         var pollFds = _pollFdWrites;
@@ -285,6 +407,13 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
     }
 
+    /// <inheritdoc/>
+    /// <returns>
+    /// <see langword="true"/> if the packet was written; <see langword="false"/> if the interface's buffer is full.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">The adapter is not open.</exception>
+    /// <exception cref="IOException">The interface took only part of the packet.</exception>
+    /// <exception cref="PInvokeException">The write failed.</exception>
     protected override bool WritePacket(IpPacket ipPacket)
     {
         var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
@@ -315,6 +444,10 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The adapter is not open.</exception>
+    /// <exception cref="IOException">The read returned no bytes, as when the interface has closed.</exception>
+    /// <exception cref="PInvokeException">The read failed.</exception>
     protected override int ReadPacket(byte[] buffer)
     {
         lock (_readLock) {
@@ -343,11 +476,12 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It closes an interface still open.</remarks>
+    // No finalizer here: ParcelFileDescriptor has its own, and Java peers must not be touched from a .NET finalizer
+    // because they may already be collected.
     protected override void DisposeUnmanaged()
     {
-        // The adapter is an unmanaged resource; it must be closed if it is open.
-        // No finalizer here: ParcelFileDescriptor has its own, and Java peers must not be touched
-        // from a .NET finalizer because they may already be collected.
         if (_parcelFileDescriptor != null)
             AdapterRemove();
 

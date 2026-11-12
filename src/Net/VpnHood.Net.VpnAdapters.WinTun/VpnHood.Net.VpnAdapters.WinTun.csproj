@@ -2,7 +2,12 @@
 	<PropertyGroup>
 		<Description>VpnHood VpnAdapter for WinTun</Description>
 		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.Test" />
+	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Net.VpnAdapters.Abstractions\VpnHood.Net.VpnAdapters.Abstractions.csproj" />

@@ -3,6 +3,7 @@
 		<Description>VpnHood VpnAdapter for Android</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>

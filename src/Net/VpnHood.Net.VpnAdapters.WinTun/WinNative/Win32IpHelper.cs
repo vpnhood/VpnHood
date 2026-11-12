@@ -10,7 +10,7 @@ using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.VpnAdapters.WinTun.WinNative;
 
-public static class Win32IpHelper
+internal static class Win32IpHelper
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct MIB_IPFORWARD_ROW2

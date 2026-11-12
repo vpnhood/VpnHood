@@ -5,17 +5,47 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.Net.Toolkit.Net;
 
+/// <summary>
+/// Represents an IP network in CIDR notation, such as <c>10.0.0.0/8</c> or <c>2001:db8::/32</c>: a prefix, and the
+/// number of its leading bits that every address of the network shares.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Its properties are read-only, and the addresses they return are its own, which a caller must not change. The prefix
+/// is kept as given, host bits included, so <c>10.0.0.5/8</c> prints as such while its <see cref="FirstIpAddress"/> is
+/// <c>10.0.0.0</c>; and two networks are equal when they hold the same addresses, so <c>10.0.0.5/8</c> equals
+/// <c>10.0.0.0/8</c>.
+/// </para>
+/// <para>JSON reads and writes a network as its text, through <see cref="IpNetworkConverter"/>.</para>
+/// </remarks>
 [JsonConverter(typeof(IpNetworkConverter))]
 public class IpNetwork
 {
     private readonly BigInteger _firstIpAddressValue;
     private readonly BigInteger _lastIpAddressValue;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IpNetwork"/> class that holds one address: a /32 for IPv4, a /128
+    /// for IPv6.
+    /// </summary>
+    /// <param name="prefix">The address.</param>
     public IpNetwork(IPAddress prefix)
         : this(prefix, prefix.AddressFamily == AddressFamily.InterNetwork ? 32 : 128)
     {
     }
 
+    /// <summary>Initializes a new instance of the <see cref="IpNetwork"/> class.</summary>
+    /// <param name="prefix">
+    /// An address of the network. Its host bits are left out of the network's addresses but kept in
+    /// <see cref="Prefix"/>.
+    /// </param>
+    /// <param name="prefixLength">
+    /// The number of leading bits the network's addresses share: 0 to 32 for IPv4, 0 to 128 for IPv6.
+    /// </param>
+    /// <exception cref="OverflowException">
+    /// <paramref name="prefixLength"/> is above 32 for an IPv4 prefix, or above 128 for an IPv6 one.
+    /// </exception>
+    /// <remarks>A negative <paramref name="prefixLength"/> is not refused; it gives a network with wrong ends.</remarks>
     public IpNetwork(IPAddress prefix, int prefixLength)
     {
         IPAddressUtil.Verify(prefix);
@@ -32,23 +62,61 @@ public class IpNetwork
         LastIpAddress = IPAddressUtil.FromBigInteger(_lastIpAddressValue, addressFamily);
     }
 
+    /// <summary>Gets the address the network was made with, host bits included.</summary>
     public IPAddress Prefix { get; }
+
+    /// <summary>Gets the number of leading bits the network's addresses share.</summary>
     public int PrefixLength { get; }
+
+    /// <summary>Gets the subnet mask of the prefix length, such as <c>255.255.255.0</c> for a /24.</summary>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="PrefixLength"/> is negative.</exception>
     public IPAddress SubnetMask => CidrToSubnetMask(PrefixLength, Prefix.AddressFamily);
+
+    /// <summary>
+    /// Gets the network's address family: <see cref="AddressFamily.InterNetwork"/> or
+    /// <see cref="AddressFamily.InterNetworkV6"/>.
+    /// </summary>
     public AddressFamily AddressFamily => Prefix.AddressFamily;
+
+    /// <summary>Gets whether the network is an IPv4 network.</summary>
+    /// <value><see langword="true"/> if it is; otherwise, <see langword="false"/>.</value>
     public bool IsV4 => Prefix.AddressFamily == AddressFamily.InterNetwork;
+
+    /// <summary>Gets whether the network is an IPv6 network.</summary>
+    /// <value><see langword="true"/> if it is; otherwise, <see langword="false"/>.</value>
     public bool IsV6 => Prefix.AddressFamily == AddressFamily.InterNetworkV6;
+
+    /// <summary>Gets the network's first address: the prefix with its host bits cleared.</summary>
     public IPAddress FirstIpAddress { get; }
+
+    /// <summary>Gets the network's last address: the prefix with its host bits set.</summary>
     public IPAddress LastIpAddress { get; }
+
+    /// <summary>Gets the number of addresses in the network: 2 to the power of its host bits.</summary>
     public BigInteger Total => _lastIpAddressValue - _firstIpAddressValue + 1;
 
+    /// <summary>Gets the network of every IPv4 address, <c>0.0.0.0/0</c>.</summary>
     public static IpNetwork AllV4 => field ??= new IpNetwork(IPAddress.Any, 0);
 
-    // What an interface assigns itself with no configuration: RFC 3927 when no DHCP server answers,
-    // and every IPv6 interface unconditionally. Never routed.
+    /// <summary>
+    /// Gets the IPv4 link-local network, <c>169.254.0.0/16</c>: the addresses an interface gives itself when no DHCP
+    /// server answers (RFC 3927). They are never routed.
+    /// </summary>
     public static IpNetwork LinkLocalNetworkV4 => field ??= Parse("169.254.0.0/16");
+
+    /// <summary>
+    /// Gets the IPv6 link-local network, <c>fe80::/10</c>, which every IPv6 interface has an address in, with no
+    /// configuration. Its addresses are never routed.
+    /// </summary>
     public static IpNetwork LinkLocalNetworkV6 => field ??= Parse("fe80::/10");
 
+    /// <summary>
+    /// Gets the IPv4 networks of local networks: the private <c>10.0.0.0/8</c>, <c>172.16.0.0/12</c> and
+    /// <c>192.168.0.0/16</c> (RFC 1918), and the link-local <see cref="LinkLocalNetworkV4"/>.
+    /// </summary>
+    /// <remarks>
+    /// Neither the loopback network <c>127.0.0.0/8</c> nor the carriers' shared space <c>100.64.0.0/10</c> is in it.
+    /// </remarks>
     public static IReadOnlyList<IpNetwork> LocalNetworksV4 => field ??= [
         Parse("10.0.0.0/8"),
         Parse("172.16.0.0/12"),
@@ -56,19 +124,60 @@ public class IpNetwork
         LinkLocalNetworkV4
     ];
 
+    /// <summary>Gets the IPv4 multicast network, <c>224.0.0.0/4</c>.</summary>
     public static IpNetwork MulticastNetworkV4 => field ??= new IpNetwork(IPAddress.Parse("224.0.0.0"), 4);
+
+    /// <summary>Gets the IPv6 multicast network, <c>ff00::/8</c>.</summary>
     public static IpNetwork MulticastNetworkV6 => field ??= new IpNetwork(IPAddress.Parse("ff00::"), 8);
+
+    /// <summary>Gets <see cref="MulticastNetworkV4"/> and <see cref="MulticastNetworkV6"/>.</summary>
     public static IReadOnlyList<IpNetwork> MulticastNetworks => field ??= [MulticastNetworkV4, MulticastNetworkV6];
+
+    /// <summary>Gets the IPv4 loopback network, <c>127.0.0.0/8</c>.</summary>
     public static IpNetwork LoopbackNetworkV4 => field ??= Parse("127.0.0.0/8");
+
+    /// <summary>Gets the IPv6 loopback address as a network, <c>::1/128</c>.</summary>
     public static IpNetwork LoopbackNetworkV6 => field ??= Parse("::1/128");
+
+    /// <summary>Gets <see cref="LoopbackNetworkV4"/> and <see cref="LoopbackNetworkV6"/>.</summary>
     public static IReadOnlyList<IpNetwork> LoopbackNetworks => field ??= [LoopbackNetworkV4, LoopbackNetworkV6];
+
+    /// <summary>Gets the network of every IPv6 address, <c>::/0</c>.</summary>
     public static IpNetwork AllV6 => field ??= new IpNetwork(IPAddress.IPv6Any, 0);
+
+    /// <summary>
+    /// Gets the IPv6 global unicast space, <c>2000::/3</c>, which holds every public IPv6 address assigned today.
+    /// </summary>
     public static IpNetwork AllGlobalUnicastV6 => field ??= Parse("2000::/3");
+
+    /// <summary>
+    /// Gets the IPv6 networks outside the global unicast space <see cref="AllGlobalUnicastV6"/>: <c>::/3</c>,
+    /// <c>4000::/2</c> and <c>8000::/1</c>.
+    /// </summary>
+    /// <remarks>
+    /// So it holds the loopback, unique local, link-local and multicast addresses, and the space no registry assigns
+    /// yet, where <see cref="LocalNetworksV4"/> holds the private and link-local networks alone.
+    /// </remarks>
     public static IReadOnlyList<IpNetwork> LocalNetworksV6 => field ??= AllGlobalUnicastV6.Invert().ToArray();
+
+    /// <summary>Gets <see cref="LocalNetworksV4"/> followed by <see cref="LocalNetworksV6"/>.</summary>
     public static IReadOnlyList<IpNetwork> LocalNetworks => field ??= LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
+
+    /// <summary>Gets the networks of every address: <see cref="AllV4"/> and <see cref="AllV6"/>.</summary>
     public static IReadOnlyList<IpNetwork> All => field ??= [AllV4, AllV6];
+
+    /// <summary>Gets an empty list of networks.</summary>
     public static IReadOnlyList<IpNetwork> None { get; } = [];
 
+    /// <summary>Gets the fewest networks that hold exactly the addresses of a range.</summary>
+    /// <param name="firstIpAddress">The range's first address.</param>
+    /// <param name="lastIpAddress">The range's last address, of the same family.</param>
+    /// <returns>
+    /// The networks, from the lowest address up; none when <paramref name="lastIpAddress"/> is below
+    /// <paramref name="firstIpAddress"/>.
+    /// </returns>
+    /// <exception cref="ArgumentException">The two addresses are of different families.</exception>
+    /// <remarks>The networks are made, and the families checked, as the result is enumerated.</remarks>
     public static IEnumerable<IpNetwork> FromRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
     {
         if (firstIpAddress.AddressFamily != lastIpAddress.AddressFamily)
@@ -140,6 +249,12 @@ public class IpNetwork
         }
     }
 
+    /// <summary>Gets the networks of the addresses outside this network, within its own address family.</summary>
+    /// <returns>The fewest networks that hold those addresses, from the lowest address up; none for a /0 network.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The network, or an address next to it, is IPv4-mapped where the other end of a range the inversion makes is not:
+    /// <c>::ffff:10.0.0.5/128</c> and <c>::/80</c> throw, <c>::ffff:0:0/96</c> does not.
+    /// </exception>
     public IOrderedEnumerable<IpNetwork> Invert()
     {
         return new[] { this }
@@ -150,11 +265,23 @@ public class IpNetwork
             .ToIpNetworks();
     }
 
+    /// <summary>Converts the network to the range from its first to its last address.</summary>
+    /// <returns>The range.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The network reaches from other IPv6 addresses into the IPv4-mapped ones, as <c>::/80</c> does: its last address
+    /// is then IPv4-mapped, and <see cref="IpRange"/> compares it as IPv4, below the first.
+    /// </exception>
     public IpRange ToIpRange()
     {
         return new IpRange(FirstIpAddress, LastIpAddress);
     }
 
+    /// <summary>Determines whether an address is in the network.</summary>
+    /// <param name="ipAddress">
+    /// The address. An IPv4-mapped IPv6 address is compared as its IPv4 address, and a scope id is ignored, as
+    /// <see cref="IPAddressUtil.Compare(IPAddress, IPAddress)"/> orders addresses.
+    /// </param>
+    /// <returns><see langword="true"/> if the network holds the address; otherwise, <see langword="false"/>.</returns>
     public bool Contains(IPAddress ipAddress)
     {
         return IPAddressUtil.Compare(ipAddress, FirstIpAddress) >= 0 &&
@@ -173,6 +300,16 @@ public class IpNetwork
                IPAddressUtil.Compare(ipAddress, LastIpAddress.ToValue()) <= 0;
     }
 
+    /// <summary>Converts the text form of a network, such as <c>10.0.0.0/8</c>, to an <see cref="IpNetwork"/>.</summary>
+    /// <param name="value">An address, a slash and a prefix length.</param>
+    /// <returns>The network.</returns>
+    /// <exception cref="FormatException">
+    /// <paramref name="value"/> is not an address, a slash and a prefix length, or the length is above the family's
+    /// bits.
+    /// </exception>
+    /// <remarks>
+    /// As in the constructor, a negative prefix length is not refused, and text after a second slash is ignored.
+    /// </remarks>
     public static IpNetwork Parse(string value)
     {
         try {
@@ -184,11 +321,18 @@ public class IpNetwork
         }
     }
 
+    /// <summary>
+    /// Returns the network's text form: the prefix as given, a slash and the prefix length, such as
+    /// <c>10.0.0.0/8</c>.
+    /// </summary>
+    /// <returns>The text.</returns>
     public override string ToString()
     {
         return $"{Prefix}/{PrefixLength}";
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Two networks are equal when they hold the same addresses; the prefix's host bits do not count.</remarks>
     public override bool Equals(object? obj)
     {
         return obj is IpNetwork ipNetwork &&
@@ -196,6 +340,7 @@ public class IpNetwork
                LastIpAddress.Equals(ipNetwork.LastIpAddress);
     }
 
+    /// <inheritdoc/>
     public override int GetHashCode()
     {
         return HashCode.Combine(FirstIpAddress, LastIpAddress);

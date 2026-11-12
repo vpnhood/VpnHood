@@ -5,7 +5,7 @@ namespace VpnHood.Net.VpnAdapters.IosTun.Utils;
 // When the CancellationToken fires the returned Task transitions to Canceled immediately;
 // the native operation itself is NOT cancelled (iOS provides no cancellation path for most
 // NE settings calls), the await is simply abandoned.
-public static class IosCallbackTask
+internal static class IosCallbackTask
 {
     public static Task WaitAsync(
         Action<Action<NSError?>> nativeCall,

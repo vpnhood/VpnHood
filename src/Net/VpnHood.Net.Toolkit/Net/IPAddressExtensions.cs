@@ -4,6 +4,10 @@ using System.Net.Sockets;
 namespace VpnHood.Net.Toolkit.Net;
 
 // ReSharper disable once InconsistentNaming
+/// <summary>
+/// Provides extension members for addresses, endpoints and address families: their version and kind checks, an
+/// address's bytes, and its conversion to an <see cref="IpAddressValue"/>.
+/// </summary>
 public static class IPAddressExtensions
 {
     /// <summary>Provides the conversion of an address.</summary>

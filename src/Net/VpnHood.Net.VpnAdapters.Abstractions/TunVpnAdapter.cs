@@ -349,7 +349,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// network changes until it is disposed.
     /// </summary>
     /// <param name="adapterSettings">The adapter's settings.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The settings' blocking timeout is negative or too long.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
+    /// </exception>
     protected TunVpnAdapter(VpnAdapterSettings adapterSettings)
         : base(adapterSettings)
     {

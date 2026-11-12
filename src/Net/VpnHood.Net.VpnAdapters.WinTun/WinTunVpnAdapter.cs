@@ -19,6 +19,27 @@ using VpnHood.Net.VpnAdapters.WinTun.WinNative;
 
 namespace VpnHood.Net.VpnAdapters.WinTun;
 
+/// <summary>
+/// Provides the VPN adapter for Windows that runs on WinTun, a layer-3 TUN driver: it makes the interface and gives it
+/// its addresses, routes, DNS servers, MTU and metric, and, for a server, IPv4 NAT through WinNAT.
+/// </summary>
+/// <param name="adapterSettings">The adapter's settings.</param>
+/// <remarks>
+/// <para>
+/// It runs as an administrator only. The first start in a process installs the wintun.dll it carries, for an x64 or
+/// arm64 process, into a protected folder of its own under Common Files, or takes the one installed there, and loads
+/// it for the process's life; WinTun installs its driver with the first interface. The interface's GUID comes from
+/// its name (<see cref="BuildGuidFromName"/>).
+/// </para>
+/// <para>
+/// Windows asks every adapter's DNS servers at once, whatever the routes, so a start that sets DNS servers also adds a
+/// Name Resolution Policy Table (NRPT) rule that makes the tunnel's servers the only ones; Group Policy's own NRPT
+/// rules override it, which the adapter logs. It has no app filter, and its NAT translates IPv4 only.
+/// </para>
+/// </remarks>
+/// <exception cref="ArgumentOutOfRangeException">
+/// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
+/// </exception>
 public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
@@ -51,25 +72,56 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private const int ErrorAlreadyExists = 183;
     private const int ErrorAlreadyExistsHResult = unchecked((int)0x800700B7);
 
-    public const int MinRingCapacity = 0x20000; // 128kiB
-    public const int MaxRingCapacity = 0x4000000; // 64MiB
+    /// <summary>The smallest ring size WinTun takes, 128 KiB.</summary>
+    public const int MinRingCapacity = 0x20000;
+
+    /// <summary>The largest ring size WinTun takes, 64 MiB.</summary>
+    public const int MaxRingCapacity = 0x4000000;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="true"/>.</value>
     protected override bool IsSocketProtectedByBind => true;
-    // WinNAT translates IPv4 only: New-NetNat answers "IPV6 is not supported."
+
+    /// <inheritdoc/>
+    /// <remarks>WinNAT translates IPv4 only: <c>New-NetNat</c> answers "IPV6 is not supported."</remarks>
     public override bool IsNatSupported(IpVersion ipVersion) => ipVersion == IpVersion.IPv4;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>.</value>
     public override bool IsAppFilterSupported => false;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="null"/>: there is no app filter.</value>
     protected override string? AppPackageId => null;
-    // A client takes a new network without a restart, whose teardown would let the host's traffic pass
-    // outside the tunnel for its seconds; a server restarts, as it adds its NAT only with a primary IP
+
+    /// <inheritdoc/>
+    /// <value>
+    /// <see langword="true"/> when the adapter uses NAT, as a server's does, which adds its NAT only with a primary
+    /// address; <see langword="false"/> for a client's, which takes a new network without a restart, whose teardown
+    /// would let the host's traffic pass outside the tunnel for its seconds.
+    /// </value>
     protected override bool RestartAfterNetworkAddressChanged => UseNat;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="true"/>.</value>
     protected override bool CheckAdapterInterfaceAfterNetworkChanged => true;
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: WinTun has no app filter.</exception>
     protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on WinTun.");
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: WinTun has no app filter.</exception>
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on WinTun.");
 
-    // The adapter's own GUID, the same for its name at each start; a kill switch finds its interface by it.
+    /// <summary>
+    /// Builds the GUID of an adapter name's interface: the same for the name at every start, so a kill switch finds
+    /// the interface by it.
+    /// </summary>
+    /// <param name="adapterName">The adapter's name, <see cref="VpnAdapterSettings.AdapterName"/>.</param>
+    /// <returns>A GUID in the version 5 layout, made from the SHA-1 hash of <c>VpnHood.</c> and the name.</returns>
     public static Guid BuildGuidFromName(string adapterName)
     {
         adapterName = $"VpnHood.{adapterName}"; // make sure it is unique
@@ -98,6 +150,25 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     //    return index;
     //}
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The first start loads wintun.dll, installing it first. An interface of the name whose process ended a moment
+    /// ago may still be on its way out; the create is then tried once more.
+    /// </remarks>
+    /// <exception cref="PlatformNotSupportedException">The OS is not Windows.</exception>
+    /// <exception cref="NotSupportedException">The process is neither x64 nor arm64.</exception>
+    /// <exception cref="UnauthorizedAccessException">
+    /// The process is not an administrator's, or Common Files or the install folder is a link or one others than
+    /// administrators may change, so wintun.dll cannot be installed.
+    /// </exception>
+    /// <exception cref="PInvokeException">
+    /// WinTun could not create the interface, as when another process holds an interface of the name.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// The package's wintun.dll is missing; the installed one is not the one the package carries, is a link, or is one
+    /// others than administrators may change; or the new interface was not found by its name or has no IPv4 or IPv6
+    /// index.
+    /// </exception>
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         // Load the WinTun DLL
@@ -133,6 +204,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It also removes the interface's NRPT rule and, with NAT, the NAT; a failure of either is logged, not thrown. A
+    /// later start tries to replace or remove the NRPT rule, and one that adds NAT tries to remove a NAT left behind.
+    /// </remarks>
     protected override void AdapterRemove()
     {
         lock (_adapterLock) {
@@ -174,6 +250,12 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         _adapterIndex = 0;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It starts a WinTun session with rings of <see cref="WinVpnAdapterSettings.RingCapacity"/>.</remarks>
+    /// <exception cref="InvalidOperationException">A stop removed the interface while the start was under way.</exception>
+    /// <exception cref="Win32Exception">
+    /// WinTun could not start the session, as for a ring size it does not take.
+    /// </exception>
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
         // start WinTun session
@@ -196,6 +278,14 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Ending the session frees its rings, so it first wakes the reader and waits up to a second for it to leave the
+    /// session, and up to a second plus twice <see cref="VpnAdapterSettings.MaxPacketSendDelay"/> for a batch being
+    /// sent, then 100 ms more for each that is late; a reader or sender that stops the adapter itself is not waited
+    /// for. When one does not leave in time, the session stays allocated until the process exits, which is logged as
+    /// an error.
+    /// </remarks>
     protected override void AdapterClose()
     {
         lock (_adapterLock) {
@@ -238,12 +328,17 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return false;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: WinTun shows no session name.</remarks>
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
     {
         // not supported. ignore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The interface's metric then stops being automatic.</remarks>
+    /// <exception cref="Win32Exception">Windows refused the change.</exception>
     protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         if (ipV4)
@@ -255,6 +350,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It turns off duplicate address detection on the interface first: a tunnel shares its link with no one, and the
+    /// detection would keep the address unusable for seconds after the interface comes up. The address lasts as long
+    /// as the interface.
+    /// </remarks>
+    /// <exception cref="Win32Exception">Windows refused the change.</exception>
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -300,6 +402,9 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken).Vhc();
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The interface has not been made yet.</exception>
+    /// <exception cref="Win32Exception">Windows refused the route.</exception>
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         if (_adapterIndex == 0)
@@ -334,6 +439,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         throw new InvalidOperationException($"Adapter '{adapterName}' does not support IPv4 or IPv6.");
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="Win32Exception">Windows refused the change.</exception>
     protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         if (ipV4)
@@ -345,9 +452,20 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         return Task.CompletedTask;
     }
 
-    // A failure fails the start: Windows asks every adapter's servers at once, each through its own adapter whatever
-    // the routes, often a router outside the tunnel, unless a rule names the tunnel's alone, and the user would never
-    // know
+    /// <inheritdoc/>
+    /// <remarks>
+    /// For each IP version that has servers, they replace the interface's own, through the IP Helper API from Windows 10
+    /// 2004, through PowerShell before it. Then an NRPT rule makes them the only servers Windows asks, unless Group
+    /// Policy sets NRPT rules of its own, which is logged: Windows asks every adapter's servers at once, each through
+    /// its own adapter whatever the routes, often a router outside the tunnel. With no servers, the rule is removed,
+    /// and the interface's settings are left as they are.
+    /// </remarks>
+    /// <exception cref="Win32Exception">Windows refused the servers, or PowerShell could not be started.</exception>
+    /// <exception cref="ExternalException">PowerShell's command failed, before Windows 10 2004.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled before or while the PowerShell command ran.
+    /// </exception>
+    // A failure fails the start, as the user would never know the DNS went around the tunnel
     protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
         CancellationToken cancellationToken)
     {
@@ -384,6 +502,18 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private static readonly TimeSpan NatAddTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan NatRemoveTimeout = TimeSpan.FromSeconds(15);
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It runs PowerShell's <c>New-NetNat</c>, after trying to remove a NAT of the adapter's name that a killed run
+    /// left, as WinNAT keeps one after its process. A stop does not cut it off once begun, so a failed start's cleanup
+    /// comes after the command ends; after 60 seconds it stops waiting for PowerShell, which may go on and still make
+    /// the NAT.
+    /// </remarks>
+    /// <exception cref="ExternalException"><c>New-NetNat</c> failed, as WinNAT does for an IPv6 network.</exception>
+    /// <exception cref="Win32Exception">PowerShell could not be started.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled before the command began, or the command ran 60 seconds.
+    /// </exception>
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         // WinNAT keeps a NAT after its process, so one a killed run left goes first; a failure here
@@ -419,6 +549,10 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         OsUtils.ExecuteCommand("powershell.exe", ps, timeout);
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="IOException">The session is closed.</exception>
+    /// <exception cref="Win32Exception">The wait for WinTun's read event failed.</exception>
+    /// <exception cref="PInvokeException">The wait for WinTun's read event ended in another way.</exception>
     protected override void WaitForTunRead()
     {
         var readEvent = _readEvent;
@@ -435,6 +569,10 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     }
 
 
+    /// <inheritdoc/>
+    /// <exception cref="IOException">The session or the interface is closed.</exception>
+    /// <exception cref="InvalidOperationException">WinTun found its ring's data invalid.</exception>
+    /// <exception cref="PInvokeException">WinTun failed with another error.</exception>
     protected override int ReadPacket(byte[] buffer)
     {
         var session = _tunSession;
@@ -466,6 +604,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         };
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It sleeps a millisecond: WinTun has no event for room in its ring.</remarks>
     protected override void WaitForTunWrite()
     {
         Thread.Sleep(1);
@@ -473,6 +613,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     // A real call, never inlined: the batch's sending flag, set before it, then stays ahead of this read of
     // the session, which a stop's wait for the sender counts on (WaitForSender)
+    /// <inheritdoc/>
+    /// <returns>
+    /// <see langword="true"/> if WinTun took the packet; <see langword="false"/> if it could not allocate the packet in
+    /// its ring, as when the ring is full, or if the session is closed.
+    /// </returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
     protected override bool WritePacket(IpPacket ipPacket)
     {
@@ -537,19 +682,24 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                throw new InvalidOperationException($"The embedded {name} is missing.");
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// An interface still there is removed, and the removal of its NRPT rule and NAT tried, also when the finalizer calls
+    /// it, which no stop came before: a NAT left pointing at a dead interface can break the host's network.
+    /// </remarks>
     protected override void DisposeUnmanaged()
     {
-        // The adapter is an unmanaged resource; it must be closed if it is open. AdapterRemove also
-        // removes the NAT rules — on a normal Dispose that already happened via Stop(), but the finalizer
-        // path never runs Stop(), so we must clean NAT here too. A leftover NAT rule pointing at a dead
-        // interface can break the host network, so cleaning it (even on the finalizer thread) is the
-        // lesser evil versus leaking it.
         if (_tunAdapter != IntPtr.Zero)
             AdapterRemove();
 
         base.DisposeUnmanaged();
     }
 
+    /// <summary>Removes the interface of an adapter that was not disposed, as <see cref="DisposeUnmanaged"/> does.</summary>
+    /// <remarks>
+    /// The adapter's handlers on the host's network-change events keep it reachable until it is disposed, so dispose it
+    /// rather than count on this.
+    /// </remarks>
     ~WinTunVpnAdapter()
     {
         Dispose(false);

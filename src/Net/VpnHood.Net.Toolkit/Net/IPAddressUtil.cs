@@ -9,8 +9,16 @@ using VpnHood.Net.Toolkit.Extensions;
 namespace VpnHood.Net.Toolkit.Net;
 
 // ReSharper disable once InconsistentNaming
+/// <summary>
+/// Provides helpers for IP addresses: comparing and converting them, finding this device's own addresses, and
+/// well-known DNS servers.
+/// </summary>
 public static class IPAddressUtil
 {
+    /// <summary>
+    /// Gets Google Public DNS's addresses: <c>8.8.8.8</c>, <c>8.8.4.4</c>, <c>2001:4860:4860::8888</c> and
+    /// <c>2001:4860:4860::8844</c>.
+    /// </summary>
     // Lazy initialization to avoid running heavy static cctor on iOS NE AOT sandbox.
     public static IReadOnlyList<IPAddress> GoogleDnsServers => field ??= [
         IPAddress.Parse("8.8.8.8"),
@@ -19,6 +27,10 @@ public static class IPAddressUtil
         IPAddress.Parse("2001:4860:4860::8844")
     ];
 
+    /// <summary>
+    /// Gets the addresses of Cloudflare's 1.1.1.1 for Families that blocks malware and adult content: <c>1.1.1.3</c>,
+    /// <c>1.0.0.3</c>, <c>2606:4700:4700::1113</c> and <c>2606:4700:4700::1003</c>.
+    /// </summary>
     public static IReadOnlyList<IPAddress> KidsSafeCloudflareDnsServers => field ??= [
         IPAddress.Parse("1.1.1.3"),
         IPAddress.Parse("1.0.0.3"),
@@ -26,6 +38,11 @@ public static class IPAddressUtil
         IPAddress.Parse("2606:4700:4700::1003")
     ];
 
+    /// <summary>
+    /// Gets an IPv4 and an IPv6 address of <see cref="GoogleDnsServers"/> and of
+    /// <see cref="KidsSafeCloudflareDnsServers"/>: <c>8.8.8.8</c>, <c>2001:4860:4860::8888</c>, <c>1.1.1.3</c> and
+    /// <c>2606:4700:4700::1113</c>.
+    /// </summary>
     public static IReadOnlyList<IPAddress> ReliableDnsServers => field ??= [
         GoogleDnsServers.First(x => x.IsV4),
         GoogleDnsServers.First(x => x.IsV6),
@@ -33,6 +50,13 @@ public static class IPAddressUtil
         KidsSafeCloudflareDnsServers.First(x => x.IsV6)
     ];
 
+    /// <summary>Generates a random unique local IPv6 address (RFC 4193) that ends in a given value.</summary>
+    /// <param name="lastValue">The address's last 16 bits.</param>
+    /// <returns>
+    /// An address in <c>fd00::/8</c> with a random 40-bit global ID, subnet 0 and <paramref name="lastValue"/> as its
+    /// last 16 bits, such as <c>fdb6:f6f2:b3c4::1001</c>.
+    /// </returns>
+    /// <remarks>The global ID comes from a cryptographic random generator, at each call.</remarks>
     public static IPAddress GenerateUlaAddress(ushort lastValue)
     {
         var randomBytes = new byte[5]; // 40-bit random part
@@ -55,6 +79,11 @@ public static class IPAddressUtil
         return new IPAddress(ulaBytes);
     }
 
+    /// <summary>
+    /// Gets the addresses this device sends from to reach the internet, IPv4 then IPv6, as
+    /// <see cref="GetPrivateIpAddress(AddressFamily)"/> finds them.
+    /// </summary>
+    /// <returns>A task whose result is the addresses: none, one or two.</returns>
     public static async Task<IReadOnlyList<IPAddress>> GetPrivateIpAddresses()
     {
         var ret = new List<IPAddress>();
@@ -69,6 +98,15 @@ public static class IPAddressUtil
         return [.. ret];
     }
 
+    /// <summary>Determines whether this device reaches the internet over IPv6.</summary>
+    /// <returns>
+    /// A task whose result is <see langword="true"/> if the device has an IPv6 route and an IPv6 address of
+    /// <see cref="ReliableDnsServers"/> answers a ping; otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <remarks>
+    /// The servers are pinged one after the other, each with <see cref="Ping"/>'s default timeout of 5 seconds, so the
+    /// answer can take 10 seconds; a network that drops ICMPv6 echo requests reads as no IPv6. It never throws.
+    /// </remarks>
     public static async Task<bool> IsIpv6Supported()
     {
         try {
@@ -104,6 +142,16 @@ public static class IPAddressUtil
         return false;
     }
 
+    /// <summary>
+    /// Gets this device's public addresses, IPv4 then IPv6, as <see cref="GetPublicIpAddress"/> finds them, with no
+    /// app name.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the addresses found: none, one or two.</returns>
+    /// <remarks>
+    /// The two lookups run one after the other; each asks up to two services, each canceled after 5 seconds. A
+    /// canceled token ends them with the addresses found so far rather than an exception.
+    /// </remarks>
     public static async Task<IReadOnlyList<IPAddress>> GetPublicIpAddresses(CancellationToken cancellationToken)
     {
         var ret = new List<IPAddress>();
@@ -122,8 +170,24 @@ public static class IPAddressUtil
     // app built on it carries in its assemblies anyway.
     private const string DefaultUserAgent = "VpnHood";
 
-    // userAgent is the name the asking app gives the services, its package title; null sends
-    // DefaultUserAgent.
+    /// <summary>Gets this device's public address of a family, as web services see it.</summary>
+    /// <param name="addressFamily">
+    /// The address family: <see cref="AddressFamily.InterNetwork"/> or <see cref="AddressFamily.InterNetworkV6"/>.
+    /// </param>
+    /// <param name="userAgent">
+    /// The name the asking app gives the services in the User-Agent header, such as its package title, sent as it is;
+    /// <see langword="null"/> sends <c>VpnHood</c>.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is the address, or <see langword="null"/> when no service answered with one.
+    /// </returns>
+    /// <remarks>
+    /// It asks Cloudflare's trace page (<c>www.cloudflare.com/cdn-cgi/trace</c>) over a connection of the family, then,
+    /// if that throws, my-ip.io's API for the family, each canceled after 5 seconds. Cloudflare's answer is taken as it
+    /// is: one with no address gives <see langword="null"/>, with no second try. It never throws: a failure or a
+    /// canceled token gives <see langword="null"/>.
+    /// </remarks>
     public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, string? userAgent,
         CancellationToken cancellationToken)
     {
@@ -201,6 +265,20 @@ public static class IPAddressUtil
         return httpClient;
     }
 
+    /// <summary>
+    /// Gets the address this device sends from to reach the internet over a family: on most devices, its own address on
+    /// the default route.
+    /// </summary>
+    /// <param name="addressFamily">The address family.</param>
+    /// <returns>
+    /// A task whose result is the address, or <see langword="null"/> when the device has no route of the family or the
+    /// family is not supported.
+    /// </returns>
+    /// <remarks>
+    /// It connects a UDP socket to an address of <see cref="KidsSafeCloudflareDnsServers"/> and reads the local address
+    /// the OS chose for it; no packet is sent. The address is private only on a private network: a device with a public address
+    /// gets that. The task is complete when returned, and the method never throws.
+    /// </remarks>
     public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
     {
         try {
@@ -212,6 +290,19 @@ public static class IPAddressUtil
         }
     }
 
+    /// <summary>
+    /// Gets the address a UDP client's socket sends from to reach the internet: on most devices, its own address on the
+    /// default route of the client's family.
+    /// </summary>
+    /// <param name="udpClient">
+    /// The client. It is connected to an address of <see cref="KidsSafeCloudflareDnsServers"/>, port 53, and stays so:
+    /// pass one made for this.
+    /// </param>
+    /// <returns>
+    /// A task whose result is the address, or <see langword="null"/> when there is no route or the client cannot
+    /// connect.
+    /// </returns>
+    /// <remarks>No packet is sent. The task is complete when returned, and the method never throws.</remarks>
     public static Task<IPAddress?> GetPrivateIpAddress(UdpClient udpClient)
     {
         try {
@@ -229,25 +320,54 @@ public static class IPAddressUtil
         }
     }
 
-    // Hypervisor and container adapters no other device can reach. Matched by name and description
-    // because the OS reports most of them as plain Ethernet; a VPN's tunnel needs no marker, being
-    // known by its type (IsVirtualAdapter). "Hyper-V Virtual" is the host's side alone: a guest's own
-    // card is a "Microsoft Hyper-V Network Adapter", and its LAN. One with a gateway is reachable all
-    // the same (IsHostOnlyAdapter).
+    /// <summary>
+    /// Gets the names that mark the hypervisor and container adapters no other device can reach: <c>Hyper-V
+    /// Virtual</c>, <c>vEthernet</c>, <c>VirtualBox</c>, <c>VMware</c>, <c>Docker</c> and <c>WSL</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="GetLanAddresses"/> leaves out an adapter whose name or description contains one, ignoring case, and
+    /// that has no gateway: one with a gateway is reachable all the same, as when a Hyper-V external switch moves the
+    /// PC's own LAN address onto its <c>vEthernet</c> adapter. They are matched by name because the OS reports most
+    /// of them as plain Ethernet; a VPN's tunnel needs no marker, being known by its type.
+    /// </para>
+    /// <para>
+    /// <c>Hyper-V Virtual</c> matches the host's side alone: a guest's own card is a <c>Microsoft Hyper-V Network
+    /// Adapter</c>, on its LAN.
+    /// </para>
+    /// </remarks>
     public static IReadOnlyList<string> VirtualAdapterMarkers { get; } =
         ["Hyper-V Virtual", "vEthernet", "VirtualBox", "VMware", "Docker", "WSL"];
 
-    // Every address of the family that another device on the local network could dial, best guess
-    // first. Which network that device is on cannot be known from here, so this is ranking, not
-    // proof: the address on the default route (the network with the internet is the one others
-    // share), then Wi-Fi and Ethernet, then the rest. Adapters matching excludeAdapterMarkers
-    // (VirtualAdapterMarkers when null) with no gateway, VPN tunnels, mobile broadband and the
-    // loopback interface are left out entirely (IsLanInterface): a PC holds Hyper-V, VirtualBox or
-    // Docker addresses nobody can dial, WSL puts 10.255.255.254 on its loopback, and while a VPN is
-    // connected its adapter holds the default route on Windows — which is why the probe's answer
-    // counts only when the enumeration also lists it. Loopback addresses go one by one too, as
-    // Android may not type its interfaces. "Not Down" rather than "Up": an OS that hides operstate
-    // reports Unknown. A phone or TV ends up with one entry; a PC with a few.
+    /// <summary>
+    /// Gets this device's addresses of a family that another device on the local network could dial, best guess
+    /// first.
+    /// </summary>
+    /// <param name="addressFamily">
+    /// The address family: <see cref="AddressFamily.InterNetwork"/> or <see cref="AddressFamily.InterNetworkV6"/>.
+    /// </param>
+    /// <param name="excludeAdapterMarkers">
+    /// The names that mark an adapter no other device can reach, found in its name or description, ignoring case;
+    /// <see langword="null"/> for <see cref="VirtualAdapterMarkers"/>. A marked adapter with a gateway still counts.
+    /// </param>
+    /// <returns>A task whose result is the addresses: on a phone or TV usually one, on a PC a few.</returns>
+    /// <exception cref="NotSupportedException">
+    /// <paramref name="addressFamily"/> is neither IPv4 nor IPv6.
+    /// </exception>
+    /// <exception cref="NetworkInformationException">The OS could not list the network interfaces.</exception>
+    /// <remarks>
+    /// <para>
+    /// Which network the other device is on cannot be known from here, so the order is a ranking, not proof: the
+    /// address on the default route first, as the network with the internet is the one others share, then those of
+    /// Wi-Fi and Ethernet adapters, then the rest. The default route's address leads only when an adapter below lists
+    /// it, as a connected VPN holds the default route on Windows.
+    /// </para>
+    /// <para>
+    /// Left out: adapters that are down, loopback interfaces, VPN tunnels, mobile broadband (a carrier's address that
+    /// nothing on the local network reaches), marked adapters with no gateway, and every loopback and link-local
+    /// address, such as the 10.255.255.254 WSL puts on its loopback. An adapter whose state the OS hides counts.
+    /// </para>
+    /// </remarks>
     public static async Task<IReadOnlyList<IPAddress>> GetLanAddresses(AddressFamily addressFamily,
         IEnumerable<string>? excludeAdapterMarkers = null)
     {
@@ -334,6 +454,14 @@ public static class IPAddressUtil
                name.StartsWith("ccmni", StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Gets the address that stands for any address of a family: <c>0.0.0.0</c> for IPv4, <c>::</c> for IPv6.
+    /// </summary>
+    /// <param name="addressFamily">The address family.</param>
+    /// <returns>The address.</returns>
+    /// <exception cref="NotSupportedException">
+    /// <paramref name="addressFamily"/> is neither IPv4 nor IPv6.
+    /// </exception>
     public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)
     {
         return addressFamily switch {
@@ -343,6 +471,11 @@ public static class IPAddressUtil
         };
     }
 
+    /// <summary>Checks that a family is IPv4 or IPv6.</summary>
+    /// <param name="addressFamily">The address family.</param>
+    /// <exception cref="NotSupportedException">
+    /// <paramref name="addressFamily"/> is neither IPv4 nor IPv6.
+    /// </exception>
     public static void Verify(AddressFamily addressFamily)
     {
         var isSupported = addressFamily is AddressFamily.InterNetworkV6 or AddressFamily.InterNetwork;
@@ -350,6 +483,9 @@ public static class IPAddressUtil
             throw new NotSupportedException($"{addressFamily} is not supported!");
     }
 
+    /// <summary>Checks that an address's family is IPv4 or IPv6.</summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <remarks>Every <see cref="IPAddress"/> is one or the other, so the check passes for any address.</remarks>
     public static void Verify(IPAddress ipAddress)
     {
         Verify(ipAddress.AddressFamily);
@@ -410,6 +546,14 @@ public static class IPAddressUtil
         return value1.CompareAddress(value2);
     }
 
+    /// <summary>
+    /// Converts an IPv4 address to its number, its first byte highest: <c>10.0.0.1</c> is <c>0x0A000001</c>.
+    /// </summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <returns>The number, from 0 to 4,294,967,295.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// <paramref name="ipAddress"/> is not IPv4; an IPv4-mapped IPv6 address is not.
+    /// </exception>
     public static long ToLong(IPAddress ipAddress)
     {
         if (!ipAddress.IsV4)
@@ -420,16 +564,39 @@ public static class IPAddressUtil
         return ((long)bytes[0] << 24) | ((long)bytes[1] << 16) | ((long)bytes[2] << 8) | bytes[3];
     }
 
+    /// <summary>
+    /// Converts a number to an IPv4 address, as <see cref="ToLong"/> numbers them: <c>0x0A000001</c> is
+    /// <c>10.0.0.1</c>.
+    /// </summary>
+    /// <param name="ipAddress">The number. Only its low 32 bits are read.</param>
+    /// <returns>The address.</returns>
     public static IPAddress FromLong(long ipAddress)
     {
         return new IPAddress((uint)IPAddress.NetworkToHostOrder((int)ipAddress));
     }
 
+    /// <summary>Converts an address to its number, its first byte highest.</summary>
+    /// <param name="value">The address.</param>
+    /// <returns>
+    /// The number: up to 2^32 - 1 for IPv4, up to 2^128 - 1 for IPv6. It does not hold the family, which
+    /// <see cref="FromBigInteger"/> takes too.
+    /// </returns>
     public static BigInteger ToBigInteger(IPAddress value)
     {
         return new BigInteger(value.GetAddressBytesFast(stackalloc byte[16]), true, true);
     }
 
+    /// <summary>Converts a number to an address of a family, as <see cref="ToBigInteger"/> numbers them.</summary>
+    /// <param name="value">
+    /// The number: up to 2^32 - 1 for IPv4, up to 2^128 - 1 for IPv6. A larger one is not refused, and gives a wrong
+    /// address.
+    /// </param>
+    /// <param name="addressFamily">The address family.</param>
+    /// <returns>The address.</returns>
+    /// <exception cref="NotSupportedException">
+    /// <paramref name="addressFamily"/> is neither IPv4 nor IPv6.
+    /// </exception>
+    /// <exception cref="OverflowException"><paramref name="value"/> is negative.</exception>
     public static IPAddress FromBigInteger(BigInteger value, AddressFamily addressFamily)
     {
         Verify(addressFamily);
@@ -440,6 +607,11 @@ public static class IPAddressUtil
         return new IPAddress(bytes);
     }
 
+    /// <summary>Gets the address after an address.</summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <returns>
+    /// The next address, without the scope id; <paramref name="ipAddress"/> itself when it is the last of its family.
+    /// </returns>
     public static IPAddress Increment(IPAddress ipAddress)
     {
         Verify(ipAddress);
@@ -461,6 +633,12 @@ public static class IPAddressUtil
         return ipAddress;
     }
 
+    /// <summary>Gets the address before an address.</summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <returns>
+    /// The previous address, without the scope id; <paramref name="ipAddress"/> itself when it is the first of its
+    /// family.
+    /// </returns>
     public static IPAddress Decrement(IPAddress ipAddress)
     {
         Verify(ipAddress);
@@ -482,11 +660,25 @@ public static class IPAddressUtil
         return ipAddress;
     }
 
+    /// <summary>Gets the last IPv6 address, <c>ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff</c>.</summary>
     public static IPAddress MaxIPv6Value => field ??= IPAddress.Parse("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
+
+    /// <summary>Gets the first IPv6 address, <c>::</c>.</summary>
     public static IPAddress MinIPv6Value => field ??= IPAddress.Parse("::");
+
+    /// <summary>Gets the last IPv4 address, <c>255.255.255.255</c>.</summary>
     public static IPAddress MaxIPv4Value => field ??= IPAddress.Parse("255.255.255.255");
+
+    /// <summary>Gets the first IPv4 address, <c>0.0.0.0</c>.</summary>
     public static IPAddress MinIPv4Value => field ??= IPAddress.Parse("0.0.0.0");
 
+    /// <summary>
+    /// Determines whether an address is the last of its family, <see cref="MaxIPv4Value"/> or
+    /// <see cref="MaxIPv6Value"/>.
+    /// </summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>An IPv6 address with a scope id is not, as <see cref="IPAddress.Equals(object)"/> compares the scope id.</remarks>
     public static bool IsMaxValue(IPAddress ipAddress)
     {
         Verify(ipAddress);
@@ -497,6 +689,13 @@ public static class IPAddressUtil
         };
     }
 
+    /// <summary>
+    /// Determines whether an address is the first of its family, <see cref="MinIPv4Value"/> or
+    /// <see cref="MinIPv6Value"/>.
+    /// </summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>An IPv6 address with a scope id is not, as <see cref="IPAddress.Equals(object)"/> compares the scope id.</remarks>
     public static bool IsMinValue(IPAddress ipAddress)
     {
         Verify(ipAddress);
@@ -507,6 +706,13 @@ public static class IPAddressUtil
         };
     }
 
+    /// <summary>Hides the host part of an address, for logs and reports.</summary>
+    /// <param name="ipAddress">The address.</param>
+    /// <returns>
+    /// The address's /24 network for IPv4, such as <c>1.2.3.0</c>, or its /48 for IPv6, such as <c>2001:db8:1::</c>,
+    /// without the scope id.
+    /// </returns>
+    /// <remarks>An IPv4-mapped IPv6 address counts as IPv6, so nothing of its IPv4 address is left.</remarks>
     public static IPAddress Anonymize(IPAddress ipAddress)
     {
         if (ipAddress.AddressFamily == AddressFamily.InterNetwork) {
@@ -522,16 +728,39 @@ public static class IPAddressUtil
         }
     }
 
+    /// <summary>
+    /// Returns the lower of two addresses, in <see cref="Compare(IPAddress, IPAddress)"/>'s order.
+    /// </summary>
+    /// <param name="ipAddress1">The first address.</param>
+    /// <param name="ipAddress2">The second address.</param>
+    /// <returns>The lower address; <paramref name="ipAddress2"/> when the two compare as the same.</returns>
     public static IPAddress Min(IPAddress ipAddress1, IPAddress ipAddress2)
     {
         return Compare(ipAddress1, ipAddress2) < 0 ? ipAddress1 : ipAddress2;
     }
 
+    /// <summary>
+    /// Returns the higher of two addresses, in <see cref="Compare(IPAddress, IPAddress)"/>'s order.
+    /// </summary>
+    /// <param name="ipAddress1">The first address.</param>
+    /// <param name="ipAddress2">The second address.</param>
+    /// <returns>The higher address; <paramref name="ipAddress2"/> when the two compare as the same.</returns>
     public static IPAddress Max(IPAddress ipAddress1, IPAddress ipAddress2)
     {
         return Compare(ipAddress1, ipAddress2) > 0 ? ipAddress1 : ipAddress2;
     }
 
+    /// <summary>Gets the key under which a server counts a client's requests, to limit a flood from one source.</summary>
+    /// <param name="ip">The client's address.</param>
+    /// <returns>
+    /// An IPv4 address's text, or an IPv6 address's /64 network, such as <c>2001:db8:1:2::/64</c>, as one IPv6
+    /// subscriber is given a whole /64.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="ip"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// An IPv4-mapped IPv6 address counts as IPv6, so all of them share the key <c>::/64</c>: map such an address to
+    /// IPv4 first.
+    /// </remarks>
     public static string GetDosKey(IPAddress ip)
     {
         if (ip == null)

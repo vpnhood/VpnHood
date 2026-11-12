@@ -2,10 +2,14 @@
 
 namespace VpnHood.Net.VpnAdapters.WinTun;
 
+/// <summary>Represents the settings of a <see cref="WinTunVpnAdapter"/>.</summary>
 public class WinVpnAdapterSettings : VpnAdapterSettings
 {
     /// <summary>
-    /// Capacity: Rings capacity. Must be between MinRingCapacity and MaxRingCapacity (incl.) Must be a power of two.
+    /// Gets or initializes the size of each of the session's two rings, the one for each direction, in bytes: a power
+    /// of two from <see cref="WinTunVpnAdapter.MinRingCapacity"/> to <see cref="WinTunVpnAdapter.MaxRingCapacity"/>.
+    /// The default is 4 MiB.
     /// </summary>
-    public int RingCapacity { get; init; } = 0x400000; // 4MB (default)
+    /// <remarks>A size WinTun refuses fails the start, when the adapter opens its session.</remarks>
+    public int RingCapacity { get; init; } = 0x400000;
 }

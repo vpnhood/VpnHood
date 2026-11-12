@@ -11,6 +11,34 @@ using VpnHood.Net.VpnAdapters.IosTun.Utils;
 
 namespace VpnHood.Net.VpnAdapters.IosTun;
 
+/// <summary>
+/// Provides the VPN adapter for iOS and tvOS, inside an app's packet tunnel extension: it applies the tunnel's network
+/// settings through the <see cref="NEPacketTunnelProvider"/>, and reads and writes packets through its
+/// <see cref="NEPacketTunnelFlow"/>.
+/// </summary>
+/// <param name="tunnelProvider">The extension's packet tunnel provider.</param>
+/// <param name="settings">The adapter's settings.</param>
+/// <param name="completeStartTunnel">
+/// The completion handler iOS gave the provider's start of the tunnel, wrapped so that only its first call counts, as
+/// every open calls it: with <see langword="null"/> once the settings are applied, or with the error of applying them.
+/// A failure before that, as while the settings are built, does not reach it: the caller answers iOS for such a one.
+/// </param>
+/// <remarks>
+/// <para>
+/// The start's addresses, routes, DNS servers and MTU are gathered and applied all at once when the adapter opens.
+/// iOS hands the packets the device sends in batches, through callbacks, not through reads; the adapter writes in
+/// batches of up to 32.
+/// </para>
+/// <para>
+/// It has no NAT, no metric and no session name, and no app filter, which iOS leaves to device management. It cannot
+/// protect a socket (<see cref="CanProtectSocket"/>): the extension's own sockets were seen to go around its tunnel on
+/// an Apple TV, and the VPN keeps its server's address out of the routes in any case. Its steps take no notice of
+/// their cancellation tokens, but the open's wait for iOS to apply the settings.
+/// </para>
+/// </remarks>
+/// <exception cref="ArgumentOutOfRangeException">
+/// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
+/// </exception>
 public class IosVpnAdapter(
     NEPacketTunnelProvider tunnelProvider,
     IosVpnAdapterSettings settings,
@@ -64,21 +92,66 @@ public class IosVpnAdapter(
     // Traffic byte counters + the freeze locator (last TUN read/write stamps, worst write drain) live in
     // IosTunDiagnostics and are maintained only when IosTunDiagnostics.Enabled — see the call sites below.
 
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>.</value>
     protected override bool RestartAfterNetworkAddressChanged => false;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>.</value>
     protected override bool CheckAdapterInterfaceAfterNetworkChanged => false;
+
+    /// <inheritdoc/>
+    /// <returns>Always <see langword="false"/>.</returns>
     public override bool IsNatSupported(IpVersion ipVersion) => false;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>: iOS leaves the apps of a VPN to device management.</value>
     public override bool IsAppFilterSupported => false;
+
+    /// <inheritdoc/>
+    /// <value>Always <see langword="false"/>.</value>
     protected override bool IsSocketProtectedByBind => false;
 
-    // CRITICAL: false makes core EXCLUDE the VPN server's IP from the tunnel's routes
-    // (ClientHelper.BuildIncludeIpRangesByDevice). On an iPhone, with the server's IP inside them, the
-    // transport went into its OWN tunnel -> routing loop -> total freeze (no traffic in or out), though on
-    // an Apple TV the extension's own sockets were seen going around its tunnel (see ProtectSocket).
+    /// <inheritdoc/>
+    /// <value>
+    /// Always <see langword="false"/>: the client then leaves its sockets out of its protection wrapper, while a direct
+    /// call of <see cref="ProtectSocket(System.Net.Sockets.Socket, IPAddress)"/>, as its server address check makes,
+    /// still gets <see langword="true"/>. The VPN leaves its server's address out of the routes in any case.
+    /// </value>
+    // ClientHelper.CreateSocketFactory reads it. The server's address leaves the routes whatever it says
+    // (ClientHelper.BuildIncludeIpRangesByDevice): on an iPhone, with it inside them, the transport went into its own
+    // tunnel and all traffic stopped, though on an Apple TV the extension's own sockets were seen going around it
     public override bool CanProtectSocket => false;
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: the settings are applied when the adapter opens.</remarks>
     protected override Task AdapterAdd(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    /// <remarks>It does nothing.</remarks>
     protected override void AdapterRemove() { }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// It reads the network's DNS servers first (<see cref="GetPrimaryAdapterDnsServers"/>), then applies the gathered
+    /// addresses, routes, DNS servers and MTU to the tunnel, and calls the start's completion handler with
+    /// <see langword="null"/>, before the reads start. A failure to apply them, or a canceled wait, goes to the handler
+    /// too, as an <see cref="NSError"/>, and is thrown; one before, while the settings are built, is only thrown. The
+    /// tunnel's remote address is the VPN server's, the protocol configuration's server address when it is an IP
+    /// address, or <c>192.0.2.1</c>: iOS refuses settings whose remote address is not an IP address.
+    /// </para>
+    /// <para>
+    /// When the tunnel has an IPv6 address and an IPv6 route shorter than /64, while the adapter found no IPv6 address
+    /// on the network (<see cref="TunVpnAdapter.IsIpVersionSupported"/>), <c>::/0</c> and <c>2000::/3</c> join the
+    /// routes, as iOS was seen to hold back AAAA lookups otherwise. Routes of /64 or narrower bring neither, so a split
+    /// tunnel stays split, and iOS may then hold back AAAA lookups for them on a network with no IPv6.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="NSErrorException">iOS refused the settings.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled: the wait ends, while iOS may still apply the settings.
+    /// </exception>
     protected override async Task AdapterOpen(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Establishing iOS tun adapter...");
@@ -224,6 +297,12 @@ public class IosVpnAdapter(
         completeStartTunnel(null);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It forgets the gathered settings and the packet flow. It does not wait for a callback under way, which may still
+    /// hand on its batch; a callback that finds the flow gone drops its batch and asks for no more. The settings applied
+    /// to the tunnel stay.
+    /// </remarks>
     protected override void AdapterClose()
     {
         // Clearing the config means a bare AdapterClose -> AdapterOpen would apply EMPTY settings.
@@ -238,6 +317,8 @@ public class IosVpnAdapter(
         _packetFlow = null;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps the address for <see cref="AdapterOpen"/>, which applies the settings all at once.</remarks>
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         if (ipNetwork.IsV4)
@@ -248,6 +329,8 @@ public class IosVpnAdapter(
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps the route for <see cref="AdapterOpen"/>, which applies the settings all at once.</remarks>
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         if (ipNetwork.IsV4)
@@ -258,46 +341,89 @@ public class IosVpnAdapter(
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="NotSupportedException">Always: iOS has no NAT for an app.</exception>
     protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken) =>
         throw new NotSupportedException("iOS does not support NAT.");
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing.</remarks>
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
         => Task.CompletedTask;
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing.</remarks>
     protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
         => Task.CompletedTask;
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps the MTU for <see cref="AdapterOpen"/>, which applies it to both IP versions.</remarks>
     protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         _mtu = mtu;
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It keeps the servers for <see cref="AdapterOpen"/>, which applies the settings all at once.</remarks>
     protected override Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         _dnsServers.AddRange(dnsServers);
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: iOS leaves the apps of a VPN to device management.</remarks>
     protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
-        Task.CompletedTask; // MDM-only on iOS
+        Task.CompletedTask;
 
+    /// <inheritdoc/>
+    /// <remarks>It does nothing: iOS leaves the apps of a VPN to device management.</remarks>
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
-        Task.CompletedTask; // MDM-only on iOS
+        Task.CompletedTask;
 
+    /// <inheritdoc/>
+    /// <value>The bundle identifier of the extension.</value>
+    /// <exception cref="Exception">The extension's bundle has no identifier.</exception>
     protected override string AppPackageId =>
         NSBundle.MainBundle.BundleIdentifier ?? throw new Exception("Could not get the app BundleIdentifier!");
 
-    // Nothing to do: the extension's own sockets go around its tunnel, as a DNS query and a web request
-    // were seen to on an Apple TV with every route in the tunnel, so the server address check asks the
-    // network's DNS servers over a plain socket. The base's look for the network's primary addresses goes
-    // around it too: on an iPhone it found the Wi-Fi's address, not the tunnel's, with its target inside the
-    // tunnel's routes, so the session's check of the network's IP versions holds here as well.
+    /// <summary>Does nothing to the socket, and returns <see langword="true"/>.</summary>
+    /// <param name="socket">The socket.</param>
+    /// <returns>Always <see langword="true"/>.</returns>
+    /// <remarks>
+    /// The extension's own sockets go around its tunnel, as a DNS query and a web request were seen to on an Apple TV
+    /// with every route in the tunnel. The client's socket wrapper does not call it, as <see cref="CanProtectSocket"/> is
+    /// <see langword="false"/>; its server address check does.
+    /// </remarks>
+    // So the server address check asks the network's DNS servers over a plain socket. The base's look for the
+    // network's primary addresses goes around it too: on an iPhone it found the Wi-Fi's address, not the tunnel's,
+    // with its target inside the tunnel's routes, so the session's check of the network's IP versions holds here.
     public override bool ProtectSocket(System.Net.Sockets.Socket socket) => true;
 
+    /// <summary>
+    /// Does nothing to the socket, and returns <see langword="true"/>, as <see cref="ProtectSocket(System.Net.Sockets.Socket)"/>
+    /// does.
+    /// </summary>
+    /// <param name="socket">The socket.</param>
+    /// <param name="ipAddress">Not used.</param>
+    /// <returns>Always <see langword="true"/>.</returns>
     public override bool ProtectSocket(System.Net.Sockets.Socket socket, IPAddress ipAddress) => true;
 
-    // Apple gives an app no way to read a network's DNS servers under a VPN that serves the device's DNS
+    /// <summary>
+    /// Gets the DNS servers of the network under the tunnel: the last reading that found any, taken when an adapter
+    /// opened, before it applied the tunnel's settings, as the device's resolver reports the tunnel's own servers once
+    /// the tunnel serves the device's DNS.
+    /// </summary>
+    /// <returns>
+    /// The servers, link-local IPv6 ones and those the opening start asked the tunnel for left out; none before a
+    /// reading found any. They may be stale.
+    /// </returns>
+    /// <remarks>
+    /// The reading is the process's: a reconnect makes a new adapter under the tunnel still up, whose open reads the
+    /// tunnel's servers. Those are left out when the new start asks for the same ones, so the last reading of the
+    /// network's stands; a start that asks for others can let the earlier tunnel's servers in.
+    /// </remarks>
     public override IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers() => _networkDnsServers;
 
     // Read before the tunnel's settings take the device's DNS. An open under a tunnel still up, as a reconnect's, reads
@@ -319,12 +445,23 @@ public class IosVpnAdapter(
         }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>It sleeps 10 milliseconds.</remarks>
     protected override void WaitForTunRead() => Thread.Sleep(10);
 
+    /// <inheritdoc/>
+    /// <remarks>It sleeps 10 milliseconds.</remarks>
     protected override void WaitForTunWrite() => Thread.Sleep(10);
 
-    // Single-packet write (required by the base contract; the batched SendPacketsAsync below is the
-    // actual hot path). Writes one packet through the same lock/pool/batch machinery.
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It writes one packet through the packet flow; the adapter's sender writes with <see cref="SendPacketsAsync"/>
+    /// instead.
+    /// </remarks>
+    /// <returns>
+    /// <see langword="true"/> if the packet flow took the packet; <see langword="false"/> if it refused it.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">The adapter is not open.</exception>
     protected override bool WritePacket(IpPacket ipPacket)
     {
         // Capture the flow; AdapterClose may null it out concurrently.
@@ -342,8 +479,18 @@ public class IosVpnAdapter(
         }
     }
 
-    // Unlike the base sender, no error count stops the adapter: a failed write drops its batch (a stall,
-    // never a leak), iOS ends a dead tunnel itself (stopTunnel), and Apple names no failure to stop on
+    /// <summary>
+    /// Writes a batch of packets to the packet flow, in chunks of up to 32, and is done when it returns.
+    /// </summary>
+    /// <param name="ipPackets">The batch. The list is reused after the call.</param>
+    /// <returns>A completed task.</returns>
+    /// <remarks>
+    /// A chunk iOS refuses is dropped, which is logged once until writes succeed again; unlike the base's sender, no
+    /// count of failures stops the adapter. An exception while a chunk is written ends the batch, which the base then
+    /// counts as dropped whole.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The adapter is not open.</exception>
+    // iOS ends a dead tunnel itself (stopTunnel), and Apple names no failure to stop on
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         // Capture the flow; AdapterClose may null it out concurrently.
@@ -455,6 +602,14 @@ public class IosVpnAdapter(
         return batches;
     }
 
+    /// <summary>
+    /// Asks iOS for the packets the device sends: each batch arrives in a callback, which hands its packets to the
+    /// transport's receivers and asks for the next batch.
+    /// </summary>
+    /// <remarks>
+    /// A packet that does not parse is dropped. With no packet flow, as during a stop, it does nothing, and logs a
+    /// warning when the adapter is started.
+    /// </remarks>
     protected override void StartReadingPackets()
     {
         // Base fires this from a fire-and-forget Task.Run after AdapterOpen, so a throw here would
@@ -534,6 +689,10 @@ public class IosVpnAdapter(
         _packetFlow?.ReadPackets(OnPacketsReceived);
     }
 
+    /// <summary>Not used: iOS hands the packets to <see cref="StartReadingPackets"/>'s callbacks.</summary>
+    /// <param name="buffer">Not used.</param>
+    /// <returns>Never returns.</returns>
+    /// <exception cref="NotSupportedException">Always.</exception>
     protected override int ReadPacket(byte[] buffer)
     {
         throw new NotSupportedException("Use StartReadingPackets as iOS already handle it.");

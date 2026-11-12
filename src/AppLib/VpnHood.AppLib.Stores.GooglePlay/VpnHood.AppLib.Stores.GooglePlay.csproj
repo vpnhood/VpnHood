@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Client App Common Library for Google</Description>
+		<Description>Google Play billing and sign-in with Google for VpnHood apps on Android.</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>

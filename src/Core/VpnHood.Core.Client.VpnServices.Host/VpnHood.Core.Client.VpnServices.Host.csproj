@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Handles VPN service tasks and controls the VpnHood client. It can be managed by VpnServiceManager.</Description>
+		<Description>The VPN service's side of the contract: it takes the app's requests, connects with the options the app saved, and reports the connection's state back.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

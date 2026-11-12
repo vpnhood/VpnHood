@@ -5,7 +5,8 @@ you are trying to do.
 
 | I want to… | Go to |
 | --- | --- |
-| **Publish my own branded VPN app** to the stores | [publish-your-app/](publish-your-app/README.md) ← start here |
+| **Build my own VPN app**, from the template | [build-your-app.md](build-your-app.md) ← start here |
+| Publish my own branded VPN app to the stores | [publish-your-app/](publish-your-app/README.md) |
 | Know which component talks to which, and in which direction | [topology.md](topology.md) |
 | Know how a client is built - a head over three layers: UI, the app's logic, VPN engine - and the two contracts that let you replace any of them; how the app and its VPN service fit together, and which project is which half | [client-architecture.md](client-architecture.md) |
 | Find where something lives in `src/`, or what a platform app is made of | [source-layout.md](source-layout.md) |

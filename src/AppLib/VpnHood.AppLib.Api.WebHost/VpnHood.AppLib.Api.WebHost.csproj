@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA)</Description>
+		<Description>The VpnHood app's web hosts: they serve the app's API over HTTP, and a web UI's files, to a UI on the device and to a paired device on the network.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

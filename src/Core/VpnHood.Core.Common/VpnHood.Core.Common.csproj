@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Common Library is shared among all other VpnHood modules</Description>
+		<Description>Types the VpnHood client, server and access manager share: access keys and server tokens, access and usage, client policies, and their errors.</Description>
 		<TargetFramework>net10.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

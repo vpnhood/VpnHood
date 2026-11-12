@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Device abstraction</Description>
+		<Description>The device a VpnHood app runs on, as the app sees it: what it supports, how the app starts the VPN service, and its installed apps. Each platform's provider is a package of its own.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

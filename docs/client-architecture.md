@@ -39,8 +39,8 @@ flowchart TB
 1. **The head** is the app you publish, one for each platform and store: a thin shell that names the
    app and its store and hands them to its UI's host, which starts the app's logic, then the UI. Where
    the VPN service runs apart, the head carries it too: an iOS app bundles its Network Extension, a
-   desktop app its VPN host. CLIENT and CONNECT are our heads; a fork writes its own
-   ([what a head is made of](source-layout.md#what-a-head-is-made-of)).
+   desktop app its VPN host. CLIENT and CONNECT are our heads; your app's come with the template
+   ([Build your VPN app](build-your-app.md); [what a head is made of](source-layout.md#what-a-head-is-made-of)).
 2. **① The app API** is everything a UI needs from the app: six interfaces in `VpnHood.AppLib.Api` -
    the app, profiles, account, billing, intents and proxies. A .NET UI holds them as `VpnHoodApi`: the
    app's own controllers in its process (`VpnHoodApp.Api`), or the same calls over HTTP
@@ -56,7 +56,7 @@ flowchart TB
 
 | To build | On our | Through |
 | --- | --- | --- |
-| your own branded app | AppUi, AppLib and Core | a head of your own - see [publish-your-app/](publish-your-app/README.md) |
+| your own branded app | AppUi, AppLib and Core, from NuGet | a copy of [VpnHood.App.Template](https://github.com/vpnhood/VpnHood.App.Template) - see [Build your VPN app](build-your-app.md) |
 | your own UI, in any framework or language | AppLib and Core | ① the app API |
 | your own app in .NET, without AppLib | Core | the manager and the device: `Core.Client.VpnServices.Manager` and `Core.Client.Devices.<OS>` |
 | your own app in another framework or language - Swift, Kotlin, C++ | Core's VPN service | ② the VPN service contract, spoken directly: our .NET device libraries are out of its reach, but the contract is plain files and JSON |

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood QUIC Abstractions. A minimal transport abstraction over the QUIC surface used by VpnHood, independent of any concrete QUIC implementation.</Description>
+		<Description>A minimal QUIC transport abstraction: the QUIC surface VpnHood uses, independent of any QUIC implementation, with MsQuic, Android and iOS ones in their own packages.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<!-- the whole public API is documented: a missing or broken doc comment fails the build -->
 		<VhApiDocsComplete>true</VhApiDocsComplete>

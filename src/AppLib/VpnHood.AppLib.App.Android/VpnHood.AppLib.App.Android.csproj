@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Client App Common Library</Description>
+		<Description>The VpnHood app on Android: the application and main activity a head derives from, the Quick Settings tile, and Android's notifications, file sharing and update notices.</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>

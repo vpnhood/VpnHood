@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Shared library for VpnHood Windows Clients</Description>
+		<Description>The VpnHood app on Windows with WinTun: it runs as a service, one per app, with the VPN service in a process of its own.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

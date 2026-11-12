@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Ad Library for AdMob</Description>
+		<Description>Google AdMob ads for VpnHood apps on Android: app-open, interstitial and rewarded ads, and the consent form of Google's User Messaging Platform.</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>

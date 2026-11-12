@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Abstractions for VPN services shared between the manager and host</Description>
+		<Description>The VPN service contract: the requests the app sends its VPN service and the connection info it gets back, shared by both sides.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

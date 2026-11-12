@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>The core of VpnHood server. It can listen and accept connections from VpnHood clients</Description>
+		<Description>The VpnHood VPN server engine: it takes its configuration from its access manager, listens for clients, and carries their sessions.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

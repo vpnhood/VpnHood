@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Manage client accounts and in-app purchases through the VpnHood Portal API (backend-agnostic)</Description>
+		<Description>Accounts, sign-in and web purchases for VpnHood apps, through the VpnHood Portal API.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

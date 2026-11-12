@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <Description>Abstractions (interfaces) for VpnHood TCP stack implementations.</Description>
+        <Description>The interfaces of VpnHood's user-space TCP stack, for code that takes a stack without depending on VpnHood.Net.TcpStack.</Description>
         <TargetFramework>net11.0</TargetFramework>
         <!-- the whole public API is documented: a missing or broken doc comment fails the build -->
         <VhApiDocsComplete>true</VhApiDocsComplete>

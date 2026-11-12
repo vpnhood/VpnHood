@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Description>VpnHood Abstraction for VPN Adapter</Description>
+		<Description>The VPN adapter contract: a virtual network interface whose packets a VPN reads and writes, the base class every platform's TUN adapter extends, and a null adapter.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<!-- the whole public API is documented: a missing or broken doc comment fails the build -->
 		<VhApiDocsComplete>true</VhApiDocsComplete>

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Description>VpnHood VpnAdapter for LinuxTun</Description>
+		<Description>The VPN adapter for Linux, on a TUN device of the process's own: its addresses, routes, MTU and DNS servers.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

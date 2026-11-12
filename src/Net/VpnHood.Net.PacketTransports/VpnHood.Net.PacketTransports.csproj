@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Abstract base class for transporting and forwarding IP packets.</Description>
+		<Description>Two-way channels of IP packets: send queues, batching, and a fair queue that keeps a flooding flow from starving the others.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<!-- the whole public API is documented: a missing or broken doc comment fails the build -->
 		<VhApiDocsComplete>true</VhApiDocsComplete>

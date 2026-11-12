@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Light access manager using OS file system</Description>
+		<Description>An access manager on the server's own file system: access keys and sessions in files, for a VpnHood server that runs without the MANAGER.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

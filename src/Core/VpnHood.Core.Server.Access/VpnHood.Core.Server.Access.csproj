@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Description>Stores, and retrieves end users' access and usage. Provides required interfaces and classes to use or create an access server and accounting</Description>
+		<Description>The access manager a VpnHood server answers to: it admits sessions, counts their traffic and configures the server. Includes the client of the MANAGER's agent API.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

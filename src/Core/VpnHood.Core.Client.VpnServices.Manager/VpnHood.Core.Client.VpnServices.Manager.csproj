@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Manages the VpnHood service from another process by communicating with VpnHoodService.</Description>
+		<Description>The app's side of the VPN service contract: it starts the VPN service with its options, follows its state, and sends it the app's requests.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

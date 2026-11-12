@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Shared library for VpnHood Windows clients on the Windows VPN plug-in, which run from an MSIX package</Description>
+		<Description>The VpnHood app on the Windows VPN plug-in, for an app that runs from an MSIX package.</Description>
 		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>

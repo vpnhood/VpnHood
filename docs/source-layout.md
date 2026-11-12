@@ -351,18 +351,15 @@ page is published, and throws only when the page makes that call. `publish_nuget
 test before the pack. Locally, a head build that finds no zip warns and names the script to run; the
 app then has a web host with no page to serve.
 
-## What a fork copies
+## Your own app
 
-Copy one product folder — `Client/` or `Connect/` — and it becomes a third sibling. Inside it:
-rename the folders and projects to your product, put your app's id base and name in the product's
-`Directory.Build.props` (see [the app's identity](#the-apps-identity)), your logo and consent
-summary in the product's options builder, your settings - links, analytics, portal, ad ids, the
-update feed's address - in your own private appsettings, and pin your own asset package if you are
-replacing the artwork. Everything else is consumed from NuGet.
+Don't fork this repository to build your own app: start from
+[VpnHood.App.Template](https://github.com/vpnhood/VpnHood.App.Template), which holds only your app and takes
+everything VpnHood from NuGet - see [build-your-app.md](build-your-app.md). `Client/` and `Connect/` are VpnHood's own
+two products.
 
-Nothing beneath `src/Apps/` may be edited for a fork, and nothing beneath it may depend on anything
-inside it. If you find yourself wanting to change a library to brand your app, that is a bug in the
-library's shape.
+Nothing beneath `src/Apps/` may be edited for your app, and nothing beneath it may depend on anything inside it. If
+you find yourself wanting to change a library to brand your app, that is a bug in the library's shape.
 
 ## See also
 

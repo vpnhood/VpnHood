@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Client Abstractions</Description>
+		<Description>What a VpnHood client is told and reports, shared by the app and its VPN service: the connection's options, the client's state, its DNS, and the errors a connection ends with.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

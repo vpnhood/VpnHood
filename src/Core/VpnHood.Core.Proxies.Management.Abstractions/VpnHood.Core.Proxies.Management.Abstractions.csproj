@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Abstract base class ProxyEndPointManager</Description>
+		<Description>How a VpnHood client connects through proxies: the proxy connector, proxy endpoints and their parsing, and the managed list's store and its updates from a URL.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

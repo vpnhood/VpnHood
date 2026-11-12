@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>IP location abstractions and providers for VpnHood.</Description>
+		<Description>Finds where an IP address is: online providers (ipapi.co, ipinfo.io, ip2location.io, Cloudflare), a local database of country ranges, and composites that try them in turn.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

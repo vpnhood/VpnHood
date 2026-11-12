@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood VpnAdapter for WinDivert</Description>
+		<Description>A VPN adapter for Windows on WinDivert, a packet capture driver, with no network interface of its own.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

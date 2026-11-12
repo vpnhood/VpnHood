@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Filtering Abstractions</Description>
+		<Description>The filters a VpnHood client or server applies to its flows: pipes of IP and domain filters and an IP mapper, with in-memory implementations.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

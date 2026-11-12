@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it</Description>
+		<Description>The VpnHood app without its screens: connecting, servers and access keys, settings, accounts, ads, updates, and the API a UI reads the app through. A head adds the platform and the UI.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<!-- The DTO converters map every enum with no default arm, so a member added on one side fails the

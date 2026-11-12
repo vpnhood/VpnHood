@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Provides tunnelling classes and protocols shared between VpnHood.Core.Client and VpnHood.Core.Server</Description>
+		<Description>The tunnel between a VpnHood client and server, which both share: its requests, channels and streams, and the forwarding of a session's packets.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

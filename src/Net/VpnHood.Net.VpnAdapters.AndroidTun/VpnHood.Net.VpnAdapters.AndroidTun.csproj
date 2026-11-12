@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood VpnAdapter for Android</Description>
+		<Description>The VPN adapter for Android, on the TUN interface that Android's VpnService gives an app.</Description>
 		<TargetFramework>net11.0-android37.0</TargetFramework>
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<VhApiDocsComplete>true</VhApiDocsComplete>

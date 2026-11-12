@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
-        <Description>VpnHood Toolkit Library can be used in any project</Description>
+        <Description>General-purpose .NET helpers, used across VpnHood and usable in any project: IP networks and ranges, collections, streams, JSON converters, API clients, jobs and trackers.</Description>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 

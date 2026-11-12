@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
-		<Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.AppLib</Description>
+		<Description>The VpnHood VPN client engine: it finds a server, builds a session with it, and runs the session's tunnel on a VPN adapter. To build an app, start from VpnHood.AppLib.App.</Description>
 		<OutputType>Library</OutputType>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

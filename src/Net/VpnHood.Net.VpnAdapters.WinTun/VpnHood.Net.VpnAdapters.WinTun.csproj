@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood VpnAdapter for WinTun</Description>
+		<Description>The VPN adapter for Windows on WinTun, a layer-3 TUN driver: it makes the interface and gives it its addresses, routes and DNS servers.</Description>
 		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

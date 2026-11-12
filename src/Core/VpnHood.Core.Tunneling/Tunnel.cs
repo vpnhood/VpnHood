@@ -154,7 +154,7 @@ public class Tunnel : PacketTransportBase
         if (ipPacket.PacketLength <= Mtu)
             return;
 
-        var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(ipPacket, (ushort)Mtu);
+        var replyPacket = PacketBuilder.BuildIcmpPacketTooBigReply(ipPacket, Mtu);
         OnPacketReceived(replyPacket);
         throw new Exception(
             $"The packet length is larger than MTU. PacketLength: {ipPacket.PacketLength}, MTU: {Mtu}.");

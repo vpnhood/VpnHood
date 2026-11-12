@@ -150,6 +150,39 @@ public class PacketTest : TestBase
     }
 
     [TestMethod]
+    public void Endpoint_with_a_port_changes_nothing_where_the_protocol_has_no_ports()
+    {
+        var endPoint = new IpEndPointValue(IPAddress.Parse("10.0.0.9"), 53);
+        using var ipPacket = PacketBuilder.BuildIcmpV4EchoRequest(IPAddress.Parse("10.0.0.2"),
+            IPAddress.Parse("10.0.0.3"), [1, 2, 3]);
+        var bytes = ipPacket.Buffer.ToArray();
+
+        Assert.ThrowsExactly<InvalidOperationException>(() => ipPacket.SetSourceEndPoint(endPoint));
+        Assert.ThrowsExactly<InvalidOperationException>(() => ipPacket.SetDestinationEndPoint(endPoint));
+        CollectionAssert.AreEqual(bytes, ipPacket.Buffer.ToArray());
+
+        // without a port, the address alone is set
+        ipPacket.SetSourceEndPoint(new IpEndPointValue(endPoint.AddressValue, 0));
+        Assert.AreEqual(endPoint.AddressValue, ipPacket.SourceAddressValue);
+    }
+
+    [TestMethod]
+    public void Endpoint_changes_nothing_on_a_fragment()
+    {
+        // a fragment holds only a piece of the datagram its ports are in
+        var endPoint = new IpEndPointValue(IPAddress.Parse("10.0.0.9"), 53);
+        using var udpPacket = (IpV4Packet)PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"),
+            IPAddress.Parse("10.0.0.3"), 1000, 53, [1, 2, 3]);
+        udpPacket.MoreFragments = true;
+        using var ipPacket = PacketBuilder.Parse(udpPacket.Buffer.Span);
+        var bytes = ipPacket.Buffer.ToArray();
+
+        Assert.ThrowsExactly<InvalidDataException>(() => ipPacket.SetSourceEndPoint(endPoint));
+        Assert.ThrowsExactly<InvalidDataException>(() => ipPacket.SetDestinationEndPoint(endPoint));
+        CollectionAssert.AreEqual(bytes, ipPacket.Buffer.ToArray());
+    }
+
+    [TestMethod]
     public void Disposed_packet_is_named_without_its_buffer()
     {
         // error paths log a packet another owner has disposed
@@ -308,6 +341,49 @@ public class PacketTest : TestBase
     }
 
     [TestMethod]
+    public void IPv4_build_refuses_options_longer_than_the_packet()
+    {
+        // 40 bytes of options in a 20-byte packet: its header would say it is 60 bytes long
+        Assert.ThrowsExactly<ArgumentException>(() => new IpV4Packet(new byte[20], 20, IpProtocol.Udp, 40));
+        Assert.ThrowsExactly<ArgumentException>(() => new IpV4Packet(new byte[60], 59, IpProtocol.Udp, 40));
+
+        // a packet that is its header alone
+        using var ipPacket = new IpV4Packet(new byte[60], 60, IpProtocol.Udp, 40);
+        Assert.AreEqual(60, ipPacket.Header.Length);
+        Assert.AreEqual(40, ipPacket.Options.Length);
+        Assert.AreEqual(0, ipPacket.Payload.Length);
+    }
+
+    [TestMethod]
+    public void A_refused_build_leaves_the_memory_as_it_was()
+    {
+        var bytes = new byte[64];
+        Array.Fill(bytes, (byte)0xAA);
+        var bytesBefore = bytes.ToArray();
+
+        // IPv4 options of a length no header has
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new IpV4Packet(bytes, 64, IpProtocol.Udp, 3));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new IpV4Packet(bytes, 64, IpProtocol.Udp, 44));
+        CollectionAssert.AreEqual(bytesBefore, bytes);
+
+        // a packet shorter than its header
+        Assert.ThrowsExactly<ArgumentException>(() => new IpV4Packet(bytes, 24, IpProtocol.Udp, 8));
+        Assert.ThrowsExactly<ArgumentException>(() => new IpV4Packet(bytes, 10, IpProtocol.Udp, 0));
+        Assert.ThrowsExactly<ArgumentException>(() => new IpV6Packet(bytes, 30, IpProtocol.Udp));
+        CollectionAssert.AreEqual(bytesBefore, bytes);
+    }
+
+    [TestMethod]
+    public void A_version_that_is_neither_4_nor_6_is_not_supported()
+    {
+        byte[] bytes = [0x50, 0, 0, 20, .. new byte[16]];
+
+        Assert.ThrowsExactly<NotSupportedException>(() => PacketUtil.ReadPacketLength(bytes));
+        Assert.ThrowsExactly<NotSupportedException>(() => PacketBuilder.Parse(bytes));
+        Assert.ThrowsExactly<NotSupportedException>(() => PacketBuilder.Attach(bytes));
+    }
+
+    [TestMethod]
     public void IPv6_reads_through_extension_headers()
     {
         using var tcpPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("[2001:db8::1]:1000"),
@@ -434,6 +510,18 @@ public class PacketTest : TestBase
         CollectionAssert.AreEqual(udpPacketNet.Bytes, udpPacket.Buffer.ToArray());
         CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
         ipPacket.Dispose();
+    }
+
+    [TestMethod]
+    public void Udp_build_refuses_a_datagram_longer_than_its_length_field_holds()
+    {
+        // 65535 bytes: the longest a length field can say, which a parse reads back
+        var longest = new VpnHood.Net.Packets.UdpPacket(new byte[0xFFFF], building: true);
+        var parsed = new VpnHood.Net.Packets.UdpPacket(longest.Buffer, building: false);
+        Assert.AreEqual(0xFFFF, parsed.Buffer.Length);
+
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            new VpnHood.Net.Packets.UdpPacket(new byte[0x10000], building: true));
     }
 
     [TestMethod]
@@ -609,5 +697,38 @@ public class PacketTest : TestBase
         ipPacket.UpdateAllChecksums();
         ipPacketNet.UpdateAllChecksums();
         CollectionAssert.AreEqual(ipPacketNet.Bytes, ipPacket.Buffer.ToArray());
+    }
+
+    [TestMethod]
+    public void IcmpPacketTooBig_carries_an_IPv6_mtu_above_65535()
+    {
+        using var orgPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[2001:db8::1]:1000"),
+            IPEndPoint.Parse("[2001:db8::2]:53"), []);
+
+        // ICMPv6's MTU field is 32 bits (RFC 4443 3.2)
+        using var ipPacket = PacketBuilder.BuildIcmpPacketTooBigReply(orgPacket, 70_000);
+        Assert.AreEqual(70_000u, ipPacket.ExtractIcmpV6().MessageSpecific);
+    }
+
+    [TestMethod]
+    public void IcmpV6_error_is_no_longer_than_the_minimum_mtu()
+    {
+        var payload = new byte[1400];
+        new Random(4).NextBytes(payload);
+        using var orgPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[2001:db8::1]:1000"),
+            IPEndPoint.Parse("[2001:db8::2]:53"), payload);
+
+        // as much of the packet as an error of 1280 bytes holds (RFC 4443 2.4 c)
+        using var ipPacket = PacketBuilder.BuildIcmpUnreachableReply(orgPacket);
+        Assert.AreEqual(1280, ipPacket.PacketLength);
+        CollectionAssert.AreEqual(orgPacket.Buffer[..(1280 - 40 - 8)].ToArray(),
+            ipPacket.ExtractIcmpV6().Payload.ToArray());
+        Assert.IsTrue(ipPacket.ExtractIcmpV6().IsChecksumValid(ipPacket));
+
+        // a packet that fits goes whole
+        using var shortPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[2001:db8::1]:1000"),
+            IPEndPoint.Parse("[2001:db8::2]:53"), [1, 2, 3]);
+        using var shortReply = PacketBuilder.BuildIcmpUnreachableReply(shortPacket);
+        CollectionAssert.AreEqual(shortPacket.Buffer.ToArray(), shortReply.ExtractIcmpV6().Payload.ToArray());
     }
 }

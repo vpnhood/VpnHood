@@ -34,7 +34,7 @@ public class IpV6Packet : IpPacket
     /// </summary>
     /// <remarks>
     /// The packet's bytes are cleared, then the version, the Next Header and the payload length are written. The
-    /// addresses and the hop limit are left zero.
+    /// addresses and the hop limit are left zero. A build that is refused writes nothing.
     /// </remarks>
     /// <param name="memory">
     /// The memory, at least <paramref name="packetLength"/> bytes: a <see cref="Memory{T}"/> or an array the caller

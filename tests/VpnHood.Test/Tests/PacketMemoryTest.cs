@@ -145,6 +145,27 @@ public class PacketMemoryTest : TestBase
     }
 
     [TestMethod]
+    public void Parse_refuses_a_length_below_an_IP_header_before_it_rents()
+    {
+        // what a pool lends still holds its last renter's bytes: here a whole packet
+        var memoryPool = new UsedMemoryPool(BuildPacketBytes(60));
+
+        // a length of 0 to 3 bytes: its copy would leave the length field itself to those old bytes
+        foreach (var totalLength in new byte[] { 0, 1, 3, 19 }) {
+            byte[] bytes = [0x45, 0, 0, totalLength, .. new byte[16]];
+            Assert.ThrowsExactly<ArgumentException>(() => PacketBuilder.Parse(bytes, memoryPool));
+            Assert.ThrowsExactly<ArgumentException>(() => PacketBuilder.Parse(bytes));
+        }
+
+        Assert.AreEqual(0, memoryPool.RentCount);
+
+        // a whole packet parses as its own bytes, whatever the pool's memory held
+        using var source = BuildUdp(IpVersion.IPv4);
+        using var ipPacket = PacketBuilder.Parse(source.Buffer.Span, memoryPool);
+        CollectionAssert.AreEqual(source.Buffer.ToArray(), ipPacket.Buffer.ToArray());
+    }
+
+    [TestMethod]
     public void BuildIp_returns_the_memory_it_rented_when_the_length_is_refused()
     {
         var address = IPAddress.Parse("10.0.0.2");
@@ -307,6 +328,26 @@ public class PacketMemoryTest : TestBase
         }
 
         public void Dispose()
+        {
+        }
+    }
+
+    // a pool whose memory holds what its last renter left in it, as a pool's does
+    private sealed class UsedMemoryPool(byte[] leftBytes) : MemoryPool<byte>
+    {
+        public int RentCount { get; private set; }
+
+        public override int MaxBufferSize => int.MaxValue;
+
+        public override IMemoryOwner<byte> Rent(int minBufferSize = -1)
+        {
+            RentCount++;
+            var buffer = new byte[Math.Max(minBufferSize, leftBytes.Length)];
+            leftBytes.CopyTo(buffer, 0);
+            return new TestMemoryOwner(buffer);
+        }
+
+        protected override void Dispose(bool disposing)
         {
         }
     }

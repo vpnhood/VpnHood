@@ -239,27 +239,31 @@ public static class IpPacketExtensions
         /// </remarks>
         /// <param name="value">The new source endpoint; its port must be 0 for a protocol other than TCP and UDP.</param>
         /// <exception cref="ArgumentException">The address is not of the packet's IP version, or the TCP or UDP payload is invalid.</exception>
-        /// <exception cref="InvalidOperationException">
-        /// The port is not 0 and the protocol has no ports; the address has been set by then.
-        /// </exception>
+        /// <exception cref="InvalidOperationException">The port is not 0 and the protocol has no ports.</exception>
         /// <exception cref="InvalidDataException">The packet is a TCP or UDP fragment.</exception>
         public void SetSourceEndPoint(IpEndPointValue value)
         {
-            ipPacket.SourceAddressValue = value.AddressValue;
-
+            // each case reads its payload, or checks the port, before it sets the address, which checks before it
+            // writes: a refused endpoint leaves the packet as it was
             switch (ipPacket.Protocol) {
                 case IpProtocol.Tcp:
-                    ipPacket.ExtractTcp().SourcePort = (ushort)value.Port;
+                    var tcpPacket = ipPacket.ExtractTcp();
+                    ipPacket.SourceAddressValue = value.AddressValue;
+                    tcpPacket.SourcePort = (ushort)value.Port;
                     break;
 
                 case IpProtocol.Udp:
-                    ipPacket.ExtractUdp().SourcePort = (ushort)value.Port;
+                    var udpPacket = ipPacket.ExtractUdp();
+                    ipPacket.SourceAddressValue = value.AddressValue;
+                    udpPacket.SourcePort = (ushort)value.Port;
                     break;
 
                 default:
                     if (value.Port != 0)
                         throw new InvalidOperationException(
                             $"Cannot set non-zero port {value.Port} for protocol {ipPacket.Protocol}. Only TCP and UDP support ports.");
+
+                    ipPacket.SourceAddressValue = value.AddressValue;
                     break;
             }
         }
@@ -272,27 +276,31 @@ public static class IpPacketExtensions
         /// </remarks>
         /// <param name="value">The new destination endpoint; its port must be 0 for a protocol other than TCP and UDP.</param>
         /// <exception cref="ArgumentException">The address is not of the packet's IP version, or the TCP or UDP payload is invalid.</exception>
-        /// <exception cref="InvalidOperationException">
-        /// The port is not 0 and the protocol has no ports; the address has been set by then.
-        /// </exception>
+        /// <exception cref="InvalidOperationException">The port is not 0 and the protocol has no ports.</exception>
         /// <exception cref="InvalidDataException">The packet is a TCP or UDP fragment.</exception>
         public void SetDestinationEndPoint(IpEndPointValue value)
         {
-            ipPacket.DestinationAddressValue = value.AddressValue;
-
+            // each case reads its payload, or checks the port, before it sets the address, which checks before it
+            // writes: a refused endpoint leaves the packet as it was
             switch (ipPacket.Protocol) {
                 case IpProtocol.Tcp:
-                    ipPacket.ExtractTcp().DestinationPort = (ushort)value.Port;
+                    var tcpPacket = ipPacket.ExtractTcp();
+                    ipPacket.DestinationAddressValue = value.AddressValue;
+                    tcpPacket.DestinationPort = (ushort)value.Port;
                     break;
 
                 case IpProtocol.Udp:
-                    ipPacket.ExtractUdp().DestinationPort = (ushort)value.Port;
+                    var udpPacket = ipPacket.ExtractUdp();
+                    ipPacket.DestinationAddressValue = value.AddressValue;
+                    udpPacket.DestinationPort = (ushort)value.Port;
                     break;
 
                 default:
                     if (value.Port != 0)
                         throw new InvalidOperationException(
                             $"Cannot set non-zero port {value.Port} for protocol {ipPacket.Protocol}. Only TCP and UDP support ports.");
+
+                    ipPacket.DestinationAddressValue = value.AddressValue;
                     break;
             }
         }

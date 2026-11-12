@@ -38,7 +38,7 @@ public static class PacketBuilder
     /// <returns>An <see cref="IpV4Packet"/> or <see cref="IpV6Packet"/>; dispose it to return its memory.</returns>
     /// <exception cref="ArgumentException">The bytes are no valid IP packet.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="buffer"/> is shorter than the packet's length field says.</exception>
-    /// <exception cref="Exception">The version is neither 4 nor 6.</exception>
+    /// <exception cref="NotSupportedException">The version is neither 4 nor 6.</exception>
     /// <exception cref="IndexOutOfRangeException"><paramref name="buffer"/> is empty.</exception>
     /// <example>
     /// <code snippet="Snippet:PacketsParse" language="csharp">
@@ -57,6 +57,12 @@ public static class PacketBuilder
     {
         // adjust buffer length by parsing the packet length
         var packetLength = PacketUtil.ReadPacketLength(buffer);
+
+        // a length no IP header fits in is refused before the copy: the copy would leave out the header's own
+        // fields, and a pool's memory holds another packet's there
+        if (packetLength < 20)
+            throw new ArgumentException("The packet's length field is shorter than an IP header.", nameof(buffer));
+
         buffer = buffer[..packetLength];
 
         // copy the packet into rented memory
@@ -697,7 +703,7 @@ public static class PacketBuilder
     {
         return ipPacket.Version == IpVersion.IPv6
             ? BuildIcmpV6Error(ipPacket, IcmpV6Type.PacketTooBig, IcmpV6Code.PacketTooBig,
-                (ushort)mtu, updateChecksum)
+                (uint)mtu, updateChecksum)
             : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.FragmentationNeeded,
                 (ushort)(mtu & 0xFFFF), updateChecksum);
     }
@@ -742,7 +748,8 @@ public static class PacketBuilder
     /// Builds an ICMPv6 error about a packet, from its destination back to its source.
     /// </summary>
     /// <remarks>
-    /// The error carries the packet's first 1240 bytes, or the whole packet when it is shorter.
+    /// The error carries the packet's first 1232 bytes, or the whole packet when it is shorter, so that the error is
+    /// no longer than 1280 bytes, IPv6's minimum MTU, as RFC 4443 asks.
     /// </remarks>
     /// <param name="ipPacket">The IPv6 packet the error is about.</param>
     /// <param name="icmpV6Type">The error's type.</param>
@@ -758,8 +765,9 @@ public static class PacketBuilder
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-        // Copy original IP header (40 bytes) + 8 bytes of payload into ICMP payload
-        var toCopy = Math.Min(1280 - 40, ipPacket.Buffer.Length);
+        // as much of the packet as leaves the error, with its IPv6 and ICMPv6 headers, within IPv6's minimum MTU
+        // (RFC 4443 2.4 c): any link carries it back
+        var toCopy = Math.Min(1280 - 40 - 8, ipPacket.Buffer.Length);
         var icmpIpPacket = BuildIcmpV6(ipPacket.DestinationAddress, ipPacket.SourceAddress,
             ipPacket.Buffer.Span[..toCopy]);
 

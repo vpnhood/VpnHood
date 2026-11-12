@@ -62,6 +62,25 @@ public class ChecksumTest : TestBase
         }
     }
 
+    // RFC 8200 8.1: the IPv6 pseudo header carries the upper-layer packet's length in 32 bits
+    [TestMethod]
+    public void IPv6_pseudo_header_carries_a_length_above_65535()
+    {
+        var sourceAddress = Address(IpVersion.IPv6, 1).GetAddressBytes();
+        var destinationAddress = Address(IpVersion.IPv6, 2).GetAddressBytes();
+        var data = new byte[0x10003];
+        new Random(3).NextBytes(data);
+
+        var pseudoHeader = new byte[40];
+        sourceAddress.CopyTo(pseudoHeader, 0);
+        destinationAddress.CopyTo(pseudoHeader, 16);
+        BinaryPrimitives.WriteUInt32BigEndian(pseudoHeader.AsSpan(32), (uint)data.Length);
+        pseudoHeader[39] = (byte)IpProtocol.Udp;
+
+        Assert.AreEqual(WordByWordChecksum(pseudoHeader, data),
+            PacketUtil.ComputeChecksum(sourceAddress, destinationAddress, (byte)IpProtocol.Udp, data));
+    }
+
     // The checksum written into the data adds its own complement, so the sum becomes all ones and the next
     // checksum is zero: TCP and ICMP carry it as it is, and a field of either zero passes the check
     [TestMethod]

@@ -1,5 +1,6 @@
 ﻿// ReSharper disable UnusedMember.Global
 
+using System.Buffers.Binary;
 using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Net.Packets;
@@ -16,7 +17,7 @@ public static class PacketUtil
     /// <returns>The packet's length in bytes, header included.</returns>
     /// <exception cref="ArgumentException"><paramref name="buffer"/> is too short to hold the length.</exception>
     /// <exception cref="IndexOutOfRangeException"><paramref name="buffer"/> is empty.</exception>
-    /// <exception cref="Exception">The packet is neither IPv4 nor IPv6.</exception>
+    /// <exception cref="NotSupportedException">The packet is neither IPv4 nor IPv6.</exception>
     public static int ReadPacketLength(ReadOnlySpan<byte> buffer)
     {
         var ipVersion = IpPacket.GetPacketVersion(buffer);
@@ -24,7 +25,7 @@ public static class PacketUtil
             // v4
             IpVersion.IPv4 => IpV4Packet.GetPacketLength(buffer),
             IpVersion.IPv6 => IpV6Packet.GetPacketLength(buffer),
-            _ => throw new Exception("Unknown packet version.")
+            _ => throw new NotSupportedException($"IP version {ipVersion} not supported.")
         };
     }
 
@@ -54,14 +55,11 @@ public static class PacketUtil
         }
 
         if (sourceAddress.Length == 16 && destinationAddress.Length == 16) {
-            // IPv6 pseudo header is 40 bytes
+            // IPv6 pseudo header is 40 bytes; its length field is 32 bits (RFC 8200 8.1)
             Span<byte> pseudoHeader = stackalloc byte[40];
             sourceAddress.CopyTo(pseudoHeader[..16]);
             destinationAddress.CopyTo(pseudoHeader[16..32]);
-            pseudoHeader[32] = (byte)(data.Length >> 8);
-            pseudoHeader[33] = (byte)data.Length;
-            pseudoHeader[34] = 0;
-            pseudoHeader[35] = 0;
+            BinaryPrimitives.WriteUInt32BigEndian(pseudoHeader[32..36], (uint)data.Length);
             pseudoHeader[36] = 0;
             pseudoHeader[37] = 0;
             pseudoHeader[38] = 0;

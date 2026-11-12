@@ -17,20 +17,26 @@ public class UdpPacket : IChecksumPayloadPacket
     /// Initializes a new instance of the <see cref="UdpPacket"/> class over a buffer, to parse a datagram or to
     /// build one.
     /// </summary>
-    /// <param name="buffer">The datagram's bytes, header and payload, exactly as long as the datagram.</param>
+    /// <param name="buffer">
+    /// The datagram's bytes, header and payload, exactly as long as the datagram: from 8 to 65535 bytes.
+    /// </param>
     /// <param name="building">
     /// <see langword="true"/> to build: the 8-byte header is cleared and its length field set to the buffer's
     /// length, and the payload is left as it is. <see langword="false"/> to parse: the length field must match
     /// the buffer's length.
     /// </param>
     /// <exception cref="ArgumentException">
-    /// <paramref name="buffer"/> is shorter than 8 bytes, or, when parsing, its length differs from the length
-    /// field.
+    /// <paramref name="buffer"/> is shorter than 8 bytes or longer than 65535, or, when parsing, its length differs
+    /// from the length field.
     /// </exception>
     public UdpPacket(Memory<byte> buffer, bool building)
     {
         if (buffer.Length < 8)
             throw new ArgumentException("Buffer too small for UDP header.", nameof(buffer));
+
+        // the length field holds at most 65535: a longer datagram would say it is shorter
+        if (buffer.Length > 0xFFFF)
+            throw new ArgumentException("Buffer too large for the UDP length field.", nameof(buffer));
 
         // write udpLength
         if (building) {

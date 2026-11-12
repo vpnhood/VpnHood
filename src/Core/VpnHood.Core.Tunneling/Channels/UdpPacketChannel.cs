@@ -179,7 +179,7 @@ public abstract class UdpPacketChannel : PacketTransport, IPacketChannel
     /// read loop serves every session. A packet message is dropped, as one is a channel's own and UDP has none.
     /// </remarks>
     /// <exception cref="ArgumentException">A packet is broken; the rest of the payload is lost.</exception>
-    /// <exception cref="Exception">A packet is neither IPv4 nor IPv6; the rest of the payload is lost.</exception>
+    /// <exception cref="NotSupportedException">A packet is neither IPv4 nor IPv6; the rest of the payload is lost.</exception>
     /// <exception cref="ObjectDisposedException">The traffic meter is disposed.</exception>
     // left so, as a forged datagram costs the read loop as much
     protected void HandUp(Memory<byte> payload)

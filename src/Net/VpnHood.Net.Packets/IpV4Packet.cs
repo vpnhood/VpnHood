@@ -19,17 +19,22 @@ public class IpV4Packet : IpPacket
     /// </summary>
     /// <remarks>
     /// The packet's bytes are cleared, then the version, the header length, the protocol and the total length are
-    /// written. The addresses, the time to live and the checksum are left zero.
+    /// written. The addresses, the time to live and the checksum are left zero. A build that is refused writes
+    /// nothing.
     /// </remarks>
     /// <param name="memory">
     /// The memory, at least <paramref name="packetLength"/> bytes: a <see cref="Memory{T}"/> or an array the caller
     /// keeps, or memory given to the packet (see <see cref="PacketMemory"/>), which stays the caller's when building
     /// fails.
     /// </param>
-    /// <param name="packetLength">The packet's total length in bytes, from 20 to 65535.</param>
+    /// <param name="packetLength">
+    /// The packet's total length in bytes, from 20 to 65535, and at least 20 plus <paramref name="optionsLength"/>.
+    /// </param>
     /// <param name="protocol">The protocol of the payload.</param>
     /// <param name="optionsLength">The length of the header options, a multiple of 4 from 0 to 40.</param>
-    /// <exception cref="ArgumentException"><paramref name="packetLength"/> is below 20 or above 65535.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="packetLength"/> is below 20, above 65535, or shorter than the header with its options.
+    /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// <paramref name="optionsLength"/> is out of range or not a multiple of 4, or <paramref name="packetLength"/> is
     /// negative or exceeds the memory.
@@ -39,14 +44,14 @@ public class IpV4Packet : IpPacket
     {
         var buffer = Buffer;
 
-        // validate buffer length
-        if (buffer.Length is < 20 or > 0xFFFF)
+        // every check comes before the first write: a refused build leaves the caller's memory as it was
+        if (buffer.Length < 20)
             throw new ArgumentException("Buffer too small for IP header.", nameof(packetLength));
 
-        // clean buffer
-        buffer.Span.Clear();
+        // the total length field holds at most 65535: a longer packet would say it is shorter
+        if (buffer.Length > 0xFFFF)
+            throw new ArgumentException("Packet too long for the IPv4 total length field.", nameof(packetLength));
 
-        // validate options length
         if (optionsLength is < 0 or > 40)
             throw new ArgumentOutOfRangeException(nameof(optionsLength),
                 "Options length must be between 0 and 40 bytes.");
@@ -54,6 +59,13 @@ public class IpV4Packet : IpPacket
         if (optionsLength % 4 != 0)
             throw new ArgumentOutOfRangeException(nameof(optionsLength),
                 "Options length must be a multiple of 4 bytes.");
+
+        // the header length field counts the options: past the packet's end, Header and Payload would throw
+        if (buffer.Length < 20 + optionsLength)
+            throw new ArgumentException("Buffer too small for IP header and its options.", nameof(packetLength));
+
+        // clean buffer
+        buffer.Span.Clear();
 
         // set version
         Version = IpVersion.IPv4;

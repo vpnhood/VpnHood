@@ -7,24 +7,28 @@ contract is all the layer beside it relies on.
 ## The layers and their contracts
 
 ```mermaid
----
-config:
-  flowchart:
-    wrappingWidth: 400
----
-flowchart TB
-    HEAD["<b>Head</b> · the app you publish<br/>its brand, its store, its platform"]
-    UI["<b>AppUi</b> · the user interface<br/>our Avalonia UI, or yours"]
-    APP["<b>AppLib</b> · the app's logic<br/>settings, profiles, accounts, billing"]
-    CORE["<b>Core</b> · the VPN service and its engine<br/>ours, or yours that keeps to contract ②"]
-    NET["<b>Net</b> · networking, no VPN<br/>packets, TCP stack, QUIC, adapters"]
+flowchart LR
+    HEAD["<b>Your head</b><br/>names the app,<br/>picks its providers"]
+    subgraph APPSIDE["The app's process"]
+        direction TB
+        UI["<b>AppUi</b><br/>the UI: ours, or yours"]
+        APP["<b>AppLib</b><br/>the app's logic"]
+        DEV["<b>Core</b><br/>the manager, the device"]
+        UI <-->|"① app API"| APP
+        APP --> DEV
+    end
+    subgraph SVCSIDE["The VPN service's process"]
+        direction TB
+        VPN["<b>Core</b><br/>the VPN service,<br/>the engine, the tunnel"]
+        NET["<b>Net</b><br/>the adapter, packets"]
+        VPN --> NET
+    end
+    HEAD -->|starts| APPSIDE
+    DEV <-->|"② VPN service<br/>contract"| VPN
 
-    HEAD --> UI
-    UI <-->|① app API| APP
-    APP <-->|② VPN service contract| CORE
-    CORE --> NET
-
-    classDef head fill:#eceff1,stroke:#546e7a,color:#000
+    style APPSIDE fill:#f8f6ff,stroke:#c4b6ff
+    style SVCSIDE fill:#f8f6ff,stroke:#c4b6ff
+    classDef head fill:#e8fbf7,stroke:#2fd3b5,color:#1f1640
     classDef appUi fill:#e3f2fd,stroke:#1e88e5,color:#000
     classDef appLib fill:#e8f5e9,stroke:#43a047,color:#000
     classDef core fill:#fff3e0,stroke:#fb8c00,color:#000
@@ -32,7 +36,7 @@ flowchart TB
     class HEAD head
     class UI appUi
     class APP appLib
-    class CORE core
+    class DEV,VPN core
     class NET net
 ```
 
@@ -41,6 +45,8 @@ flowchart TB
    the VPN service runs apart, the head carries it too: an iOS app bundles its Network Extension, a
    desktop app its VPN host. CLIENT and CONNECT are our heads; your app's come with the template
    ([Build your VPN app](build-your-app.md); [what a head is made of](source-layout.md#what-a-head-is-made-of)).
+   How a head builds the app at start, and gives it its store's providers:
+   [How a VpnHood app starts](app-startup.md).
 2. **① The app API** is everything a UI needs from the app: six interfaces in `VpnHood.AppLib.Api` -
    the app, profiles, account, billing, intents and proxies. A .NET UI holds them as `VpnHoodApi`: the
    app's own controllers in its process (`VpnHoodApp.Api`), or the same calls over HTTP

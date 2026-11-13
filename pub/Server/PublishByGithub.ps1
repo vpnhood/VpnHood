@@ -4,13 +4,15 @@
 # holds NO code and only a `main` branch (a develop line there would be meaningless); the
 # develop -> main prerelease/stable model lives in THIS monorepo via bump.yml.
 #
-# Two steps, one command:
+# Three steps, one command:
 #   1. Bump the MONOREPO in CI (bump.yml) with the nuget publish OFF — so PubVersion.json advances
 #      and is pushed to develop (+ fast-forwarded to main on a STABLE bump). The CHANGELOG is
 #      hand-maintained and never touched here. Waits for it to finish.
 #   2. Dispatch server_publish.yml in the SERVER repo (its own `main`) to build the server from the
 #      freshly bumped monorepo code (ref = develop) and release it there — plus push the multi-arch
 #      docker image. No bump and no NuGet happen in the server repo.
+#   3. Start the build of developer.vpnhood.com (vpnhood/VpnHood.Developer), which documents the freshly
+#      bumped develop (lib/Start-DeveloperSiteBuild.ps1).
 #
 # Unlike Client/Connect there is NO app store and NO fastlane, so there is no rollout prompt.
 #
@@ -42,6 +44,7 @@ $ErrorActionPreference = "Stop";
 # GITHUB_TOKEN — no token file. Run `gh auth login` once if dispatch fails with a 401.
 
 . "$PSScriptRoot/../lib/Resolve-PublishRepo.ps1";
+. "$PSScriptRoot/../lib/Start-DeveloperSiteBuild.ps1";
 if ([string]::IsNullOrWhiteSpace($monoRepo)) { $monoRepo = Resolve-PublishRepoSlug; }
 if ([string]::IsNullOrWhiteSpace($monoRepo)) {
 	throw "Could not resolve the monorepo. Set -monoRepo owner/name or VH_PUBLISH_REPO.";
@@ -109,6 +112,9 @@ gh workflow run server_publish.yml `
 	-f "push_docker=$($pushDocker.ToString().ToLower())";
 if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch server_publish.yml on $serverRepo."; }
 Write-Host "Dispatched. View runs: https://github.com/$serverRepo/actions/workflows/server_publish.yml" -ForegroundColor Green;
+
+# --- Step 3: developer.vpnhood.com documents the freshly bumped develop -------------------------
+Start-DeveloperSiteBuild $monoRepo;
 
 if ($watch) {
 	Start-Sleep -Seconds 6;

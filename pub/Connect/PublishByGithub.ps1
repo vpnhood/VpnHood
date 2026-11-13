@@ -1,11 +1,13 @@
 # Releases VpnHood CONNECT. Connect's code + version live in THIS monorepo, but Connect releases to a
 # SEPARATE repo (vpnhood/Vpnhood.App.Connect) whose workflow checks out this code at build time.
 #
-# Two steps, one command:
+# Three steps, one command:
 #   1. Bump the MONOREPO in CI (bump.yml) with the nuget publish OFF — so PubVersion.json +
 #      CHANGELOG advance and are pushed to develop + main. Waits for it to finish.
 #   2. Dispatch connect_publish.yml in the CONNECT repo (ref = develop) to build Connect from the
 #      freshly bumped code and release it there. No bump and no NuGet happen in the Connect repo.
+#   3. Start the build of developer.vpnhood.com (vpnhood/VpnHood.Developer), which documents the freshly
+#      bumped develop (lib/Start-DeveloperSiteBuild.ps1).
 #
 # Usage:
 #   ./PublishByGithub.ps1                       # prompts for both, then bumps + releases Connect
@@ -34,6 +36,7 @@ $ErrorActionPreference = "Stop";
 # GITHUB_TOKEN — no token file. Run `gh auth login` once if dispatch fails with a 401.
 
 . "$PSScriptRoot/../lib/Resolve-PublishRepo.ps1";
+. "$PSScriptRoot/../lib/Start-DeveloperSiteBuild.ps1";
 if ([string]::IsNullOrWhiteSpace($monoRepo)) { $monoRepo = Resolve-PublishRepoSlug; }
 if ([string]::IsNullOrWhiteSpace($monoRepo)) {
 	throw "Could not resolve the monorepo. Set -monoRepo owner/name or VH_PUBLISH_REPO.";
@@ -117,6 +120,9 @@ gh workflow run connect_publish.yml `
 	-f "rollout=$rollout";
 if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch connect_publish.yml on $connectRepo."; }
 Write-Host "Dispatched. View runs: https://github.com/$connectRepo/actions/workflows/connect_publish.yml" -ForegroundColor Green;
+
+# --- Step 3: developer.vpnhood.com documents the freshly bumped develop -------------------------
+Start-DeveloperSiteBuild $monoRepo;
 
 if ($watch) {
 	Start-Sleep -Seconds 6;

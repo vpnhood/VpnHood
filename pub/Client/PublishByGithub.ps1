@@ -4,11 +4,13 @@
 # — that repo sets VH_PUBLISH_REPO=vpnhood/VpnHood — so every existing download link, README badge and
 # in-app update URL keeps working.
 #
-# Two steps, one command (the same shape as Connect's dispatcher beside this one):
+# Three steps, one command (the same shape as Connect's dispatcher beside this one):
 #   1. Bump the MONOREPO in CI (bump.yml) with the nuget publish OFF — so PubVersion.json advances and
 #      is pushed to develop + main. Waits for it to finish; a failed bump publishes nothing.
 #   2. Dispatch publish_client.yml in the CLIENT repo (ref = develop) to build from the freshly bumped
 #      code. No bump and no NuGet happen in the client repo.
+#   3. Start the build of developer.vpnhood.com (vpnhood/VpnHood.Developer), which documents the freshly
+#      bumped develop (lib/Start-DeveloperSiteBuild.ps1).
 #
 # Why two dispatches instead of letting bump.yml chain the publish: bump.yml runs here, and dispatching
 # a workflow in the client repo from there would need a cross-repo `actions: write` credential this
@@ -45,6 +47,7 @@ $ErrorActionPreference = "Stop";
 # Resolve the monorepo the same way the build does (no side effects: this resolver does NOT bump the
 # version, unlike Common.ps1, so it is safe to dot-source here).
 . "$PSScriptRoot/../lib/Resolve-PublishRepo.ps1";
+. "$PSScriptRoot/../lib/Start-DeveloperSiteBuild.ps1";
 if ([string]::IsNullOrWhiteSpace($monoRepo)) { $monoRepo = Resolve-PublishRepoSlug; }
 if ([string]::IsNullOrWhiteSpace($monoRepo)) {
 	throw "Could not resolve the monorepo. Set -monoRepo owner/name or VH_PUBLISH_REPO.";
@@ -132,6 +135,9 @@ gh workflow run publish_client.yml `
 	-f "rollout=$rollout";
 if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch publish_client.yml on $clientRepo."; }
 Write-Host "Dispatched. View runs: https://github.com/$clientRepo/actions/workflows/publish_client.yml" -ForegroundColor Green;
+
+# --- Step 3: developer.vpnhood.com documents the freshly bumped develop -------------------------
+Start-DeveloperSiteBuild $monoRepo;
 
 if ($watch) {
 	Start-Sleep -Seconds 6;

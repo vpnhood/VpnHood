@@ -150,7 +150,8 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
 3. Run `pub/Client/PublishByGithub.ps1` (or `pub/Connect/PublishByGithub.ps1`). It prompts for the
    channel and the Play audience ratio, dispatches **Bump Version** (`bump.yml`) here, waits for it,
    then dispatches that app's publish workflow — which lives in its brand repo — against the freshly
-   bumped `develop`. A failed bump means nothing is published.
+   bumped `develop`. A failed bump means nothing is published. Last, it starts the build of developer.vpnhood.com
+   in vpnhood/VpnHood.Developer with the same login, so the site documents the released code.
 4. To bump without publishing, run `bump.yml` directly. Choose `prerelease` on/off and optionally
    tick `then_publish_nugets`. It bumps the version once (`PubVersion.json` + `Directory.Build.props`)
    and pushes `develop` (a stable bump also fast-forwards `main`; a prerelease bump does not). It does

@@ -8,12 +8,40 @@ implements `VpnHood.Net.VpnAdapters.Abstractions`.
 dotnet add package VpnHood.Net.VpnAdapters.WinTun
 ```
 
+## Quick start
+
+Open an adapter and handle the packets the host routes into it. The example compiles with the tests in CI
+([VpnAdaptersReadmeExampleTest.cs](https://github.com/vpnhood/VpnHood/blob/develop/tests/VpnHood.Test/Tests/VpnAdaptersReadmeExampleTest.cs))
+but does not run there, as it needs an administrator's rights. Its namespaces are `VpnHood.Net.VpnAdapters.WinTun`,
+`VpnHood.Net.VpnAdapters.Abstractions` and `VpnHood.Net.Toolkit.Net`.
+
+```csharp Snippet:VpnAdapterWinTun
+// LinuxTunVpnAdapter, AndroidVpnAdapter and IosVpnAdapter take the same calls
+using var adapter = new WinTunVpnAdapter(new WinVpnAdapterSettings {
+    AdapterName = "MyVpn",
+    AutoDisposePackets = true, // the adapter disposes each packet it has written to the host
+    Blocking = false // a full queue drops its oldest packet instead of making a send wait
+});
+
+// every packet the host routes into the tunnel arrives here
+adapter.PacketReceived += (_, ipPacket) => {
+    Console.WriteLine($"{ipPacket.SourceAddress} -> {ipPacket.DestinationAddress}, {ipPacket.Protocol}");
+    ipPacket.Dispose(); // the handler owns each packet: forward it or dispose it
+};
+
+await adapter.Start(new VpnAdapterOptions {
+    SessionName = "My VPN",
+    VirtualIpNetworkV4 = IpNetwork.Parse("10.255.0.2/24"),
+    IncludeNetworks = IpNetwork.All
+}, cancellationToken);
+```
+
 ## How it works
 
 - `WinTunVpnAdapter` is an `IVpnAdapter`: make it with a `WinVpnAdapterSettings`, whose `AdapterName` names the
-  interface, and use it as the
+  interface. The
   [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
-  uses `NullVpnAdapter`.
+  goes on from here: sending packets to the host, and stopping.
 - A start makes the interface and sets its addresses, routes, MTU and metric through Windows' IP Helper API. Its DNS
   servers come with a Name Resolution Policy Table (NRPT) rule that makes them the only ones Windows asks, as
   Windows otherwise asks every adapter's servers at once; Group Policy's own NRPT rules override it, which the

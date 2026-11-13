@@ -3,6 +3,7 @@ using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.Abstractions;
+using VpnHood.Net.VpnAdapters.WinTun;
 
 namespace VpnHood.Test.Tests;
 
@@ -44,5 +45,32 @@ public class VpnAdaptersReadmeExampleTest
         #endregion
 
         Assert.IsFalse(adapter.IsStarted);
+    }
+
+    // Compiled with the tests and never run: a WinTun adapter needs an administrator's rights, installs WinTun's
+    // driver, and with IncludeNetworks = All would take the machine's traffic. VpnHood.Net.VpnAdapters.WinTun's README
+    // and developer.vpnhood.com's home page show it.
+    internal static async Task WinTunQuickStart(CancellationToken cancellationToken)
+    {
+        #region Snippet:VpnAdapterWinTun
+        // LinuxTunVpnAdapter, AndroidVpnAdapter and IosVpnAdapter take the same calls
+        using var adapter = new WinTunVpnAdapter(new WinVpnAdapterSettings {
+            AdapterName = "MyVpn",
+            AutoDisposePackets = true, // the adapter disposes each packet it has written to the host
+            Blocking = false // a full queue drops its oldest packet instead of making a send wait
+        });
+
+        // every packet the host routes into the tunnel arrives here
+        adapter.PacketReceived += (_, ipPacket) => {
+            Console.WriteLine($"{ipPacket.SourceAddress} -> {ipPacket.DestinationAddress}, {ipPacket.Protocol}");
+            ipPacket.Dispose(); // the handler owns each packet: forward it or dispose it
+        };
+
+        await adapter.Start(new VpnAdapterOptions {
+            SessionName = "My VPN",
+            VirtualIpNetworkV4 = IpNetwork.Parse("10.255.0.2/24"),
+            IncludeNetworks = IpNetwork.All
+        }, cancellationToken);
+        #endregion
     }
 }

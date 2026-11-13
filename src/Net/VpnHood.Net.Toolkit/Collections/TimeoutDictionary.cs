@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
 // ReSharper disable OutParameterValueIsAlwaysDiscarded.Global
@@ -13,12 +15,12 @@ namespace VpnHood.Net.Toolkit.Collections;
 /// the operations try, with no timer of its own, against a cached clock of about one second's precision.
 /// Ownership contract:
 /// a value the dictionary adds (or a factory creates) is owned and disposed by the dictionary. One TryAdd returns false
-/// for stays the caller's, though its last-used time may be set; one AddOrUpdate rejects because the dictionary is
+/// for stays the caller's, as it came; one AddOrUpdate rejects because the dictionary is
 /// already disposed stays the caller's. A factory may run more than
 /// once under contention and must return a fresh instance each time; losing instances are disposed.
 /// A returned value may be disposed by a concurrent eviction right after retrieval, so callers must
-/// tolerate IsDisposed values and value Dispose must be idempotent. A value's Dispose must not throw: the
-/// dictionary does not catch it, and a throw would end a drain part-way.
+/// tolerate IsDisposed values and value Dispose must be idempotent. A value's Dispose should not throw: one that
+/// does is logged as an error, and the dictionary goes on with the rest.
 /// </summary>
 /// <typeparam name="TKey">The type of the keys.</typeparam>
 /// <typeparam name="TValue">The type of the values.</typeparam>
@@ -116,14 +118,14 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 if (_items.TryUpdate(key, newEntry, entry)) {
                     // guard the same-instance case; the factory may have returned the mapped value
                     if (!ReferenceEquals(entry.Value, created))
-                        entry.Value.Dispose();
+                        DisposeValue(entry.Value);
                     added = true;
                     return FinishPublish(key, newEntry);
                 }
 
                 // lost the replacement race; drop the orphan and re-observe the current state
                 if (!ReferenceEquals(entry.Value, created))
-                    created.Dispose();
+                    DisposeValue(created);
             }
             else {
                 var created = valueFactory(key);
@@ -135,7 +137,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 }
 
                 // lost the insert race; drop the orphan and re-observe the current state
-                created.Dispose();
+                DisposeValue(created);
             }
         }
     }
@@ -196,7 +198,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 // dispose the displaced value only after the swap succeeded, and never when the
                 // caller passed the instance that is already mapped
                 if (!ReferenceEquals(entry.Value, value))
-                    entry.Value.Dispose();
+                    DisposeValue(entry.Value);
                 return FinishPublish(key, newEntry);
             }
         }
@@ -206,7 +208,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     /// Adds a value unless the key has a live one; an expired one is replaced and disposed.
     /// </summary>
     /// <param name="key">The key.</param>
-    /// <param name="value">The value, which the dictionary owns when it is added; its last-used time may be set either way.</param>
+    /// <param name="value">The value, which the dictionary owns when it is added, with its last-used time set then.</param>
     /// <returns>
     /// <see langword="true"/> if the value was added; <see langword="false"/> if the key has a live value or the
     /// dictionary is disposed, and the caller keeps the value.
@@ -220,17 +222,22 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
 
         AutoCleanupInternal();
 
+        // The value is stamped before each try to publish it. A try that loses to another writer's live value ends
+        // in a refusal, which gives the value back as it came, its time too.
+        var originalLastUsedTime = value.LastUsedTime;
         var newEntry = new Entry(value);
         while (true) {
             if (_items.TryGetValue(key, out var entry)) {
-                if (!IsExpired(entry.Value))
+                if (!IsExpired(entry.Value)) {
+                    value.LastUsedTime = originalLastUsedTime;
                     return false;
+                }
 
                 // an expired occupant must not block a fresh add; replace it like GetOrAdd does
                 value.LastUsedTime = FastDateTime.UtcNow;
                 if (_items.TryUpdate(key, newEntry, entry)) {
                     if (!ReferenceEquals(entry.Value, value))
-                        entry.Value.Dispose();
+                        DisposeValue(entry.Value);
                     FinishPublish(key, newEntry);
                     return true;
                 }
@@ -258,7 +265,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         }
 
         value = entry.Value;
-        value.Dispose();
+        DisposeValue(value);
         return true;
     }
 
@@ -278,13 +285,25 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
 
     private bool TryRemoveEntry(TKey key, Entry entry)
     {
-        // an item's close, ours, never throws: one that did would abort a drain half-way, skip the publishing
-        // handshake or propagate into packet threads
         if (!_items.TryRemove(new KeyValuePair<TKey, Entry>(key, entry)))
             return false;
 
-        entry.Value.Dispose();
+        DisposeValue(entry.Value);
         return true;
+    }
+
+    // An item's close should never throw. One that does is logged and goes no further: thrown on, it would abort
+    // a drain half-way and leave the items after it undisposed, skip the publishing handshake, or reach a packet
+    // thread through a sweep.
+    private static void DisposeValue(TValue value)
+    {
+        try {
+            value.Dispose();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "An item of a TimeoutDictionary failed to dispose. Type: {Type}",
+                VhLogger.FormatType(value));
+        }
     }
 
     private TValue FinishPublish(TKey key, Entry entry)

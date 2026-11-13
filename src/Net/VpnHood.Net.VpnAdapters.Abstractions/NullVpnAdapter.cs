@@ -22,14 +22,12 @@ public class NullVpnAdapter : TunVpnAdapter
     // never waits on into another run. Never reset: a waiter may miss a set that a reset follows. It holds no
     // handle to dispose.
     private volatile ManualResetEventSlim _readerRelease = new(false);
-    private readonly bool _disposeWrittenPackets;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NullVpnAdapter"/> class, named "NullAdapter".
     /// </summary>
     /// <param name="autoDisposePackets">
-    /// <see langword="true"/> to have the transport dispose each packet once sent; <see langword="false"/> to have
-    /// the adapter dispose it as it takes it. Either way a written packet is disposed.
+    /// Not used: an adapter disposes each packet once it is written, whatever this says.
     /// </param>
     /// <param name="blocking">
     /// <see langword="true"/> to make a send wait for room when the queue is full; <see langword="false"/> to drop
@@ -52,7 +50,6 @@ public class NullVpnAdapter : TunVpnAdapter
     protected NullVpnAdapter(VpnAdapterSettings adapterSettings)
         : base(adapterSettings)
     {
-        _disposeWrittenPackets = !adapterSettings.AutoDisposePackets;
     }
 
     /// <inheritdoc/>
@@ -191,16 +188,12 @@ public class NullVpnAdapter : TunVpnAdapter
     }
 
     /// <summary>
-    /// Takes a packet and drops it. The adapter is the packet's last owner, so it disposes the packet where the
-    /// transport does not (<see cref="PacketTransports.PacketTransportOptions.AutoDisposePackets"/>).
+    /// Takes a packet and drops it; the adapter's transport disposes it, as it does every written packet.
     /// </summary>
     /// <param name="ipPacket">The packet.</param>
     /// <returns>Always <see langword="true"/>.</returns>
     protected override bool WritePacket(IpPacket ipPacket)
     {
-        if (_disposeWrittenPackets)
-            ipPacket.Dispose();
-
         return true;
     }
 

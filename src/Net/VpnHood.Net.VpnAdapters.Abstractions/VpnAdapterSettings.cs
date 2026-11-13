@@ -6,6 +6,10 @@ namespace VpnHood.Net.VpnAdapters.Abstractions;
 /// Provides the settings a VPN adapter is made with, which hold for its whole life; what changes from one run to
 /// the next is in <see cref="VpnAdapterOptions"/>.
 /// </summary>
+/// <remarks>
+/// <see cref="PacketTransportOptions.AutoDisposePackets"/> has no effect on an adapter: it hands its packets on to no
+/// one, so each is disposed once it is written.
+/// </remarks>
 public class VpnAdapterSettings : PacketTransportOptions
 {
     /// <summary>

@@ -37,12 +37,15 @@ public static class WindowsCommonFiles
     /// Installs files into the folder of a name, such as <c>WinTun-x64</c>, and the files' hash, unless they are there
     /// already. A folder or a file that others than administrators may change fails the install; it is never repaired.
     /// </summary>
-    /// <param name="name">The folder's name, before the hash; a single name, which is not checked.</param>
+    /// <param name="name">The folder's name, before the hash: a single name, not a path.</param>
     /// <param name="files">
-    /// The files' names, single names, which are not checked, and their contents. Each stream must seek: it is read from its start for its hash, and again to write a
-    /// missing file.
+    /// The files' names, single names too, and their contents. Each stream must seek: it is read from its start for
+    /// its hash, and again to write a missing file.
     /// </param>
     /// <returns>The folder's path.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="name"/> or a file's name is no single name: empty, a path, or with a character no file name has.
+    /// </exception>
     /// <exception cref="UnauthorizedAccessException">
     /// The process is not an administrator's, or Common Files or the folder is a link or not only administrators may
     /// change it.
@@ -52,6 +55,12 @@ public static class WindowsCommonFiles
     /// </exception>
     public static string Install(string name, IReadOnlyDictionary<string, Stream> files)
     {
+        // Single names only: a rooted name, or one with "..", would take the folder or a file out of Common Files,
+        // with an administrator's rights.
+        ThrowIfNotSingleName(name, nameof(name));
+        foreach (var fileName in files.Keys)
+            ThrowIfNotSingleName(fileName, nameof(files));
+
         // what such files serve needs administrators anyway; checked first, for one clear error
         using var identity = WindowsIdentity.GetCurrent();
         if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator))
@@ -78,6 +87,13 @@ public static class WindowsCommonFiles
             InstallFile(new FileInfo(Path.Combine(folder.FullName, fileName)), content, fileHashes[fileName]);
 
         return folder.FullName;
+    }
+
+    private static void ThrowIfNotSingleName(string name, string paramName)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name is "." or ".." || Path.GetFileName(name) != name ||
+            name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new ArgumentException($"'{name}' is not a single file or folder name.", paramName);
     }
 
     // Written under a name of its own and then moved into place, so neither a racing process nor a

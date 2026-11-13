@@ -6,6 +6,8 @@
 /// </summary>
 public class TimeoutItem : ITimeoutItem
 {
+    private int _disposeStarted;
+
     /// <inheritdoc/>
     public DateTime LastUsedTime { get; set; }
 
@@ -23,10 +25,15 @@ public class TimeoutItem : ITimeoutItem
         IsDisposed = true;
     }
 
-    /// <summary>Disposes the item.</summary>
+    /// <summary>Disposes the item, once: a second call, or one at the same moment, does nothing.</summary>
     public void Dispose()
     {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        // one caller runs the cleanup: two at the same moment would both find the item not disposed yet, and a
+        // derived class would release what it holds twice
+        if (Interlocked.Exchange(ref _disposeStarted, 1) != 0)
+            return;
+
+        // Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(true);
         GC.SuppressFinalize(this);
     }

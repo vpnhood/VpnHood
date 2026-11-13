@@ -27,7 +27,7 @@ public sealed class WinEventLogLoggerProvider(string sourceName) : ILoggerProvid
     public ILogger CreateLogger(string categoryName)
     {
         return _logger ??= new TextLogger(new WinEventLogLogger(_eventLog),
-            singleLine: false, includeTime: false, includeScopes: false);
+            singleLine: false, includeTime: false, includeScopes: false, includeLevel: false);
     }
 
     /// <summary>Closes the Application log.</summary>

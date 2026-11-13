@@ -263,8 +263,10 @@ public static class VhLogger
     public static void LogError(EventId eventId, Exception ex, string message, params object?[] args)
     {
 #pragma warning disable CA2254 // it is our log builder, not a simple logging
+        // the exception's message as an argument: put into the template, its braces would be read as the
+        // template's own
         if (IsSocketCloseException(ex)) {
-            Instance.LogDebug(TcpCloseEventId, message + $" Message: {ex.Message}", args);
+            Instance.LogDebug(TcpCloseEventId, message + " Message: {ExceptionMessage}", [.. args, ex.Message]);
             return;
         }
 

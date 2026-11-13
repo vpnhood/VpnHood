@@ -27,8 +27,9 @@ public class Singleton<T> where T : Singleton<T>
         if (!register)
             return;
 
-        if (IsInit) throw new InvalidOperationException($"{typeof(T).Name} is already initialized.");
-        _instance = (T?)this;
+        // in one step: of two instances made at the same moment, both could find none registered
+        if (Interlocked.CompareExchange(ref _instance, (T)this, null) != null)
+            throw new InvalidOperationException($"{typeof(T).Name} is already initialized.");
     }
 
     /// <summary>
@@ -39,8 +40,7 @@ public class Singleton<T> where T : Singleton<T>
     {
         if (disposing) {
             // an unregistered instance must not clear another instance's registration
-            if (_instance == this)
-                _instance = null;
+            Interlocked.CompareExchange(ref _instance, null, (T)this);
         }
     }
 

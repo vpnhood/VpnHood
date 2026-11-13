@@ -12,7 +12,14 @@ public sealed class TestLogCapture : ILoggerProvider, ILogger
     private const string MessagePrefix = "Test log capture: ";
     private readonly ConcurrentQueue<(LogLevel LogLevel, string Message)> _entries = new();
     private readonly ConcurrentQueue<string> _warnings = new();
+    private readonly ConcurrentQueue<string> _eventLines = new();
     public static TestLogCapture Instance { get; } = Create();
+
+    // the name of the event whose lines are kept as they are written, for a test that runs alone
+    public const string CapturedEventName = "TestLogCapture";
+
+    // set, a Debug line with this text fails, as a sink that cannot write does; for a test that runs alone
+    public volatile string? FailingDebugMessage;
 
     private static TestLogCapture Create()
     {
@@ -29,6 +36,8 @@ public sealed class TestLogCapture : ILoggerProvider, ILogger
 
     public IReadOnlyList<string> GetWarnings() => _warnings.ToArray();
 
+    public IReadOnlyList<string> GetEventLines() => _eventLines.ToArray();
+
     public ILogger CreateLogger(string categoryName) => this;
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     public bool IsEnabled(LogLevel logLevel) => true;
@@ -41,6 +50,13 @@ public sealed class TestLogCapture : ILoggerProvider, ILogger
 
         if (logLevel == LogLevel.Warning)
             _warnings.Enqueue(formatter(state, exception));
+
+        if (eventId.Name == CapturedEventName)
+            _eventLines.Enqueue(formatter(state, exception));
+
+        if (logLevel == LogLevel.Debug && FailingDebugMessage is { } failingMessage &&
+            formatter(state, exception) == failingMessage)
+            throw new InvalidOperationException("Test: the sink could not write.");
     }
 
     public void Dispose()

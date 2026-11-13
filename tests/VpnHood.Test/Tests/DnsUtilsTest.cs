@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Test.Tests;
@@ -13,6 +14,7 @@ public class DnsUtilsTest
     private const ushort TruncatedResponse = 0x8380; // QR, TC, RD, RA
     private const ushort ServerFailure = 0x8182; // QR, RD, RA, RCODE 2
     private static readonly IPAddress Address = IPAddress.Parse("192.0.2.1");
+    public required TestContext TestContext { get; set; }
 
     [TestMethod]
     public void A_whole_response_gives_its_addresses()
@@ -36,10 +38,62 @@ public class DnsUtilsTest
             DnsUtils.ParseDnsResponse(BuildResponse(ServerFailure), QueryId));
     }
 
+    [TestMethod]
+    public void A_query_carries_the_name_without_its_last_dot_and_in_ascii()
+    {
+        CollectionAssert.AreEqual(
+            DnsUtils.BuildDnsQuery(QueryId, "vpnhood.com"), DnsUtils.BuildDnsQuery(QueryId, "vpnhood.com."));
+        CollectionAssert.AreEqual(
+            DnsUtils.BuildDnsQuery(QueryId, "xn--bcher-kva.de"), DnsUtils.BuildDnsQuery(QueryId, "b\u00FCcher.de"));
+    }
+
+    [TestMethod]
+    [DataRow("a..com")]
+    [DataRow(".com")]
+    [DataRow("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com")] // a label of 64
+    public void A_name_that_is_no_host_name_makes_no_query(string host)
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => DnsUtils.BuildDnsQuery(QueryId, host));
+    }
+
+    [TestMethod]
+    public void A_response_that_ends_early_is_refused_as_such()
+    {
+        var response = BuildResponse(WholeResponse);
+        Assert.ThrowsExactly<EndOfStreamException>(() => DnsUtils.ParseDnsResponse(response[..^2], QueryId));
+    }
+
+    // the query's own client is of the resolver's family: made without one it is IPv4, and reaches no IPv6 resolver
+    [TestMethod]
+    public async Task A_resolver_at_an_IPv6_address_is_asked()
+    {
+        if (!Socket.OSSupportsIPv6)
+            Assert.Inconclusive("This machine has no IPv6.");
+
+        var cancellationToken = TestContext.CancellationToken;
+        using var resolver = new UdpClient(new IPEndPoint(IPAddress.IPv6Loopback, 0));
+        var resolverEndPoint = (IPEndPoint?)resolver.Client.LocalEndPoint ??
+                               throw new InvalidOperationException("The resolver has no endpoint.");
+        var resolverTask = Task.Run(async () => {
+            var request = await resolver.ReceiveAsync(cancellationToken);
+            await resolver.SendAsync(BuildResponse(request.Buffer, WholeResponse), request.RemoteEndPoint,
+                cancellationToken);
+        }, cancellationToken);
+
+        var hostEntry = await DnsUtils.GetHostEntry("vpnhood.com", resolverEndPoint, TimeSpan.FromSeconds(5),
+            cancellationToken);
+        await resolverTask;
+        CollectionAssert.AreEqual(new[] { Address }, hostEntry.AddressList);
+    }
+
     // the query for vpnhood.com, with one A record that points back at its name
     private static byte[] BuildResponse(ushort flags)
     {
-        var query = DnsUtils.BuildDnsQuery(QueryId, "vpnhood.com");
+        return BuildResponse(DnsUtils.BuildDnsQuery(QueryId, "vpnhood.com"), flags);
+    }
+
+    private static byte[] BuildResponse(byte[] query, ushort flags)
+    {
         using var stream = new MemoryStream();
         stream.Write(query);
         stream.Position = 2;

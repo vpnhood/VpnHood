@@ -37,25 +37,26 @@ public class IpRangeOrderedList :
     private readonly IpAddressValue[] _searchFirsts;
     private readonly IpAddressValue[] _searchLasts;
 
-    /// <summary>Sorts the ranges by a key, for <c>ThenBy</c> and <c>ThenByDescending</c>.</summary>
+    /// <summary>Adds a key to the list's order, for <c>ThenBy</c> and <c>ThenByDescending</c>.</summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="keySelector">The function that gets a range's key.</param>
     /// <param name="comparer">The comparer of keys, or <see langword="null"/> for the default one.</param>
     /// <param name="descending">
     /// <see langword="true"/> to sort by the key in descending order; <see langword="false"/> for ascending.
     /// </param>
-    /// <returns>The ranges, sorted by the key.</returns>
+    /// <returns>The ranges, in this list's order, then the key's.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> is <see langword="null"/>.</exception>
     /// <remarks>
-    /// Unlike other ordered sequences, the key comes first and this list's order breaks its ties only, so
-    /// <c>list.ThenBy(key)</c> sorts the ranges as <c>list.OrderBy(key)</c> would.
+    /// As with any ordered sequence, this list's order comes first, and the key orders only what it leaves equal;
+    /// the list's ranges never start at the same address, so <c>list.ThenBy(key)</c> keeps the list's order.
     /// </remarks>
     public IOrderedEnumerable<IpRange> CreateOrderedEnumerable<TKey>(
         Func<IpRange, TKey> keySelector,
         IComparer<TKey>? comparer, bool descending) =>
-        descending
-            ? _orderedList.OrderByDescending(keySelector, comparer)
-            : _orderedList.OrderBy(keySelector, comparer);
+        // this list's order first, as its first addresses give it, and the key for what that leaves equal
+        _orderedList
+            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer())
+            .CreateOrderedEnumerable(keySelector, comparer, descending);
 
     /// <inheritdoc/>
     public IEnumerator<IpRange> GetEnumerator() => _orderedList.GetEnumerator();
@@ -99,7 +100,7 @@ public class IpRangeOrderedList :
     }
 
     /// <summary>Writes the ranges to a stream in a compact binary form, which <see cref="Deserialize"/> reads.</summary>
-    /// <param name="stream">The stream. It is closed when the method returns.</param>
+    /// <param name="stream">The stream, which is left open.</param>
     /// <exception cref="ArgumentNullException"><paramref name="stream"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException"><paramref name="stream"/> cannot be written.</exception>
     /// <remarks>
@@ -110,8 +111,8 @@ public class IpRangeOrderedList :
     {
         Span<byte> firstIpBuffer = stackalloc byte[16];
         Span<byte> lastIpBuffer = stackalloc byte[16];
-        // serialize to binary
-        using var writer = new BinaryWriter(stream);
+        // serialize to binary; the stream stays the caller's
+        using var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
         writer.Write(_orderedList.Count);
         foreach (var range in _orderedList) {
             var firstIpBytes = range.FirstIpAddress.GetAddressBytesFast(firstIpBuffer);
@@ -125,63 +126,75 @@ public class IpRangeOrderedList :
     }
 
     /// <summary>Reads ranges that <see cref="Serialize"/> wrote.</summary>
-    /// <param name="stream">The stream, at the start of the data. It is closed when the method returns.</param>
+    /// <param name="stream">The stream, at the start of the data. It is left open.</param>
     /// <returns>The list, sorted and merged again.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="stream"/> is <see langword="null"/>.</exception>
-    /// <exception cref="EndOfStreamException">The stream ends before the number of ranges or an address's length.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends before the last range's end.</exception>
+    /// <exception cref="InvalidDataException">
+    /// The number of ranges is negative, or an address is neither 4 nor 16 bytes long.
+    /// </exception>
     /// <exception cref="ArgumentException">
-    /// <paramref name="stream"/> cannot be read, or an address's bytes are neither 4 nor 16, as when the stream ends
-    /// inside an address.
+    /// <paramref name="stream"/> cannot be read, or a range's addresses are of different families, or out of order.
     /// </exception>
-    /// <exception cref="InvalidOperationException">
-    /// A range's addresses are of different families, or out of order.
-    /// </exception>
-    /// <exception cref="OverflowException">The number of ranges is negative.</exception>
-    /// <remarks>
-    /// An address's bytes are not checked against its length: a last address cut short to 4 of its 16 bytes reads as
-    /// an IPv4 address.
-    /// </remarks>
     public static IpRangeOrderedList Deserialize(Stream stream)
     {
-        using var reader = new BinaryReader(stream);
-        var length = reader.ReadInt32();
-        var ipRanges = new IpRange[length];
+        using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+        var length = ReadCount(reader);
+
+        // no room made for a count the stream only claims: the list grows as the ranges come
+        var ipRanges = new List<IpRange>(Math.Min(length, 4096));
         for (var i = 0; i < length; i++) {
-            var firstIpLength = reader.ReadByte();
-            var firstIpBytes = reader.ReadBytes(firstIpLength);
-            var lastIpLength = reader.ReadByte();
-            var lastIpBytes = reader.ReadBytes(lastIpLength);
-            ipRanges[i] = new IpRange(new IPAddress(firstIpBytes), new IPAddress(lastIpBytes));
+            var firstIpBytes = ReadAddress(reader);
+            var lastIpBytes = ReadAddress(reader);
+            ipRanges.Add(new IpRange(new IPAddress(firstIpBytes), new IPAddress(lastIpBytes)));
         }
 
         return new IpRangeOrderedList(ipRanges);
+    }
+
+    private static int ReadCount(BinaryReader reader)
+    {
+        var count = reader.ReadInt32();
+        return count >= 0 ? count : throw new InvalidDataException("The number of IP ranges is negative.");
+    }
+
+    // An address of 4 or 16 bytes, whole: read as its length says and no further check, a last address that the
+    // stream's end cut to 4 of its 16 bytes was an IPv4 address.
+    private static byte[] ReadAddress(BinaryReader reader)
+    {
+        var length = reader.ReadByte();
+        if (length is not (4 or 16))
+            throw new InvalidDataException($"An IP address of {length} bytes is neither IPv4 nor IPv6.");
+
+        var bytes = reader.ReadBytes(length);
+        return bytes.Length == length ? bytes : throw new EndOfStreamException("The IP ranges end inside an address.");
     }
 
     /// <summary>
     /// Reads ranges that <see cref="Serialize"/> wrote as their addresses' bytes, with no <see cref="IpRange"/> or
     /// <see cref="IPAddress"/> made, and no sorting.
     /// </summary>
-    /// <param name="stream">The stream, at the start of the data. It is closed when the enumeration ends.</param>
+    /// <param name="stream">The stream, at the start of the data. It is left open.</param>
     /// <returns>
     /// Each range's first and last address bytes, 4 for IPv4 and 16 for IPv6, in the stream's order, which
-    /// <see cref="Serialize"/> wrote sorted and merged. Nothing is read until the result is enumerated, and the lengths
-    /// are not checked: a last address the stream's end cuts short comes back short.
+    /// <see cref="Serialize"/> wrote sorted and merged. Nothing is read until the result is enumerated.
     /// </returns>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="stream"/> is <see langword="null"/>, when the enumeration starts.
     /// </exception>
     /// <exception cref="ArgumentException"><paramref name="stream"/> cannot be read, when the enumeration starts.</exception>
-    /// <exception cref="EndOfStreamException">The stream ends before the number of ranges or an address's length.</exception>
+    /// <exception cref="EndOfStreamException">The stream ends before the last range's end.</exception>
+    /// <exception cref="InvalidDataException">
+    /// The number of ranges is negative, or an address is neither 4 nor 16 bytes long.
+    /// </exception>
     /// <remarks>For a caller that only stores the ranges, such as a bulk insert into a database.</remarks>
     public static IEnumerable<(byte[] Start, byte[] End)> DeserializeRaw(Stream stream)
     {
-        using var reader = new BinaryReader(stream);
-        var length = reader.ReadInt32();
+        using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
+        var length = ReadCount(reader);
         for (var i = 0; i < length; i++) {
-            var firstIpLength = reader.ReadByte();
-            var firstIpBytes = reader.ReadBytes(firstIpLength);
-            var lastIpLength = reader.ReadByte();
-            var lastIpBytes = reader.ReadBytes(lastIpLength);
+            var firstIpBytes = ReadAddress(reader);
+            var lastIpBytes = ReadAddress(reader);
             yield return (firstIpBytes, lastIpBytes);
         }
     }
@@ -290,9 +303,9 @@ public class IpRangeOrderedList :
     /// <exception cref="ArgumentNullException"><paramref name="ipRanges"/> is <see langword="null"/>.</exception>
     public IpRangeOrderedList Union(IEnumerable<IpRange> ipRanges)
     {
-        // ReSharper disable PossibleMultipleEnumeration
-        return ipRanges.Any() ? new IpRangeOrderedList(_orderedList.Concat(ipRanges)) : this;
-        // ReSharper restore PossibleMultipleEnumeration
+        // read once: a sequence that can be read only once, or costs to read, would give its ranges to the first look
+        var addedRanges = ipRanges as IReadOnlyCollection<IpRange> ?? ipRanges.ToArray();
+        return addedRanges.Count > 0 ? new IpRangeOrderedList(_orderedList.Concat(addedRanges)) : this;
     }
 
     /// <summary>Returns a list of this list's addresses but one.</summary>

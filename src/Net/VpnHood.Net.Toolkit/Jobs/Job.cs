@@ -225,14 +225,17 @@ public class Job : IDisposable
             FailedCount++;
             _currentFailedCount++;
 
-            // stop the job if it has failed too many times
+            // Stop the job if it has failed too many times. Not by Stop(), which throws for a job that is not
+            // started: run by RunNow without a start, or stopped by its own function, that error would take the
+            // place of the function's.
             if (_currentFailedCount > _maxRetry) {
                 _jobRunner.Logger?.LogError(ex,
                     "Job failed too many times and stopped. " +
                     "JobName: {JobName}, FailedCount: {FailedCount}, TotalErrorCount: {TotalFailedCount}",
                     Name, _currentFailedCount, FailedCount);
 
-                Stop();
+                StartedTime = null;
+                _currentFailedCount = 0;
             }
 
             throw;

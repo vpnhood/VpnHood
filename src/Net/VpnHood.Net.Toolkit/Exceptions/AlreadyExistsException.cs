@@ -25,8 +25,25 @@ public sealed class AlreadyExistsException : Exception
         Data["HttpStatusCode"] = 409;
     }
 
-    /// <summary>Gets the name of the collection the object exists in.</summary>
+    // For an error that came from elsewhere with its message made, as an API's: the message as it is. Given as the
+    // collection's name, it would be wrapped in the message a second time.
+    private AlreadyExistsException(string message, Exception innerException, string collectionName) :
+        base(message, innerException)
+    {
+        CollectionName = collectionName;
+        Data["HttpStatusCode"] = 409;
+    }
+
+    /// <summary>
+    /// Gets the name of the collection the object exists in; empty for an exception rebuilt from an API's error,
+    /// which carries the message alone.
+    /// </summary>
     public string CollectionName { get; }
+
+    internal static AlreadyExistsException FromMessage(string message, Exception innerException)
+    {
+        return new AlreadyExistsException(message, innerException, collectionName: "");
+    }
 
     /// <summary>
     /// Determines, by a heuristic, whether an exception, or one of its inner exceptions, tells that an object already

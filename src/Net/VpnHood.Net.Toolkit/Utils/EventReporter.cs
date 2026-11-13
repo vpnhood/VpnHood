@@ -113,7 +113,8 @@ public class EventReporter : IDisposable
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        ReportInternal();
+        // the job ends whatever the last report does: left alive by a report that throws, it would report on
+        VhInvoker.TryInvoke("write an event reporter's last report", LogLevel.Error, ReportInternal);
         _reportJob.Dispose();
     }
 }

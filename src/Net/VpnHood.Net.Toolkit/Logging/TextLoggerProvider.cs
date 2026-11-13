@@ -10,12 +10,14 @@ namespace VpnHood.Net.Toolkit.Logging;
 /// <param name="createLogger">Makes the destination's logger for a category: the same one for every category, or one per category where the destination files by it.</param>
 /// <param name="singleLine"><see langword="true"/> for one line per entry.</param>
 /// <param name="includeTime"><see langword="true"/> to write the time.</param>
-/// <param name="includeScopes"><see langword="true"/> to write the level and the scopes.</param>
+/// <param name="includeScopes"><see langword="true"/> to write the scopes.</param>
+/// <param name="includeLevel"><see langword="true"/> to write the level.</param>
 public class TextLoggerProvider(
     Func<string, ILogger> createLogger,
     bool singleLine = true,
     bool includeTime = true,
-    bool includeScopes = true)
+    bool includeScopes = true,
+    bool includeLevel = true)
     : ILoggerProvider
 {
     private readonly ConcurrentDictionary<string, TextLogger> _loggers = new();
@@ -26,9 +28,11 @@ public class TextLoggerProvider(
     /// <param name="logger">The destination's logger.</param>
     /// <param name="singleLine"><see langword="true"/> for one line per entry.</param>
     /// <param name="includeTime"><see langword="true"/> to write the time.</param>
-    /// <param name="includeScopes"><see langword="true"/> to write the level and the scopes.</param>
-    public TextLoggerProvider(ILogger logger, bool singleLine = true, bool includeTime = true, bool includeScopes = true)
-        : this(_ => logger, singleLine, includeTime, includeScopes)
+    /// <param name="includeScopes"><see langword="true"/> to write the scopes.</param>
+    /// <param name="includeLevel"><see langword="true"/> to write the level.</param>
+    public TextLoggerProvider(ILogger logger, bool singleLine = true, bool includeTime = true, bool includeScopes = true,
+        bool includeLevel = true)
+        : this(_ => logger, singleLine, includeTime, includeScopes, includeLevel)
     {
     }
 
@@ -38,7 +42,7 @@ public class TextLoggerProvider(
     public ILogger CreateLogger(string categoryName)
     {
         return _loggers.GetOrAdd(categoryName,
-            name => new TextLogger(createLogger(name), singleLine, includeTime, includeScopes, name));
+            name => new TextLogger(createLogger(name), singleLine, includeTime, includeScopes, name, includeLevel));
     }
 
     /// <summary>Forgets the loggers it made; the destination's loggers are not disposed.</summary>

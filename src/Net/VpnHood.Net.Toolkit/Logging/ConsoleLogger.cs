@@ -9,7 +9,10 @@ namespace VpnHood.Net.Toolkit.Logging;
 public sealed class ConsoleLogger : ILogger
 {
     private static readonly bool IsColorSupported = GetIsColorSupported();
-    private readonly Lock _lock = new();
+
+    // One for every instance: the console and its color are the process's. With a lock each, one logger could take
+    // another's color for the console's own and put that back.
+    private static readonly Lock ConsoleLock = new();
 
     /// <inheritdoc/>
     /// <remarks>It keeps no scopes: it returns <see langword="null"/>.</remarks>
@@ -31,16 +34,21 @@ public sealed class ConsoleLogger : ILogger
         Func<TState, Exception?, string> formatter)
     {
         var text = formatter(state, exception);
-        lock (_lock) {
+        lock (ConsoleLock) {
             if (!IsColorSupported) {
                 Console.WriteLine(text);
                 return;
             }
 
+            // the console's color comes back whatever the write does
             var prevColor = Console.ForegroundColor;
             Console.ForegroundColor = GetColor(logLevel);
-            Console.WriteLine(text);
-            Console.ForegroundColor = prevColor;
+            try {
+                Console.WriteLine(text);
+            }
+            finally {
+                Console.ForegroundColor = prevColor;
+            }
         }
     }
 

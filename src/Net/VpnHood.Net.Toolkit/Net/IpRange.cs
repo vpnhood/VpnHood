@@ -40,7 +40,7 @@ public class IpRange
     /// <summary>Initializes a new instance of the <see cref="IpRange"/> class.</summary>
     /// <param name="firstIpAddress">The first address.</param>
     /// <param name="lastIpAddress">The last address, of the same family.</param>
-    /// <exception cref="InvalidOperationException">
+    /// <exception cref="ArgumentException">
     /// The two addresses are of different families, or <paramref name="lastIpAddress"/> comes before
     /// <paramref name="firstIpAddress"/>.
     /// </exception>
@@ -52,14 +52,15 @@ public class IpRange
     public IpRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
     {
         if (firstIpAddress.AddressFamily != lastIpAddress.AddressFamily)
-            throw new InvalidOperationException("Both ipAddress must have a same address family!");
+            throw new ArgumentException("Both ipAddress must have a same address family!");
 
         if (IPAddressUtil.Compare(firstIpAddress, lastIpAddress) > 0)
-            throw new InvalidOperationException(
+            throw new ArgumentException(
                 $"{nameof(lastIpAddress)} must be equal or greater than {nameof(firstIpAddress)}");
 
-        FirstIpAddress = firstIpAddress;
-        LastIpAddress = lastIpAddress;
+        // without their scope ids, which are no part of a range: with one, :: would not be the first address
+        FirstIpAddress = IPAddressUtil.WithoutScopeId(firstIpAddress);
+        LastIpAddress = IPAddressUtil.WithoutScopeId(lastIpAddress);
     }
 
     /// <summary>Creates a range that holds one address.</summary>

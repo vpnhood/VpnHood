@@ -363,8 +363,16 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// <exception cref="ArgumentOutOfRangeException">
     /// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
     /// </exception>
+    // An adapter hands its packets on to no one: its device takes their bytes. So the transport disposes each one
+    // once it is written, whatever the settings say; left to the settings, a written packet's memory was never
+    // returned with AutoDisposePackets off.
     protected TunVpnAdapter(VpnAdapterSettings adapterSettings)
-        : base(adapterSettings)
+        : base(new PacketTransportOptions {
+            QueueCapacity = adapterSettings.QueueCapacity,
+            Blocking = adapterSettings.Blocking,
+            BlockingTimeout = adapterSettings.BlockingTimeout,
+            AutoDisposePackets = true
+        })
     {
         _maxPacketSendDelayMs = (int)adapterSettings.MaxPacketSendDelay.TotalMilliseconds;
         _autoRestart = adapterSettings.AutoRestart;
@@ -1072,14 +1080,16 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     // The reader's or the sender's stop on its own I/O errors never waits for the stop lock: a stop that
     // holds it may be waiting for that very thread, and the teardown is that stop's anyway. It stops only
-    // the run the errors came from, checked under the lock: a stop and a restart may have replaced it.
+    // the run the errors came from, checked under the lock: a stop and a restart may have replaced it. The
+    // errors of no run stop nothing: a start under way has no device yet for the sender to write to, and no run
+    // id either, so the sender's errors would end that start.
     private bool StopOnIoErrors(int runId)
     {
         if (!_stopLock.TryEnter())
             return false;
 
         try {
-            return _readerRunId == runId && Stop(false);
+            return runId != NoRunId && _readerRunId == runId && Stop(false);
         }
         finally {
             _stopLock.Exit();
@@ -1499,11 +1509,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     }
 
     // The task runs later than the failure: an owner that has stopped or disposed the adapter since must not hear
-    // of it after its own stop, and one that has started it again has another run, whatever its state by now.
+    // of it after its own stop, and one that has started it again has another run, whatever its state by now. Nor
+    // one whose start has failed since: its caller has that start's exception, and nothing is kept started.
     private void RaiseFailed(EventHandler<Exception>? failed, Exception ex, CancellationTokenSource keepStartedCts)
     {
-        if (keepStartedCts.IsCancellationRequested || keepStartedCts != _keepStartedCts || IsStarted || IsDisposing ||
-            IsDisposed)
+        if (keepStartedCts.IsCancellationRequested || keepStartedCts != _keepStartedCts || !_keepStarted || IsStarted ||
+            IsDisposing || IsDisposed)
             return;
 
         VhInvoker.TryInvoke("raise the adapter's Failed event", LogLevel.Error, () => failed?.Invoke(this, ex));

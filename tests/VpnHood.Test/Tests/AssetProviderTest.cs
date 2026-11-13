@@ -50,6 +50,43 @@ public class AssetProviderTest
         }
     }
 
+    // a root's path ends with its separator already: one more made a prefix no file under it has
+    [TestMethod]
+    public async Task A_folder_that_is_a_root_serves_its_files()
+    {
+        var folder = CreateFolder(("a.txt", "root-file"));
+        try {
+            var root = Path.GetPathRoot(folder) ?? throw new InvalidOperationException("The folder has no root.");
+            var assetPath = Path.GetRelativePath(root, Path.Combine(folder, "a.txt"))
+                .Replace(Path.DirectorySeparatorChar, '/');
+
+            Assert.AreEqual("root-file", await ReadText(new FolderAssetProvider(root), assetPath));
+        }
+        finally {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task A_file_that_is_not_there_is_a_missing_asset()
+    {
+        var folder = CreateFolder(("a.txt", "file"));
+        try {
+            await Assert.ThrowsExactlyAsync<AssetNotFoundException>(() =>
+                new FileAsset(Path.Combine(folder, "none.txt")).OpenReadAsync(TestCt));
+            await Assert.ThrowsExactlyAsync<AssetNotFoundException>(() =>
+                new FileAsset(Path.Combine(folder, "none", "a.txt")).OpenReadAsync(TestCt));
+
+            // a folder is no file, nor is what lies outside the provider's folder
+            var provider = new FolderAssetProvider(folder);
+            await Assert.ThrowsExactlyAsync<AssetNotFoundException>(() => provider.OpenReadAsync("", TestCt));
+            await Assert.ThrowsExactlyAsync<AssetNotFoundException>(() => provider.OpenReadAsync("../a.txt", TestCt));
+        }
+        finally {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
     [TestMethod]
     public void Composite_refuses_an_empty_list()
     {

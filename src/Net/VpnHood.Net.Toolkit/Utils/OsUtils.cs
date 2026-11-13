@@ -33,7 +33,10 @@ public static class OsUtils
     /// <param name="command">The arguments, as one string.</param>
     /// <param name="timeout">How long to wait, or <see cref="Timeout.InfiniteTimeSpan"/> for no limit.</param>
     /// <returns>The program's standard output.</returns>
-    /// <exception cref="TimeoutException">The program was still running at the timeout.</exception>
+    /// <exception cref="TimeoutException">
+    /// The program was still running at the timeout, or its output had not ended, as a child it left behind holds it
+    /// open; both are ended.
+    /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
     /// <exception cref="System.Runtime.InteropServices.ExternalException">
     /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
@@ -122,10 +125,22 @@ public static class OsUtils
         process.Start();
 
         // both streams at once: reading one to its end first stalls a command that fills the other's pipe
+        var stopwatch = Stopwatch.StartNew();
         var errorTask = process.StandardError.ReadToEndAsync();
         var outputTask = process.StandardOutput.ReadToEndAsync();
-        if (!process.WaitForExit(timeout)) {
-            process.Kill(entireProcessTree: true);
+
+        // The timeout is for the command and its output together: a pipe stays open as long as any process holds
+        // it, so a child the command leaves behind keeps the read waiting after the command itself has ended.
+        var isFinished = process.WaitForExit(timeout);
+        if (isFinished && timeout != Timeout.InfiniteTimeSpan) {
+            var remaining = timeout - stopwatch.Elapsed;
+            isFinished = Task.WaitAll([errorTask, outputTask], remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero);
+        }
+
+        if (!isFinished) {
+            // its children too, which hold the pipes; one that cannot be ended must not hide the timeout
+            VhInvoker.TryInvoke("end a command that timed out", LogLevel.Warning,
+                () => process.Kill(entireProcessTree: true));
             throw new TimeoutException(
                 $"The command has not finished in {timeout.TotalSeconds} seconds. Command: {commandLine}.");
         }

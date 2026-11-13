@@ -70,7 +70,8 @@ public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
             ? new Uri("https://www.google-analytics.com/debug/mp/collect")
             : new Uri("https://www.google-analytics.com/mp/collect");
         var requestMessage = new HttpRequestMessage(HttpMethod.Post,
-            new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}"));
+            new Uri(baseUri,
+                $"?api_secret={Uri.EscapeDataString(ApiSecret)}&measurement_id={Uri.EscapeDataString(MeasurementId)}"));
         PrepareHttpHeaders(requestMessage.Headers);
         return SendHttpRequest(requestMessage, "Measurement", ga4Payload, cancellationToken);
     }

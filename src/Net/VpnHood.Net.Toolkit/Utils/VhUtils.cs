@@ -281,6 +281,9 @@ public static class VhUtils
     }
 
     /// <summary>Splits a command line into arguments at white space, keeping a double-quoted part together.</summary>
+    /// <remarks>
+    /// A quoted part and what stands right beside it are one argument, and a pair of quotes alone is an empty one.
+    /// </remarks>
     /// <param name="commandLine">The command line.</param>
     /// <returns>The arguments, without their quotes.</returns>
     public static IEnumerable<string> ParseArguments(string commandLine)
@@ -288,28 +291,33 @@ public static class VhUtils
         if (string.IsNullOrWhiteSpace(commandLine))
             yield break;
 
+        // A quote opens or closes a quoted part and is not kept; only white space outside one ends an argument. So
+        // quoted and plain parts side by side are one argument, and a pair of quotes alone is an empty one.
         var sb = new StringBuilder();
         var inQuote = false;
+        var hasArgument = false;
         foreach (var c in commandLine) {
-            if (c == '"' && !inQuote) {
-                inQuote = true;
+            if (c == '"') {
+                inQuote = !inQuote;
+                hasArgument = true;
                 continue;
             }
 
-            if (c != '"' && !(char.IsWhiteSpace(c) && !inQuote)) {
-                sb.Append(c);
+            if (char.IsWhiteSpace(c) && !inQuote) {
+                if (hasArgument) {
+                    yield return sb.ToString();
+                    sb.Clear();
+                    hasArgument = false;
+                }
+
                 continue;
             }
 
-            if (sb.Length > 0) {
-                var result = sb.ToString();
-                sb.Clear();
-                inQuote = false;
-                yield return result;
-            }
+            sb.Append(c);
+            hasArgument = true;
         }
 
-        if (sb.Length > 0)
+        if (hasArgument)
             yield return sb.ToString();
     }
 
@@ -334,23 +342,30 @@ public static class VhUtils
     }
 
     /// <summary>
-    /// Encrypts a client ID with a shared key, as the server checks it: AES-CBC with a zero IV and no padding, over the
-    /// ID's GUID bytes, or its UTF-8 bytes when it is no GUID.
+    /// Encrypts a client ID with a shared key, as the server checks it: AES-CBC with a zero IV, over the ID's GUID
+    /// bytes, or its UTF-8 bytes when it is no GUID, filled up with zeros to a whole number of blocks.
     /// </summary>
+    /// <remarks>
+    /// The same ID and key always give the same bytes: the server makes them again to check that the client holds
+    /// the key. They are a proof of that, not a secret kept.
+    /// </remarks>
     /// <param name="clientId">The client ID.</param>
-    /// <param name="key">The AES key; only a 128-bit one works now, as the IV is made as long as the key.</param>
+    /// <param name="key">The AES key, of 128, 192 or 256 bits.</param>
     /// <returns>The encrypted bytes.</returns>
-    /// <exception cref="System.Security.Cryptography.CryptographicException">
-    /// The key is not 128 bits, or the ID's bytes are not a whole number of blocks.
-    /// </exception>
+    /// <exception cref="System.Security.Cryptography.CryptographicException">The key is of no AES size.</exception>
     public static byte[] EncryptClientId(string clientId, byte[] key)
     {
         // Validate request by shared secret
         using var aes = Aes.Create();
         aes.Mode = CipherMode.CBC;
         aes.Key = key;
-        aes.IV = new byte[key.Length];
-        aes.Padding = PaddingMode.None;
+
+        // a block of zeros, whatever the key's size: made as long as the key, it fit a 128-bit key alone
+        aes.IV = new byte[aes.BlockSize / 8];
+
+        // none is added to a GUID's 16 bytes, so their bytes are as they always were; an ID of another length is
+        // filled up, where it could not be encrypted at all
+        aes.Padding = PaddingMode.Zeros;
 
         // compatibility with old clients
         var buffer = Guid.TryParse(clientId, out var clientGuid)
@@ -498,8 +513,8 @@ public static class VhUtils
         // ReSharper disable PossibleLossOfFraction
 
         // Get absolute value
-        if (bytes >= 0x40000000) // Gigabyte
-            return ((double)(bytes / 0x40000000)).ToString("0.# ") + "Gbps";
+        if (bytes >= 0x40000000) // Gigabyte, with the fraction its format asks for: divided as a real number
+            return (bytes / (double)0x40000000).ToString("0.# ") + "Gbps";
 
         if (bytes >= 0x100000) // Megabyte
             return ((double)(bytes / 0x100000)).ToString("0 ") + "Mbps";

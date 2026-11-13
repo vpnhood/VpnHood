@@ -204,13 +204,13 @@ public class ApiClientBase : ApiClientCommon
         return result ?? "";
     }
 
-    /// <summary>Sends a request; the body of a success is not read.</summary>
+    /// <summary>Sends a request and reads its response as text, not as an object.</summary>
     /// <param name="httpMethod">The method.</param>
     /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
     /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
     /// <param name="data">The body, sent as JSON, or <see langword="null"/> for none.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>A task whose result is empty.</returns>
+    /// <returns>A task whose result is the response's text; empty for status 204.</returns>
     /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
     /// <exception cref="Exception">
     /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
@@ -277,12 +277,12 @@ public class ApiClientBase : ApiClientCommon
         return await HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).Vhc();
     }
 
-    /// <summary>Sends a request the caller made; the body of a success is not read.</summary>
+    /// <summary>Sends a request the caller made, and reads its response as text, not as an object.</summary>
     /// <param name="urlPart">The URL, relative to <see cref="ApiClientCommon.DefaultBaseAddress"/> or absolute.</param>
     /// <param name="parameters">The query's parameters, or <see langword="null"/> for none.</param>
     /// <param name="request">The request, which the caller keeps owning.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>A task whose result is empty.</returns>
+    /// <returns>A task whose result is the response's text; empty for status 204.</returns>
     /// <exception cref="ApiException">The status is not a success, or the response cannot be read.</exception>
     /// <exception cref="Exception">
     /// The exception <see cref="ToException"/> makes for an error response, or the client has no <see cref="HttpClient"/>.
@@ -379,8 +379,18 @@ public class ApiClientBase : ApiClientCommon
         var status = (int)response.StatusCode;
         if (status is >= 200 and < 300) {
             // 204 says there is no body; a typed caller gets default for it rather than a parse failure
-            if (typeof(T) == typeof(HttpNoResult) || status == (int)HttpStatusCode.NoContent)
+            if (status == (int)HttpStatusCode.NoContent)
                 return new HttpResult<T> { ResponseMessage = response, Object = default!, Text = string.Empty };
+
+            // no object asked for: the body is the result's text, read as it is
+            if (typeof(T) == typeof(HttpNoResult))
+                return new HttpResult<T> {
+                    ResponseMessage = response,
+                    Object = default!,
+                    Text = response.Content != null
+                        ? await response.Content.ReadAsStringAsync(cancellationToken).Vhc()
+                        : string.Empty
+                };
 
             var objectResponse =
                 await ReadObjectResponseAsync<T>(response, headers, cancellationToken).Vhc();

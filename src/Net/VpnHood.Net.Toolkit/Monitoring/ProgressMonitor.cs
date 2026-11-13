@@ -7,27 +7,43 @@ namespace VpnHood.Net.Toolkit.Monitoring;
 /// batch of slow tasks runs: the larger of the share of tasks completed and the share of the time the batches may
 /// take.
 /// </summary>
-/// <remarks>In a release build, the percentage stays within 0 to 100, given at least one task, a positive task timeout and a positive parallelism.</remarks>
+/// <remarks>
+/// A run of no tasks is complete, at 100. A task timeout that is not positive leaves the time out, and the percentage
+/// follows the completed tasks alone. In a release build the percentage stays within 0 to 100.
+/// </remarks>
 /// <param name="totalTaskCount">The number of tasks.</param>
 /// <param name="taskTimeout">How long one task may take; a batch may take as long.</param>
 /// <param name="maxDegreeOfParallelism">How many tasks run at once, as a batch. The default is 1.</param>
+/// <exception cref="ArgumentOutOfRangeException">
+/// <paramref name="totalTaskCount"/> is negative, or <paramref name="maxDegreeOfParallelism"/> is less than 1.
+/// </exception>
 public class ProgressMonitor(
     int totalTaskCount,
     TimeSpan taskTimeout,
     int maxDegreeOfParallelism = 1)
 {
+    private readonly int _totalTaskCount = totalTaskCount >= 0
+        ? totalTaskCount
+        : throw new ArgumentOutOfRangeException(nameof(totalTaskCount), totalTaskCount, "The number of tasks cannot be negative.");
+
+    // a batch of no tasks would divide by zero
+    private readonly int _maxDegreeOfParallelism = maxDegreeOfParallelism >= 1
+        ? maxDegreeOfParallelism
+        : throw new ArgumentOutOfRangeException(nameof(maxDegreeOfParallelism), maxDegreeOfParallelism, "The parallelism must be at least 1.");
+
+    private readonly TimeSpan _taskTimeout = taskTimeout;
     private readonly DateTime _startTime = FastDateTime.UtcNow;
     private DateTime _currentBatchStartTime = FastDateTime.UtcNow;
     private readonly Lock _incrementLock = new();
     private int _completedTaskCount;
-    private int TotalBatches => (int)Math.Ceiling(totalTaskCount / (double)maxDegreeOfParallelism);
-    private TimeSpan MaxDuration => TimeSpan.FromMilliseconds(taskTimeout.TotalMilliseconds * TotalBatches);
-    private int CurrentBatchIndex => _completedTaskCount / maxDegreeOfParallelism;
+    private int TotalBatches => (int)Math.Ceiling(_totalTaskCount / (double)_maxDegreeOfParallelism);
+    private TimeSpan MaxDuration => TimeSpan.FromMilliseconds(_taskTimeout.TotalMilliseconds * TotalBatches);
+    private int CurrentBatchIndex => _completedTaskCount / _maxDegreeOfParallelism;
 
     /// <summary>Gets the progress now.</summary>
     public ProgressStatus Progress => new(
         Completed: _completedTaskCount,
-        Total: totalTaskCount,
+        Total: _totalTaskCount,
         StartedTime: _startTime,
         Percentage: ProgressPercentage);
 
@@ -36,7 +52,7 @@ public class ProgressMonitor(
     {
         lock (_incrementLock) {
             _completedTaskCount++;
-            if (_completedTaskCount % maxDegreeOfParallelism == 0)
+            if (_completedTaskCount % _maxDegreeOfParallelism == 0)
                 _currentBatchStartTime = FastDateTime.UtcNow;
         }
     }
@@ -45,23 +61,30 @@ public class ProgressMonitor(
     public void Finish()
     {
         lock (_incrementLock)
-            _completedTaskCount = totalTaskCount;
+            _completedTaskCount = _totalTaskCount;
     }
 
     private int ProgressPercentage {
         get {
             lock (_incrementLock) {
+                // nothing to run is a run that is complete; its shares below would be 0 of 0
+                if (_totalTaskCount == 0)
+                    return 100;
+
                 // Method 1: Progress based on completed tasks
-                var taskCompletionProgress = _completedTaskCount / (double)totalTaskCount * 100.0;
+                var taskCompletionProgress = _completedTaskCount / (double)_totalTaskCount * 100.0;
 
-                // Method 2: Overall time-based progress
+                // Method 2: Overall time-based progress; without a time to share, the tasks alone tell
                 // completedTime not exceed of its own bound
-                var completedTime = CurrentBatchIndex * taskTimeout + (FastDateTime.UtcNow - _currentBatchStartTime);
-                var maxCurrentBatchTime = (CurrentBatchIndex + 1) * taskTimeout;
-                if (completedTime > maxCurrentBatchTime)
-                    completedTime = maxCurrentBatchTime;
+                var timeProgress = 0.0;
+                if (_taskTimeout > TimeSpan.Zero) {
+                    var completedTime = CurrentBatchIndex * _taskTimeout + (FastDateTime.UtcNow - _currentBatchStartTime);
+                    var maxCurrentBatchTime = (CurrentBatchIndex + 1) * _taskTimeout;
+                    if (completedTime > maxCurrentBatchTime)
+                        completedTime = maxCurrentBatchTime;
 
-                var timeProgress = completedTime / MaxDuration * 100.0;
+                    timeProgress = completedTime / MaxDuration * 100.0;
+                }
 
                 // Use the maximum of all three methods to ensure smooth progress that never goes backward
                 var progress = Math.Max(taskCompletionProgress, timeProgress);

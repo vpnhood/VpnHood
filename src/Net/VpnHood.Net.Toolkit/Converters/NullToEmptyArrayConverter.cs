@@ -7,6 +7,7 @@ namespace VpnHood.Net.Toolkit.Converters;
 /// <summary>
 /// Converts an array, reading JSON null as an empty array.
 /// </summary>
+/// <remarks>It can be set on a property or added to the settings' converters, for every array of the type.</remarks>
 /// <typeparam name="T">The type of the items.</typeparam>
 public class NullToEmptyArrayConverter<T> : JsonConverter<T[]>
 {
@@ -21,19 +22,38 @@ public class NullToEmptyArrayConverter<T> : JsonConverter<T[]>
         if (reader.TokenType == JsonTokenType.Null)
             return [];
 
-        return JsonSerializer.Deserialize(ref reader, GetArrayTypeInfo(options)) ??
-               throw new JsonException($"Could not parse {typeof(T)}");
+        if (reader.TokenType != JsonTokenType.StartArray)
+            throw new JsonException($"Could not parse {typeof(T)}[]. TokenType: {reader.TokenType}");
+
+        // Item by item, never the array through the settings: with this converter among the settings' own, the
+        // array's serializer is this converter again, without end.
+        var itemTypeInfo = GetItemTypeInfo(options);
+        var items = new List<T>();
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+            items.Add(JsonSerializer.Deserialize(ref reader, itemTypeInfo)!);
+
+        return items.ToArray();
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, T[] value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, T[]? value, JsonSerializerOptions options)
     {
-        JsonSerializer.Serialize(writer, value, GetArrayTypeInfo(options));
+        if (value == null) {
+            writer.WriteNullValue();
+            return;
+        }
+
+        var itemTypeInfo = GetItemTypeInfo(options);
+        writer.WriteStartArray();
+        foreach (var item in value)
+            JsonSerializer.Serialize(writer, item, itemTypeInfo);
+
+        writer.WriteEndArray();
     }
 
     // From the settings' own resolver: the overloads that take the settings need reflection.
-    private static JsonTypeInfo<T[]> GetArrayTypeInfo(JsonSerializerOptions options)
+    private static JsonTypeInfo<T> GetItemTypeInfo(JsonSerializerOptions options)
     {
-        return (JsonTypeInfo<T[]>)options.GetTypeInfo(typeof(T[]));
+        return (JsonTypeInfo<T>)options.GetTypeInfo(typeof(T));
     }
 }

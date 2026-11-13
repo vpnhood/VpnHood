@@ -27,7 +27,7 @@ public sealed class LinuxJournalSocketLoggerProvider(string identifier) : ILogge
     public ILogger CreateLogger(string categoryName)
     {
         return _logger ??= new TextLogger(new LinuxJournalSocketLogger(_socket, identifier),
-            singleLine: false, includeTime: false, includeScopes: false);
+            singleLine: false, includeTime: false, includeScopes: false, includeLevel: false);
     }
 
     /// <inheritdoc/>

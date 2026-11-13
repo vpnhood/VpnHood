@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
@@ -73,7 +74,7 @@ public static class DnsUtils
     /// <param name="timeout">How long the send and the answer may take.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the host's addresses.</returns>
-    /// <exception cref="ArgumentException"><paramref name="host"/> is empty or white space.</exception>
+    /// <exception cref="ArgumentException"><paramref name="host"/> is empty or white space, or no host name.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="dnsEndPoint"/> is <see langword="null"/>.</exception>
     /// <exception cref="OperationCanceledException">The timeout passed, or <paramref name="cancellationToken"/> was canceled.</exception>
     /// <exception cref="InvalidOperationException">The answer is not this query's, not a response, truncated, or an error.</exception>
@@ -83,7 +84,10 @@ public static class DnsUtils
     public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
-        using var udpClientTemp = new UdpClient();
+        ArgumentNullException.ThrowIfNull(dnsEndPoint);
+
+        // of the resolver's own family: a client made without one is IPv4, which no IPv6 resolver can be reached with
+        using var udpClientTemp = new UdpClient(dnsEndPoint.AddressFamily);
         return await GetHostEntry(host, dnsEndPoint, udpClientTemp, timeout, cancellationToken).Vhc();
     }
 
@@ -97,7 +101,7 @@ public static class DnsUtils
     /// <param name="timeout">How long the send and the answer may take.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the host's addresses.</returns>
-    /// <exception cref="ArgumentException"><paramref name="host"/> is empty or white space.</exception>
+    /// <exception cref="ArgumentException"><paramref name="host"/> is empty or white space, or no host name.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="dnsEndPoint"/> is <see langword="null"/>.</exception>
     /// <exception cref="OperationCanceledException">The timeout passed, or <paramref name="cancellationToken"/> was canceled.</exception>
     /// <exception cref="InvalidOperationException">The answer is not this query's, not a response, truncated, or an error.</exception>
@@ -143,8 +147,14 @@ public static class DnsUtils
 
     /// <summary>Builds a DNS query for a host's A records, recursion desired.</summary>
     /// <param name="queryId">The query's ID.</param>
-    /// <param name="host">The host name.</param>
+    /// <param name="host">
+    /// The host name. A dot at its end is left out, and a label with Unicode letters goes in its ASCII form.
+    /// </param>
     /// <returns>The query's bytes.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="host"/> is empty, or no host name: a label of it is empty or longer than 63 characters, or the
+    /// name longer than 253.
+    /// </exception>
     public static byte[] BuildDnsQuery(ushort queryId, string host)
     {
         using var stream = new MemoryStream();
@@ -159,7 +169,7 @@ public static class DnsUtils
         writer.Write((ushort)IPAddress.HostToNetworkOrder((short)0)); // Additional RRs
 
         // Question section
-        foreach (var label in host.Split('.')) {
+        foreach (var label in GetQueryLabels(host)) {
             writer.Write((byte)label.Length);
             writer.Write(Encoding.ASCII.GetBytes(label));
         }
@@ -169,6 +179,31 @@ public static class DnsUtils
         writer.Write((ushort)IPAddress.HostToNetworkOrder((short)1)); // Class IN
 
         return stream.ToArray();
+    }
+
+    // The name as a query carries it: without the root's dot at its end, its Unicode labels in their ASCII form, and
+    // each label and the whole within DNS's lengths. Written unchecked, an empty label ended the name early, a
+    // Unicode letter went out as a question mark, and a long label's length read as a pointer.
+    private static string[] GetQueryLabels(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+            throw new ArgumentException("Host cannot be null or empty", nameof(host));
+
+        var name = host.EndsWith('.') ? host[..^1] : host;
+        try {
+            name = new IdnMapping().GetAscii(name);
+        }
+        catch (ArgumentException ex) {
+            throw new ArgumentException($"'{host}' is not a host name: {ex.Message}", nameof(host), ex);
+        }
+
+        var labels = name.Split('.');
+        if (name.Length > 253 || labels.Any(label => label.Length is 0 or > 63))
+            throw new ArgumentException(
+                $"'{host}' is not a host name: a label is empty or longer than 63 characters, or the name longer than 253.",
+                nameof(host));
+
+        return labels;
     }
 
     /// <summary>
@@ -233,11 +268,11 @@ public static class DnsUtils
 
             if (type == 1 && @class == 1 && dataLength == 4) // Type A, Class IN, an IPv4 address
             {
-                var addressBytes = reader.ReadBytes(dataLength);
+                var addressBytes = ReadBytes(reader, dataLength);
                 ipAddresses.Add(new IPAddress(addressBytes));
             }
             else {
-                reader.ReadBytes(dataLength); // Skip non-A records
+                ReadBytes(reader, dataLength); // Skip non-A records
             }
         }
 
@@ -265,7 +300,16 @@ public static class DnsUtils
                 break;
             }
 
-            reader.ReadBytes(length);
+            ReadBytes(reader, length);
         }
+    }
+
+    // All of them or none: BinaryReader gives what is left of a response that ends early, with no word of it
+    private static byte[] ReadBytes(BinaryReader reader, int count)
+    {
+        var bytes = reader.ReadBytes(count);
+        return bytes.Length == count
+            ? bytes
+            : throw new EndOfStreamException("The DNS response ends early.");
     }
 }

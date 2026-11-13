@@ -45,6 +45,32 @@ public class ZipAssetProviderTest : TestBase
             Directory.GetDirectories(extractPath).Select(Path.GetFileName).ToArray());
     }
 
+    // The cleanup after an extraction takes old versions and unfinished copies, but not a copy another instance is
+    // writing at that moment: deleted under its writer, it would be finished and marked with files missing.
+    [TestMethod]
+    public async Task A_copy_another_instance_is_writing_is_left_alone_and_a_leftover_goes()
+    {
+        var folderPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        var extractPath = Path.Combine(folderPath, "extracted");
+        var zipPath = await WriteZip(folderPath, stamped: true, "a.txt", "hello");
+
+        var writingPath = Path.Combine(extractPath, $"0123456789abcdef.{Guid.NewGuid():N}.tmp");
+        var leftoverPath = Path.Combine(extractPath, $"0123456789abcdef.{Guid.NewGuid():N}.tmp");
+        var oldVersionPath = Path.Combine(extractPath, "fedcba9876543210");
+        foreach (var path in new[] { writingPath, leftoverPath, oldVersionPath }) {
+            Directory.CreateDirectory(path);
+            await File.WriteAllTextAsync(Path.Combine(path, "a.txt"), "other", TestCt);
+        }
+
+        // the leftover's writer is long gone
+        Directory.SetLastWriteTimeUtc(leftoverPath, DateTime.UtcNow - TimeSpan.FromHours(2));
+
+        Assert.AreEqual("hello", await ReadEntry(new ZipAssetProvider(new FileAsset(zipPath), extractPath), "a.txt"));
+        Assert.IsTrue(File.Exists(Path.Combine(writingPath, "a.txt")), "The copy being written was deleted.");
+        Assert.IsFalse(Directory.Exists(leftoverPath));
+        Assert.IsFalse(Directory.Exists(oldVersionPath));
+    }
+
     // a zip without a stamp, a fork's packed by its own tool, still extracts, named by its hash
     [TestMethod]
     public async Task A_zip_without_a_stamp_still_extracts()

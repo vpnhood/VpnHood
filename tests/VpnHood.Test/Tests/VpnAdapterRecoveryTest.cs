@@ -593,6 +593,29 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
+    public async Task Write_errors_during_a_start_do_not_end_it()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { HoldBeforeAdd = true, FailWrite = true };
+        var failedCount = 0;
+        adapter.Failed += (_, _) => Interlocked.Increment(ref failedCount);
+        var startTask = adapter.Start(CreateAdapterOptions(), TestCt);
+        await AssertEqualsWait(true, () => adapter.IsStartHeld);
+
+        // more write errors in a row than stop a run, each in a batch of its own. There is no run yet: the start
+        // has no device to write to, and its sender's errors are not a run's
+        for (var i = 1; i <= 12; i++) {
+            adapter.SendPacketQueued(BuildPacket());
+            await AssertEqualsWait((long)i, () => adapter.PacketStat.DroppedPackets);
+        }
+
+        adapter.FailWrite = false;
+        adapter.ReleaseStart();
+        await startTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.IsTrue(adapter.IsStarted);
+        Assert.AreEqual(0, failedCount);
+    }
+
+    [TestMethod]
     public async Task A_null_adapters_reader_ends_with_its_run()
     {
         using var adapter = new ReaderCountingNullVpnAdapter();
@@ -613,12 +636,12 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
-    public async Task A_null_adapter_disposes_a_packet_its_transport_leaves_to_it()
+    public async Task An_adapter_disposes_a_written_packet_whatever_its_settings_say()
     {
-        using var adapter = new NullVpnAdapter(autoDisposePackets: false, blocking: false);
+        using var adapter = new CopyingVpnAdapter();
         await adapter.Start(CreateAdapterOptions(), TestCt);
 
-        // nothing takes a packet on from an adapter with no interface: it is the packet's last owner
+        // nothing takes a packet on from an adapter: its transport disposes it, with AutoDisposePackets off too
         var packet = BuildPacket();
         adapter.SendPacketQueued(packet);
         await AssertEqualsWait(1L, () => adapter.PacketStat.SentPackets);
@@ -727,6 +750,20 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     // a null adapter whose readers and their waits are counted
+    // as a platform adapter: its write copies the packet's bytes out and disposes nothing; its settings leave the
+    // packets' disposal off
+    private sealed class CopyingVpnAdapter() : NullVpnAdapter(new VpnAdapterSettings {
+        AdapterName = "CopyingAdapter",
+        Blocking = false,
+        AutoDisposePackets = false
+    })
+    {
+        protected override bool WritePacket(IpPacket ipPacket)
+        {
+            return true;
+        }
+    }
+
     private sealed class ReaderCountingNullVpnAdapter() : NullVpnAdapter(autoDisposePackets: true, blocking: false)
     {
         public int ReaderCount;

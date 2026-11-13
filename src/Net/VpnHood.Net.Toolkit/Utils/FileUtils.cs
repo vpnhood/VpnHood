@@ -17,10 +17,12 @@ public static class FileUtils
     /// <param name="sourcePath">The file's or folder's path.</param>
     /// <param name="targetPath">The new path.</param>
     /// <returns>
-    /// <see langword="true"/> if it was moved or deleted; <see langword="false"/> if it is gone, as another process may
-    /// have moved it first.
+    /// <see langword="true"/> if it was moved or deleted, or the two paths are the same place;
+    /// <see langword="false"/> if it is gone, as another process may have moved it first.
     /// </returns>
-    /// <exception cref="IOException">The move or the deletion failed.</exception>
+    /// <exception cref="IOException">
+    /// The move or the deletion failed, as when the new place's folder is missing.
+    /// </exception>
     /// <exception cref="UnauthorizedAccessException">The process may not move or delete it.</exception>
     public static bool MoveOrDiscard(string sourcePath, string targetPath)
     {
@@ -29,6 +31,11 @@ public static class FileUtils
             if (!isFolder && !File.Exists(sourcePath))
                 return false;
 
+            // The same place: it is there already. Taken for a new place that has one, it would be deleted, the
+            // only copy with it.
+            if (IsSamePath(sourcePath, targetPath))
+                return true;
+
             var isTargetPresent = File.Exists(targetPath) || Directory.Exists(targetPath);
             if (isFolder && isTargetPresent) Directory.Delete(sourcePath, recursive: true);
             else if (isFolder) Directory.Move(sourcePath, targetPath);
@@ -36,9 +43,24 @@ public static class FileUtils
             else File.Move(sourcePath, targetPath);
             return true;
         }
-        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) {
-            return false; // another process moved it in the meantime
+        // another process moved it in the meantime; with the source still there, the new place is what is missing
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException &&
+                                   !File.Exists(sourcePath) && !Directory.Exists(sourcePath)) {
+            return false;
         }
+    }
+
+    // as the file system compares names: without their case on Windows and macOS
+    private static bool IsSamePath(string path1, string path2)
+    {
+        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        return string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(path1)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(path2)),
+            comparison);
     }
 
     /// <summary>

@@ -126,7 +126,8 @@ public class Redactor(bool isAnonymousMode)
 
     /// <summary>
     /// Redacts a host name: one that is an address or an endpoint as one; otherwise, in anonymous mode, all but its first
-    /// two and last four characters, or for a short name all but its last four.
+    /// two and last four characters, for a short name all but its last four, and a name of four characters or fewer
+    /// whole.
     /// </summary>
     /// <param name="dnsName">The host name, or <see langword="null"/>.</param>
     /// <returns>The text, or <c>&lt;null&gt;</c>.</returns>
@@ -136,6 +137,10 @@ public class Redactor(bool isAnonymousMode)
         if (IPAddress.TryParse(dnsName, out var ipAddress)) return RedactIpAddress(ipAddress);
         if (IPEndPoint.TryParse(dnsName, out var ipEndPoint)) return RedactEndPoint(ipEndPoint);
         if (!IsAnonymousMode) return dnsName;
+
+        // its last four characters would be the whole of it
+        if (dnsName.Length <= 4)
+            return "***";
 
         return dnsName.Length <= 8
             ? "***" + dnsName[^4..]
@@ -154,9 +159,9 @@ public class Redactor(bool isAnonymousMode)
     }
 
     /// <summary>
-    /// Redacts the addresses in a packet's text, after its <c>SourceAddress</c>, <c>DestinationAddress</c>, <c>Src</c> and
-    /// <c>Dst</c> labels, as <see cref="RedactIpAddress"/> does: only each label's first occurrence, up to the next
-    /// comma; a text without a label may come out as <c>*</c> whole.
+    /// Redacts the addresses in a packet's text, after each of its <c>SourceAddress</c>, <c>DestinationAddress</c>,
+    /// <c>Src</c> and <c>Dst</c> labels, as <see cref="RedactIpAddress"/> does. A value ends at a comma, a space or the
+    /// text's end; one that is no address is written as <c>***</c>, and the rest of the text stays as it is.
     /// </summary>
     /// <param name="ipPacketText">The packet's text.</param>
     /// <returns>The text.</returns>
@@ -302,21 +307,30 @@ public class Redactor(bool isAnonymousMode)
 
     private string RedactIpAddressInText(string text, string keyText)
     {
-        try {
-            var start = text.IndexOf($"{keyText}=", StringComparison.Ordinal) + 1;
-            if (start == -1)
-                return text;
-            start += keyText.Length;
+        var label = keyText + "=";
+        var searchStart = 0;
+        while (true) {
+            var labelStart = text.IndexOf(label, searchStart, StringComparison.Ordinal);
+            if (labelStart == -1)
+                return text; // a text without the label has nothing of it to hide
 
-            var end = text.IndexOf(",", start, StringComparison.Ordinal);
-            var ipAddressText = text[start..end];
-            var ipAddress = IPAddress.Parse(ipAddressText);
+            // the end of a longer label is another label
+            var start = labelStart + label.Length;
+            if (labelStart > 0 && char.IsLetterOrDigit(text[labelStart - 1])) {
+                searchStart = start;
+                continue;
+            }
 
-            text = text[..start] + RedactIpAddress(ipAddress) + text[end..];
-            return text;
-        }
-        catch {
-            return "*";
+            var length = text.AsSpan(start).IndexOfAny(',', ' ');
+            var end = length == -1 ? text.Length : start + length;
+
+            // an address as its token; what is no address is hidden too, never left as it came
+            var redacted = IPAddress.TryParse(text.AsSpan(start, end - start), out var ipAddress)
+                ? RedactIpAddress(ipAddress)
+                : "***";
+
+            text = string.Concat(text.AsSpan(0, start), redacted, text.AsSpan(end));
+            searchStart = start + redacted.Length;
         }
     }
 }

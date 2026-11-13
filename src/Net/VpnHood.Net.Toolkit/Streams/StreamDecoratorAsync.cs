@@ -42,9 +42,12 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
 
     /// <inheritdoc cref="Stream.Position"/>
     /// <remarks>The source's.</remarks>
+    // A disposed decorator works no more, with its source left open too: the source is then its owner's again, and
+    // a decorator that went on reading and writing it would do so beside that owner.
     public override long Position {
         get => SourceStream.Position;
         set {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
             if (!CanSeek)
                 throw new NotSupportedException();
 
@@ -56,6 +59,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
     /// <remarks>The source's.</remarks>
     public override long Seek(long offset, SeekOrigin origin)
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         if (!CanSeek)
             throw new NotSupportedException();
 
@@ -66,6 +70,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
     /// <remarks>The source's.</remarks>
     public override void SetLength(long value)
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         SourceStream.SetLength(value);
     }
 
@@ -73,6 +78,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
     /// <remarks>The source's.</remarks>
     public override Task FlushAsync(CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         return SourceStream.FlushAsync(cancellationToken);
     }
 
@@ -80,6 +86,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
     /// <remarks>The source's.</remarks>
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         return SourceStream.ReadAsync(buffer, cancellationToken);
     }
 
@@ -87,6 +94,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
     /// <remarks>The source's.</remarks>
     public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         return SourceStream.WriteAsync(buffer, cancellationToken);
     }
 

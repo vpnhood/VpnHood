@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Net.Sockets;
+using System.Numerics;
 using VpnHood.Net.Toolkit.Net;
 
 // ReSharper disable StringLiteralTypo
@@ -7,6 +9,157 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class IpNetworkTest : TestBase
 {
+    [TestMethod]
+    [DataRow("10.0.0.0/8/garbage")]
+    [DataRow("10.0.0.0/-1")]
+    [DataRow("10.0.0.0/+8")]
+    [DataRow("10.0.0.0/ 8")]
+    [DataRow("10.0.0.0/33")]
+    [DataRow("::/129")]
+    [DataRow("10.0.0.0")]
+    [DataRow("x/8")]
+    public void A_text_that_is_no_network_is_refused(string value)
+    {
+        Assert.ThrowsExactly<FormatException>(() => IpNetwork.Parse(value));
+    }
+
+    [TestMethod]
+    public void A_prefix_length_or_a_number_beyond_the_family_is_refused()
+    {
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new IpNetwork(IPAddress.Parse("10.0.0.0"), 33));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new IpNetwork(IPAddress.Parse("10.0.0.0"), -1));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new IpNetwork(IPAddress.IPv6Any, 129));
+        Assert.AreEqual(IPAddress.Parse("10.0.0.7"), new IpNetwork(IPAddress.Parse("10.0.0.7"), 32).LastIpAddress);
+        Assert.AreEqual(IPAddress.Parse("255.255.255.255"), IpNetwork.Parse("0.0.0.0/0").LastIpAddress);
+
+        // a number above the family's last address is no address of it
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            IPAddressUtil.FromBigInteger(BigInteger.One << 32, AddressFamily.InterNetwork));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() =>
+            IPAddressUtil.FromBigInteger(BigInteger.MinusOne, AddressFamily.InterNetwork));
+        Assert.AreEqual(IPAddress.Parse("255.255.255.255"),
+            IPAddressUtil.FromBigInteger((BigInteger.One << 32) - 1, AddressFamily.InterNetwork));
+    }
+
+    [TestMethod]
+    public void A_bad_range_or_address_is_a_bad_argument()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            new IpRange(IPAddress.Parse("10.0.0.9"), IPAddress.Parse("10.0.0.1")));
+        Assert.ThrowsExactly<ArgumentException>(() => new IpRange(IPAddress.Parse("10.0.0.9"), IPAddress.Parse("aa::1")));
+        Assert.ThrowsExactly<ArgumentException>(() => IPAddressUtil.ToLong(IPAddress.IPv6Loopback));
+    }
+
+    // the list's own order comes first: its ranges never start at the same address, so a key has nothing to order
+    [TestMethod]
+    public void ThenBy_keeps_the_lists_order()
+    {
+        var list = new IpRangeOrderedList([
+            IpRange.Parse("10.0.0.0-10.0.0.9"), IpRange.Parse("1.0.0.0-1.0.0.255"), IpRange.Parse("5.0.0.0")
+        ]);
+
+        // by their sizes they would come another way round
+        CollectionAssert.AreEqual(list.ToArray(), list.ThenBy(x => x.Total).ToArray());
+        CollectionAssert.AreEqual(list.ToArray(), list.ThenByDescending(x => x.Total).ToArray());
+    }
+
+    [TestMethod]
+    public void A_range_and_a_network_leave_the_scope_id_out()
+    {
+        var scoped = IPAddress.Parse("::%3");
+        var range = new IpRange(scoped, IPAddress.Parse("::5%7"));
+        Assert.AreEqual(0, range.FirstIpAddress.ScopeId);
+        Assert.AreEqual(0, range.LastIpAddress.ScopeId);
+        Assert.AreEqual(3, scoped.ScopeId); // the caller's own address is as it was
+        Assert.AreEqual(0, new IpNetwork(IPAddress.Parse("fe80::1%4"), 64).Prefix.ScopeId);
+        Assert.IsTrue(IPAddressUtil.IsMinValue(scoped));
+        Assert.IsTrue(IPAddressUtil.IsMaxValue(IPAddress.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff%2")));
+
+        // excluding :: by an address with a scope id leaves no :: behind
+        var rest = new IpRangeOrderedList([new IpRange(IPAddressUtil.MinIPv6Value, IPAddress.Parse("::9"))])
+            .Exclude(scoped);
+        Assert.IsFalse(rest.Contains(IPAddress.IPv6Any));
+        Assert.AreEqual(IPAddress.Parse("::1"), rest[0].FirstIpAddress);
+    }
+
+    [TestMethod]
+    public void Ranges_are_written_and_read_without_closing_the_stream()
+    {
+        var list = new IpRangeOrderedList([IpRange.Parse("1.0.0.0-1.0.0.255"), IpRange.Parse("aa::1-aa::ff")]);
+        using var stream = new MemoryStream();
+
+        list.Serialize(stream);
+        Assert.IsTrue(stream.CanWrite);
+
+        stream.Position = 0;
+        CollectionAssert.AreEqual(list.ToArray(), IpRangeOrderedList.Deserialize(stream).ToArray());
+        Assert.IsTrue(stream.CanRead);
+
+        stream.Position = 0;
+        Assert.HasCount(2, IpRangeOrderedList.DeserializeRaw(stream).ToArray());
+        Assert.IsTrue(stream.CanRead);
+    }
+
+    [TestMethod]
+    public void Ranges_that_are_cut_short_or_malformed_are_refused()
+    {
+        using var stream = new MemoryStream();
+        new IpRangeOrderedList([IpRange.Parse("aa::1-aa::ff")]).Serialize(stream);
+        var bytes = stream.ToArray();
+
+        // the last address cut to 4 of its 16 bytes: no IPv4 address, but a list that ends early
+        Assert.ThrowsExactly<EndOfStreamException>(() =>
+            IpRangeOrderedList.Deserialize(new MemoryStream(bytes[..^12])));
+        Assert.ThrowsExactly<EndOfStreamException>(() =>
+            IpRangeOrderedList.DeserializeRaw(new MemoryStream(bytes[..^12])).ToArray());
+
+        // a negative count, and an address that is neither 4 nor 16 bytes long
+        Assert.ThrowsExactly<InvalidDataException>(() =>
+            IpRangeOrderedList.Deserialize(new MemoryStream([0xFF, 0xFF, 0xFF, 0xFF])));
+        Assert.ThrowsExactly<InvalidDataException>(() =>
+            IpRangeOrderedList.Deserialize(new MemoryStream([1, 0, 0, 0, 5, 1, 2, 3, 4, 5, 5, 1, 2, 3, 4, 5])));
+
+        // a count far above what the stream holds is found out by the stream's end, not by the memory it asks for
+        Assert.ThrowsExactly<EndOfStreamException>(() =>
+            IpRangeOrderedList.Deserialize(new MemoryStream([0xFF, 0xFF, 0xFF, 0x7F])));
+    }
+
+    [TestMethod]
+    public void Union_reads_its_ranges_once()
+    {
+        var list = new IpRangeOrderedList([IpRange.Parse("1.0.0.0")]);
+        var reads = 0;
+
+        Assert.HasCount(2, list.Union(GetRanges()));
+        Assert.AreEqual(1, reads);
+        return;
+
+        IEnumerable<IpRange> GetRanges()
+        {
+            reads++;
+            yield return IpRange.Parse("2.0.0.0");
+        }
+    }
+
+    [TestMethod]
+    public void A_mapped_address_has_its_IPv4_addresss_dos_key()
+    {
+        Assert.AreEqual("10.0.0.5", IPAddressUtil.GetDosKey(IPAddress.Parse("::ffff:10.0.0.5")));
+        Assert.AreEqual("10.0.0.5", IPAddressUtil.GetDosKey(IPAddress.Parse("10.0.0.5")));
+        Assert.AreEqual("2001:db8:1:2::/64", IPAddressUtil.GetDosKey(IPAddress.Parse("2001:db8:1:2:3:4:5:6")));
+    }
+
+    // the token is canceled before the call, so nothing is sent
+    [TestMethod]
+    public async Task A_public_address_lookup_its_caller_cancels_is_canceled()
+    {
+        using var canceled = new CancellationTokenSource();
+        await canceled.CancelAsync();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork, userAgent: null, canceled.Token));
+    }
+
     [TestMethod]
     public void Invert_Unify_Convert()
     {

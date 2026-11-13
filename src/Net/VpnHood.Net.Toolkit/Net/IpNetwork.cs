@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
@@ -42,18 +43,21 @@ public class IpNetwork
     /// <param name="prefixLength">
     /// The number of leading bits the network's addresses share: 0 to 32 for IPv4, 0 to 128 for IPv6.
     /// </param>
-    /// <exception cref="OverflowException">
-    /// <paramref name="prefixLength"/> is above 32 for an IPv4 prefix, or above 128 for an IPv6 one.
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="prefixLength"/> is negative, above 32 for an IPv4 prefix, or above 128 for an IPv6 one.
     /// </exception>
-    /// <remarks>A negative <paramref name="prefixLength"/> is not refused; it gives a network with wrong ends.</remarks>
     public IpNetwork(IPAddress prefix, int prefixLength)
     {
         IPAddressUtil.Verify(prefix);
 
-        Prefix = prefix;
-        PrefixLength = prefixLength;
+        // within the family's bits: the masks below shift by it, and by what is left of the bits
         var addressFamily = prefix.AddressFamily;
         var bits = addressFamily.IsV6 ? 128 : 32;
+        ArgumentOutOfRangeException.ThrowIfNegative(prefixLength);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(prefixLength, bits);
+
+        Prefix = IPAddressUtil.WithoutScopeId(prefix);
+        PrefixLength = prefixLength;
         var mask = ((BigInteger.One << prefixLength) - 1) << (bits - prefixLength);
         var maskNot = (BigInteger.One << (bits - prefixLength)) - 1;
         _firstIpAddressValue = IPAddressUtil.ToBigInteger(Prefix) & mask;
@@ -304,21 +308,20 @@ public class IpNetwork
     /// <param name="value">An address, a slash and a prefix length.</param>
     /// <returns>The network.</returns>
     /// <exception cref="FormatException">
-    /// <paramref name="value"/> is not an address, a slash and a prefix length, or the length is above the family's
-    /// bits.
+    /// <paramref name="value"/> is not an address, one slash and a prefix length of digits alone, or the length is
+    /// above the family's bits.
     /// </exception>
-    /// <remarks>
-    /// As in the constructor, a negative prefix length is not refused, and text after a second slash is ignored.
-    /// </remarks>
     public static IpNetwork Parse(string value)
     {
-        try {
-            var parts = value.Split('/');
-            return new IpNetwork(IPAddress.Parse(parts[0]), int.Parse(parts[1]));
-        }
-        catch {
-            throw new FormatException($"Could not parse IPNetwork from: {value}.");
-        }
+        // an address, one slash and a prefix length of digits alone: nothing after it, no sign and no space
+        var parts = value.Split('/');
+        if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var prefix) &&
+            int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var prefixLength) &&
+            prefixLength <= (prefix.AddressFamily == AddressFamily.InterNetworkV6 ? 128 : 32) &&
+            prefix.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6)
+            return new IpNetwork(prefix, prefixLength);
+
+        throw new FormatException($"Could not parse IPNetwork from: {value}.");
     }
 
     /// <summary>

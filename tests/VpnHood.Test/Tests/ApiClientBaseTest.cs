@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
@@ -113,6 +114,48 @@ public class ApiClientBaseTest : TestBase
         Assert.AreEqual(apiError, parsed);
     }
 
+    [TestMethod]
+    public void An_ApiError_with_null_data_reads_as_one_with_none()
+    {
+        const string json = """{"TypeName":"Type1","Message":"Message1","Data":null}""";
+
+        Assert.IsTrue(ApiError.TryParse(json, out var apiError));
+        Assert.IsEmpty(apiError.Data);
+        Assert.AreEqual(apiError, apiError.Clone());
+
+        // the exception made of that response reads its data too
+        var exception = new ApiException("failed", 400, json, headers: null, innerException: null);
+        Assert.AreEqual("Message1", exception.Message);
+        Assert.AreEqual("Type1", exception.ExceptionTypeName);
+    }
+
+    [TestMethod]
+    public void An_AlreadyExists_error_is_rebuilt_with_its_message_as_it_came()
+    {
+        var original = new AlreadyExistsException("Devices");
+        var apiError = new ApiError { TypeName = nameof(AlreadyExistsException), Message = original.Message };
+
+        var rebuilt = apiError.ToException();
+        Assert.IsInstanceOfType<AlreadyExistsException>(rebuilt);
+        Assert.AreEqual("Object already exists in Devices.", rebuilt.Message);
+        Assert.AreEqual(409, rebuilt.Data["HttpStatusCode"]);
+    }
+
+    // A call that asks for no object still has a response, whose text is the call's result
+    [TestMethod]
+    public async Task A_call_for_no_object_gets_the_responses_text()
+    {
+        var statusCode = HttpStatusCode.OK;
+        using var httpClient = CreateHttpClient((_, _) => Task.FromResult(
+            new HttpResponseMessage(statusCode) { Content = new StringContent("plain text") }));
+        var apiClient = new TextApiClient(httpClient);
+
+        Assert.AreEqual("plain text", await apiClient.PostForText(TestCt));
+
+        statusCode = HttpStatusCode.NoContent;
+        Assert.AreEqual("", await apiClient.PostForText(TestCt));
+    }
+
     // A call its caller cancels still throws, but is no failure: it leaves no Error in the log
     [TestMethod]
     public async Task A_call_its_caller_cancels_logs_no_error()
@@ -145,5 +188,13 @@ public class ApiClientBaseTest : TestBase
         Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send)
     {
         return new HttpClient(new TestHttpMessageHandler(send)) { BaseAddress = new Uri("http://localhost/") };
+    }
+
+    private sealed class TextApiClient(HttpClient httpClient) : ApiClientBase(httpClient)
+    {
+        public Task<string> PostForText(CancellationToken cancellationToken)
+        {
+            return HttpSendAsync(HttpMethod.Post, "test", parameters: null, data: null, cancellationToken);
+        }
     }
 }

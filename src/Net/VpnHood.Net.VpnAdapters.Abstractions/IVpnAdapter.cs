@@ -59,9 +59,11 @@ public interface IVpnAdapter : IPacketTransport
     /// </summary>
     /// <remarks>
     /// It is raised on the starting thread, once the adapter is up and before the start or the restart completes. A
-    /// handler may stop or dispose the adapter, or start it again; it must not wait for another start or restart of
-    /// it. A run that is over by a handler's turn is not announced to that handler, and one run's handlers return
-    /// before the next run's are called, except those of a run a handler itself starts.
+    /// handler may stop or dispose the adapter, and start it again once it has stopped it; it must not wait for
+    /// another start or restart of it. A run that is over by a handler's turn is not announced to that handler, and
+    /// one run's handlers return before the next run's are called, except those of a run a handler itself starts.
+    /// A stop or a disposal on another thread does not wait for the handlers: one may still run, or be called, as
+    /// that stop returns.
     /// </remarks>
     event EventHandler<VpnAdapterOptions>? Started;
 

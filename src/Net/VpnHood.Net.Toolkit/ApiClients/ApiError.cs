@@ -26,8 +26,12 @@ public class ApiError : ICloneable, IEquatable<ApiError>
     /// <summary>Gets the exception's message.</summary>
     public required string Message { get; init; }
 
-    /// <summary>Gets the exception's data, as text. The default is none.</summary>
-    public Dictionary<string, string?> Data { get; init; } = new();
+    /// <summary>Gets the exception's data, as text. The default is none, and JSON null reads as none.</summary>
+    [AllowNull]
+    public Dictionary<string, string?> Data {
+        get;
+        init => field = value ?? new Dictionary<string, string?>();
+    } = new();
 
     /// <summary>Gets the inner exception's message, or <see langword="null"/>.</summary>
     public string? InnerMessage { get; init; }
@@ -108,7 +112,7 @@ public class ApiError : ICloneable, IEquatable<ApiError>
         Exception exception =
             Is<OperationCanceledException>() ? new OperationCanceledException(Message, innerException) :
             Is<TaskCanceledException>() ? new TaskCanceledException(Message, innerException) :
-            Is<AlreadyExistsException>() ? new AlreadyExistsException(Message, innerException) :
+            Is<AlreadyExistsException>() ? AlreadyExistsException.FromMessage(Message, innerException) :
             Is<NotExistsException>() ? new NotExistsException(Message, innerException) :
             Is<UnauthorizedAccessException>() ? new UnauthorizedAccessException(Message, innerException) :
             Is<TimeoutException>() ? new TimeoutException(Message, innerException) :

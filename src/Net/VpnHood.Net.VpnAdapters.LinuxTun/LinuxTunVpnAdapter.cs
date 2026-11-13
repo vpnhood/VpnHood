@@ -1099,7 +1099,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// <inheritdoc/>
     /// <returns>
     /// <see langword="true"/> if the device took the packet, also when it took only a part, which a TUN device should
-    /// never do, and which is logged; <see langword="false"/> if it cannot take it now, or the adapter is closed.
+    /// never do, and which is logged and counted as a drop; <see langword="false"/> if it cannot take it now, or the
+    /// adapter is closed.
     /// </returns>
     /// <exception cref="PInvokeException">The write failed with another error.</exception>
     protected override bool WritePacket(IpPacket ipPacket)
@@ -1121,6 +1122,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             VhLogger.Instance.LogWarning(
                 "Partial write to TUN device; dropping packet. Written: {Written}, Length: {Length}",
                 bytesWritten, bufferLength);
+
+            // true ends the base's tries for it; the drop is told, or the packet would count as sent
+            DropPacket(ipPacket);
             return true;
         }
 

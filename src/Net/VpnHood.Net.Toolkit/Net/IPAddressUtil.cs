@@ -101,11 +101,12 @@ public static class IPAddressUtil
     /// <summary>Determines whether this device reaches the internet over IPv6.</summary>
     /// <returns>
     /// A task whose result is <see langword="true"/> if the device has an IPv6 route and an IPv6 address of
-    /// <see cref="ReliableDnsServers"/> answers a ping; otherwise, <see langword="false"/>.
+    /// <see cref="ReliableDnsServers"/> answers a ping or a DNS query; otherwise, <see langword="false"/>.
     /// </returns>
     /// <remarks>
-    /// The servers are pinged one after the other, each with <see cref="Ping"/>'s default timeout of 5 seconds, so the
-    /// answer can take 10 seconds; a network that drops ICMPv6 echo requests reads as no IPv6. It never throws.
+    /// The servers are pinged one after the other, each with <see cref="Ping"/>'s default timeout of 5 seconds; where
+    /// none answers, as on a network that drops ICMPv6 echo requests, each is sent a DNS query, with 2 seconds for its
+    /// answer. So the answer can take 14 seconds. It never throws.
     /// </remarks>
     public static async Task<bool> IsIpv6Supported()
     {
@@ -121,7 +122,7 @@ public static class IPAddressUtil
             udpClient.Connect(dnsServersV6.First(), 53);
 
             // it may throw error if IPv6 is not supported before creating task
-            var ping = new Ping();
+            using var ping = new Ping();
             var pingTasks = dnsServersV6
                 .Select(x => ping.SendPingAsync(x));
 
@@ -134,12 +135,33 @@ public static class IPAddressUtil
                     //ignore
                 }
             }
+
+            // A network may drop the echo and still carry IPv6: the servers are resolvers, so one that answers a
+            // query over IPv6 tells as much.
+            foreach (var dnsServer in dnsServersV6)
+                if (await IsDnsServerAnswering(dnsServer).Vhc())
+                    return true;
         }
         catch {
             // ignore
         }
 
         return false;
+    }
+
+    private static async Task<bool> IsDnsServerAnswering(IPAddress dnsServer)
+    {
+        try {
+            using var udpClient = new UdpClient(dnsServer.AddressFamily);
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            var query = Utils.DnsUtils.BuildDnsQuery((ushort)Random.Shared.Next(ushort.MaxValue), "one.one.one.one");
+            await udpClient.SendAsync(query, new IPEndPoint(dnsServer, 53), timeoutCts.Token).Vhc();
+            await udpClient.ReceiveAsync(timeoutCts.Token).Vhc();
+            return true; // any answer came back over IPv6
+        }
+        catch {
+            return false;
+        }
     }
 
     /// <summary>
@@ -149,9 +171,9 @@ public static class IPAddressUtil
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the addresses found: none, one or two.</returns>
     /// <remarks>
-    /// The two lookups run one after the other; each asks up to two services, each canceled after 5 seconds. A
-    /// canceled token ends them with the addresses found so far rather than an exception.
+    /// The two lookups run one after the other; each asks up to two services, each canceled after 5 seconds.
     /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<IReadOnlyList<IPAddress>> GetPublicIpAddresses(CancellationToken cancellationToken)
     {
         var ret = new List<IPAddress>();
@@ -184,10 +206,10 @@ public static class IPAddressUtil
     /// </returns>
     /// <remarks>
     /// It asks Cloudflare's trace page (<c>www.cloudflare.com/cdn-cgi/trace</c>) over a connection of the family, then,
-    /// if that throws, my-ip.io's API for the family, each canceled after 5 seconds. Cloudflare's answer is taken as it
-    /// is: one with no address gives <see langword="null"/>, with no second try. It never throws: a failure or a
-    /// canceled token gives <see langword="null"/>.
+    /// if that fails or answers with no address, my-ip.io's API for the family, each canceled after 5 seconds. A
+    /// failure of both gives <see langword="null"/>.
     /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, string? userAgent,
         CancellationToken cancellationToken)
     {
@@ -195,7 +217,15 @@ public static class IPAddressUtil
             // create linked cancellation token of max 5 seconds
             using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             linkedToken.CancelAfter(TimeSpan.FromSeconds(5));
-            return await GetPublicIpAddressByCloudflare(addressFamily, userAgent, linkedToken.Token).Vhc();
+
+            // an answer without an address is no answer: the next service is asked
+            var ipAddress = await GetPublicIpAddressByCloudflare(addressFamily, userAgent, linkedToken.Token).Vhc();
+            if (ipAddress != null)
+                return ipAddress;
+        }
+        // the caller's cancellation is no failed lookup
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch {
             /* continue next service */
@@ -204,7 +234,10 @@ public static class IPAddressUtil
         try {
             using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             linkedToken.CancelAfter(TimeSpan.FromSeconds(5));
-            return await GetPublicIpAddressByIpify(addressFamily, userAgent, linkedToken.Token).Vhc();
+            return await GetPublicIpAddressByMyIp(addressFamily, userAgent, linkedToken.Token).Vhc();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch {
             /* ignore */
@@ -234,7 +267,7 @@ public static class IPAddressUtil
         return ipLine != null ? IPAddress.Parse(ipLine.Split('=')[1]) : null;
     }
 
-    private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily,
+    private static async Task<IPAddress?> GetPublicIpAddressByMyIp(AddressFamily addressFamily,
         string? userAgent, CancellationToken cancellationToken)
     {
         //var url = addressFamily == AddressFamily.InterNetwork
@@ -251,7 +284,7 @@ public static class IPAddressUtil
             .GetStringAsync(url, cancellationToken)
             .Vhc();
 
-        var document = JsonDocument.Parse(json);
+        using var document = JsonDocument.Parse(json);
         var ipString = document.RootElement.GetProperty("ip").GetString();
         var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());
         return ipAddress.AddressFamily == addressFamily ? ipAddress : null;
@@ -551,14 +584,14 @@ public static class IPAddressUtil
     /// </summary>
     /// <param name="ipAddress">The address.</param>
     /// <returns>The number, from 0 to 4,294,967,295.</returns>
-    /// <exception cref="InvalidOperationException">
+    /// <exception cref="ArgumentException">
     /// <paramref name="ipAddress"/> is not IPv4; an IPv4-mapped IPv6 address is not.
     /// </exception>
     public static long ToLong(IPAddress ipAddress)
     {
         if (!ipAddress.IsV4)
-            throw new InvalidOperationException(
-                $"Only {AddressFamily.InterNetwork} family can be converted into long!");
+            throw new ArgumentException(
+                $"Only {AddressFamily.InterNetwork} family can be converted into long!", nameof(ipAddress));
 
         var bytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
         return ((long)bytes[0] << 24) | ((long)bytes[1] << 16) | ((long)bytes[2] << 8) | bytes[3];
@@ -588,23 +621,36 @@ public static class IPAddressUtil
 
     /// <summary>Converts a number to an address of a family, as <see cref="ToBigInteger"/> numbers them.</summary>
     /// <param name="value">
-    /// The number: up to 2^32 - 1 for IPv4, up to 2^128 - 1 for IPv6. A larger one is not refused, and gives a wrong
-    /// address.
+    /// The number: up to 2^32 - 1 for IPv4, up to 2^128 - 1 for IPv6.
     /// </param>
     /// <param name="addressFamily">The address family.</param>
     /// <returns>The address.</returns>
     /// <exception cref="NotSupportedException">
     /// <paramref name="addressFamily"/> is neither IPv4 nor IPv6.
     /// </exception>
-    /// <exception cref="OverflowException"><paramref name="value"/> is negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="value"/> is negative, or above the family's last address.
+    /// </exception>
     public static IPAddress FromBigInteger(BigInteger value, AddressFamily addressFamily)
     {
         Verify(addressFamily);
 
+        // within the family's range: a number above it wrote nothing, and came back as the family's first address
         Span<byte> bytes = stackalloc byte[addressFamily == AddressFamily.InterNetworkV6 ? 16 : 4];
-        value.TryWriteBytes(bytes, out _, true);
+        if (value.Sign < 0 || !value.TryWriteBytes(bytes, out _, true))
+            throw new ArgumentOutOfRangeException(nameof(value), value,
+                $"The number is no address of {addressFamily}.");
+
         bytes.Reverse();
         return new IPAddress(bytes);
+    }
+
+    // An address's scope id is no part of a network or a range. A copy, and only where there is one to leave out.
+    internal static IPAddress WithoutScopeId(IPAddress ipAddress)
+    {
+        return ipAddress.AddressFamily == AddressFamily.InterNetworkV6 && ipAddress.ScopeId != 0
+            ? new IPAddress(ipAddress.GetAddressBytesFast(stackalloc byte[16]))
+            : ipAddress;
     }
 
     /// <summary>Gets the address after an address.</summary>
@@ -678,15 +724,13 @@ public static class IPAddressUtil
     /// </summary>
     /// <param name="ipAddress">The address.</param>
     /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>.</returns>
-    /// <remarks>An IPv6 address with a scope id is not, as <see cref="IPAddress.Equals(object)"/> compares the scope id.</remarks>
+    /// <remarks>An IPv6 address's scope id is left out of it.</remarks>
     public static bool IsMaxValue(IPAddress ipAddress)
     {
         Verify(ipAddress);
-        return ipAddress.AddressFamily switch {
-            AddressFamily.InterNetworkV6 => ipAddress.Equals(MaxIPv6Value),
-            AddressFamily.InterNetwork => ipAddress.Equals(MaxIPv4Value),
-            _ => throw new NotSupportedException($"{ipAddress.AddressFamily} is not supported!")
-        };
+
+        // by its bytes, as the order goes: an IPv6 address with a scope id equals none without one
+        return ipAddress.GetAddressBytesFast(stackalloc byte[16]).IndexOfAnyExcept(byte.MaxValue) < 0;
     }
 
     /// <summary>
@@ -695,15 +739,11 @@ public static class IPAddressUtil
     /// </summary>
     /// <param name="ipAddress">The address.</param>
     /// <returns><see langword="true"/> if it is; otherwise, <see langword="false"/>.</returns>
-    /// <remarks>An IPv6 address with a scope id is not, as <see cref="IPAddress.Equals(object)"/> compares the scope id.</remarks>
+    /// <remarks>An IPv6 address's scope id is left out of it.</remarks>
     public static bool IsMinValue(IPAddress ipAddress)
     {
         Verify(ipAddress);
-        return ipAddress.AddressFamily switch {
-            AddressFamily.InterNetwork => ipAddress.Equals(MinIPv4Value),
-            AddressFamily.InterNetworkV6 => ipAddress.Equals(MinIPv6Value),
-            _ => throw new NotSupportedException($"{ipAddress.AddressFamily} is not supported!")
-        };
+        return ipAddress.GetAddressBytesFast(stackalloc byte[16]).IndexOfAnyExcept(byte.MinValue) < 0;
     }
 
     /// <summary>Hides the host part of an address, for logs and reports.</summary>
@@ -757,14 +797,15 @@ public static class IPAddressUtil
     /// subscriber is given a whole /64.
     /// </returns>
     /// <exception cref="ArgumentNullException"><paramref name="ip"/> is <see langword="null"/>.</exception>
-    /// <remarks>
-    /// An IPv4-mapped IPv6 address counts as IPv6, so all of them share the key <c>::/64</c>: map such an address to
-    /// IPv4 first.
-    /// </remarks>
+    /// <remarks>An IPv4-mapped IPv6 address counts as the IPv4 address it carries.</remarks>
     public static string GetDosKey(IPAddress ip)
     {
         if (ip == null)
             throw new ArgumentNullException(nameof(ip));
+
+        // an IPv4-mapped address is its IPv4 client: left as IPv6, every one of them shared the key ::/64
+        if (ip.IsIPv4MappedToIPv6)
+            ip = ip.MapToIPv4();
 
         switch (ip.AddressFamily) {
             // IPv4: use full address

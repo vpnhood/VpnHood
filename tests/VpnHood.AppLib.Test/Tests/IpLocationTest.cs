@@ -101,7 +101,12 @@ public class IpLocationTest : TestAppBase
         Assert.IsTrue(countryCodes.Any(x => x == "US"),
             "Countries has not been extracted.");
 
+        // a country whose name holds a comma in IP2Location's CSV: a database built by a parser that splits at
+        // every comma leaves it out
+        Assert.IsTrue(countryCodes.Contains("TZ"), "The shipped database has no Tanzania.");
+
         // make sure GetIpRange works
         Assert.IsTrue((await app.IpRangeLocationProvider.GetIpRanges("US", TestCt)).Any());
+        Assert.IsTrue((await app.IpRangeLocationProvider.GetIpRanges("TZ", TestCt)).Any());
     }
 }

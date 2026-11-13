@@ -15,8 +15,9 @@ public static class VhUtilsExtensions
     /// <returns>The timeout to use.</returns>
     public static TimeSpan WhenNoDebugger(this TimeSpan value)
     {
-        return Debugger.IsAttached && VhUtils.DebuggerTimeout != null
-            ? VhUtils.DebuggerTimeout.Value
+        // read once: set to null between two reads, the second would throw
+        return Debugger.IsAttached && VhUtils.DebuggerTimeout is { } debuggerTimeout
+            ? debuggerTimeout
             : value;
     }
 }

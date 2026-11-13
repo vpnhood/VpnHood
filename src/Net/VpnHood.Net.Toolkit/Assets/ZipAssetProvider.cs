@@ -27,6 +27,10 @@ namespace VpnHood.Net.Toolkit.Assets;
 public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProvider
 {
     private const string MarkerFileName = ".version";
+    private const string TempExtension = ".tmp";
+
+    // No extraction takes this long, so an unfinished copy older than this is a leftover: its writer is gone.
+    private static readonly TimeSpan UnfinishedCopyTimeout = TimeSpan.FromHours(1);
     private readonly SemaphoreSlim _extractLock = new(1, 1);
     private FolderAssetProvider? _folder;
 
@@ -61,19 +65,22 @@ public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProv
 
                 // A folder of this copy's own, so two extractions running at once - a second instance,
                 // a second process - write to different places and neither sees the other's half-copy.
-                var tempPath = Path.Combine(extractFolderPath, $"{version}.{Guid.NewGuid():N}.tmp");
+                var tempPath = Path.Combine(extractFolderPath, $"{version}.{Guid.NewGuid():N}{TempExtension}");
                 await using (var archive = new ZipArchive(seekable, ZipArchiveMode.Read, leaveOpen: true))
                     await archive.ExtractToDirectoryAsync(tempPath, overwriteFiles: true, cancellationToken).Vhc();
 
                 // last, so a folder that has it is a folder that was finished
                 await File.WriteAllTextAsync(Path.Combine(tempPath, MarkerFileName), version, cancellationToken).Vhc();
 
-                // The other one got there first: its copy is this copy, since the name stands for the bytes.
-                if (IsExtracted(folderPath))
+                // The move itself tells whether the other one got there first, at any moment up to it: a look
+                // before the move could still miss it. Its copy is this copy, since the name stands for the bytes.
+                try {
+                    Directory.Move(tempPath, folderPath);
+                }
+                catch (IOException) when (IsExtracted(folderPath)) {
                     VhInvoker.TryInvoke("delete the extra assets copy", LogLevel.Debug,
                         () => Directory.Delete(tempPath, true));
-                else
-                    Directory.Move(tempPath, folderPath);
+                }
             }
 
             // What is left of older versions, and of copies that never finished. After the move, not
@@ -102,7 +109,13 @@ public class ZipAssetProvider(IAsset zip, string extractFolderPath) : IAssetProv
             if (Path.GetFileName(path) == version)
                 continue;
 
-            // one that is being written by someone else right now simply refuses, and goes next time
+            // A copy another instance is writing right now, of this version or another, is left alone: deleted
+            // under its writer, it would lose the files written so far and still be finished and marked. Told by
+            // its age, as a writer's folder is new.
+            if (path.EndsWith(TempExtension, StringComparison.Ordinal) &&
+                DateTime.UtcNow - Directory.GetLastWriteTimeUtc(path) < UnfinishedCopyTimeout)
+                continue;
+
             VhInvoker.TryInvoke("delete an old assets copy", LogLevel.Debug, () => Directory.Delete(path, true));
         }
     }

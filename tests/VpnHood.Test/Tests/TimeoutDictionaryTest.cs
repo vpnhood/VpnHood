@@ -494,6 +494,60 @@ public class TimeoutDictionaryTest
         AssertAllDisposedExactlyOnce(ledger);
     }
 
+    [TestMethod]
+    public void TryAdd_that_loses_to_another_writers_live_value_leaves_its_value_as_it_came()
+    {
+        using var dictionary = new TimeoutDictionary<int, ITimeoutItem>(LongTimeout);
+        var originalTime = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var winner = new TrackedItem();
+        var loser = new RacedItem { LastUsedTime = originalTime };
+
+        // another writer's value lands between this add's stamp and its try to publish
+        loser.OnStamp = () => dictionary.AddOrUpdate(1, winner);
+
+        Assert.IsFalse(dictionary.TryAdd(1, loser));
+        Assert.AreEqual(originalTime, loser.LastUsedTime);
+        Assert.IsFalse(loser.IsDisposed);
+        Assert.IsTrue(dictionary.TryGetValue(1, out var current));
+        Assert.AreSame(winner, current);
+    }
+
+    [TestMethod]
+    public void An_item_disposed_by_two_callers_at_the_same_moment_disposes_its_value_once()
+    {
+        using var value = new SlowDisposable();
+        var item = new TimeoutItem<SlowDisposable>(value, autoDispose: true);
+        var first = Task.Run(item.Dispose);
+        Assert.IsTrue(value.Entered.Wait(TimeSpan.FromSeconds(5)));
+
+        // the second caller comes while the first is inside the value's disposal: it returns, or disposes it again
+        var second = Task.Run(item.Dispose);
+        Assert.IsTrue(SpinWait.SpinUntil(() => second.IsCompleted || value.DisposeCount == 2, TimeSpan.FromSeconds(5)));
+        value.Release.Set();
+        Task.WaitAll(first, second);
+
+        Assert.AreEqual(1, value.DisposeCount);
+        Assert.IsTrue(item.IsDisposed);
+    }
+
+    [TestMethod]
+    public void An_item_whose_disposal_throws_does_not_end_a_drain()
+    {
+        var dictionary = new TimeoutDictionary<int, TrackedItem>(LongTimeout);
+        var items = new[] { new ThrowingItem(), new TrackedItem(), new ThrowingItem(), new TrackedItem() };
+        for (var i = 0; i < items.Length; i++)
+            dictionary.AddOrUpdate(i, items[i]);
+
+        // one failure is logged, and the removal answers as any other
+        Assert.IsTrue(dictionary.TryRemove(0, out var removed));
+        Assert.AreSame(items[0], removed);
+
+        // the drain disposes every item left, whatever the ones before it did
+        dictionary.Dispose();
+        foreach (var item in items)
+            Assert.AreEqual(1, item.DisposeCount);
+    }
+
     private static void RunThreads(int threadCount, int iterations, Action action)
     {
         Task.WaitAll(RunThreadsAsync(threadCount, iterations, _ => action()));
@@ -518,5 +572,57 @@ public class TimeoutDictionaryTest
         var multiDisposed = ledger.Count(x => x.DisposeCount > 1);
         Assert.AreEqual(0, notDisposed, $"{notDisposed} of {ledger.Count} items were never disposed (leak)");
         Assert.AreEqual(0, multiDisposed, $"{multiDisposed} of {ledger.Count} items were disposed more than once");
+    }
+
+    // an item that tells when the dictionary stamps it, once: the moment between an add's stamp and its publication
+    private sealed class RacedItem : ITimeoutItem
+    {
+        private DateTime _lastUsedTime;
+        public Action? OnStamp { get; set; }
+        public bool IsDisposed { get; private set; }
+
+        public DateTime LastUsedTime {
+            get => _lastUsedTime;
+            set {
+                _lastUsedTime = value;
+                var onStamp = OnStamp;
+                OnStamp = null;
+                onStamp?.Invoke();
+            }
+        }
+
+        public void Dispose()
+        {
+            IsDisposed = true;
+        }
+    }
+
+    // a value whose disposal stays inside until released
+    private sealed class SlowDisposable : IDisposable
+    {
+        private int _disposeCount;
+        public ManualResetEventSlim Entered { get; } = new(false);
+        public ManualResetEventSlim Release { get; } = new(false);
+        public int DisposeCount => Volatile.Read(ref _disposeCount);
+
+        public void Dispose()
+        {
+            // the test's own using comes last, when nothing waits
+            if (Release.IsSet)
+                return;
+
+            Interlocked.Increment(ref _disposeCount);
+            Entered.Set();
+            Release.Wait(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    private sealed class ThrowingItem : TrackedItem
+    {
+        public override void Dispose()
+        {
+            base.Dispose();
+            throw new InvalidOperationException("Test: the item's disposal failed.");
+        }
     }
 }

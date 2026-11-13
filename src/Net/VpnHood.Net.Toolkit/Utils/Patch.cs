@@ -25,12 +25,15 @@ public class Patch<T>(T value)
         return Value?.ToString() ?? "";
     }
 
-    /// <summary>Determines whether the value equals an object, compared with the value itself, not with a patch.</summary>
+    /// <summary>
+    /// Determines whether the patch equals an object: another patch by its value, anything else with the value itself.
+    /// </summary>
     /// <param name="obj">The object.</param>
     /// <returns><see langword="true"/> if they are equal; otherwise, <see langword="false"/>.</returns>
     public override bool Equals(object? obj)
     {
-        return Equals(Value, obj);
+        // another patch by its value, so a patch equals itself; anything else as the value itself would
+        return obj is Patch<T> other ? Equals(Value, other.Value) : Equals(Value, obj);
     }
 
     /// <summary>Wraps a value in a patch.</summary>

@@ -14,7 +14,7 @@ namespace VpnHood.Net.Toolkit.Jobs;
 /// </remarks>
 public class JobRunner
 {
-    private SemaphoreSlim _semaphore;
+    private volatile SemaphoreSlim _semaphore;
     private readonly LinkedList<JobItem> _jobs = [];
     private static readonly Lazy<JobRunner> SlowInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(10)));
     private static readonly Lazy<JobRunner> FastInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(2)));
@@ -59,6 +59,7 @@ public class JobRunner
     }
 
     /// <summary>Gets or sets how many jobs run at once. The default is 2.</summary>
+    /// <remarks>A new value counts for the jobs started after it; the ones running then finish beside them.</remarks>
     /// <exception cref="ArgumentOutOfRangeException">The value is less than 1.</exception>
     public int MaxDegreeOfParallelism {
         get => _maxDegreeOfParallelism;
@@ -66,6 +67,8 @@ public class JobRunner
             if (value < 1)
                 throw new ArgumentOutOfRangeException(nameof(value), "MaxDegreeOfParallelism must be greater than 0.");
             _maxDegreeOfParallelism = value;
+
+            // a new one, for the runs to come: the runs under way hold the old one, and release it
             _semaphore = new SemaphoreSlim(_maxDegreeOfParallelism);
         }
     }
@@ -103,12 +106,22 @@ public class JobRunner
 
         // run jobs
         foreach (var jobCallback in jobCallbacks) {
-            await _semaphore.WaitAsync().Vhc();
-            _ = RunJob(jobCallback);
+            // the one this run takes is the one it releases: MaxDegreeOfParallelism may put a new one in the field
+            // meanwhile, whose count a release of this run would lift over its maximum
+            var semaphore = _semaphore;
+            await semaphore.WaitAsync().Vhc();
+
+            // the wait may have been long: a job stopped, disposed or run by someone else since is not due any more
+            if (!jobCallback.IsReadyToRun) {
+                semaphore.Release();
+                continue;
+            }
+
+            _ = RunJob(jobCallback, semaphore);
         }
     }
 
-    private async Task RunJob(Job job)
+    private async Task RunJob(Job job, SemaphoreSlim semaphore)
     {
         try {
             await job.RunNow().Vhc();
@@ -121,7 +134,7 @@ public class JobRunner
             Logger?.LogCritical(ex, "JobCallback should not throw this exception.");
         }
         finally {
-            _semaphore.Release();
+            semaphore.Release();
         }
     }
 

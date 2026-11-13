@@ -80,6 +80,9 @@ public class ReadBufferedStream : StreamDecoratorAsync
     /// <inheritdoc/>
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        // what is buffered goes with the stream too
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+
         // read directly to user buffer if there is no buffer, and it is larger than cache
         if (_bufferRemain == 0 && (buffer.Length > _buffer.Length || !AllowBufferRefill))
             return await base.ReadAsync(buffer, cancellationToken).Vhc();

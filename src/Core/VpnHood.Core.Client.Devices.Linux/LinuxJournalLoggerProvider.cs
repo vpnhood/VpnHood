@@ -8,7 +8,8 @@ namespace VpnHood.Core.Client.Devices.Linux;
 /// writer whatever the unit says.
 /// </summary>
 /// <param name="includeScopes">
-/// <see langword="true"/> to write each entry's scopes. The default is <see langword="true"/>.
+/// <see langword="true"/> to write each entry's level and scopes. The default is <see langword="true"/>.
 /// </param>
 public sealed class LinuxJournalLoggerProvider(bool includeScopes = true)
-    : TextLoggerProvider(new LinuxJournalLogger(), includeTime: false, includeScopes: includeScopes);
+    : TextLoggerProvider(new LinuxJournalLogger(), includeTime: false, includeScopes: includeScopes,
+        includeLevel: includeScopes);

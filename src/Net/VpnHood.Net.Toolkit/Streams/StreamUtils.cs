@@ -17,15 +17,19 @@ public static class StreamUtils
     /// </summary>
     public const int MaxMessageLength = 1024 * 512;
 
+    // strict: bytes that are no UTF-8 fail the read, where the lenient decoder puts a replacement character in
+    // their place and lets the text pass
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
     /// <summary>Reads a framed JSON message as an object, synchronously.</summary>
     /// <typeparam name="T">The object's type.</typeparam>
     /// <param name="stream">The stream.</param>
     /// <param name="maxLength">The largest message accepted, in bytes.</param>
     /// <returns>The object.</returns>
-    /// <exception cref="FormatException">The length is over <paramref name="maxLength"/>.</exception>
+    /// <exception cref="FormatException">The length is negative, or over <paramref name="maxLength"/>.</exception>
     /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
     /// <exception cref="EndOfStreamException">The stream ends early.</exception>
-    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="JsonException">The message is no JSON of the type, as when its bytes are no UTF-8.</exception>
     public static T ReadObject<T>(Stream stream, int maxLength = MaxMessageLength)
     {
         // read length
@@ -37,7 +41,8 @@ public static class StreamUtils
         if (jsonSize == 0)
             throw new Exception("json length is zero!");
 
-        if (jsonSize > maxLength)
+        // a negative length is no length: checked here, not left to the allocation below
+        if (jsonSize < 0 || jsonSize > maxLength)
             throw new FormatException(
                 $"json length for {typeof(T)} is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
 
@@ -55,10 +60,10 @@ public static class StreamUtils
     /// <param name="stream">The stream.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the object.</returns>
-    /// <exception cref="FormatException">The length is over the largest.</exception>
+    /// <exception cref="FormatException">The length is negative, or over the largest.</exception>
     /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
     /// <exception cref="EndOfStreamException">The stream ends early.</exception>
-    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="JsonException">The message is no JSON of the type, as when its bytes are no UTF-8.</exception>
     /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<T> ReadObjectAsync<T>(Stream stream, CancellationToken cancellationToken)
@@ -72,16 +77,17 @@ public static class StreamUtils
     /// <param name="maxLength">The largest message accepted, in bytes.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the object.</returns>
-    /// <exception cref="FormatException">The length is over <paramref name="maxLength"/>.</exception>
+    /// <exception cref="FormatException">The length is negative, or over <paramref name="maxLength"/>.</exception>
     /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
     /// <exception cref="EndOfStreamException">The stream ends early.</exception>
-    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="JsonException">The message is no JSON of the type, as when its bytes are no UTF-8.</exception>
     /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<T> ReadObjectAsync<T>(Stream stream, int maxLength, CancellationToken cancellationToken)
     {
-        var message = await ReadMessageAsync(stream, maxLength, cancellationToken).Vhc();
-        var ret = JsonSerializer.Deserialize<T>(message) ?? throw new Exception("Could not read Message!");
+        // from its bytes: the serializer takes no byte that is not UTF-8
+        var message = await ReadMessageBytesAsync(stream, maxLength, cancellationToken).Vhc();
+        var ret = JsonSerializer.Deserialize<T>(message.Span) ?? throw new Exception("Could not read Message!");
         return ret;
     }
 
@@ -91,10 +97,10 @@ public static class StreamUtils
     /// <param name="jsonTypeInfo">The type's metadata.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the object.</returns>
-    /// <exception cref="FormatException">The length is over the largest.</exception>
+    /// <exception cref="FormatException">The length is negative, or over the largest.</exception>
     /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
     /// <exception cref="EndOfStreamException">The stream ends early.</exception>
-    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="JsonException">The message is no JSON of the type, as when its bytes are no UTF-8.</exception>
     /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<T> ReadObjectAsync<T>(Stream stream, JsonTypeInfo<T> jsonTypeInfo,
@@ -110,17 +116,17 @@ public static class StreamUtils
     /// <param name="maxLength">The largest message accepted, in bytes.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the object.</returns>
-    /// <exception cref="FormatException">The length is over <paramref name="maxLength"/>.</exception>
+    /// <exception cref="FormatException">The length is negative, or over <paramref name="maxLength"/>.</exception>
     /// <exception cref="Exception">The length is zero, or the deserialization returns <see langword="null"/>.</exception>
     /// <exception cref="EndOfStreamException">The stream ends early.</exception>
-    /// <exception cref="JsonException">The JSON is not of the type.</exception>
+    /// <exception cref="JsonException">The message is no JSON of the type, as when its bytes are no UTF-8.</exception>
     /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task<T> ReadObjectAsync<T>(Stream stream, JsonTypeInfo<T> jsonTypeInfo, int maxLength,
         CancellationToken cancellationToken)
     {
-        var message = await ReadMessageAsync(stream, maxLength, cancellationToken).Vhc();
-        var ret = JsonSerializer.Deserialize(message, jsonTypeInfo) ?? throw new Exception("Could not read Message!");
+        var message = await ReadMessageBytesAsync(stream, maxLength, cancellationToken).Vhc();
+        var ret = JsonSerializer.Deserialize(message.Span, jsonTypeInfo) ?? throw new Exception("Could not read Message!");
         return ret;
     }
 
@@ -128,11 +134,12 @@ public static class StreamUtils
     /// <param name="stream">The stream.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the text.</returns>
-    /// <exception cref="FormatException">The length is over the largest.</exception>
+    /// <exception cref="FormatException">The length is negative, or over the largest.</exception>
     /// <exception cref="Exception">The length is zero.</exception>
     /// <exception cref="EndOfStreamException">The stream ends early.</exception>
     /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="DecoderFallbackException">The message's bytes are no UTF-8.</exception>
     public static Task<string> ReadMessageAsync(Stream stream, CancellationToken cancellationToken)
     {
         return ReadMessageAsync(stream, MaxMessageLength, cancellationToken);
@@ -145,12 +152,20 @@ public static class StreamUtils
     /// <param name="maxLength">The largest message accepted, in bytes.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the text.</returns>
-    /// <exception cref="FormatException">The length is over <paramref name="maxLength"/>.</exception>
+    /// <exception cref="FormatException">The length is negative, or over <paramref name="maxLength"/>.</exception>
     /// <exception cref="Exception">The length is zero.</exception>
     /// <exception cref="EndOfStreamException">The stream ends early.</exception>
     /// <exception cref="UnauthorizedAccessException">The stream's next four bytes are <c>HTTP</c>.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="DecoderFallbackException">The message's bytes are no UTF-8.</exception>
     public static async Task<string> ReadMessageAsync(Stream stream, int maxLength, CancellationToken cancellationToken)
+    {
+        var message = await ReadMessageBytesAsync(stream, maxLength, cancellationToken).Vhc();
+        return StrictUtf8.GetString(message.Span);
+    }
+
+    private static async Task<Memory<byte>> ReadMessageBytesAsync(Stream stream, int maxLength,
+        CancellationToken cancellationToken)
     {
         // read length
         var lengthBuffer = new byte[4].AsMemory();
@@ -165,17 +180,15 @@ public static class StreamUtils
         if (messageSize == 0)
             throw new Exception("json length is zero!");
 
-        if (messageSize > maxLength)
+        // a negative length is no length: checked here, not left to the allocation below
+        if (messageSize < 0 || messageSize > maxLength)
             throw new FormatException(
                 $"json length is too big! It should be less than {maxLength} bytes but it was {messageSize} bytes");
 
         // read json body...
         var buffer = new byte[messageSize].AsMemory();
         await stream.ReadExactlyAsync(buffer, cancellationToken).Vhc();
-
-        // serialize the request
-        var message = Encoding.UTF8.GetString(buffer.Span);
-        return message;
+        return buffer;
     }
 
     /// <summary>Frames an object as a JSON message, by its runtime type.</summary>

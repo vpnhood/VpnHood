@@ -34,7 +34,9 @@ public static class JsonSerializerExt
     /// <exception cref="UriFormatException">A Uri property's text is not a URI.</exception>
     public static void PopulateObject(object target, string jsonSource, Type type)
     {
-        var json = JsonDocument.Parse(jsonSource).RootElement;
+        // disposed, as its memory is rented
+        using var document = JsonDocument.Parse(jsonSource);
+        var json = document.RootElement;
 
         foreach (var property in json.EnumerateObject()) {
             OverwriteProperty(target, property, type);

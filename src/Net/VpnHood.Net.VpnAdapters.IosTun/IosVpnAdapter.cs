@@ -485,9 +485,9 @@ public class IosVpnAdapter(
     /// <param name="ipPackets">The batch. The list is reused after the call.</param>
     /// <returns>A completed task.</returns>
     /// <remarks>
-    /// A chunk iOS refuses is dropped, which is logged once until writes succeed again; unlike the base's sender, no
-    /// count of failures stops the adapter. An exception while a chunk is written ends the batch, which the base then
-    /// counts as dropped whole.
+    /// A chunk iOS refuses is dropped and counted as dropped, which is logged once until writes succeed again; unlike
+    /// the base's sender, no count of failures stops the adapter. An exception while a chunk is written ends the batch,
+    /// which the base then counts as dropped whole.
     /// </remarks>
     /// <exception cref="InvalidOperationException">The adapter is not open.</exception>
     // iOS ends a dead tunnel itself (stopTunnel), and Apple names no failure to stop on
@@ -510,7 +510,11 @@ public class IosVpnAdapter(
                 var batchCount = Math.Min(MaxWriteBatchSize, ipPackets.Count - batchStart);
                 try {
                     FillWriteBatch(ipPackets, batchStart, batchCount);
-                    FlushWriteBatch(flow, batchCount);
+
+                    // a chunk iOS refuses went nowhere: its packets are drops, not packets sent
+                    if (!FlushWriteBatch(flow, batchCount))
+                        for (var i = 0; i < batchCount; i++)
+                            DropPacket(ipPackets[batchStart + i]);
                 }
                 finally {
                     ClearWriteBatch(batchCount);

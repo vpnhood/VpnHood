@@ -1,6 +1,7 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -128,27 +129,80 @@ public static class JsonUtils
     }
 
     /// <summary>
-    /// Replaces the values of some keys in JSON text with <c>"***"</c>, an array's with <c>["***"]</c>, by pattern
-    /// matching, not by parsing.
+    /// Replaces the values of some keys in JSON text with <c>"***"</c>, an array's with <c>["***"]</c>, at any depth.
     /// </summary>
-    /// <param name="json">The JSON text.</param>
-    /// <param name="keys">The keys whose values are hidden; they are used in the patterns as they are.</param>
+    /// <remarks>
+    /// The text is read as JSON and written again, indented when it came on several lines, so a value is hidden
+    /// whole, whatever it holds: a string with commas or braces, an object, an array of arrays.
+    /// </remarks>
+    /// <param name="json">The JSON text; comments and trailing commas are accepted, and not written again.</param>
+    /// <param name="keys">The keys whose values are hidden, compared as they are.</param>
     /// <returns>The text with those values hidden.</returns>
+    /// <exception cref="JsonException">The text is not JSON; nothing of it is returned.</exception>
     public static string RedactValue(string json, string[] keys)
     {
-        foreach (var key in keys) {
-            // array
-            var jsonLength = json.Length;
-            var pattern = @"""key""\s*:\s*\[[^\]]*\]".Replace("key", key);
-            json = Regex.Replace(json, pattern, $"\"{key}\": [\"***\"]");
-            if (jsonLength != json.Length)
-                continue;
+        var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(json), new JsonReaderOptions {
+            AllowTrailingCommas = true,
+            CommentHandling = JsonCommentHandling.Skip
+        });
 
-            // single
-            pattern = "(?<=\"key\":)[^,|}|\r]+(?=,|}|\r)".Replace("key", key);
-            json = Regex.Replace(json, pattern, " \"***\"");
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions {
+                   Indented = json.Contains('\n'),
+                   Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping // the text is for a log, not for a page
+               })) {
+            while (reader.Read())
+                switch (reader.TokenType) {
+                    case JsonTokenType.PropertyName:
+                        var name = reader.GetString() ?? "";
+                        writer.WritePropertyName(name);
+                        if (Array.IndexOf(keys, name) < 0)
+                            break;
+
+                        // the value, to its end, is not read into the text at all
+                        reader.Read();
+                        var isArray = reader.TokenType == JsonTokenType.StartArray;
+                        reader.Skip();
+                        if (isArray) writer.WriteStartArray();
+                        writer.WriteStringValue("***");
+                        if (isArray) writer.WriteEndArray();
+                        break;
+
+                    case JsonTokenType.StartObject:
+                        writer.WriteStartObject();
+                        break;
+
+                    case JsonTokenType.EndObject:
+                        writer.WriteEndObject();
+                        break;
+
+                    case JsonTokenType.StartArray:
+                        writer.WriteStartArray();
+                        break;
+
+                    case JsonTokenType.EndArray:
+                        writer.WriteEndArray();
+                        break;
+
+                    case JsonTokenType.String:
+                        writer.WriteStringValue(reader.GetString());
+                        break;
+
+                    case JsonTokenType.Number:
+                        writer.WriteRawValue(reader.ValueSpan, skipInputValidation: true); // as it is written
+                        break;
+
+                    case JsonTokenType.True:
+                    case JsonTokenType.False:
+                        writer.WriteBooleanValue(reader.GetBoolean());
+                        break;
+
+                    case JsonTokenType.Null:
+                        writer.WriteNullValue();
+                        break;
+                }
         }
 
-        return json;
+        return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
     }
 }

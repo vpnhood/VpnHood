@@ -15,10 +15,14 @@ public class FileAsset(string filePath) : IAsset
     /// <inheritdoc/>
     public Task<Stream> OpenReadAsync(CancellationToken cancellationToken)
     {
-        if (!File.Exists(filePath))
-            throw new AssetNotFoundException(filePath);
-
-        return Task.FromResult<Stream>(File.OpenRead(filePath));
+        // the open itself tells that the file is missing: a look before it could find a file that is gone a moment
+        // later
+        try {
+            return Task.FromResult<Stream>(File.OpenRead(filePath));
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) {
+            throw new AssetNotFoundException(filePath, ex);
+        }
     }
 
     /// <summary>Returns the file's path.</summary>

@@ -61,9 +61,9 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
             ("cid", ClientId), // Client ID
 
             // client device info, user agent info
-            ("ul", CultureInfo.CurrentCulture.Name.ToLower()), // user language
+            ("ul", CultureInfo.CurrentCulture.Name.ToLowerInvariant()), // user language
             // ("sr", "1024x768"),  *Finalized // screen resolution        
-            ("uaa", RuntimeInformation.ProcessArchitecture.ToString().ToLower()), //User Agent Architecture
+            ("uaa", RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant()), //User Agent Architecture
             ("uab", Environment.Is64BitOperatingSystem ? "64" : "32"), //User Agent Bits
             ("uamb", isMobile ? 1 : 0), // User Agent Mobile
             // ("uam", "MyModel"), *Finalized // User Agent Model. The device model on which the browser is running. Will likely be empty for desktop browsers, Example "Nexus 6"
@@ -112,7 +112,7 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
         // It's the total engagement time in milliseconds since the last event.
         // The engagement time is measured only when the current page is visible and active ( ie: the browser window/tab must be active and visible ),
         // for this GA4 uses the window.events: focus, blur, page_show, page_hide and the document:visibility change, these will determine when the timer starts and pauses
-        if (ga4Event.EngagementTime != null) parameters.Add(("_et ", ga4Event.EngagementTime));
+        if (ga4Event.EngagementTime != null) parameters.Add(("_et", ga4Event.EngagementTime));
         if (IsAdminDebugView) parameters.Add(("_dbg", 1)); // Analytics debug view
 
         // add user Properties
@@ -129,9 +129,10 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
             parameters.Add((propName, eventProperties.Value));
         }
 
+        // each name and value encoded, so a title or a property with a space, an ampersand or a hash stays one value
         var url = new Uri(
             "https://www.google-analytics.com/g/collect?" +
-            string.Join('&', parameters.Select(x => $"{x.Item1}={x.Item2}"))
+            string.Join('&', parameters.Select(x => $"{Uri.EscapeDataString(x.Item1)}={EncodeValue(x.Item2)}"))
         );
 
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
@@ -162,6 +163,12 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
             });
 
         return Track(ga4TagEvents, cancellationToken);
+    }
+
+    // in the invariant culture: a number must not take the user's decimal comma into the query
+    private static string EncodeValue(object? value)
+    {
+        return Uri.EscapeDataString(Convert.ToString(value, CultureInfo.InvariantCulture) ?? "");
     }
 
     private static bool CheckIsMobileByUserAgent(string? userAgent)

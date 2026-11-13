@@ -43,7 +43,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="9.0.868" />
+	  <PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="9.0.869" />
 	</ItemGroup>
 
 	<ItemGroup>

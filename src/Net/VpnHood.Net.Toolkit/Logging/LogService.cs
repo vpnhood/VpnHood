@@ -72,8 +72,13 @@ public class LogService(string logFilePath) : IDisposable
         if (!_file.IsOpen)
             return;
 
-        VhLogger.Instance.LogDebug("LogService is stopping...");
-        _file.Close();
+        // the file is closed whatever its last line does: a sink that throws must not leave it open
+        try {
+            VhLogger.Instance.LogDebug("LogService is stopping...");
+        }
+        finally {
+            _file.Close();
+        }
     }
 
     /// <summary>Joins event names with those a debug command names.</summary>
@@ -95,9 +100,13 @@ public class LogService(string logFilePath) : IDisposable
     {
         var names = new List<string> { "*" };
 
-        var parts = debugCommand.Split(' ').Where(x => x.Contains("/log:", StringComparison.OrdinalIgnoreCase));
+        // a part that starts with the switch: one that only holds it somewhere is not it, and its names would be cut
+        // at the wrong place
+        const string logSwitch = "/log:";
+        var parts = debugCommand.Split(' ').Where(x => x.StartsWith(logSwitch, StringComparison.OrdinalIgnoreCase));
         foreach (var part in parts)
-            names.AddRange(part[5..].Split(','));
+            names.AddRange(part[logSwitch.Length..]
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
         // use user settings
         return names.Distinct();
@@ -108,6 +117,14 @@ public class LogService(string logFilePath) : IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, true))
             return;
-        Stop();
+
+        // Stop closes the file whatever its last line does. That line's failure is the log's own, with no log to go
+        // to, and a disposal does not throw it.
+        try {
+            Stop();
+        }
+        catch (Exception) {
+            // the file is closed
+        }
     }
 }

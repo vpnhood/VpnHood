@@ -19,6 +19,62 @@ public class StreamDecoratorTest : TestBase
         }
     }
 
+    // With its source left open, a disposed wrapper works no more: the source is its owner's again
+    [TestMethod]
+    public async Task A_disposed_decorator_reads_and_writes_no_more_though_its_source_is_left_open()
+    {
+        using var source = new MemoryStream(new byte[10]);
+        var decorator = new StreamDecoratorAsync(source, leaveOpen: true);
+        await decorator.DisposeAsync();
+
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(async () =>
+            await decorator.ReadAsync(new byte[1], TestCt));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(async () =>
+            await decorator.WriteAsync(new byte[1], TestCt));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => decorator.FlushAsync(TestCt));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => decorator.Seek(0, SeekOrigin.Begin));
+
+        // the source itself is as it was
+        Assert.AreEqual(0, source.ReadByte());
+    }
+
+    [TestMethod]
+    public async Task A_disposed_buffered_stream_gives_what_it_buffered_no_more()
+    {
+        using var source = new MemoryStream(new byte[10]);
+        var buffered = new ReadBufferedStream(source, leaveOpen: true, initData: [1, 2, 3]);
+        Assert.AreEqual(1, await buffered.ReadAsync(new byte[1], TestCt));
+        await buffered.DisposeAsync();
+
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(async () =>
+            await buffered.ReadAsync(new byte[1], TestCt));
+    }
+
+    [TestMethod]
+    public void A_disposed_window_reads_and_seeks_no_more_though_its_source_is_left_open()
+    {
+        using var source = new MemoryStream(new byte[10]);
+        var window = new ReadOnlySubStream(source, start: 2, length: 5, leaveOpen: true);
+        Assert.AreEqual(0, window.ReadByte());
+        window.Dispose();
+
+        Assert.ThrowsExactly<ObjectDisposedException>(() => window.ReadByte());
+        Assert.ThrowsExactly<ObjectDisposedException>(() => window.Seek(0, SeekOrigin.Begin));
+        Assert.AreEqual(0, source.ReadByte());
+    }
+
+    // a start and a length that overflow together add up to an end before the source's
+    [TestMethod]
+    public void A_window_that_runs_past_its_source_is_refused_whatever_its_numbers_add_up_to()
+    {
+        using var source = new MemoryStream(new byte[10]);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new ReadOnlySubStream(source, long.MaxValue, 1));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new ReadOnlySubStream(source, 5, long.MaxValue));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new ReadOnlySubStream(source, 5, 6));
+        using var whole = new ReadOnlySubStream(source, 5, 5, leaveOpen: true);
+        Assert.AreEqual(5, whole.Length);
+    }
+
     [TestMethod]
     public void A_sync_dispose_runs_the_cleanup_and_closes_the_source()
     {

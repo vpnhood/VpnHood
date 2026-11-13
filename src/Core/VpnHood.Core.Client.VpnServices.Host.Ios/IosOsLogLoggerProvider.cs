@@ -14,7 +14,7 @@ namespace VpnHood.Core.Client.VpnServices.Host.Ios;
 // time, which os_log stamps on each entry.
 internal sealed class IosOsLogLoggerProvider(string subsystem, bool includeScopes = true)
     : TextLoggerProvider(name => new OsLogLogger(new OSLogHandle(subsystem, name)), includeTime: false,
-        includeScopes: includeScopes)
+        includeScopes: includeScopes, includeLevel: includeScopes)
 {
     private sealed class OsLogLogger(OSLogHandle osLog) : ILogger
     {

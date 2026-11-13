@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
 
@@ -15,6 +16,7 @@ public abstract class TrackerBase : ITracker
 {
     private static readonly Lazy<HttpClient> HttpClientLazy = new(() => new HttpClient());
     private static HttpClient HttpClient => HttpClientLazy.Value;
+    private ILoggerFactory? _simpleLoggerFactory;
     /// <summary>Gets the Google Analytics 4 measurement ID, such as <c>G-XXXXXXXXXX</c>.</summary>
     public required string MeasurementId { get; init; }
 
@@ -106,7 +108,8 @@ public abstract class TrackerBase : ITracker
     /// canceled after <see cref="RequestTimeout"/>. Off, it sends nothing.
     /// </summary>
     /// <remarks>
-    /// A failure is logged, and thrown only with <see cref="ThrowExceptionOnError"/>. The answer's status is not checked.
+    /// A failure is logged, and thrown only with <see cref="ThrowExceptionOnError"/>. An answer whose status is no
+    /// success is a failure too. The URL is logged with the value of an <c>api_secret</c> parameter hidden.
     /// </remarks>
     /// <param name="requestMessage">The request.</param>
     /// <param name="name">The request's name, for the log.</param>
@@ -127,7 +130,7 @@ public abstract class TrackerBase : ITracker
             // log
             Logger?.LogInformation(LoggerEventId,
                 "Sending Ga4Track: {name}, Url: {Url},  Headers: {Headers}",
-                name, requestMessage.RequestUri,
+                name, RedactApiSecret(requestMessage.RequestUri),
                 JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true }));
 
             if (jsonData != null) {
@@ -139,11 +142,14 @@ public abstract class TrackerBase : ITracker
                 Logger?.LogInformation(LoggerEventId, "Ga4Track Data: {Data}", data);
             }
 
-            var res = await HttpClient.SendAsync(requestMessage, linkedCts.Token).Vhc();
+            using var res = await HttpClient.SendAsync(requestMessage, linkedCts.Token).Vhc();
 
             // log
             var result = await res.Content.ReadAsStringAsync(linkedCts.Token).Vhc();
-            Logger?.LogInformation(LoggerEventId, "Ga4Track Result: {Result}", result);
+            Logger?.LogInformation(LoggerEventId, "Ga4Track Result: {StatusCode}, {Result}", (int)res.StatusCode, result);
+
+            // a refusal is a track that was not sent, as an exception is
+            res.EnsureSuccessStatusCode();
         }
         catch (Exception ex) {
             Logger?.LogError(LoggerEventId, ex, "Ga4Track could not send its track");
@@ -152,11 +158,17 @@ public abstract class TrackerBase : ITracker
         }
     }
 
-    /// <summary>Sets <see cref="Logger"/> to a simple console logger, for a tool or a test.</summary>
+    /// <summary>
+    /// Sets <see cref="Logger"/> to a simple console logger, for a tool or a test. A second call replaces the first
+    /// one's logger and closes it.
+    /// </summary>
     /// <param name="singleLine"><see langword="true"/> to write each entry on one line.</param>
     public void UseSimpleLogger(bool singleLine = false)
     {
-        using var loggerFactory = LoggerFactory.Create(builder => {
+        // The factory lives as long as its logger is the tracker's: disposed here, it would take the logger's console
+        // with it. The one of an earlier call goes with its logger.
+        _simpleLoggerFactory?.Dispose();
+        _simpleLoggerFactory = LoggerFactory.Create(builder => {
             builder.AddSimpleConsole(configure => {
                 // ReSharper disable once StringLiteralTypo
                 configure.TimestampFormat = "[HH:mm:ss.ffff] ";
@@ -165,6 +177,13 @@ public abstract class TrackerBase : ITracker
             });
         });
 
-        Logger = loggerFactory.CreateLogger("");
+        Logger = _simpleLoggerFactory.CreateLogger("");
+    }
+
+    // The Measurement Protocol takes its secret in the URL, which is logged: never with the secret's value. The URL as
+    // it is sent, as Uri.ToString decodes some of what the request encodes.
+    private static string? RedactApiSecret(Uri? uri)
+    {
+        return uri == null ? null : Regex.Replace(uri.AbsoluteUri, "(?<=[?&]api_secret=)[^&]*", "***");
     }
 }

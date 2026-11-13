@@ -62,6 +62,54 @@ public class FileUtilsTest : TestBase
             FileUtils.TryReadAllTextAsync(filePath, cancellationTokenSource.Token));
     }
 
+    [TestMethod]
+    public async Task A_move_puts_the_file_in_its_new_place_or_discards_it_for_the_one_there()
+    {
+        var sourcePath = CreateFilePath();
+        var targetPath = CreateFilePath();
+        await File.WriteAllTextAsync(sourcePath, "new", TestCt);
+
+        Assert.IsTrue(FileUtils.MoveOrDiscard(sourcePath, targetPath));
+        Assert.IsFalse(File.Exists(sourcePath));
+        Assert.AreEqual("new", await File.ReadAllTextAsync(targetPath, TestCt));
+
+        // the new place has one already, which is the one in use
+        await File.WriteAllTextAsync(sourcePath, "newer", TestCt);
+        Assert.IsTrue(FileUtils.MoveOrDiscard(sourcePath, targetPath));
+        Assert.IsFalse(File.Exists(sourcePath));
+        Assert.AreEqual("new", await File.ReadAllTextAsync(targetPath, TestCt));
+
+        // gone already
+        Assert.IsFalse(FileUtils.MoveOrDiscard(sourcePath, targetPath));
+    }
+
+    [TestMethod]
+    public async Task A_move_to_its_own_place_keeps_the_file_and_the_folder()
+    {
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "only copy", TestCt);
+
+        Assert.IsTrue(FileUtils.MoveOrDiscard(filePath, filePath));
+        Assert.AreEqual("only copy", await File.ReadAllTextAsync(filePath, TestCt));
+
+        // a folder, named with and without its last separator
+        var folderPath = Path.GetDirectoryName(filePath)!;
+        Assert.IsTrue(FileUtils.MoveOrDiscard(folderPath, folderPath + Path.DirectorySeparatorChar));
+        Assert.AreEqual("only copy", await File.ReadAllTextAsync(filePath, TestCt));
+    }
+
+    [TestMethod]
+    public async Task A_move_into_a_missing_folder_fails_and_keeps_the_file()
+    {
+        var sourcePath = CreateFilePath();
+        await File.WriteAllTextAsync(sourcePath, "kept", TestCt);
+        var targetPath = Path.Combine(Path.GetDirectoryName(sourcePath)!, "missing", "file.json");
+
+        // not "gone": the file is there, and its new place is what is missing
+        Assert.ThrowsExactly<DirectoryNotFoundException>(() => FileUtils.MoveOrDiscard(sourcePath, targetPath));
+        Assert.AreEqual("kept", await File.ReadAllTextAsync(sourcePath, TestCt));
+    }
+
     private string CreateFilePath()
     {
         var folderPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());

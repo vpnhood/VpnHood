@@ -66,6 +66,7 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
     /// <remarks>It reads no further than the window's end.</remarks>
     public override int Read(Span<byte> buffer)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var count = Remaining(buffer.Length);
         if (count == 0)
             return 0;
@@ -96,6 +97,7 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var count = Remaining(buffer.Length);
         if (count == 0)
             return 0;
@@ -113,6 +115,7 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
     /// <exception cref="ArgumentOutOfRangeException">The position would be before the window's start, or the origin is not valid.</exception>
     public override long Seek(long position, SeekOrigin origin)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var target = origin switch {
             SeekOrigin.Begin => position,
             SeekOrigin.Current => _position + position,
@@ -171,7 +174,10 @@ public class ReadOnlySubStream(Stream source, long start, long length, bool leav
 
         ArgumentOutOfRangeException.ThrowIfNegative(start);
         ArgumentOutOfRangeException.ThrowIfNegative(length);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(start + length, source.Length, nameof(length));
+
+        // by what is left after the start, not by the sum: a start and a length that overflow together add up to
+        // a negative end, which lies within any source
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(length, source.Length - start);
         return source;
     }
     // ReSharper restore ParameterOnlyUsedForPreconditionCheck.Local

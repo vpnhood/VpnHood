@@ -429,9 +429,9 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
 
     /// <inheritdoc/>
     /// <returns>
-    /// <see langword="true"/> if the channel took the packet, or the packet was dropped: one longer than the MTU, which
-    /// is logged once an open, or one Windows has no receive buffer for, which is logged once a run of such drops;
-    /// <see langword="false"/> if the adapter is not open.
+    /// <see langword="true"/> if the channel took the packet, or the packet was dropped and counted as dropped: one
+    /// longer than the MTU, which is logged once an open, or one Windows has no receive buffer for, which is logged
+    /// once a run of such drops; <see langword="false"/> if the adapter is not open.
     /// </returns>
     /// <remarks>
     /// Windows' receive buffers run out when the VPN host falls behind, as while Windows freezes it between VPN events;
@@ -452,6 +452,9 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
                 VhLogger.Instance.LogWarning(
                     "Windows VPN dropped an inbound packet larger than the channel MTU. Packet: {PacketLength}, MTU: {Mtu}",
                     length, _mtu);
+
+            // true ends the base's tries for it; the drop is told, or the packet would count as sent
+            DropPacket(ipPacket);
             return true;
         }
 
@@ -468,6 +471,8 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
                 VhLogger.Instance.LogWarning(
                     "Windows VPN receive pool is empty; inbound packets are dropped until Windows returns its buffers.");
             }
+
+            DropPacket(ipPacket);
             return true;
         }
 

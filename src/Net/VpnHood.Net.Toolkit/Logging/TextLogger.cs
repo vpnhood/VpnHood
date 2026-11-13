@@ -19,14 +19,18 @@ namespace VpnHood.Net.Toolkit.Logging;
 /// each line as an entry of its own.
 /// </param>
 /// <param name="includeTime"><see langword="true"/> to write the time; <see langword="false"/> where the destination stamps its lines itself.</param>
-/// <param name="includeScopes"><see langword="true"/> to write the level and the scopes.</param>
+/// <param name="includeScopes"><see langword="true"/> to write the scopes.</param>
 /// <param name="categoryName">The category to write, or <see langword="null"/> for none.</param>
+/// <param name="includeLevel">
+/// <see langword="true"/> to write the level; <see langword="false"/> where the destination records it itself.
+/// </param>
 public sealed class TextLogger(
     ILogger logger,
     bool singleLine = true,
     bool includeTime = true,
     bool includeScopes = true,
-    string? categoryName = null)
+    string? categoryName = null,
+    bool includeLevel = true)
     : ILogger
 {
     private static readonly Func<string, Exception?, string> TextFormatter = (text, _) => text;
@@ -70,11 +74,15 @@ public sealed class TextLogger(
         if (!string.IsNullOrEmpty(categoryName))
             logBuilder.Append($"{categoryName} | ");
 
-        // level and scopes
-        if (includeScopes) {
-            logBuilder.Append(logLevel.ToString()[..4] + " |");
+        // level and scopes, each by its own switch
+        if (includeLevel || includeScopes) {
+            if (includeLevel)
+                logBuilder.Append(logLevel.ToString()[..4] + " |");
+
             var scopesStart = logBuilder.Length;
-            WriteScopeInformation(logBuilder);
+            if (includeScopes)
+                WriteScopeInformation(logBuilder);
+
             if (!singleLine)
                 logBuilder.AppendLine();
             else

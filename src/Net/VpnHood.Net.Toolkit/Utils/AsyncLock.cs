@@ -42,9 +42,14 @@ public sealed class AsyncLock
             if (Succeeded)
                 semaphoreSlimEx.Release();
 
+            // an instance's lock is no named lock: it has no count to keep, and no reason to wait for the lock that
+            // every named lock of the process shares
+            if (name == null)
+                return;
+
             lock (SemaphoreSlims) {
                 semaphoreSlimEx.ReferenceCount--;
-                if (semaphoreSlimEx.ReferenceCount == 0 && name != null)
+                if (semaphoreSlimEx.ReferenceCount == 0)
                     SemaphoreSlims.TryRemove(name, out _);
             }
         }

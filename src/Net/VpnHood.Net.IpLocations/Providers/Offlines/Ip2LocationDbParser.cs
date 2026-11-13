@@ -1,6 +1,7 @@
 ﻿using System.IO.Compression;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Extensions;
@@ -127,8 +128,8 @@ public static class Ip2LocationDbParser
     /// Reads IP2Location's CSV into each country's IP ranges.
     /// </summary>
     /// <remarks>
-    /// Rows with no country (<c>-</c>) and rows without four columns are skipped; <c>um</c>, the US Minor Outlying
-    /// Islands, counts as <c>us</c>; IPv4-mapped IPv6 ranges become IPv4 ones.
+    /// Rows with no country (<c>-</c>) and rows without four columns are skipped, a quoted column keeping its commas;
+    /// <c>um</c>, the US Minor Outlying Islands, counts as <c>us</c>; IPv4-mapped IPv6 ranges become IPv4 ones.
     /// </remarks>
     /// <param name="ipLocationsCrvStream">IP2Location's CSV; it is closed after.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -144,11 +145,11 @@ public static class Ip2LocationDbParser
         while (!streamReader.EndOfStream) {
             cancellationToken.ThrowIfCancellationRequested();
             var line = await streamReader.ReadLineAsync(cancellationToken).Vhc() ?? "";
-            var items = line.Replace("\"", "").Split(',');
-            if (items.Length != 4)
+            var items = SplitCsvLine(line);
+            if (items.Count != 4)
                 continue;
 
-            var ipGroupId = items[2].ToLower();
+            var ipGroupId = items[2].ToLowerInvariant();
             if (ipGroupId == "-") continue;
             if (ipGroupId == "um") ipGroupId = "us";
             if (!ipGroupIpRanges.TryGetValue(ipGroupId, out var ipRanges)) {
@@ -168,5 +169,35 @@ public static class Ip2LocationDbParser
         }
 
         return ipGroupIpRanges;
+    }
+
+    // A CSV line's fields (RFC 4180): a quoted field keeps its commas, as in "Tanzania, United Republic of", and a
+    // doubled quote inside it is one quote. Split at every comma, such a row has a field too many and was left out,
+    // with its country's ranges.
+    private static List<string> SplitCsvLine(string line)
+    {
+        var fields = new List<string>();
+        var field = new StringBuilder();
+        var isQuoted = false;
+        for (var i = 0; i < line.Length; i++) {
+            var ch = line[i];
+            if (isQuoted && ch == '"' && i + 1 < line.Length && line[i + 1] == '"') {
+                field.Append('"');
+                i++;
+            }
+            else if (ch == '"') {
+                isQuoted = !isQuoted;
+            }
+            else if (ch == ',' && !isQuoted) {
+                fields.Add(field.ToString());
+                field.Clear();
+            }
+            else {
+                field.Append(ch);
+            }
+        }
+
+        fields.Add(field.ToString());
+        return fields;
     }
 }

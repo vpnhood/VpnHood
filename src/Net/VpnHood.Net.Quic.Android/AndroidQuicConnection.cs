@@ -24,6 +24,9 @@ internal sealed class AndroidQuicConnection : IQuicConnection
     private unsafe QUIC_HANDLE* _configuration;
     private GCHandle _gch;
     private readonly AndroidQuicConnectionState _state;
+
+    // Held around every use of the connection's handle: an open never uses it while the disposal closes it, or after
+    private readonly Lock _handleLock = new();
     private bool _disposed;
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(2);
 
@@ -47,8 +50,12 @@ internal sealed class AndroidQuicConnection : IQuicConnection
     public unsafe ValueTask<Stream> OpenOutboundStreamAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        Stream stream = AndroidQuicStream.OpenOutbound(_connection);
-        return new ValueTask<Stream>(stream);
+        lock (_handleLock) {
+            // refused from the disposal's start: its shutdown is under way, and the handle goes next
+            ObjectDisposedException.ThrowIf(_disposed || _connection == null, this);
+            Stream stream = AndroidQuicStream.OpenOutbound(_connection);
+            return new ValueTask<Stream>(stream);
+        }
     }
 
     public async ValueTask<Stream> AcceptInboundStreamAsync(CancellationToken cancellationToken)
@@ -187,10 +194,14 @@ internal sealed class AndroidQuicConnection : IQuicConnection
 
     private unsafe void Release()
     {
-        if (_connection != null) {
-            MsQuicApi.Table->ConnectionClose(_connection); // blocks until callbacks drained
-            _connection = null;
+        // under the lock an open holds: the callbacks the close waits for never take it
+        lock (_handleLock) {
+            if (_connection != null) {
+                MsQuicApi.Table->ConnectionClose(_connection); // blocks until callbacks drained
+                _connection = null;
+            }
         }
+
         if (_configuration != null) {
             MsQuicApi.Table->ConfigurationClose(_configuration);
             _configuration = null;

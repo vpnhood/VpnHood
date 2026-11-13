@@ -95,7 +95,7 @@ public class VpnAdapterOptions
 
     /// <summary>
     /// Gets the interface's MTU in bytes, or <see langword="null"/> to leave the system's. It also sizes the
-    /// buffer each packet is read into.
+    /// buffer each packet is read into, which holds 65,535 bytes in a run without it.
     /// </summary>
     public int? Mtu { get; init; }
 

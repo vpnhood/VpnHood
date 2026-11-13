@@ -70,23 +70,21 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
             .Vhc();
 
         var apiLocation = JsonUtils.Deserialize<ApiLocation>(json);
-        var regionName = apiLocation.RegionName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)
-            ? null
-            : apiLocation.RegionName;
-
-        var cityCode = apiLocation.CityName?.ToUpper() == "NA" || string.IsNullOrEmpty(apiLocation.CityName)
-            ? null
-            : apiLocation.CityName;
-
         var ipLocation = new IpLocation {
             IpAddress = apiLocation.Ip,
             CountryName = new RegionInfo(apiLocation.CountryCode).EnglishName,
             CountryCode = apiLocation.CountryCode,
-            RegionName = regionName,
-            CityName = cityCode
+            RegionName = NormalizePart(apiLocation.RegionName),
+            CityName = NormalizePart(apiLocation.CityName)
         };
 
         return ipLocation;
+    }
+
+    // a part of the location the service does not know: it leaves it out, sends it empty, or sends "NA"
+    private static string? NormalizePart(string? value)
+    {
+        return string.IsNullOrEmpty(value) || value.Equals("NA", StringComparison.OrdinalIgnoreCase) ? null : value;
     }
 
     /// <summary>Does nothing: the provider holds nothing to release.</summary>

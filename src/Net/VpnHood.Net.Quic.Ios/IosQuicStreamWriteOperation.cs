@@ -5,6 +5,7 @@ namespace VpnHood.Net.Quic.Ios;
 internal sealed class IosQuicStreamWriteOperation
 {
     private int _outstandingDisposed;
+    private readonly long _countedSendBytes; // what the in-flight counter took for this send, to give back at its end
     private IosQuicStream? _owner;
 
     public IosQuicStreamWriteOperation(IosQuicStream owner, int count, CancellationToken cancellationToken)
@@ -24,8 +25,8 @@ internal sealed class IosQuicStreamWriteOperation
                 error?.Dispose();
             }
         };
-        // Diagnostic in-flight-send counter (sendQ=), maintained only when IosQuicDiagnostics.Enabled.
-        IosQuicDiagnostics.AddOutstandingSend(Count);
+        // Diagnostic in-flight-send counter (sendQ=), counted only when IosQuicDiagnostics.Enabled.
+        _countedSendBytes = IosQuicDiagnostics.AddOutstandingSend(Count);
     }
 
     public IosQuicStream? Owner => _owner;
@@ -40,7 +41,7 @@ internal sealed class IosQuicStreamWriteOperation
         if (Interlocked.Exchange(ref _outstandingDisposed, 1) != 0)
             return;
 
-        IosQuicDiagnostics.SubtractOutstandingSend(Count);
+        IosQuicDiagnostics.SubtractOutstandingSend(_countedSendBytes);
     }
 
     public void Clear()

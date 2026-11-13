@@ -490,6 +490,70 @@ public class PacketTransportTest : TestBase
         Assert.AreEqual(2, transport.SentPorts[0]);
     }
 
+    // a batch of three, behind one held in its own batch: the queue is emptied into it when the held one goes
+    private async Task<TestMemoryOwner[]> SendBatchOfThree(TestHeldPacketTransport transport)
+    {
+        Assert.IsTrue(transport.SendPacketQueued(BuildPacket(9)));
+        await AssertEqualsWait(true, () => transport.IsBatchHeld);
+        var memories = new[] { BuildPacketMemory(1), BuildPacketMemory(2), BuildPacketMemory(3) };
+        foreach (var memory in memories)
+            Assert.IsTrue(transport.SendPacketQueued(PacketBuilder.Attach(new PacketMemory(memory))));
+
+        transport.Release();
+        await AssertEqualsWait(2, () => transport.BatchSizes.Count);
+        CollectionAssert.AreEqual(new[] { 1, 3 }, transport.BatchSizes.ToArray());
+        return memories;
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_packet_its_send_gives_up_is_dropped_and_the_rest_of_its_batch_is_sent(bool autoDisposePackets)
+    {
+        using var transport = new TestHeldPacketTransport(queueCapacity: 4, autoDisposePackets: autoDisposePackets) {
+            DropPort = 2
+        };
+        using var samplePacket = BuildPacket(1);
+        var packetLength = samplePacket.PacketLength;
+        var memories = await SendBatchOfThree(transport);
+
+        // one dropped, not sent; the two with it sent, as the one before them
+        await AssertEqualsWait(3L, () => transport.PacketStat.SentPackets);
+        Assert.AreEqual(1L, transport.PacketStat.DroppedPackets);
+        Assert.AreEqual(3L * packetLength, transport.PacketStat.SentBytes);
+        CollectionAssert.AreEqual(new[] { 9, 1, 3 }, transport.SentPorts.ToArray());
+
+        // the dropped one went to no one, so the transport disposes it, once and after its last log line; the
+        // sent ones only when the transport does not hand its packets on
+        Assert.AreEqual(1, memories[1].DisposeCount);
+        Assert.AreEqual(autoDisposePackets ? 1 : 0, memories[0].DisposeCount);
+        Assert.AreEqual(autoDisposePackets ? 1 : 0, memories[2].DisposeCount);
+        Assert.AreEqual(0, transport.DisposedPacketLogs);
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_packet_its_send_gives_up_is_counted_once_when_its_batch_then_fails(bool autoDisposePackets)
+    {
+        using var transport = new TestHeldPacketTransport(queueCapacity: 4, autoDisposePackets: autoDisposePackets) {
+            DropPort = 2,
+            FailSendPort = 3
+        };
+        var memories = await SendBatchOfThree(transport);
+
+        // the batch is lost whole: each of its three is a drop, the one its send had given up no more than the others
+        await AssertEqualsWait(3L, () => transport.PacketStat.DroppedPackets);
+        await AssertEqualsWait(false, () => transport.IsSending);
+        Assert.AreEqual(3L, transport.PacketStat.DroppedPackets);
+        Assert.AreEqual(1L, transport.PacketStat.SentPackets);
+
+        // each is disposed once, and none before the line that logs its loss
+        foreach (var memory in memories)
+            Assert.AreEqual(1, memory.DisposeCount);
+        Assert.AreEqual(0, transport.DisposedPacketLogs);
+    }
+
     [TestMethod]
     public void A_failed_Disposed_handler_does_not_break_the_adapters_close()
     {

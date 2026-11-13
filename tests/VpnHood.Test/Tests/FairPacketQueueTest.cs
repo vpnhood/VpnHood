@@ -102,6 +102,28 @@ public class FairPacketQueueTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_lane_that_keeps_emptying_cannot_starve_another_new_lane()
+    {
+        // 1000's lane is below 2000's, and 3000's is neither
+        using var queue = new TestHeldFairPacketQueue(capacity: 8);
+        await HoldTurn(queue, 3000);
+        Assert.IsTrue(queue.SendPacketQueued(BuildPacket(2000)));
+        Assert.IsTrue(queue.SendPacketQueued(BuildPacket(1000)));
+
+        // the lower lane takes its turn, empties, and is filled again before each next turn: new every time
+        for (var turn = 2; turn <= 4; turn++) {
+            queue.AllowTurns(1);
+            await AssertEqualsWait(turn, () => queue.TurnsStarted);
+            Assert.IsTrue(queue.SendPacketQueued(BuildPacket(1000)));
+        }
+
+        // the other new lane had its turn right after the lower lane's first, not after all of them
+        queue.Release();
+        await AssertEqualsWait(6, () => queue.SentPorts.Count);
+        CollectionAssert.AreEqual(new[] { 3000, 1000, 2000, 1000, 1000, 1000 }, queue.SentPorts.ToArray());
+    }
+
+    [TestMethod]
     public async Task Full_queue_breaks_a_tie_against_the_arriving_lane()
     {
         using var queue = new TestHeldFairPacketQueue(capacity: 2);

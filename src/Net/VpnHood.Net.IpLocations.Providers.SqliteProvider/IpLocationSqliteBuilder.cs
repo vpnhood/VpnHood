@@ -25,8 +25,10 @@ public static class IpLocationSqliteBuilder
     /// <exception cref="ArgumentNullException"><paramref name="zip"/> is <see langword="null"/>.</exception>
     public static async Task Build(IAsset zip, string dbPath, CancellationToken cancellationToken)
     {
-        // ensure target folder exists
-        Directory.CreateDirectory(Path.GetDirectoryName(dbPath) ?? Directory.GetCurrentDirectory());
+        // ensure target folder exists; a bare file name has none to make: it is the current folder's
+        var folder = Path.GetDirectoryName(dbPath);
+        if (!string.IsNullOrEmpty(folder))
+            Directory.CreateDirectory(folder);
 
         // open connection once for all work
         var connectionString = new SqliteConnectionStringBuilder {
@@ -40,7 +42,9 @@ public static class IpLocationSqliteBuilder
 
     /// <summary>
     /// Builds the database on a connection, which it opens when it is closed, unless the database already holds the
-    /// zip's build, which the zip's stamp tells. A rebuild drops the IpLocations and Metadata tables first.
+    /// zip's build, which the zip's stamp tells. A rebuild replaces the IpLocations and Metadata tables in one
+    /// transaction, so one that fails or is canceled before its commit leaves the last build. The database is
+    /// compacted after the commit: a failure or a cancellation there leaves the new build, not compacted.
     /// </summary>
     /// <param name="zip">The zip of country IP ranges.</param>
     /// <param name="connection">The connection; the caller keeps owning it.</param>
@@ -70,34 +74,34 @@ public static class IpLocationSqliteBuilder
         await using var seekable = await zipStream.ToMemoryStreamIfNotSeekableAsync(cancellationToken).Vhc();
         await using var archive = new ZipArchive(seekable, ZipArchiveMode.Read, leaveOpen: true);
 
-        // reset schema
-        await using (var cleanup = connection.CreateCommand()) {
-            cleanup.CommandText = "DROP TABLE IF EXISTS IpLocations; DROP TABLE IF EXISTS Metadata;";
-            await cleanup.ExecuteNonQueryAsync(cancellationToken).Vhc();
-        }
-
-        // create schema and indexes
-        await using (var cmd = connection.CreateCommand()) {
-            cmd.CommandText = @"
-                CREATE TABLE IpLocations (
-                    CountryCode TEXT NOT NULL,
-                    StartIp BLOB NOT NULL,
-                    EndIp BLOB NOT NULL
-                );
-
-                CREATE TABLE Metadata (
-                    Key TEXT PRIMARY KEY,
-                    Value TEXT NOT NULL
-                );
-
-                CREATE INDEX idx_CountryCode ON IpLocations(CountryCode);
-                CREATE INDEX idx_StartIp ON IpLocations(StartIp);
-            ";
-            await cmd.ExecuteNonQueryAsync(cancellationToken).Vhc();
-        }
-
+        // One transaction for the whole rebuild, the tables' drop included: a failure or a cancel part-way rolls it
+        // back and leaves the last build, which a drop made before the transaction had already lost.
         await using (var transaction =
                      (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc()) {
+            // reset schema, then create schema and indexes
+            await using (var schemaCmd = connection.CreateCommand()) {
+                schemaCmd.Transaction = transaction;
+                schemaCmd.CommandText = @"
+                    DROP TABLE IF EXISTS IpLocations;
+                    DROP TABLE IF EXISTS Metadata;
+
+                    CREATE TABLE IpLocations (
+                        CountryCode TEXT NOT NULL,
+                        StartIp BLOB NOT NULL,
+                        EndIp BLOB NOT NULL
+                    );
+
+                    CREATE TABLE Metadata (
+                        Key TEXT PRIMARY KEY,
+                        Value TEXT NOT NULL
+                    );
+
+                    CREATE INDEX idx_CountryCode ON IpLocations(CountryCode);
+                    CREATE INDEX idx_StartIp ON IpLocations(StartIp);
+                ";
+                await schemaCmd.ExecuteNonQueryAsync(cancellationToken).Vhc();
+            }
+
             await using var cmd = connection.CreateCommand();
             cmd.Transaction = transaction;
             cmd.CommandText =

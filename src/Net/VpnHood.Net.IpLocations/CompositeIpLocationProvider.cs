@@ -29,6 +29,7 @@ public class CompositeIpLocationProvider(
     
     /// <inheritdoc/>
     /// <exception cref="Exception">No provider found the location.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
         foreach (var provider in providers)
@@ -42,6 +43,10 @@ public class CompositeIpLocationProvider(
             catch (NotSupportedException) {
                 // no log
             }
+            // the caller's cancellation, not this provider's timeout: no other provider is tried
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw;
+            }
             catch (Exception ex) {
                 logger.LogError(ex, "Failed to get location. Provider: {Provider}.", provider.GetType().Name);
             }
@@ -51,6 +56,7 @@ public class CompositeIpLocationProvider(
 
     /// <inheritdoc/>
     /// <exception cref="KeyNotFoundException">No provider found the location.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         return _currentIpLocationProviders.GetCurrentLocation(cancellationToken);

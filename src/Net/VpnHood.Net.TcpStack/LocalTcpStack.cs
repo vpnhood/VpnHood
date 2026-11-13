@@ -103,7 +103,7 @@ public sealed class LocalTcpStack : ITcpStack
 
     // Maintenance sweep cadence. Retransmit timing granularity is this interval; RetransmitTimeout
     // (default 500 ms) stays a comfortable multiple of it.
-    private static readonly TimeSpan MaintenanceInterval = TimeSpan.FromMilliseconds(100);
+    internal static readonly TimeSpan MaintenanceInterval = TimeSpan.FromMilliseconds(100);
     private readonly Timer _maintenanceTimer;
     private int _maintenanceInterest; // # connections currently needing maintenance service
     private int _maintenanceSweeping; // reentrancy guard so a slow sweep never overlaps itself
@@ -276,6 +276,12 @@ public sealed class LocalTcpStack : ITcpStack
             return;
         }
 
+        // The first slot arms the idle sweep, here and not once its connection is in the table: of two SYNs racing
+        // for one tuple, the one with the first slot may lose the table to the other, whose count is not the first.
+        // Armed for a slot that is then given back, the sweep parks itself at its next tick.
+        if (connectionCount == 1)
+            _idleTimer.Change(_options.IdleCheckInterval, _options.IdleCheckInterval);
+
         var connection = CreateConnection(key, ipEndPointPair, tcpPacket, listener);
         var entry = new KeyValuePair<ConnectionKey, LocalTcpConnection>(key, connection);
         if (!_connections.TryAdd(key, connection)) {
@@ -293,10 +299,6 @@ public sealed class LocalTcpStack : ITcpStack
             connection.Dispose();
             return;
         }
-
-        // The first connection arms the idle sweep.
-        if (connectionCount == 1)
-            _idleTimer.Change(_options.IdleCheckInterval, _options.IdleCheckInterval);
 
         try {
             SendSynAck(connection);
@@ -326,7 +328,7 @@ public sealed class LocalTcpStack : ITcpStack
 
     // The SYN's connection, wired (the stack reference, the stream, the maintenance interest for the SYN-ACK's
     // retransmission) before the table publishes it to the sweeps, DropAllConnections and the receive path; the
-    // listener still gets the stream only after the final ACK arrives (MarkEstablished). Its slot is taken already: a
+    // listener still gets the stream only after the final ACK arrives (HandToListener). Its slot is taken already: a
     // throw here gives it back, or the count would stay one high for the stack's life.
     private LocalTcpConnection CreateConnection(ConnectionKey key, IPEndPointPairValue ipEndPointPair, TcpPacket tcpPacket,
         LocalTcpListener listener)
@@ -404,6 +406,7 @@ public sealed class LocalTcpStack : ITcpStack
         // SynReceived: the ACK must acknowledge our SYN-ACK (see IsValidHandshakeAck); the data path
         // below takes the segment from there. The right ack beyond the window gets a plain ACK (RFC 9293
         // 3.10.7.4); a wrong ack, a stale or forged segment, keeps the old tolerance: a SYN-ACK.
+        var completesHandshake = false;
         if (conn.State == TcpConnectionState.SynReceived && (flags & TcpFlags.Rst) == 0) {
             if (!conn.IsValidHandshakeAck(tcpPacket.SequenceNumber, tcpPacket.AcknowledgmentNumber, flags)) {
                 if (conn.AcknowledgesOurSyn(tcpPacket.AcknowledgmentNumber))
@@ -413,7 +416,7 @@ public sealed class LocalTcpStack : ITcpStack
                 return;
             }
 
-            conn.MarkEstablished();
+            completesHandshake = conn.MarkEstablished();
         }
 
         var (handled, needsAck) = conn.TryHandleIncoming(
@@ -422,6 +425,13 @@ public sealed class LocalTcpStack : ITcpStack
             tcpPacket.WindowSize,
             flags,
             tcpPacket.Payload.Span);
+
+        // The listener gets the stream once the segment that completed the handshake is processed, with its window
+        // and its data, not before: a write made as the app gets the stream would go by the window guessed before any
+        // ACK, and this segment's ACK, coming after the write, would count as a duplicate. Only that segment pays
+        // for it, no other.
+        if (completesHandshake)
+            conn.HandToListener();
 
         if (!handled || !needsAck)
             return;

@@ -14,6 +14,12 @@ namespace VpnHood.Net.TcpStack;
 /// </remarks>
 public sealed class LocalTcpStackOptions
 {
+    // the longest timeout the stack keeps: its retransmission timeouts are ints of milliseconds, and so is a wait's
+    private static readonly TimeSpan MaxTimeout = TimeSpan.FromMilliseconds(int.MaxValue);
+
+    // RFC 1122's 500 ms delayed-ACK bound, less the check interval the ACK may wait on top of its timeout
+    private static readonly TimeSpan MaxDelayedAckTimeout = TimeSpan.FromMilliseconds(500) - LocalTcpStack.MaintenanceInterval;
+
     // ---- Receive / Upload buffering (tun -> stack -> app stream) ----
 
     /// <summary>
@@ -85,7 +91,7 @@ public sealed class LocalTcpStackOptions
     /// Gets how long the stack waits while the peer's window is zero before it sends a zero-window probe. The default
     /// is 200 milliseconds.
     /// </summary>
-    /// <remarks>It must be more than zero.</remarks>
+    /// <remarks>It must be at least 1 millisecond and at most 2,147,483,647 milliseconds, about 24 days.</remarks>
     public TimeSpan ZeroWindowProbeInterval { get; init; } = TimeSpan.FromMilliseconds(200);
 
     // ---- Loss recovery ----
@@ -109,7 +115,9 @@ public sealed class LocalTcpStackOptions
     /// given up with a reset at the next expiry; equal to <see cref="RetransmitTimeout"/>, it leaves a handshake no
     /// retransmission at all. The default is 4 seconds.
     /// </summary>
-    /// <remarks>It must be at least <see cref="RetransmitTimeout"/>.</remarks>
+    /// <remarks>
+    /// It must be at least <see cref="RetransmitTimeout"/> and at most 2,147,483,647 milliseconds, about 24 days.
+    /// </remarks>
     public TimeSpan RetransmitMaxTimeout { get; init; } = TimeSpan.FromSeconds(4);
 
     /// <summary>
@@ -119,8 +127,8 @@ public sealed class LocalTcpStackOptions
     /// RTO of a Linux or Android peer, which a later ACK would trip into a needless retransmission.
     /// </summary>
     /// <remarks>
-    /// It must be more than zero and at most 500 milliseconds, RFC 1122's delayed-ACK bound, which the check interval
-    /// and a busy stack may exceed.
+    /// It must be more than zero and at most 400 milliseconds: with the check interval on top, the ACK then nominally
+    /// leaves within the 500 milliseconds RFC 1122 allows a delayed ACK, which only a busy stack may exceed.
     /// </remarks>
     public TimeSpan DelayedAckTimeout { get; init; } = TimeSpan.FromMilliseconds(50);
 
@@ -268,22 +276,30 @@ public sealed class LocalTcpStackOptions
             throw new ArgumentException(
                 $"MSS values must satisfy 0 < {nameof(MinMss)} ≤ {nameof(DefaultMss)} ≤ {nameof(MaxMss)}; was {MinMss}/{DefaultMss}/{MaxMss}.");
 
-        if (ZeroWindowProbeInterval <= TimeSpan.Zero)
-            throw new ArgumentException("ZeroWindowProbeInterval must be positive.");
+        // a wait's timeout, in whole milliseconds: under one it would be no wait, and the writer would send its probes
+        // in a burst; beyond an int of them the first wait on a zero window would throw, on the data path
+        if (ZeroWindowProbeInterval < TimeSpan.FromMilliseconds(1) || ZeroWindowProbeInterval > MaxTimeout)
+            throw new ArgumentException(
+                $"{nameof(ZeroWindowProbeInterval)} must be at least 1 ms and at most {MaxTimeout}; was {ZeroWindowProbeInterval}.");
 
         // a Timer's range: under 1 ms it would be a one-shot, beyond 49 days Timer.Change throws
         if (IdleCheckInterval < TimeSpan.FromMilliseconds(1) || IdleCheckInterval.TotalMilliseconds > uint.MaxValue - 1)
             throw new ArgumentException($"{nameof(IdleCheckInterval)} must be between 1 ms and 49 days; was {IdleCheckInterval}.");
 
-        // the RTO is kept in whole milliseconds: under 1 ms it would be 0, never back off and never reach its cap
-        if (RetransmitTimeout < TimeSpan.FromMilliseconds(1) || RetransmitMaxTimeout < RetransmitTimeout)
+        // the RTO is kept in whole milliseconds: under 1 ms it would be 0, never back off and never reach its cap,
+        // and beyond an int of them it would not be the option's value
+        if (RetransmitTimeout < TimeSpan.FromMilliseconds(1) || RetransmitMaxTimeout < RetransmitTimeout ||
+            RetransmitMaxTimeout > MaxTimeout)
             throw new ArgumentException(
-                $"{nameof(RetransmitTimeout)} must be at least 1 ms and {nameof(RetransmitMaxTimeout)} must be ≥ {nameof(RetransmitTimeout)}; " +
-                $"was {RetransmitTimeout}/{RetransmitMaxTimeout}.");
+                $"{nameof(RetransmitTimeout)} must be at least 1 ms and {nameof(RetransmitMaxTimeout)} must be ≥ {nameof(RetransmitTimeout)} " +
+                $"and at most {MaxTimeout}; was {RetransmitTimeout}/{RetransmitMaxTimeout}.");
 
-        if (DelayedAckTimeout <= TimeSpan.Zero || DelayedAckTimeout > TimeSpan.FromMilliseconds(500))
+        // the ACK leaves at the first check after its timeout, up to one check interval later: together they stay
+        // under the 500 ms RFC 1122 allows a delayed ACK (4.2.3.2)
+        if (DelayedAckTimeout <= TimeSpan.Zero || DelayedAckTimeout > MaxDelayedAckTimeout)
             throw new ArgumentException(
-                $"{nameof(DelayedAckTimeout)} must be within (0, 500] ms (RFC 1122 delayed-ACK bound); was {DelayedAckTimeout}.");
+                $"{nameof(DelayedAckTimeout)} must be within (0, {MaxDelayedAckTimeout.TotalMilliseconds}] ms, which with the stack's " +
+                $"{LocalTcpStack.MaintenanceInterval.TotalMilliseconds} ms check keeps RFC 1122's 500 ms delayed-ACK bound; was {DelayedAckTimeout}.");
 
         if (IdleTimeout <= IdleCheckInterval)
             throw new ArgumentException(

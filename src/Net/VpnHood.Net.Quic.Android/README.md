@@ -45,9 +45,9 @@ we never touch OpenSSL from managed code).
 | Type | Role |
 |------|------|
 | `Interop/MsQuicApi` | Opens the native `QUIC_API_TABLE` + one registration once per process (lazy, on the bundled `libmsquic.so`). `IsSupported` probes this. |
-| `AndroidQuicClient : IQuicClient` | Opens a configuration (ALPN `h3`, client credential) + connection, starts it, awaits handshake, returns a connection. |
+| `AndroidQuicClient : IQuicClient` | Opens a configuration (ALPN `h3`, client credential, the number of streams the server may open) + connection, starts it, awaits handshake, returns a connection. |
 | `AndroidQuicConnection : IQuicConnection` | Owns the connection handle; routes the unmanaged connection callback; opens outbound / accepts inbound streams; performs **certificate validation**. |
-| `AndroidQuicStream : Stream` | An async `Stream` over one msquic stream: RECEIVE → a `Pipe` that `ReadAsync` drains; `WriteAsync` → `StreamSend` awaited until `SEND_COMPLETE` (backpressure). |
+| `AndroidQuicStream : Stream` | An async `Stream` over one msquic stream: RECEIVE → a `Pipe` that `ReadAsync` drains, holding at most 64 KB: past that the stream's receive events stop until the reader has made room, so QUIC's flow control stops the sender; `WriteAsync` → `StreamSend` awaited until `SEND_COMPLETE` (backpressure). A disposed stream or connection throws `ObjectDisposedException`. |
 
 This project is **pure managed code**. The native `libmsquic.so` and the MsQuic C# P/Invoke bindings
 (`Microsoft.Quic` namespace) both come from the self-contained package

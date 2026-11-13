@@ -1,12 +1,16 @@
 namespace VpnHood.Net.Http3;
 
 /// <summary>
-/// Provides the limits and timeouts of an <see cref="Http3ServerConnection"/>. Its constructor checks the limits and
-/// throws <see cref="ArgumentOutOfRangeException"/> for a negative one, or for zero where noted; the timeouts are not
-/// checked.
+/// Provides the limits and timeouts of an <see cref="Http3ServerConnection"/>. Its constructor checks them and throws
+/// <see cref="ArgumentOutOfRangeException"/> for a negative limit, or a zero one where noted, and for a timeout that
+/// is not above zero, is longer than a timer takes (about 49 days), and is not
+/// <see cref="Timeout.InfiniteTimeSpan"/>.
 /// </summary>
 public sealed class Http3ServerOptions
 {
+    // the longest a CancellationTokenSource or a task's wait times
+    private static readonly TimeSpan MaxTimeout = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
     /// <summary>
     /// Gets the most streams the connection processes at once; accepting waits while it has that many. It must be more
     /// than zero. The default is 110.
@@ -100,6 +104,19 @@ public sealed class Http3ServerOptions
         ArgumentOutOfRangeException.ThrowIfNegative(MaxBodyInspectionBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaxControlFrameBytes);
         ArgumentNullException.ThrowIfNull(ResponseHeaders);
+
+        // here, not at their first use: Run arms the idle timer before its cleanup is in place, so a timeout a
+        // timer refuses would end it with the connection left open
+        ThrowIfNoTimeout(HeadersTimeout, nameof(HeadersTimeout));
+        ThrowIfNoTimeout(KeepAliveTimeout, nameof(KeepAliveTimeout));
+        ThrowIfNoTimeout(CloseTimeout, nameof(CloseTimeout));
         return this;
+    }
+
+    private static void ThrowIfNoTimeout(TimeSpan timeout, string name)
+    {
+        if (timeout != Timeout.InfiniteTimeSpan && (timeout <= TimeSpan.Zero || timeout > MaxTimeout))
+            throw new ArgumentOutOfRangeException(name, timeout,
+                $"{name} must be more than zero and at most {MaxTimeout}, or Timeout.InfiniteTimeSpan.");
     }
 }

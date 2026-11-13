@@ -26,6 +26,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- the iOS QUIC client's counters are plain .NET in a project only iOS builds: compiled here too, so their
+		     pairing is tested off the device -->
+		<Compile Include="..\..\src\Net\VpnHood.Net.Quic.Ios\IosQuicDiagnostics.cs" Link="Quic\IosQuicDiagnostics.cs" />
+		<Compile Include="..\..\src\Net\VpnHood.Net.Quic.Ios\IosQuicEventIds.cs" Link="Quic\IosQuicEventIds.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Update="Assets\VpnHood.UnitTest.pfx">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>

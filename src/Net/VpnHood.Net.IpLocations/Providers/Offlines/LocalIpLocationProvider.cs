@@ -75,7 +75,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
             throw new KeyNotFoundException($"Could not find the location of the ip address. IpAddress: {ipAddress}");
 
         // return country code
-        var countryCode = _ipRangeInfoList[res].CountryCode.ToUpper();
+        var countryCode = _ipRangeInfoList[res].CountryCode.ToUpperInvariant();
         var ipLocation = new IpLocation {
             CountryName = new RegionInfo(countryCode).EnglishName,
             CountryCode = countryCode,
@@ -143,12 +143,9 @@ public class LocalIpLocationProvider : IIpLocationProvider
         var length = reader.ReadInt32();
         var ipRangeInfos = new IpRangeInfo[length];
         for (var i = 0; i < length; i++) {
-            var firstIpLength = reader.ReadByte();
-            var firstIpBytes = reader.ReadBytes(firstIpLength);
-            var lastIpLength = reader.ReadByte();
-            var lastIpBytes = reader.ReadBytes(lastIpLength);
-            var countryLength = reader.ReadByte();
-            var countryBytes = reader.ReadBytes(countryLength);
+            var firstIpBytes = ReadField(reader);
+            var lastIpBytes = ReadField(reader);
+            var countryBytes = ReadField(reader);
 
             ipRangeInfos[i] = new IpRangeInfo {
                 CountryCode = Encoding.ASCII.GetString(countryBytes),
@@ -157,6 +154,17 @@ public class LocalIpLocationProvider : IIpLocationProvider
         }
 
         return new LocalIpLocationProvider(ipRangeInfos, userAgent);
+    }
+
+    // A field with its length in front. All of it or an error: BinaryReader.ReadBytes gives what is left of a file
+    // cut short, which would read as a shorter country code, or as an IPv4 address where 16 bytes were cut to 4.
+    private static byte[] ReadField(BinaryReader reader)
+    {
+        var length = reader.ReadByte();
+        var bytes = reader.ReadBytes(length);
+        return bytes.Length == length
+            ? bytes
+            : throw new EndOfStreamException("The IP location data is cut short.");
     }
 
     /// <summary>Does nothing: the provider holds nothing to release.</summary>

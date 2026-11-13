@@ -19,7 +19,8 @@ namespace VpnHood.Net.Quic.Android;
 /// <see cref="QuicClientConnectOptions.CertificateValidationCallback"/>, whose answer decides. The callback gets the
 /// certificate, the chain built with the intermediates the server sent, and the errors found: a chain that does not
 /// build, or a name that does not match <see cref="QuicClientConnectOptions.TargetHost"/>. The client pins nothing
-/// itself. It does not apply <see cref="QuicClientConnectOptions.MaxInboundBidirectionalStreams"/>.
+/// itself. It applies <see cref="QuicClientConnectOptions.MaxInboundBidirectionalStreams"/> up to 65535, the most
+/// MsQuic takes.
 /// </remarks>
 public sealed class AndroidQuicClient : IQuicClient
 {
@@ -78,7 +79,13 @@ public sealed class AndroidQuicClient : IQuicClient
         try {
             var alpn = stackalloc byte[2] { (byte)'h', (byte)'3' };
             var alpnBuf = new QUIC_BUFFER { Length = 2, Buffer = alpn };
-            ThrowIfFailure(table->ConfigurationOpen(registration, &alpnBuf, 1, null, 0, null, &config));
+
+            // The streams the server may open at a time: with no setting MsQuic lets a peer open none.
+            var settings = new QUIC_SETTINGS();
+            settings.IsSet.PeerBidiStreamCount = 1;
+            settings.PeerBidiStreamCount = (ushort)Math.Clamp(options.MaxInboundBidirectionalStreams, 0, ushort.MaxValue);
+            ThrowIfFailure(table->ConfigurationOpen(registration, &alpnBuf, 1, &settings, (uint)sizeof(QUIC_SETTINGS),
+                null, &config));
 
             // INDICATE_CERTIFICATE_RECEIVED: raise PEER_CERTIFICATE_RECEIVED so we can validate.
             // DEFER_CERTIFICATE_VALIDATION: do NOT let msquic reject on its own (Android has no CA store,
@@ -132,6 +139,7 @@ public sealed class AndroidQuicClient : IQuicClient
         if (endPoint.AddressFamily == AddressFamily.InterNetworkV6) {
             addr.Family = (ushort)QUIC_ADDRESS_FAMILY_INET6;
             addr.Ipv6.sin6_port = portNetworkOrder;
+            addr.Ipv6.sin6_scope_id = (uint)endPoint.Address.ScopeId; // a link-local address names its interface by it
             for (var i = 0; i < bytes.Length && i < 16; i++)
                 addr.Ipv6.sin6_addr[i] = bytes[i];
         }

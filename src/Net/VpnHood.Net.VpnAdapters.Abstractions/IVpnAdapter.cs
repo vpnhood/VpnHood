@@ -44,10 +44,11 @@ public interface IVpnAdapter : IPacketTransport
     /// or by a restart that could not start it again. Its owner must act, a client by ending its session.
     /// </summary>
     /// <remarks>
-    /// It is raised on a thread-pool task, so the adapter may have changed by the time a handler runs: one already
-    /// queued may arrive after a stop or disposal. It is not raised with <see cref="VpnAdapterSettings.AutoRestart"/>,
-    /// where the adapter retries instead. The owner's stop or disposal does not raise it, nor does a failed owner's
-    /// start, whose caller gets the exception.
+    /// It is raised on a thread-pool task, after the failure. A stop, a disposal or a new start by the owner that
+    /// begins before that task runs cancels it; one that begins while a handler runs does not interrupt the
+    /// handler. It is not raised with <see cref="VpnAdapterSettings.AutoRestart"/>, where the adapter retries
+    /// instead. The owner's stop or disposal does not raise it, nor does a failed owner's start, whose caller gets
+    /// the exception.
     /// </remarks>
     event EventHandler<Exception>? Failed;
 
@@ -57,8 +58,10 @@ public interface IVpnAdapter : IPacketTransport
     /// switch's block, must follow it.
     /// </summary>
     /// <remarks>
-    /// It is raised on the starting thread, before the start completes; during a restart, under the adapter's restart
-    /// lock, so a handler must not stop or dispose the adapter before returning.
+    /// It is raised on the starting thread, once the adapter is up and before the start or the restart completes. A
+    /// handler may stop or dispose the adapter, or start it again; it must not wait for another start or restart of
+    /// it. A run that is over by a handler's turn is not announced to that handler, and one run's handlers return
+    /// before the next run's are called, except those of a run a handler itself starts.
     /// </remarks>
     event EventHandler<VpnAdapterOptions>? Started;
 

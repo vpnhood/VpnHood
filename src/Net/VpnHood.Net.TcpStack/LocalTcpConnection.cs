@@ -196,25 +196,43 @@ internal sealed class LocalTcpConnection(
     }
 
     /// <summary>
-    /// Transitions from SynReceived to Established and hands the pending stream to the listener.
-    /// Idempotent: subsequent calls are no-ops.
+    /// Transitions from SynReceived to Established. The listener gets the pending stream after the segment that
+    /// completes the handshake is processed (<see cref="HandToListener"/>). Idempotent: subsequent calls are no-ops.
     /// </summary>
-    public void MarkEstablished()
+    /// <returns>Whether this call made the transition: its caller then hands the stream to the listener.</returns>
+    public bool MarkEstablished()
     {
-        LocalTcpClient? clientToEnqueue;
+        int establishedConnections;
         lock (_seqLock) {
-            // after a dispose nobody is left to count it down; after a close its client must not reach the accept queue
-            if (_disposed || _closedFlag || State != TcpConnectionState.SynReceived) return;
+            // after a dispose nobody is left to count it down
+            if (_disposed || _closedFlag || State != TcpConnectionState.SynReceived) return false;
             State = TcpConnectionState.Established;
+            // Counted under the lock a close reads the flag under, so its count down never comes before this count up.
+            establishedConnections = diagnostics.IncrementEstablishedConnections(); // DIAGNOSTIC
             _establishedCounted = true;
-            clientToEnqueue = _pendingClient;
-            _pendingClient = null;
             UpdateMaintenanceInterestLocked(); // handshake done -> SYN-ACK retransmission no longer needed
         }
 
         // Off the hot _seqLock: the State==SynReceived guard above guarantees exactly one thread reaches
-        // here, so the count+log can run outside the lock.
-        diagnostics.IncrementEstablishedConnections(ipEndPointPair); // DIAGNOSTIC (counts + logs)
+        // here, so the log line can be written outside the lock.
+        diagnostics.LogEstablished(ipEndPointPair, establishedConnections); // DIAGNOSTIC
+        return true;
+    }
+
+    /// <summary>
+    /// Hands the established connection's stream to the listener, once the segment that completed the handshake is
+    /// processed: the app may write as soon as it has the stream, and must send by that segment's window, not the one
+    /// guessed before any ACK; nor may that segment's ACK come after the write, as a duplicate. Called once, by the
+    /// caller whose <see cref="MarkEstablished"/> made the transition.
+    /// </summary>
+    public void HandToListener()
+    {
+        LocalTcpClient? clientToEnqueue;
+        lock (_seqLock) {
+            // none left: a close or a dispose since the transition took the client and disposes it
+            clientToEnqueue = _pendingClient;
+            _pendingClient = null;
+        }
 
         // An abort landing just after the lock (the handshake's give-up, the idle timeout, an eviction) leaves the
         // listener a stream that ends at once, as a kernel's accept can return a socket the peer has reset; nothing leaks.
@@ -657,7 +675,7 @@ internal sealed class LocalTcpConnection(
         if (_finSent)
             State = _sndUna == _sndNxt ? TcpConnectionState.Closed : TcpConnectionState.LastAck;
         else
-            State = TcpConnectionState.Closing;
+            State = TcpConnectionState.CloseWait;
         return true;
     }
 
@@ -837,11 +855,12 @@ internal sealed class LocalTcpConnection(
         _retxHigh = _sndUna;
     }
 
-    // _seqLock must be held.
+    // _seqLock must be held. Doubled as a long: an int past half its range would wrap to a negative timeout, which
+    // every sweep finds expired.
     private void BackoffRtoLocked()
     {
         _rtoStartTicks = Stopwatch.GetTimestamp();
-        _rtoCurrentMs = Math.Min(_rtoCurrentMs * 2, _rtoMaxMs);
+        _rtoCurrentMs = (int)Math.Min((long)_rtoCurrentMs * 2, _rtoMaxMs);
     }
 
     /// <summary>
@@ -894,7 +913,7 @@ internal sealed class LocalTcpConnection(
 
             // The connection ends only when the peer acknowledges this FIN (HandleAck);
             // until then PollMaintenance retransmits it, and the idle timeout bounds a peer that never does.
-            State = _finReceived ? TcpConnectionState.LastAck : TcpConnectionState.FinWait1;
+            State = _finReceived ? TcpConnectionState.LastAck : TcpConnectionState.FinWait;
             UpdateMaintenanceInterestLocked();
         }
 

@@ -23,6 +23,10 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     public volatile bool FailStart;
     public volatile bool FailRead;
     public volatile bool FailWrite;
+    public volatile bool FailClose;
+    public volatile bool FailAddIpV6; // the interface refuses its IPv6 address
+    public volatile bool RefuseWrite; // the interface takes no packet: every write finds it full
+    public volatile int ReadBufferSize; // the size of the buffer the reader last asked for
     public volatile bool HoldReader; // the reader's next wait holds until ReleaseReader
     public volatile bool HoldSender; // the next write holds until ReleaseSender
     public volatile bool StopAfterOpen; // the owner's stop overtakes the start, between its open and its reader
@@ -71,6 +75,13 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         IsAdded = false;
     }
 
+    protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
+    {
+        return FailAddIpV6 && ipNetwork.IsV6
+            ? throw new IOException("Test: the adapter refused its IPv6 address.")
+            : base.AddAddress(ipNetwork, cancellationToken);
+    }
+
     // as WinTun's: the step runs to its end past a stop
     protected override async Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
@@ -96,6 +107,12 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         base.StartReadingPackets();
         IsReading = false;
         Interlocked.Decrement(ref ReadingCount);
+    }
+
+    protected override IpPacket? ReadPacket(int mtu)
+    {
+        ReadBufferSize = mtu;
+        return base.ReadPacket(mtu);
     }
 
     protected override int ReadPacket(byte[] buffer)
@@ -130,7 +147,7 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         }
 
         // as a real adapter's: no device to take the packet until the start opens it
-        return IsOpen && base.WritePacket(ipPacket);
+        return IsOpen && !RefuseWrite && base.WritePacket(ipPacket);
     }
 
     public void ReleaseStart()
@@ -154,6 +171,9 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     // as WinTun's: the reader and the batch being sent leave before what they use is freed
     protected override void AdapterClose()
     {
+        if (FailClose)
+            throw new IOException("Test: the adapter could not be closed.");
+
         ReaderEndedAtClose = WaitForReader(ReaderWaitTimeout);
         WasReadingAtClose = IsReading;
         SenderEndedAtClose = WaitForSender(TimeSpan.FromSeconds(5));

@@ -19,8 +19,8 @@ dotnet add package VpnHood.Net.Http3
 - `IHttp3StreamRunner` runs a claimed stream, which reads its first bytes again.
 - `IHttp3Responder` answers every other request with a header-only response, through `Http3ResponseWriter`. The
   engine inspects up to `MaxBodyInspectionBytes` after the headers to check the body, and discards it.
-- `Http3ServerOptions` sets the limits and timeouts; a request whose header fields are over the limits when the
-  response is chosen gets status 431.
+- `Http3ServerOptions` sets the limits and timeouts, which the connection checks as it is made; a request whose
+  header fields are over the limits when the response is chosen gets status 431.
 - QPACK runs without a dynamic table, so the engine opens no encoder or decoder streams.
 
 ## Packages

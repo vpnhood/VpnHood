@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Net;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
@@ -311,7 +312,7 @@ public sealed class LocalTcpStackTest
             DefaultMss = 512,
             MaxMss = 512,
             RetransmitBufferSize = 1024,
-            DelayedAckTimeout = TimeSpan.FromMilliseconds(500)
+            DelayedAckTimeout = TimeSpan.FromMilliseconds(400) // the longest the stack takes
         });
         var sentPackets = new List<IpPacket>();
         object lockObj = new();
@@ -1258,11 +1259,125 @@ public sealed class LocalTcpStackTest
             await client.DisposeAsync();
     }
 
+    /// <summary>The window of the ACK that completes the handshake holds for the app's first write, however early the
+    /// app makes it: the stream is handed out with that ACK processed, its window applied, not with the 64 KB guessed
+    /// before any ACK; and the ACK, come before the write, is no duplicate ACK of it. The accept's continuation runs
+    /// here on the thread that completes the handshake, at the moment the listener gets the client: the earliest a
+    /// writer on another thread could run.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task HandshakeAckWindow_HoldsForAWriteMadeAsTheClientIsHandedOut()
+    {
+        using var tcpStack = new LocalTcpStack(NoRtoOptions);
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+        var serverSeq = SynAckSequence(sent, sync, ClientPort);
+
+        // the peer's window is 1000 bytes; the app writes 5000 the moment it gets the stream
+        Task writeTask;
+        var callerContext = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
+        try {
+            writeTask = AcceptAndWrite(listener, new byte[5000]);
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: 1001, ackNum: serverSeq + 1, window: 1000));
+        }
+        finally {
+            SynchronizationContext.SetSynchronizationContext(callerContext);
+        }
+
+        Assert.AreEqual(1000, SentPayloadLength(sent, sync), "the first write stays within the handshake ACK's window");
+
+        // two duplicates of that ACK are two, one short of a fast retransmission: the handshake's own was not the first
+        for (var i = 0; i < 2; i++)
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                ack: true, seq: 1001, ackNum: serverSeq + 1, window: 1000));
+        Assert.AreEqual(1000, SentPayloadLength(sent, sync), "two duplicate ACKs retransmit nothing");
+
+        // the window opens, and the rest goes out
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1 + 1000, window: 65535));
+        await writeTask.WaitAsync(TimeSpan.FromSeconds(2), TestCt);
+        Assert.AreEqual(5000, SentPayloadLength(sent, sync));
+    }
+
+    /// <summary>The idle sweep is armed whichever of the SYNs racing for one tuple gets the connection: the one that
+    /// took the first slot may lose the table to another, and that other's connection must not be left without the
+    /// sweep, never reaped, with every connection after it. The first SYN is held here between its slot and the
+    /// table, at the read of its options, while another of its tuple takes the table.</summary>
+    [TestMethod]
+    [Timeout(20000)]
+    public async Task IdleSweep_IsArmed_WhenTheFirstSlotsSynLosesItsTupleToAnother()
+    {
+        // no RTO: the handshake is not given up, so only the idle sweep reaps the half-open connection
+        using var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            IdleTimeout = TimeSpan.FromMilliseconds(300),
+            IdleCheckInterval = TimeSpan.FromMilliseconds(100),
+            RetransmitTimeout = TimeSpan.FromSeconds(30),
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(30)
+        });
+        var sentCount = 0;
+        tcpStack.OnPacketSend = p => {
+            Interlocked.Increment(ref sentCount);
+            p.Dispose();
+        };
+        tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+
+        // the first SYN's memory holds its reader at the first read made once a slot is taken: its own slot's
+        using var held = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        var isHeldOnce = 0;
+        using var plainSyn = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
+        var firstSyn = PacketBuilder.Attach(new PacketMemory(new GatedMemoryManager(plainSyn.Buffer.ToArray(), () => {
+            if (tcpStack.Diagnostics.ConnectionCount == 0 || Interlocked.Exchange(ref isHeldOnce, 1) != 0)
+                return;
+
+            held.Set();
+            release.Wait(TimeSpan.FromSeconds(10));
+        })));
+        var firstThread = new Thread(() => tcpStack.ProcessIncoming(firstSyn));
+        firstThread.Start();
+        try {
+            Assert.IsTrue(held.Wait(TimeSpan.FromSeconds(5)), "the first SYN is held with its slot taken");
+            Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount);
+
+            // another SYN of the tuple gets the table, and its SYN-ACK, while the first is held
+            tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000));
+            Assert.AreEqual(1, Volatile.Read(ref sentCount), "the second SYN got the connection");
+        }
+        finally {
+            release.Set();
+        }
+
+        Assert.IsTrue(firstThread.Join(TimeSpan.FromSeconds(5)));
+        Assert.AreEqual(1, Volatile.Read(ref sentCount), "the first SYN lost the tuple: no SYN-ACK of its own");
+        Assert.AreEqual(1, tcpStack.Diagnostics.ConnectionCount, "one connection for the tuple");
+
+        await WaitForCondition(() => tcpStack.Diagnostics.ConnectionCount == 0, TestCt, 3000);
+        Assert.AreEqual(0, tcpStack.Diagnostics.ConnectionCount, "the idle sweep reaped it");
+    }
+
     // The handshake tests' stack: no RTO, so the maintenance sweep never retransmits a SYN-ACK into their counts.
     private static LocalTcpStackOptions NoRtoOptions => new() {
         RetransmitTimeout = TimeSpan.FromSeconds(30),
         RetransmitMaxTimeout = TimeSpan.FromSeconds(30)
     };
+
+    private async Task AcceptAndWrite(LocalTcpListener listener, byte[] data)
+    {
+        var client = await listener.AcceptAsync(TestCt);
+        await client.Stream.WriteAsync(data, TestCt);
+    }
+
+    // the payload bytes the stack has sent, in all its segments
+    private static int SentPayloadLength(List<IpPacket> sent, object sync)
+    {
+        lock (sync)
+            return sent.Sum(p => p.ExtractTcp().Payload.Length);
+    }
 
     private static IpPacket[] Snapshot(List<IpPacket> sent, object sync)
     {
@@ -1768,5 +1883,37 @@ public sealed class LocalTcpStackTest
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var client = await acceptTask.WaitAsync(cts.Token);
         await client.DisposeAsync();
+    }
+
+    // runs what is posted to it at once, on the posting thread
+    private sealed class InlineSynchronizationContext : SynchronizationContext
+    {
+        public override void Post(SendOrPostCallback d, object? state)
+        {
+            d(state);
+        }
+    }
+
+    // a packet's memory whose every read passes a gate first: a test holds the stack between two reads of a packet
+    private sealed class GatedMemoryManager(byte[] buffer, Action gate) : MemoryManager<byte>
+    {
+        public override Span<byte> GetSpan()
+        {
+            gate();
+            return buffer;
+        }
+
+        public override MemoryHandle Pin(int elementIndex = 0)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void Unpin()
+        {
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+        }
     }
 }

@@ -6,8 +6,9 @@ namespace VpnHood.Net.Quic.Ios;
 
 /// <summary>
 /// Provides the iOS QUIC client's investigation counters and its <c>[VHQUIC]</c> open and close log lines, as
-/// <c>TcpStackDiagnostics</c> does for the TCP stack. The counters move only while <see cref="Enabled"/>, so production
-/// pays nothing.
+/// <c>TcpStackDiagnostics</c> does for the TCP stack. A stream, a connection, a send or a teardown is counted only when
+/// it begins while <see cref="Enabled"/>, so production pays nothing; its end is then counted whatever the log level is
+/// by then, so no count goes below zero or stays up.
 /// </summary>
 /// <remarks>
 /// Only the diagnostic counters live here. The load-bearing jetsam brake input is deliberately NOT gated: the
@@ -34,7 +35,10 @@ public static class IosQuicDiagnostics
     /// Gets a value indicating whether the counters move and the lines are logged: while the log level is below
     /// Information.
     /// </summary>
-    /// <remarks>A change of the log level while streams are open leaves the counts off by those streams.</remarks>
+    /// <remarks>
+    /// What was open, or being sent, before the log level dropped is never counted, so the counts may then be under
+    /// the real ones; they are exact for everything that began since.
+    /// </remarks>
     public static bool Enabled => VhLogger.MinLogLevel < LogLevel.Information;
 
     /// <summary>Gets the number of open QUIC streams, each a native NWConnection.</summary>
@@ -61,12 +65,16 @@ public static class IosQuicDiagnostics
         return id;
     }
 
-    /// <summary>Records a QUIC stream close (logs <c>[VHQUIC] -CONN</c>). No-op unless enabled.</summary>
+    /// <summary>
+    /// Records the close of a QUIC stream whose open was counted (logs <c>[VHQUIC] -CONN</c>). No-op for id 0, the
+    /// open that was not counted.
+    /// </summary>
     internal static void OnStreamClosed(int id)
     {
-        if (!Enabled) return;
+        if (id == 0) return;
         var live = Interlocked.Decrement(ref _liveStreamCount);
-        LogConn("-CONN", live, id);
+        if (Enabled)
+            LogConn("-CONN", live, id);
     }
 
     /// <summary>Records creation of an underlying QUIC connection group.</summary>
@@ -81,14 +89,18 @@ public static class IosQuicDiagnostics
         return id;
     }
 
-    /// <summary>Records disposal of an underlying QUIC connection group.</summary>
+    /// <summary>
+    /// Records disposal of an underlying QUIC connection group whose creation was counted. No-op for id 0, the
+    /// creation that was not counted.
+    /// </summary>
     internal static void OnConnectionClosed(int id)
     {
-        if (!Enabled || id == 0) return;
+        if (id == 0) return;
         var live = Interlocked.Decrement(ref _liveConnectionCount);
-        VhLogger.Instance.LogDebug(IosQuicEventIds.Quic,
-            "[VHQUIC] -GROUP live={Live} mem={Memory}MB id={Id}",
-            live.ToString("D3"), FootprintFixed(), id);
+        if (Enabled)
+            VhLogger.Instance.LogDebug(IosQuicEventIds.Quic,
+                "[VHQUIC] -GROUP live={Live} mem={Memory}MB id={Id}",
+                live.ToString("D3"), FootprintFixed(), id);
     }
 
     // Logs one stream-lifecycle line: "[VHQUIC] ±CONN live=NNN mem=MM.MMB id=N". Fixed-width live/mem
@@ -119,10 +131,13 @@ public static class IosQuicDiagnostics
     /// </summary>
     internal static long BeginTiming() => Enabled ? Environment.TickCount64 : 0;
 
-    /// <summary>Records a completed QUIC stream teardown, tracking the worst duration.</summary>
+    /// <summary>
+    /// Records a completed QUIC stream teardown, tracking the worst duration. No-op for a start of 0, the teardown
+    /// that was not timed from its beginning: its duration would read as the device's uptime.
+    /// </summary>
     internal static void EndStreamTeardown(long startTimestamp)
     {
-        if (!Enabled) return;
+        if (startTimestamp == 0) return;
         var elapsed = Environment.TickCount64 - startTimestamp;
         long prev;
         while (elapsed > (prev = Volatile.Read(ref _maxStreamCancelMs)) &&
@@ -139,17 +154,24 @@ public static class IosQuicDiagnostics
 
 
     // ---- in-flight sends -------------------------------------------------------------------------
-    /// <summary>Adds to the in-flight QUIC send-bytes counter. No-op unless <see cref="Enabled"/>.</summary>
-    internal static void AddOutstandingSend(long bytes)
+    /// <summary>
+    /// Adds a send to the in-flight QUIC send-bytes counter, while <see cref="Enabled"/>, and returns what it counted:
+    /// the bytes, or 0. The send's end gives that back to <see cref="SubtractOutstandingSend"/>.
+    /// </summary>
+    internal static long AddOutstandingSend(long bytes)
     {
-        if (Enabled)
-            Interlocked.Add(ref _outstandingSendBytes, bytes);
+        if (!Enabled) return 0;
+        Interlocked.Add(ref _outstandingSendBytes, bytes);
+        return bytes;
     }
 
-    /// <summary>Subtracts from the in-flight QUIC send-bytes counter. No-op unless <see cref="Enabled"/>.</summary>
-    internal static void SubtractOutstandingSend(long bytes)
+    /// <summary>
+    /// Subtracts from the in-flight QUIC send-bytes counter what a send's <see cref="AddOutstandingSend"/> counted,
+    /// whatever the log level is by now.
+    /// </summary>
+    internal static void SubtractOutstandingSend(long countedBytes)
     {
-        if (Enabled)
-            Interlocked.Add(ref _outstandingSendBytes, -bytes);
+        if (countedBytes != 0)
+            Interlocked.Add(ref _outstandingSendBytes, -countedBytes);
     }
 }

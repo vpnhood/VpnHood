@@ -9,17 +9,27 @@ namespace VpnHood.Net.VpnAdapters.Abstractions;
 /// tests and for running a VPN without a tunnel on the host.
 /// </summary>
 /// <remarks>
-/// It needs no rights: every step of its start and stop does nothing, it supports NAT and app filters, and it
-/// neither restarts nor checks its interface when the host's network changes.
+/// It needs no rights: its start and stop touch nothing on the host, it supports NAT and app filters, and it
+/// neither restarts nor checks its interface when the host's network changes. A packet written to it is disposed:
+/// nothing takes it on.
 /// </remarks>
 public class NullVpnAdapter : TunVpnAdapter
 {
+    // the wait of the run this thread reads for
+    [ThreadStatic] private static ManualResetEventSlim? _threadReaderRelease;
+
+    // The wait of the run that is up, or of the next one: a stop sets it and makes the next run's, so a reader
+    // never waits on into another run. Never reset: a waiter may miss a set that a reset follows. It holds no
+    // handle to dispose.
+    private volatile ManualResetEventSlim _readerRelease = new(false);
+    private readonly bool _disposeWrittenPackets;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="NullVpnAdapter"/> class, named "NullAdapter".
     /// </summary>
     /// <param name="autoDisposePackets">
-    /// <see langword="true"/> to dispose each packet once sent; <see langword="false"/> to leave that to its new
-    /// owner.
+    /// <see langword="true"/> to have the transport dispose each packet once sent; <see langword="false"/> to have
+    /// the adapter dispose it as it takes it. Either way a written packet is disposed.
     /// </param>
     /// <param name="blocking">
     /// <see langword="true"/> to make a send wait for room when the queue is full; <see langword="false"/> to drop
@@ -42,6 +52,7 @@ public class NullVpnAdapter : TunVpnAdapter
     protected NullVpnAdapter(VpnAdapterSettings adapterSettings)
         : base(adapterSettings)
     {
+        _disposeWrittenPackets = !adapterSettings.AutoDisposePackets;
     }
 
     /// <inheritdoc/>
@@ -134,8 +145,12 @@ public class NullVpnAdapter : TunVpnAdapter
     }
 
     /// <inheritdoc/>
+    /// <remarks>It releases the run's reader, which then leaves.</remarks>
     protected override void AdapterClose()
     {
+        var readerRelease = _readerRelease;
+        _readerRelease = new ManualResetEventSlim(false);
+        readerRelease.Set();
     }
 
     /// <inheritdoc/>
@@ -143,17 +158,26 @@ public class NullVpnAdapter : TunVpnAdapter
     {
     }
 
-    private ManualResetEventSlim? _readBlockEvent = new(false);
+    /// <inheritdoc/>
+    // The reader keeps the wait it found at its start: its own run's, which that run's stop sets. Read at each
+    // wait instead, it could be the next run's, where the stop came between the reader's look at its run and its wait.
+    protected override void StartReadingPackets()
+    {
+        _threadReaderRelease = _readerRelease;
+        try {
+            base.StartReadingPackets();
+        }
+        finally {
+            _threadReaderRelease = null;
+        }
+    }
 
     /// <summary>
-    /// Blocks the reader until the adapter is disposed, as no packet ever arrives.
+    /// Blocks the reader until its run is stopped, as no packet ever arrives.
     /// </summary>
     protected override void WaitForTunRead()
     {
-        // wait for dispose or unblock
-        // NullVpnAdapter never returns any packets, so we need to wait for unblock
-        _readBlockEvent?.Wait();
-        _readBlockEvent?.Dispose();
+        (_threadReaderRelease ?? _readerRelease).Wait();
     }
 
     /// <summary>
@@ -167,12 +191,16 @@ public class NullVpnAdapter : TunVpnAdapter
     }
 
     /// <summary>
-    /// Takes a packet and drops it.
+    /// Takes a packet and drops it. The adapter is the packet's last owner, so it disposes the packet where the
+    /// transport does not (<see cref="PacketTransports.PacketTransportOptions.AutoDisposePackets"/>).
     /// </summary>
     /// <param name="ipPacket">The packet.</param>
     /// <returns>Always <see langword="true"/>.</returns>
     protected override bool WritePacket(IpPacket ipPacket)
     {
+        if (_disposeWrittenPackets)
+            ipPacket.Dispose();
+
         return true;
     }
 
@@ -181,9 +209,7 @@ public class NullVpnAdapter : TunVpnAdapter
     /// </summary>
     protected override void DisposeManaged()
     {
-        _readBlockEvent?.Set();
-        _readBlockEvent = null;
-
+        _readerRelease.Set();
         base.DisposeManaged();
     }
 }

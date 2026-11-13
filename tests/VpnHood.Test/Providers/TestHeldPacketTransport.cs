@@ -17,13 +17,30 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
 {
     private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly List<int> _sentPorts = [];
+    private readonly List<int> _batchSizes = [];
     private int _sendsStarted;
+    private int _disposedPacketLogs;
     private int _preDisposeCount;
     private int _disposeUnmanagedCount;
     public volatile bool IsBatchHeld;
 
     // set, a batch holding a packet from this UDP source port fails to send
     public volatile int FailSendPort;
+
+    // set, the send gives up a packet from this UDP source port, as a device that stays full does, before the
+    // batch goes or fails
+    public volatile int DropPort;
+
+    // the log lines written of a packet already disposed: a logger may read the packet it is given
+    public int DisposedPacketLogs => Volatile.Read(ref _disposedPacketLogs);
+
+    // the size of each batch the send was given, in order
+    public IReadOnlyList<int> BatchSizes {
+        get {
+            lock (_batchSizes)
+                return _batchSizes.ToArray();
+        }
+    }
 
     public int PreDisposeCount => Volatile.Read(ref _preDisposeCount);
     public int DisposeUnmanagedCount => Volatile.Read(ref _disposeUnmanagedCount);
@@ -54,12 +71,20 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
         IsBatchHeld = !_release.Task.IsCompleted;
         await _release.Task;
         IsBatchHeld = false;
+        lock (_batchSizes)
+            _batchSizes.Add(ipPackets.Count);
+
+        foreach (var ipPacket in ipPackets)
+            if (ipPacket.ExtractUdp().SourcePort == DropPort)
+                DropPacket(ipPacket);
+
         if (ipPackets.Any(ipPacket => ipPacket.ExtractUdp().SourcePort == FailSendPort))
             throw new InvalidOperationException("Test: the send failed.");
 
         lock (_sentPorts)
             foreach (var ipPacket in ipPackets)
-                _sentPorts.Add(ipPacket.ExtractUdp().SourcePort);
+                if (ipPacket.ExtractUdp().SourcePort != DropPort)
+                    _sentPorts.Add(ipPacket.ExtractUdp().SourcePort);
     }
 
     // a send logs this right after its disposed check, before it writes to the queue
@@ -69,6 +94,13 @@ public class TestHeldPacketTransport(int queueCapacity, bool blocking = false, b
         if (message == "Sending a packet to queue.") {
             Interlocked.Increment(ref _sendsStarted);
             SendGate?.Wait();
+        }
+
+        try {
+            _ = ipPacket.Buffer;
+        }
+        catch (ObjectDisposedException) {
+            Interlocked.Increment(ref _disposedPacketLogs);
         }
 
         base.LogPacket(ipPacket, logLevel, exception, message, args);

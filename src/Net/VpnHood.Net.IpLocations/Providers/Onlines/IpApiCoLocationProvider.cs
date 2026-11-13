@@ -61,15 +61,17 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
             IpAddress = apiLocation.Ip,
             CountryName = new RegionInfo(apiLocation.CountryCode).EnglishName,
             CountryCode = apiLocation.CountryCode,
-            RegionName = apiLocation.RegionName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName)
-                ? null
-                : apiLocation.RegionName,
-            CityName = apiLocation.CityName == "NA" || string.IsNullOrEmpty(apiLocation.RegionName)
-                ? null
-                : apiLocation.CityName
+            RegionName = NormalizePart(apiLocation.RegionName),
+            CityName = NormalizePart(apiLocation.CityName)
         };
 
         return ipLocation;
+    }
+
+    // a part of the location the service does not know: it leaves it out, sends it empty, or sends "NA"
+    private static string? NormalizePart(string? value)
+    {
+        return string.IsNullOrEmpty(value) || value.Equals("NA", StringComparison.OrdinalIgnoreCase) ? null : value;
     }
 
     /// <summary>Does nothing: the provider holds nothing to release.</summary>

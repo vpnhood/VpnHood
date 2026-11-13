@@ -13,8 +13,9 @@ namespace VpnHood.Net.PacketTransports;
 /// lane and the packets of other flows need not wait behind its backlog.
 /// </summary>
 /// <remarks>
-/// The busy lanes take turns a packet each, and a lane that was empty is preferred, every other turn at least; flows
-/// whose ports hash alike share a lane, and the queue promises no latency. The lanes share the capacity, so one flow
+/// The busy lanes take turns a packet each, and a lane that was empty is preferred, every other turn at least, such
+/// lanes taking turns among themselves too; flows whose ports hash alike share a lane, and the queue promises no
+/// latency. The lanes share the capacity, so one flow
 /// alone may use all of it, and a full queue drops the oldest packet of its longest lane. A send never waits for room,
 /// though it takes a lock; the slots are allocated at construction. A derived class sends each packet
 /// in <see cref="SendQueuedPacketAsync"/>.
@@ -40,6 +41,7 @@ public abstract class FairPacketQueue : IDisposable
     private ulong _newLanes;
     private bool _isNewLaneTurn;
     private int _nextLane;
+    private int _nextNewLane;
     private bool _isWaiting;
     private bool _disposed;
     private long _droppedPackets;
@@ -217,10 +219,14 @@ public abstract class FairPacketQueue : IDisposable
         return _isNewLaneTurn ? TakeNewLane() : TakeOldLane(oldLanes);
     }
 
-    // under the lock: the new lane's turn, after which it is an old one while it stays busy
+    // under the lock: the new lane's turn, after which it is an old one while it stays busy. The first new lane
+    // from the one that went last, as among the old lanes: a lane that empties and fills again between turns is
+    // new each time, and with the lowest lane first it would keep every new turn from a higher one
     private int TakeNewLane()
     {
-        var lane = BitOperations.TrailingZeroCount(_newLanes);
+        var lane = (_nextNewLane + BitOperations.TrailingZeroCount(BitOperations.RotateRight(_newLanes, _nextNewLane))) &
+                   LaneMask;
+        _nextNewLane = (lane + 1) & LaneMask;
         _newLanes &= ~(1UL << lane);
         return lane;
     }

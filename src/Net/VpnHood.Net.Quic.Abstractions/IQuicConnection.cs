@@ -27,6 +27,7 @@ public interface IQuicConnection : IAsyncDisposable
     /// <returns>A task whose result is the stream, which the caller owns and disposes.</returns>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     /// <exception cref="IOException">The stream could not be opened, as when the connection is closed.</exception>
+    /// <exception cref="ObjectDisposedException">The connection is disposed.</exception>
     ValueTask<Stream> OpenOutboundStreamAsync(CancellationToken cancellationToken);
 
     /// <summary>

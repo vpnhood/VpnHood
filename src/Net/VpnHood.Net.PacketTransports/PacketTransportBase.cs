@@ -13,10 +13,10 @@ namespace VpnHood.Net.PacketTransports;
 /// shares; a derived class sends the packets and raises the ones it receives.
 /// </summary>
 /// <remarks>
-/// The transport takes every packet it is given. One it drops or refuses is disposed in any mode. One a send fails on,
-/// or left in the queue at the end, is disposed too, except in a passthrough transport without
-/// <see cref="PacketTransportOptions.AutoDisposePackets"/>, whose derived class disposes what it does not hand on. One
-/// delivered is disposed with <see cref="PacketTransportOptions.AutoDisposePackets"/>. A full queue waits with
+/// The transport takes every packet it is given. One it drops or refuses is disposed in any mode. One a send fails on
+/// or gives up (<see cref="DropPacket"/>), or left in the queue at the end, is disposed too, except in a passthrough
+/// transport without <see cref="PacketTransportOptions.AutoDisposePackets"/>, whose derived class disposes what it does
+/// not hand on. One delivered is disposed with <see cref="PacketTransportOptions.AutoDisposePackets"/>. A full queue waits with
 /// <see cref="PacketTransportOptions.Blocking"/>, or drops its oldest packet. A sending loop that fails disposes
 /// the transport.
 /// </remarks>
@@ -40,6 +40,11 @@ public abstract class PacketTransportBase : IPacketTransport
     private bool _disposing;
     private readonly PacketTransportStat _stat = new();
     private bool _isSending;
+
+    // what the send in flight gave up of its batch (DropPacket), for the batch's counts and its end. One batch is
+    // sent at a time, so these are that batch's alone; the list is made at the first drop and kept
+    private List<IpPacket>? _batchDroppedPackets;
+    private long _batchDroppedBytes;
 
     // The transport takes every packet it is given. One it drops or refuses went to no one, so it is disposed in
     // any mode. One a send failed on, or left in the queue at the end, is disposed whenever the transport queues,
@@ -69,8 +74,9 @@ public abstract class PacketTransportBase : IPacketTransport
     /// <remarks>
     /// It must end once the transport is disposed. A throw counts the whole batch dropped and disposes it, except in
     /// passthrough mode without <see cref="PacketTransportOptions.AutoDisposePackets"/>, where the derived class
-    /// disposes what it does not hand on; so it must not throw after handing a packet on. In passthrough mode it must
-    /// complete at once and never send on its own transport.
+    /// disposes what it does not hand on; so it must not throw after handing a packet on. A packet it gives up without
+    /// failing the batch, it reports with <see cref="DropPacket"/>, or the packet counts as sent. In passthrough mode it
+    /// must complete at once and never send on its own transport.
     /// </remarks>
     /// <param name="ipPackets">The batch. The list is reused after the call.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
@@ -364,8 +370,32 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
+    /// <summary>
+    /// Drops a packet of the batch being sent: counts it as dropped, not sent. It is for a send that gives a packet
+    /// up without failing its batch, as when its device stays full.
+    /// </summary>
+    /// <remarks>
+    /// Call it only from <see cref="SendPacketsAsync"/>, once for a packet of its batch. The transport disposes the
+    /// packet when the send returns, as it does a packet a send fails on; in a passthrough transport without
+    /// <see cref="PacketTransportOptions.AutoDisposePackets"/> it does not, and the derived class disposes what it
+    /// does not hand on.
+    /// </remarks>
+    /// <param name="ipPacket">The packet.</param>
+    // Not disposed here: the batch's end logs and disposes each of its packets once, and a logger may read a packet
+    protected void DropPacket(IpPacket ipPacket)
+    {
+        LogPacket(ipPacket, LogLevel.Debug, null, "Dropping a packet. Its send gave it up.");
+        _stat.AddDroppedPacket();
+        _batchDroppedBytes += ipPacket.PacketLength;
+        (_batchDroppedPackets ??= []).Add(ipPacket);
+    }
+
     private async ValueTask<bool> SendPacketsInternalAsync(IReadOnlyList<IpPacket> ipPackets)
     {
+        // the drops of the last batch's send are not this one's
+        _batchDroppedPackets?.Clear();
+        _batchDroppedBytes = 0;
+
         // a transport disposed since the send's own check refuses the packets: the subclass never saw them, so
         // they are disposed in any mode. The loop's mark goes with them, or the transport would read as sending
         // for good
@@ -396,24 +426,38 @@ public abstract class PacketTransportBase : IPacketTransport
         }
 
         // delivered ones, outside the send's try: a failing dispose is not a failed send
+        long batchBytes = 0;
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
-            _stat.SentBytes += ipPackets[i].PacketLength;
-            _stat.SentPackets++;
+            batchBytes += ipPackets[i].PacketLength;
             if (_autoDisposePackets)
                 ipPackets[i].Dispose();
         }
 
-        return true;
+        // The ones the send gave up went to no one: disposed as unsent ones, where the loop above left them. They
+        // are counted as dropped already, so they come off what was sent
+        var droppedPackets = _batchDroppedPackets;
+        var droppedCount = droppedPackets?.Count ?? 0;
+        if (droppedPackets != null && _disposeUnsentPackets && !_autoDisposePackets)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < droppedPackets.Count; i++)
+                droppedPackets[i].Dispose();
+
+        _stat.SentBytes += batchBytes - _batchDroppedBytes;
+        _stat.SentPackets += ipPackets.Count - droppedCount;
+        return droppedCount == 0;
     }
 
-    // a batch that was not sent: every packet is counted and, when told, disposed
+    // a batch that was not sent: every packet is counted and, when told, disposed. The ones its send gave up
+    // before it failed are counted already; which of the batch they are does not matter to the count
     private void DropFailedPackets(IReadOnlyList<IpPacket> ipPackets, Exception exception, bool disposePackets)
     {
+        var countedPackets = _batchDroppedPackets?.Count ?? 0;
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {
             LogPacket(ipPackets[i], exception, "Error in sending packet via channel.");
-            _stat.AddDroppedPacket();
+            if (i >= countedPackets)
+                _stat.AddDroppedPacket();
             if (disposePackets)
                 ipPackets[i].Dispose();
         }

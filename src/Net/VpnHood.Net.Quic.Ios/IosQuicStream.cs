@@ -200,7 +200,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
         op.Registration.Dispose();
 
         // The native send finished (or failed); it is no longer in flight. Settles the diagnostic
-        // in-flight counter (no-op unless IosQuicDiagnostics.Enabled).
+        // in-flight counter (no-op unless the send was counted).
         op.DisposeOutstandingSend();
 
         if (error != null) {
@@ -273,7 +273,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
             readOp?.Source.TrySetResult(0);
 
             // The completion may never fire after Cancel(); settle the diagnostic in-flight counter
-            // (no-op unless IosQuicDiagnostics.Enabled).
+            // (no-op unless the send was counted).
             writeOp?.DisposeOutstandingSend();
             writeOp?.Clear();
             writeOp?.Source.TrySetException(new ObjectDisposedException(nameof(IosQuicStream)));

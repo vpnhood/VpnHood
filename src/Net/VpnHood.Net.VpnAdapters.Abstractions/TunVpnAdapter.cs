@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Packets.Extensions;
@@ -44,8 +45,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 {
     private readonly int _maxPacketSendDelayMs;
     private const int MaxIoErrorCount = 10;
+
+    // the largest IP packet: the reader's buffer in a run that sets no MTU, whose interface has the system's
+    private const int DefaultMtu = 0xFFFF;
+
+    // no run: a run is known by its reader's task id, which is never zero
+    private const int NoRunId = 0;
     private readonly bool _autoRestart;
-    private int _mtu = 0xFFFF;
+    private int _mtu = DefaultMtu;
 
     // Errors in a row, one count per direction, each its thread's own: the reader succeeds at every quiet poll,
     // which would otherwise hide a write that always fails, and the reverse.
@@ -58,6 +65,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
 
     private readonly Lock _stopLock = new();
+
+    // Started is raised under this lock alone, never the restart's or the stop's, so a handler may stop or
+    // dispose the adapter; a run's handlers are not called while another run's are, but for a run a handler starts
+    private readonly Lock _startedLock = new();
     private volatile bool _isStarting;
     private bool _isStopping;
     private VpnAdapterOptions? _startOptions;
@@ -212,7 +223,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// <summary>
     /// Removes the interface and what the start added with it: the last step of a stop, after
     /// <see cref="AdapterClose"/>. When the base calls it, it runs under the base's stop lock and must not wait for
-    /// the reader or a sender to take that lock. It may run after a partial start.
+    /// the reader or a sender to take that lock. It may run after a partial start, and after a close that failed.
     /// </summary>
     protected abstract void AdapterRemove();
 
@@ -325,7 +336,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     /// <summary>
     /// Gets the gateway of the interface's IPv6 network: its first address plus one, or <see langword="null"/>
-    /// for a /128 network or when not started. A run whose IPv6 address could not be added may still show it.
+    /// for a /128 network, when not started, or in a run whose IPv6 address the interface refused.
     /// </summary>
     public IPAddress? GatewayIpV6 { get; private set; }
 
@@ -397,9 +408,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// Await one start before the next. From here the adapter keeps itself started until <see cref="Stop()"/>,
     /// disposal, or a failure it does not recover from (without <see cref="VpnAdapterSettings.AutoRestart"/>).
     /// <see cref="IsStarted"/> is <see langword="true"/> from the start's beginning, before the interface exists. A
-    /// failed start tries to remove what it added and leaves the adapter stopped; it raises no
-    /// <see cref="Failed"/>, as the caller has the exception. An IPv6 address the interface refuses is logged, and
-    /// the run goes on without IPv6. Before it completes, it raises <see cref="Started"/> on its own thread.
+    /// failed start tries to remove what it added and leaves the adapter stopped, with none of the run's addresses
+    /// and gateways; it raises no <see cref="Failed"/>, as the caller has the exception. An IPv6 address the
+    /// interface refuses is logged, and the run goes on without IPv6. Once the adapter is up and before the start
+    /// completes, it raises <see cref="Started"/> on its own thread.
     /// </remarks>
     /// <param name="options">The options this run uses, which each restart uses again.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -424,24 +436,45 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         _keepStarted = true;
         var keepStartedCts = new CancellationTokenSource();
         _keepStartedCts = keepStartedCts;
+        int runId;
         try {
             // a Stop or a Dispose meanwhile ends the start at its next step, rather than letting it add the
             // rest - a tun, routes, DNS - after the stop, until its end finds it stopped
             using var startCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, keepStartedCts.Token);
-            await StartCore(options, startCts.Token).Vhc();
+            runId = await StartCore(options, startCts.Token).Vhc();
         }
         catch {
             _keepStarted = false; // the caller has the exception: nothing to keep started
             throw;
         }
 
+        RaiseStarted(options, runId);
+
         // an address change or a disable during the start was left to it: see them now
         CheckPrimaryAdapterAddresses();
         await CheckAdapterInterface().Vhc();
     }
 
-    // The start itself, for the owner's Start and for a restart
-    private async Task StartCore(VpnAdapterOptions options, CancellationToken cancellationToken)
+    // Tells the subscribers of a run that is up, its start's caller holding no lock but this one's own: a handler
+    // that stops or disposes the adapter waits for nothing its caller holds. Each handler by itself, and only
+    // while the run is the current one: a stop, or a later start, a handler's own included, retires it, and the
+    // handlers after that one are not told of a run that is over; the later start announces its own. A failed
+    // handler must not fail the start, nor keep the notice from the rest.
+    private void RaiseStarted(VpnAdapterOptions options, int runId)
+    {
+        lock (_startedLock) {
+            foreach (var handler in Started?.GetInvocationList() ?? []) {
+                if (_readerRunId != runId)
+                    return;
+
+                VhInvoker.TryInvoke("raise the adapter's Started event", LogLevel.Error,
+                    () => ((EventHandler<VpnAdapterOptions>)handler)(this, options));
+            }
+        }
+    }
+
+    // The start itself, for the owner's Start and for a restart. Returns the run it started, by its reader's id.
+    private async Task<int> StartCore(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         _startOptions = options;
 
@@ -475,7 +508,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             AdapterIpNetworkV4 = adapterIpNetworkV4;
             AdapterIpNetworkV6 = adapterIpNetworkV6;
             UseNat = options.UseNat;
-            _mtu = options.Mtu ?? _mtu;
+            _mtu = options.Mtu ?? DefaultMtu; // this run's, not the last one's
 
             // the host's addresses before the primary IPs, so a change between the two is one the start's look at
             // its end sees; after the virtual networks, by which the record leaves our own adapter out
@@ -526,6 +559,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                         adapterIpNetworkV6);
                     adapterIpNetworkV6 = null;
                     AdapterIpNetworkV6 = null;
+                    GatewayIpV6 = null;
                 }
             }
 
@@ -611,10 +645,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             }
 
             VhLogger.Instance.LogInformation("TUN adapter started.");
-
-            // a failed handler must not fail the start
-            VhInvoker.TryInvoke("raise the adapter's Started event", LogLevel.Error,
-                () => Started?.Invoke(this, options));
+            return readerTask.Id;
         }
         catch (Exception ex) {
             // when a concurrent Stop() tears the adapter down mid-start, or the start is cancelled (a
@@ -699,7 +730,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// </summary>
     /// <remarks>
     /// The adapter counts as stopped even when closing or removing the interface fails: the error reaches the caller,
-    /// and the next start removes the leftover.
+    /// and the next start removes a leftover. A close that fails does not skip the removal.
     /// </remarks>
     /// <exception cref="ObjectDisposedException">The adapter is disposed.</exception>
     public void Stop()
@@ -724,10 +755,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
             _isStopping = true;
-            _readerRunId = 0; // this run's reader leaves, even one that outlives the stop's wait
+            _readerRunId = NoRunId; // this run's reader leaves, even one that outlives the stop's wait
             try {
-                AdapterClose();
-                AdapterRemove();
+                CloseAndRemoveAdapter();
                 VhLogger.Instance.LogInformation("TUN adapter stopped.");
             }
             catch (Exception ex) when (!throwException) {
@@ -735,12 +765,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                     AdapterName);
             }
             finally {
-                PrimaryAdapterIpV4 = null;
-                PrimaryAdapterIpV6 = null;
-                AdapterIpNetworkV4 = null;
-                AdapterIpNetworkV6 = null;
-                GatewayIpV4 = null;
-                GatewayIpV6 = null;
+                ClearRunState();
                 IsStarted = false;
                 _isStopping = false;
             }
@@ -759,15 +784,53 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             VhLogger.Instance.LogInformation(
                 "Removing what the start added after a stop overtook it. AdapterName: {AdapterName}", AdapterName);
             try {
-                AdapterClose();
-                AdapterRemove();
+                CloseAndRemoveAdapter();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex,
                     "Could not remove what the start added after a stop overtook it. AdapterName: {AdapterName}",
                     AdapterName);
             }
+            finally {
+                // the start wrote some of it again after the stop had cleared it
+                ClearRunState();
+            }
         }
+    }
+
+    // A run's teardown, under the stop lock. Each step on its own: a close that fails must not leave the interface
+    // behind, with its routes and its NAT, as after a dispose no start comes to remove them. The close's error is
+    // the teardown's; a removal that fails after it is logged.
+    private void CloseAndRemoveAdapter()
+    {
+        ExceptionDispatchInfo? closeError = null;
+        try {
+            AdapterClose();
+        }
+        catch (Exception ex) {
+            closeError = ExceptionDispatchInfo.Capture(ex);
+        }
+
+        try {
+            AdapterRemove();
+        }
+        catch (Exception ex) when (closeError != null) {
+            VhLogger.Instance.LogError(ex,
+                "Could not remove the TUN adapter after its close failed. AdapterName: {AdapterName}", AdapterName);
+        }
+
+        closeError?.Throw();
+    }
+
+    // what a run shows of itself, which a stopped adapter has none of
+    private void ClearRunState()
+    {
+        PrimaryAdapterIpV4 = null;
+        PrimaryAdapterIpV6 = null;
+        AdapterIpNetworkV4 = null;
+        AdapterIpNetworkV6 = null;
+        GatewayIpV4 = null;
+        GatewayIpV6 = null;
     }
 
     /// <summary>
@@ -965,7 +1028,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// <see cref="VpnAdapterSettings.MaxPacketSendDelay"/>), after which the packet is dropped with a warning.
     /// </summary>
     /// <remarks>
-    /// A packet the interface refuses during a stop or a start is dropped. Ten exceptions in a row from writing stop
+    /// A packet the interface refuses during a stop or a start is dropped. A dropped packet is counted as dropped,
+    /// not sent, so call it only from <see cref="SendPacketsAsync"/>. Ten exceptions in a row from writing stop
     /// the adapter, which then restarts itself or raises <see cref="Failed"/>; a send that completes without an
     /// exception, a drop included, resets the count.
     /// </remarks>
@@ -1036,8 +1100,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // a stop: the packet goes with the run, and no wait here holds the stop. A start, a restart's too,
             // opens its device last: a packet before finds none, and would wait out the backoff for nothing
-            if (!IsReady || _isStarting)
+            if (!IsReady || _isStarting) {
+                DropPacket(ipPacket);
                 return;
+            }
 
             // break if delay exceeds the max delay
             if (delay > _maxPacketSendDelayMs)
@@ -1049,10 +1115,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             WaitForTunWrite();
         }
 
-        // log if failed to send
-        if (!sent)
+        // the retries ran out: the packet is given up, which is a drop, not a packet sent
+        if (!sent) {
             VhLogger.Instance.LogWarning("Failed to send packet via TUN adapter. AdapterName: {AdapterName}",
                 AdapterName);
+            DropPacket(ipPacket);
+        }
     }
 
     // The reader's thread is known, so a stop made on it does not wait for itself. Never faults: a stop
@@ -1363,25 +1431,30 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             return; // the owner stopped it: nothing to restart
 
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, keepStartedToken);
-        await RestartUnderLock(startOptions, keepStartedToken, cancellationTokenSource.Token).Vhc();
+        var runId = await RestartUnderLock(startOptions, keepStartedToken, cancellationTokenSource.Token).Vhc();
+
+        // outside the restart lock: a handler that stops or disposes the adapter waits for that lock
+        if (runId != NoRunId)
+            RaiseStarted(startOptions, runId);
 
         // an address change or a disable during the restart was left to it: see them now, outside the lock
         CheckPrimaryAdapterAddresses();
         await CheckAdapterInterface().Vhc();
     }
 
-    private async Task RestartUnderLock(VpnAdapterOptions startOptions, CancellationToken keepStartedToken,
+    // Returns the run it started, or NoRunId when it started none.
+    private async Task<int> RestartUnderLock(VpnAdapterOptions startOptions, CancellationToken keepStartedToken,
         CancellationToken cancellationToken)
     {
         using var lockScope = await _restartLock.LockAsync(TimeSpan.Zero, cancellationToken).Vhc();
         if (!lockScope.Succeeded)
-            return; // already in progress
+            return NoRunId; // already in progress
 
         // A stop or a disposal clears the keep flag, waits for this lock and then stops the adapter, so a
         // restart that sees the stop begun starts nothing; one already starting runs to its end, for that stop.
         // An owner's start under way is left alone: it looks at the addresses itself at its end.
         if (!_keepStarted || _isStarting || IsDisposing || IsDisposed)
-            return;
+            return NoRunId;
 
         VhLogger.Instance.LogInformation("Restarting VPN Adapter");
         try {
@@ -1389,10 +1462,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             Stop(throwException: true);
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken).Vhc();
             if (!_keepStarted || IsDisposing || IsDisposed)
-                return;
+                return NoRunId;
 
             // start the adapter with the same options; the start reads the primary IPs itself, with the adapter off
-            await StartCore(startOptions, cancellationToken).Vhc();
+            return await StartCore(startOptions, cancellationToken).Vhc();
         }
         // this restart's own failure, not the owner's stop ending it: the adapter answers it
         catch (Exception ex) when (!keepStartedToken.IsCancellationRequested) {
@@ -1421,7 +1494,19 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // run on the adapter's I/O thread, nor under the restart lock
         VhLogger.Instance.LogError(ex, "The VPN adapter is down and stays down.");
         var failed = Failed; // this run's subscribers, not a later one's
-        Task.Run(() => VhInvoker.TryInvoke("raise the adapter's Failed event", LogLevel.Error, () => failed?.Invoke(this, ex)));
+        var keepStartedCts = _keepStartedCts; // this run's owner: its stop or disposal cancels it, its next start replaces it
+        Task.Run(() => RaiseFailed(failed, ex, keepStartedCts));
+    }
+
+    // The task runs later than the failure: an owner that has stopped or disposed the adapter since must not hear
+    // of it after its own stop, and one that has started it again has another run, whatever its state by now.
+    private void RaiseFailed(EventHandler<Exception>? failed, Exception ex, CancellationTokenSource keepStartedCts)
+    {
+        if (keepStartedCts.IsCancellationRequested || keepStartedCts != _keepStartedCts || IsStarted || IsDisposing ||
+            IsDisposed)
+            return;
+
+        VhInvoker.TryInvoke("raise the adapter's Failed event", LogLevel.Error, () => failed?.Invoke(this, ex));
     }
 
     // A restart on a task of its own. Its failure is logged and answered by Restart.

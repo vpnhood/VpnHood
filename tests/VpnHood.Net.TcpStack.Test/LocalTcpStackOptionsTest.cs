@@ -206,6 +206,35 @@ public sealed class LocalTcpStackOptionsTest
             "an idle check interval beyond a timer's range must be rejected");
     }
 
+    /// <summary>A timing the stack cannot keep is refused when the stack is made, not found later on the data path:
+    /// the retransmission timeouts are kept in whole milliseconds and doubled, the probe interval is a wait's
+    /// timeout, and a delayed ACK leaves up to one 100 ms check after its timeout, which must stay within RFC 1122's
+    /// 500 ms.</summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public void Validation_RejectsTimingsTheStackCannotKeep()
+    {
+        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { RetransmitMaxTimeout = TimeSpan.FromDays(30) }),
+            "a retransmission timeout beyond an int of milliseconds must be rejected");
+        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { RetransmitTimeout = TimeSpan.FromDays(30), RetransmitMaxTimeout = TimeSpan.FromDays(30) }),
+            "a first retransmission timeout beyond an int of milliseconds must be rejected");
+        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { ZeroWindowProbeInterval = TimeSpan.FromDays(30) }),
+            "a probe interval beyond a wait's longest timeout must be rejected");
+        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { ZeroWindowProbeInterval = TimeSpan.FromMicroseconds(999) }),
+            "a probe interval under a millisecond, no wait at all, must be rejected");
+        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { DelayedAckTimeout = TimeSpan.FromMilliseconds(500) }),
+            "a delayed ACK that leaves 500 to 600 ms after its segment must be rejected");
+
+        using var longest = new LocalTcpStack(new LocalTcpStackOptions {
+            RetransmitMaxTimeout = TimeSpan.FromMilliseconds(int.MaxValue),
+            ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(int.MaxValue),
+            DelayedAckTimeout = TimeSpan.FromMilliseconds(400)
+        });
+        using var shortestProbe = new LocalTcpStack(new LocalTcpStackOptions {
+            ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(1)
+        });
+    }
+
     /// <summary>The window's whole range is valid, down to a single byte.</summary>
     [TestMethod]
     [Timeout(5000)]

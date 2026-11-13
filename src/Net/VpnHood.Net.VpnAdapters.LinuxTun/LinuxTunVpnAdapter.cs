@@ -405,6 +405,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task AdapterAdd(CancellationToken cancellationToken)
     {
+        // a run's own: one that sets no metric adds its routes with the system's, not the last run's
+        _metric = null;
+
         // Get the primary adapter name
         VhLogger.Instance.LogDebug("Getting the primary adapter name...");
         _primaryAdapterName = await GetPrimaryAdapterName(UseNat, cancellationToken).Vhc();
@@ -712,7 +715,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     /// <inheritdoc/>
-    /// <remarks>The route takes the metric <see cref="SetMetric"/> kept, if any.</remarks>
+    /// <remarks>The route takes the metric <see cref="SetMetric"/> kept in this run, if any.</remarks>
     /// <exception cref="ExternalException"><c>ip route add</c> failed, as for a route the table has already.</exception>
     /// <exception cref="System.ComponentModel.Win32Exception">bash could not be started.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -731,7 +734,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// <inheritdoc/>
     /// <remarks>
     /// It keeps the metric for the routes the start adds next, of both IP versions, and changes no route already
-    /// there.
+    /// there. The next start forgets it.
     /// </remarks>
     protected override Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {

@@ -22,7 +22,8 @@ dotnet add package VpnHood.Net.IpLocations
   in SQLite instead.
 - `CompositeIpLocationProvider` and `CompositeCurrentIpLocationProvider` try several providers in order. Each gets a
   token canceled after its timeout (for the current location 5 seconds by default; for an address none), so the
-  timeout holds for a provider that observes it. Failures are logged, except `NotSupportedException`.
+  timeout holds for a provider that observes it. Failures are logged, except `NotSupportedException`; your own
+  cancellation ends the lookup with `OperationCanceledException`, and no other provider is tried.
 - A local lookup of the current location still finds the device's public address online first.
 
 ## Quick start

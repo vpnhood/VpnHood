@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Assets;
-using VpnHood.Net.Toolkit.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
@@ -52,39 +51,54 @@ public class LocalIpRangeLocationProvider(
         var zipArchive = await GetZipArchive(cancellationToken).Vhc();
         _countryCodes = zipArchive.Entries
             .Where(x => Path.GetExtension(x.Name) == ".ips")
-            .Select(x => Path.GetFileNameWithoutExtension(x.Name).ToUpper())
+            .Select(x => Path.GetFileNameWithoutExtension(x.Name).ToUpperInvariant())
             .ToArray();
 
         return _countryCodes;
     }
 
     /// <inheritdoc/>
-    /// <remarks>A country the zip has no entry for, or whose entry cannot be read, has no ranges; the error is logged.</remarks>
+    /// <remarks>
+    /// A country the zip has no entry for has no ranges. One whose entry cannot be read, or the zip itself, gives none
+    /// for that call, and the next call reads it again. Either error is logged.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<IpRangeOrderedList> GetIpRanges(string countryCode, CancellationToken cancellationToken)
     {
         using var _ = await _lock.LockAsync(cancellationToken).Vhc();
-        var ipRanges = await GetIpRangesInternal(countryCode, cancellationToken).Vhc();
-        _countryIpRanges.TryAdd(countryCode, ipRanges);
-        return ipRanges;
-    }
-
-    // must be called within async lock
-    private async Task<IpRangeOrderedList> GetIpRangesInternal(string countryCode, CancellationToken cancellationToken)
-    {
         if (_countryIpRanges.TryGetValue(countryCode, out var countryIpRangeCache))
             return countryIpRangeCache;
 
         try {
-            var zipArchive = await GetZipArchive(cancellationToken).Vhc();
-            var entry = zipArchive.GetEntry($"{countryCode.ToLower()}.ips")
-                        ?? throw new NotExistsException();
-            await using var stream = await entry.OpenAsync(cancellationToken).Vhc();
-            return IpRangeOrderedList.Deserialize(stream);
+            var ipRanges = await ReadIpRanges(countryCode, cancellationToken).Vhc();
+            _countryIpRanges.TryAdd(countryCode, ipRanges);
+            return ipRanges;
+        }
+        // the caller's cancellation is no failed load
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
+            // not kept: the next call reads again, where a kept failure would leave the country without ranges for good
             VhLogger.Instance.LogError(ex, "Could not load ip ranges. CountryCode: {CountryCode}", countryCode);
             return IpRangeOrderedList.Empty;
         }
+    }
+
+    // Must be called within async lock. Whatever it returns is kept: a country the zip holds no file of has no
+    // ranges, now or later, which only the zip's own list of entries tells; an asset that cannot be opened throws.
+    private async Task<IpRangeOrderedList> ReadIpRanges(string countryCode, CancellationToken cancellationToken)
+    {
+        var zipArchive = await GetZipArchive(cancellationToken).Vhc();
+        var entry = zipArchive.GetEntry($"{countryCode.ToLowerInvariant()}.ips");
+        if (entry == null) {
+            VhLogger.Instance.LogError("Could not load ip ranges: the zip has none for the country. CountryCode: {CountryCode}",
+                countryCode);
+            return IpRangeOrderedList.Empty;
+        }
+
+        await using var stream = await entry.OpenAsync(cancellationToken).Vhc();
+        return IpRangeOrderedList.Deserialize(stream);
     }
 
     /// <inheritdoc/>
@@ -129,7 +143,7 @@ public class LocalIpRangeLocationProvider(
 
     private static IpLocation BuildIpLocation(string countryCode, IPAddress ipAddress)
     {
-        countryCode = countryCode.ToUpper();
+        countryCode = countryCode.ToUpperInvariant();
         return new IpLocation {
             CountryName = new RegionInfo(countryCode).EnglishName,
             CountryCode = countryCode,

@@ -12,9 +12,10 @@ namespace VpnHood.Net.TcpStack;
 /// </summary>
 /// <remarks>
 /// This type also owns the lifecycle logging for established connections: callers report the establish/release
-/// events (via <see cref="IncrementEstablishedConnections"/> / <see cref="DecrementEstablishedConnections"/>)
-/// and the counter + log line are produced together, so the running live count can never drift from what is
-/// logged. Lines are at Debug level — grep catlog for "[TcpStack]" (or "+CONN" / "-CONN").
+/// events (via <see cref="IncrementEstablishedConnections"/> with <see cref="LogEstablished"/>, and
+/// <see cref="DecrementEstablishedConnections"/>), and each log line carries the count its own event left, so
+/// the running live count can never drift from what is logged. Lines are at Debug level — grep catlog for
+/// "[TcpStack]" (or "+CONN" / "-CONN").
 /// </remarks>
 public sealed class TcpStackDiagnostics
 {
@@ -108,12 +109,21 @@ public sealed class TcpStackDiagnostics
     }
 
     /// <summary>
-    /// Records that a connection completed its handshake: bumps the live established count and logs the
-    /// event so TCP-stack stream creation can be monitored via catlog.
+    /// Records that a connection completed its handshake: bumps the live established count and returns it, for
+    /// <see cref="LogEstablished"/>. The connection calls it under the lock its close reads the counted flag under,
+    /// so a close racing the handshake's end can never count down first and take the count below zero.
     /// </summary>
-    internal void IncrementEstablishedConnections(IPEndPointPairValue endPointPair)
+    internal int IncrementEstablishedConnections()
     {
-        var live = Interlocked.Increment(ref _establishedConnections);
+        return Interlocked.Increment(ref _establishedConnections);
+    }
+
+    /// <summary>
+    /// Logs a connection's establishment with the live count its increment returned, so TCP-stack stream creation
+    /// can be monitored via catlog. Outside the connection's lock: the line reads the process footprint.
+    /// </summary>
+    internal void LogEstablished(IPEndPointPairValue endPointPair, int live)
+    {
         // Low-frequency lifecycle event (one per connection): logged at Debug and UNGATED so it's visible
         // when the log level is Debug without enabling the per-packet hot-path traces. Volume is
         // per-connection, not per-packet, so it never floods.

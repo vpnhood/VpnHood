@@ -15,17 +15,33 @@ namespace VpnHood.Net.Quic.Android;
 /// <summary>
 /// Adapts a single MsQuic stream to a <see cref="Stream"/>. Inbound data delivered by msquic
 /// RECEIVE callback is copied into a <see cref="Pipe"/> that <see cref="ReadAsync(Memory{byte},CancellationToken)"/>
-/// drains; writes are issued via StreamSend and await it until SEND_COMPLETE (backpressure).
-/// Pointer work is confined to <c>unsafe</c> members so the async members compile.
+/// drains, up to <see cref="ReceiveBufferLimit"/>: past it the stream's receive events stop until the reader has made
+/// room, so the stream's flow control holds the sender. Writes are issued via StreamSend and await it until
+/// SEND_COMPLETE (backpressure). Pointer work is confined to <c>unsafe</c> members so the async members compile.
 /// </summary>
 internal sealed class AndroidQuicStream : Stream
 {
+    // The most received bytes held for the reader, as much as System.Net.Quic holds. Beyond it MsQuic keeps what
+    // arrives, within the stream's flow-control window, which then stops the peer.
+    private const int ReceiveBufferLimit = 64 * 1024;
+
+    // Held around every use of the stream's handle outside its callbacks: a send or a resumed receive never uses it
+    // while the disposal closes it, or after. The callbacks the close waits for never take it.
+    private readonly Lock _handleLock = new();
     private unsafe QUIC_HANDLE* _stream;
     private GCHandle _gch;
-    private readonly Pipe _recvPipe = new(new PipeOptions(useSynchronizationContext: false));
+
+    // Never pauses its writer: the limit above bounds it, so a flush always completes at once
+    private readonly Pipe _recvPipe = new(new PipeOptions(pauseWriterThreshold: 0, resumeWriterThreshold: 0,
+        useSynchronizationContext: false));
     private readonly ConcurrentDictionary<IntPtr, TaskCompletionSource> _pendingSends = new();
     private readonly TaskCompletionSource? _inboundShutdown;
+    private long _receiveBufferedBytes; // in the pipe, not read yet
+    private int _receivePaused; // 1 while MsQuic holds the receive events back, as a receive took less than it was given
     private bool _disposed;
+
+    // room to take up the receive events again: at half the limit, so a slow reader does not resume them per read
+    private bool HasReceiveRoom => Interlocked.Read(ref _receiveBufferedBytes) <= ReceiveBufferLimit / 2;
 
     private AndroidQuicStream(bool isInbound = false)
     {
@@ -102,6 +118,7 @@ internal sealed class AndroidQuicStream : Stream
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var result = await _recvPipe.Reader.ReadAsync(cancellationToken).Vhc();
         var seq = result.Buffer;
         if (seq.IsEmpty && result.IsCompleted) {
@@ -112,7 +129,28 @@ internal sealed class AndroidQuicStream : Stream
         var n = (int)Math.Min(seq.Length, buffer.Length);
         seq.Slice(0, n).CopyTo(buffer.Span);
         _recvPipe.Reader.AdvanceTo(seq.GetPosition(n));
+
+        // room again for what MsQuic holds back: its receive events go on
+        Interlocked.Add(ref _receiveBufferedBytes, -n);
+        if (HasReceiveRoom && Interlocked.CompareExchange(ref _receivePaused, 0, 1) == 1)
+            ResumeReceive();
+
         return n;
+    }
+
+    private unsafe void ResumeReceive()
+    {
+        int status;
+        lock (_handleLock) {
+            if (_stream == null)
+                return; // closed meanwhile: nothing more to receive
+
+            status = MsQuicApi.Table->StreamReceiveSetEnabled(_stream, 1);
+        }
+
+        // a stream whose receives stay off would stall its reader for good: the reader gets the error instead
+        if (StatusFailed(status))
+            _recvPipe.Writer.Complete(new IOException($"Could not resume the QUIC stream's receives. status=0x{(uint)status:x}"));
     }
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
@@ -123,6 +161,7 @@ internal sealed class AndroidQuicStream : Stream
 
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (buffer.IsEmpty)
             return;
 
@@ -152,8 +191,18 @@ internal sealed class AndroidQuicStream : Stream
         qb->Buffer = dataPtr;
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingSends[(IntPtr)block] = tcs;
-        var status = MsQuicApi.Table->StreamSend(_stream, qb, 1, QUIC_SEND_FLAGS.NONE, block);
+        int status;
+        lock (_handleLock) {
+            // not on a handle the disposal has closed, or is closing
+            if (_disposed || _stream == null) {
+                NativeMemory.Free(block);
+                throw new ObjectDisposedException(nameof(AndroidQuicStream));
+            }
+
+            _pendingSends[(IntPtr)block] = tcs;
+            status = MsQuicApi.Table->StreamSend(_stream, qb, 1, QUIC_SEND_FLAGS.NONE, block);
+        }
+
         if (StatusFailed(status)) {
             _pendingSends.TryRemove((IntPtr)block, out _);
             NativeMemory.Free(block);
@@ -166,17 +215,7 @@ internal sealed class AndroidQuicStream : Stream
     {
         switch (evt->Type) {
             case QUIC_STREAM_EVENT_TYPE.RECEIVE:
-                ref var recv = ref evt->RECEIVE;
-                for (uint i = 0; i < recv.BufferCount; i++) {
-                    var qb = recv.Buffers[i];
-                    if (qb.Length == 0) continue;
-                    var src = new ReadOnlySpan<byte>(qb.Buffer, (int)qb.Length);
-                    var dst = _recvPipe.Writer.GetSpan((int)qb.Length);
-                    src.CopyTo(dst);
-                    _recvPipe.Writer.Advance((int)qb.Length);
-                }
-                _ = _recvPipe.Writer.FlushAsync(); // wake the reader (backpressure intentionally not applied here)
-                break;
+                return OnReceive(evt);
 
             case QUIC_STREAM_EVENT_TYPE.SEND_COMPLETE:
                 var ctx = (IntPtr)evt->SEND_COMPLETE.ClientContext;
@@ -205,6 +244,42 @@ internal sealed class AndroidQuicStream : Stream
                 break;
         }
         return QUIC_STATUS_SUCCESS;
+    }
+
+    // Takes what fits under the limit and tells MsQuic how much that was. Less than it was given stops the stream's
+    // receive events until the reader has made room (ReadAsync), as System.Net.Quic does it: what MsQuic then keeps
+    // fills the stream's flow-control window, and the peer stops sending.
+    private unsafe int OnReceive(QUIC_STREAM_EVENT* evt)
+    {
+        ref var receive = ref evt->RECEIVE;
+        var room = ReceiveBufferLimit - Interlocked.Read(ref _receiveBufferedBytes);
+        long taken = 0;
+        for (uint i = 0; i < receive.BufferCount && taken < room; i++) {
+            var buffer = receive.Buffers[i];
+            var length = (int)Math.Min(buffer.Length, room - taken);
+            if (length == 0)
+                continue;
+
+            new ReadOnlySpan<byte>(buffer.Buffer, length).CopyTo(_recvPipe.Writer.GetSpan(length));
+            _recvPipe.Writer.Advance(length);
+            taken += length;
+        }
+
+        if (taken > 0) {
+            Interlocked.Add(ref _receiveBufferedBytes, taken);
+            _ = _recvPipe.Writer.FlushAsync(); // wakes the reader; complete at once, as the pipe never pauses its writer
+        }
+
+        if ((ulong)taken == receive.TotalBufferLength)
+            return QUIC_STATUS_SUCCESS;
+
+        // The rest stays with MsQuic. The reader takes the events up again once it has made room; where it made that
+        // room just now, before the mark below, it found nothing to take up, and they go on from here.
+        receive.TotalBufferLength = (ulong)taken;
+        Volatile.Write(ref _receivePaused, 1);
+        return HasReceiveRoom && Interlocked.CompareExchange(ref _receivePaused, 0, 1) == 1
+            ? QUIC_STATUS_CONTINUE
+            : QUIC_STATUS_SUCCESS;
     }
 
     private void FailPendingSends()
@@ -248,10 +323,13 @@ internal sealed class AndroidQuicStream : Stream
 
     private unsafe void CloseResources()
     {
-        if (_stream != null) {
-            MsQuicApi.Table->StreamClose(_stream); // blocks until callbacks drained
-            _stream = null;
+        lock (_handleLock) {
+            if (_stream != null) {
+                MsQuicApi.Table->StreamClose(_stream); // blocks until callbacks drained
+                _stream = null;
+            }
         }
+
         try { _recvPipe.Writer.Complete(); } catch { /* ignore */ }
         try { _recvPipe.Reader.Complete(); } catch { /* ignore */ }
         FailPendingSends();
@@ -263,9 +341,12 @@ internal sealed class AndroidQuicStream : Stream
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        if (_stream != null) {
-            try { MsQuicApi.Table->StreamShutdown(_stream, QUIC_STREAM_SHUTDOWN_FLAGS.GRACEFUL, 0); } catch { /* ignore */ }
+        lock (_handleLock) {
+            if (_stream != null) {
+                try { MsQuicApi.Table->StreamShutdown(_stream, QUIC_STREAM_SHUTDOWN_FLAGS.GRACEFUL, 0); } catch { /* ignore */ }
+            }
         }
+
         CloseResources();
         base.Dispose(disposing);
     }

@@ -17,7 +17,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
     public class IpRangeInfo
     {
         /// <summary>Gets the IP range.</summary>
-        public required IpRange IpRanges { get; init; }
+        public required IpRange IpRange { get; init; }
 
         /// <summary>Gets the country's two-letter code.</summary>
         public required string CountryCode { get; init; }
@@ -34,7 +34,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
     public LocalIpLocationProvider(IEnumerable<IpRangeInfo> ipRangeInfos, string? userAgent = null)
     {
         _ipRangeInfoList = ipRangeInfos
-            .OrderBy(x => x.IpRanges.FirstIpAddress, new IPAddressComparer())
+            .OrderBy(x => x.IpRange.FirstIpAddress, new IPAddressComparer())
             .ToList();
         _userAgent = userAgent;
     }
@@ -68,7 +68,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
         // binary search
         var itemToSearch = new IpRangeInfo {
             CountryCode = "?",
-            IpRanges = new IpRange(ipAddress)
+            IpRange = new IpRange(ipAddress)
         };
         var res = _ipRangeInfoList.BinarySearch(itemToSearch, new IpRangeSearchComparer());
         if (res < 0)
@@ -95,11 +95,11 @@ public class LocalIpLocationProvider : IIpLocationProvider
             if (x is null) return -1; // null is less than any non-null value
             if (y is null) return +1; // any non-null value is greater than null
 
-            if (IPAddressUtil.Compare(x.IpRanges.FirstIpAddress, y.IpRanges.FirstIpAddress) <= 0 &&
-                IPAddressUtil.Compare(x.IpRanges.LastIpAddress, y.IpRanges.LastIpAddress) >= 0)
+            if (IPAddressUtil.Compare(x.IpRange.FirstIpAddress, y.IpRange.FirstIpAddress) <= 0 &&
+                IPAddressUtil.Compare(x.IpRange.LastIpAddress, y.IpRange.LastIpAddress) >= 0)
                 return 0;
 
-            if (IPAddressUtil.Compare(x.IpRanges.FirstIpAddress, y.IpRanges.FirstIpAddress) < 0)
+            if (IPAddressUtil.Compare(x.IpRange.FirstIpAddress, y.IpRange.FirstIpAddress) < 0)
                 return -1;
 
             return +1;
@@ -116,7 +116,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
         Span<byte> lastIpBuffer = stackalloc byte[16];
         writer.Write(_ipRangeInfoList.Count);
         foreach (var ipRangeInfo in _ipRangeInfoList) {
-            var ipRange = ipRangeInfo.IpRanges;
+            var ipRange = ipRangeInfo.IpRange;
             var firstIpBytes = ipRange.FirstIpAddress.GetAddressBytesFast(firstIpBuffer);
             var lastIpBytes = ipRange.LastIpAddress.GetAddressBytesFast(lastIpBuffer);
             var countryBytes = Encoding.ASCII.GetBytes(ipRangeInfo.CountryCode);
@@ -149,7 +149,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
 
             ipRangeInfos[i] = new IpRangeInfo {
                 CountryCode = Encoding.ASCII.GetString(countryBytes),
-                IpRanges = new IpRange(new IPAddress(firstIpBytes), new IPAddress(lastIpBytes))
+                IpRange = new IpRange(new IPAddress(firstIpBytes), new IPAddress(lastIpBytes))
             };
         }
 

@@ -5,7 +5,7 @@ namespace VpnHood.Net.Http3;
 
 // Validate HTTP message semantics separately from QPACK compression. The request handler maps each
 // failure to the measured reference's HTTP/3 error code and stream/connection scope.
-internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes)
+internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineSize)
 {
     private static readonly UTF8Encoding HeaderEncoding = new(false, throwOnInvalidBytes: true);
     private static readonly SearchValues<char> InvalidValueCharacters = SearchValues.Create(
@@ -107,7 +107,7 @@ internal sealed class Http3RequestHeaders(bool trailers, int maxRequestLineBytes
                 Reject(Http3Protocol.ProtocolError);
             // Kestrel approximates the request line with these decoded pseudo-header values.
             if (!(path == "*" && method == "OPTIONS") &&
-                (long)method.Length + scheme.Length + authority.Length + path.Length > maxRequestLineBytes)
+                (long)method.Length + scheme.Length + authority.Length + path.Length > maxRequestLineSize)
                 Reject(Http3Protocol.RequestRejected);
             // The reference preserves a plain UTF-8 raw path, but its unescaped path-with-query
             // conversion requires ASCII. Keep the measured /é and /é?q outcomes distinct.

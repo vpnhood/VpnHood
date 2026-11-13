@@ -265,7 +265,7 @@ public class IpV4Packet : IpPacket
     // with its checksum, a valid header sums to all ones, whose complement is zero, whichever zero the field holds
     public bool IsHeaderChecksumValid()
     {
-        return PacketUtil.OnesComplementSum(Span[..Header.Length]) == 0;
+        return PacketUtil.ComputeChecksum(Span[..Header.Length]) == 0;
     }
 
     /// <summary>
@@ -275,7 +275,7 @@ public class IpV4Packet : IpPacket
     {
         Span[10] = 0;
         Span[11] = 0;
-        HeaderChecksum = PacketUtil.OnesComplementSum(Span[..Header.Length]);
+        HeaderChecksum = PacketUtil.ComputeChecksum(Span[..Header.Length]);
     }
 
     /// <summary>

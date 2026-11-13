@@ -48,7 +48,7 @@ public sealed class Http3ServerOptions
     /// Gets the most characters of a request's decoded method, scheme, authority and path together; a longer request is
     /// rejected. A CONNECT request without <c>:protocol</c> and <c>OPTIONS *</c> are not checked. The default is 8192.
     /// </summary>
-    public int MaxRequestLineBytes { get; init; } = 8192;
+    public int MaxRequestLineSize { get; init; } = 8192;
 
     /// <summary>
     /// Gets the most bytes the server inspects after a request's headers, frames and trailers included, to check the body
@@ -100,7 +100,7 @@ public sealed class Http3ServerOptions
         ArgumentOutOfRangeException.ThrowIfNegative(MaxHeaderBytes);
         ArgumentOutOfRangeException.ThrowIfNegative(MaxHeaderCount);
         ArgumentOutOfRangeException.ThrowIfNegative(MaxFieldBytes);
-        ArgumentOutOfRangeException.ThrowIfNegative(MaxRequestLineBytes);
+        ArgumentOutOfRangeException.ThrowIfNegative(MaxRequestLineSize);
         ArgumentOutOfRangeException.ThrowIfNegative(MaxBodyInspectionBytes);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaxControlFrameBytes);
         ArgumentNullException.ThrowIfNull(ResponseHeaders);

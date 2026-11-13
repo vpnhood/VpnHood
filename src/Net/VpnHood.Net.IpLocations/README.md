@@ -38,11 +38,11 @@ Their namespaces are `System.Net`, `VpnHood.Net.IpLocations.Providers.Offlines` 
 // IP ranges with their countries: two here; in an app, IP2Location's database (Ip2LocationDbParser)
 using var provider = new LocalIpLocationProvider([
     new LocalIpLocationProvider.IpRangeInfo {
-        IpRanges = new IpRange(IPAddress.Parse("1.0.0.0"), IPAddress.Parse("1.0.0.255")),
+        IpRange = new IpRange(IPAddress.Parse("1.0.0.0"), IPAddress.Parse("1.0.0.255")),
         CountryCode = "AU"
     },
     new LocalIpLocationProvider.IpRangeInfo {
-        IpRanges = new IpRange(IPAddress.Parse("5.0.0.0"), IPAddress.Parse("5.0.0.255")),
+        IpRange = new IpRange(IPAddress.Parse("5.0.0.0"), IPAddress.Parse("5.0.0.255")),
         CountryCode = "DE"
     }
 ]);

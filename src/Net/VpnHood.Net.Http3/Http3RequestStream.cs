@@ -121,7 +121,7 @@ internal sealed class Http3RequestStream(Http3StreamReader reader, IQuicStream q
         Http3HeaderBudget headerBudget, Http3ServerOptions options,
         CancellationToken cancellationToken)
     {
-        var trailerHeaders = new Http3RequestHeaders(trailers: true, options.MaxRequestLineBytes);
+        var trailerHeaders = new Http3RequestHeaders(trailers: true, options.MaxRequestLineSize);
         var section = await Http3Qpack.ReadSection(reader, length, trailerHeaders.Append,
             options, headerBudget, cancellationToken).Vhc();
         if (!section.Completed)
@@ -143,7 +143,7 @@ internal sealed class Http3RequestStream(Http3StreamReader reader, IQuicStream q
                 var type = await reader.ReadInteger(cancellationToken).Vhc();
                 var length = await reader.ReadInteger(cancellationToken).Vhc();
                 if (type == 1) {
-                    var headers = new Http3RequestHeaders(trailers: false, options.MaxRequestLineBytes);
+                    var headers = new Http3RequestHeaders(trailers: false, options.MaxRequestLineSize);
                     var section = await Http3Qpack.ReadSection(reader, length, headers.Append,
                         options, _headerBudget, cancellationToken).Vhc();
                     if (section.Completed)

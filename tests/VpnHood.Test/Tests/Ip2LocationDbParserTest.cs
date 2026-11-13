@@ -40,7 +40,7 @@ public class Ip2LocationDbParserTest : TestBase
                            "\"84017152\",\"84017407\",\"TZ\",\"Tanzania, United Republic of\"\n" +
                            "\"84017408\",\"84017663\",\"CI\",\"Cote d\"\"Ivoire\"\n";
         await using var csvStream = new MemoryStream(Encoding.ASCII.GetBytes(csv));
-        var countries = await Ip2LocationDbParser.ParseIp2LocationCrv(csvStream, TestCt);
+        var countries = await Ip2LocationDbParser.ParseIp2LocationCsv(csvStream, TestCt);
 
         CollectionAssert.AreEquivalent(new[] { "us", "tz", "ci" }, countries.Keys.ToArray());
         Assert.HasCount(1, countries["tz"]);
@@ -55,7 +55,7 @@ public class Ip2LocationDbParserTest : TestBase
         try {
             CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
             await using var csvStream = new MemoryStream(Encoding.ASCII.GetBytes(csv));
-            var countries = await Ip2LocationDbParser.ParseIp2LocationCrv(csvStream, TestCt);
+            var countries = await Ip2LocationDbParser.ParseIp2LocationCsv(csvStream, TestCt);
             CollectionAssert.AreEqual(new[] { "ir" }, countries.Keys.ToArray());
         }
         finally {

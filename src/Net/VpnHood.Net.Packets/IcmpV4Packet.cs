@@ -124,7 +124,7 @@ public class IcmpV4Packet : IChecksumPayloadPacket
     /// <returns><see langword="true"/> if the checksum is valid; otherwise, <see langword="false"/>.</returns>
     // with its checksum, a valid message sums to all ones, whose complement is zero, whichever zero the field holds
     public bool IsChecksumValid(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress) =>
-        ChecksumUtils.OnesComplementSum(_buffer.Span) == 0;
+        ChecksumUtils.ComputeChecksum(_buffer.Span) == 0;
 
     /// <summary>
     /// Computes the checksum and writes it to <see cref="Checksum"/>.
@@ -154,7 +154,7 @@ public class IcmpV4Packet : IChecksumPayloadPacket
             span[2] = 0;
             span[3] = 0;
 
-            return ChecksumUtils.OnesComplementSum(span);
+            return ChecksumUtils.ComputeChecksum(span);
         }
         finally {
             Checksum = orgChecksum;

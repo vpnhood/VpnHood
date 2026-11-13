@@ -321,7 +321,7 @@ public class Http3QpackTest
     {
         await using var stream = new FragmentedReadStream(prefix, 1);
         await using var reader = new Http3StreamReader(stream);
-        var headers = new Http3RequestHeaders(trailers: false, new Http3ServerOptions().MaxRequestLineBytes);
+        var headers = new Http3RequestHeaders(trailers: false, new Http3ServerOptions().MaxRequestLineSize);
         var exception = await Assert.ThrowsExactlyAsync<Http3ProtocolException>(() =>
             Http3Qpack.ReadSection(reader, 1024 * 1024, headers.Append, new Http3ServerOptions(),
                 TestContext.CancellationToken));

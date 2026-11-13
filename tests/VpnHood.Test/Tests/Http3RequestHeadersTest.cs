@@ -61,7 +61,7 @@ public class Http3RequestHeadersTest
         bytes.AddRange(value);
         using var stream = new MemoryStream(bytes.ToArray());
         await using var reader = new Http3StreamReader(stream);
-        var headers = new Http3RequestHeaders(trailers: false, new Http3ServerOptions().MaxRequestLineBytes);
+        var headers = new Http3RequestHeaders(trailers: false, new Http3ServerOptions().MaxRequestLineSize);
         var section = await Http3Qpack.ReadSection(reader, bytes.Count, headers.Append,
             new Http3ServerOptions(), cancellationToken);
         Assert.IsTrue(section.Completed);

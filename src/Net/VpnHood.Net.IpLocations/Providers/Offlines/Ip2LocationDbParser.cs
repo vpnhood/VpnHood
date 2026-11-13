@@ -56,27 +56,27 @@ public static class Ip2LocationDbParser
         var ipLocationEntry = ipLocationZipArchive.GetEntry(entryName) ??
                               throw new Exception($"{entryName} not found in the zip file!");
 
-        await using var crvStream = await ipLocationEntry.OpenAsync(cancellationToken).Vhc();
+        await using var csvStream = await ipLocationEntry.OpenAsync(cancellationToken).Vhc();
         if (forIpRange)
-            await BuildLocalIpRangeLocationDb(crvStream, filePath, cancellationToken).Vhc();
+            await BuildLocalIpRangeLocationDb(csvStream, filePath, cancellationToken).Vhc();
         else
-            await BuildLocalIpLocationDb(crvStream, filePath, cancellationToken).Vhc();
+            await BuildLocalIpLocationDb(csvStream, filePath, cancellationToken).Vhc();
     }
 
     /// <summary>
     /// Builds the zip <see cref="LocalIpRangeLocationProvider"/> reads, with an entry of IP ranges per country
     /// (<c>cc.ips</c>), stamped so an app can tell the build.
     /// </summary>
-    /// <param name="crvStream">IP2Location's CSV; it is closed after.</param>
+    /// <param name="csvStream">IP2Location's CSV; it is closed after.</param>
     /// <param name="outputZipFile">The zip file to write; an existing one is overwritten.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     /// <exception cref="FormatException">A row has an address that is not a number.</exception>
-    public static async Task BuildLocalIpRangeLocationDb(Stream crvStream, string outputZipFile,
+    public static async Task BuildLocalIpRangeLocationDb(Stream csvStream, string outputZipFile,
         CancellationToken cancellationToken)
     {
-        var countryIpRanges = await ParseIp2LocationCrv(crvStream, cancellationToken).Vhc();
+        var countryIpRanges = await ParseIp2LocationCsv(csvStream, cancellationToken).Vhc();
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
@@ -95,16 +95,16 @@ public static class Ip2LocationDbParser
     /// <summary>
     /// Builds the file <see cref="LocalIpLocationProvider.Deserialize"/> reads.
     /// </summary>
-    /// <param name="crvStream">IP2Location's CSV; it is closed after.</param>
+    /// <param name="csvStream">IP2Location's CSV; it is closed after.</param>
     /// <param name="outputFile">The file to write; an existing one is overwritten.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     /// <exception cref="FormatException">A row has an address that is not a number.</exception>
-    public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile,
+    public static async Task BuildLocalIpLocationDb(Stream csvStream, string outputFile,
         CancellationToken cancellationToken)
     {
-        var countries = await ParseIp2LocationCrv(crvStream, cancellationToken).Vhc();
+        var countries = await ParseIp2LocationCsv(csvStream, cancellationToken).Vhc();
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
@@ -114,7 +114,7 @@ public static class Ip2LocationDbParser
             ipRangeInfos.AddRange(
                 country.Value.Select(ipRange => new LocalIpLocationProvider.IpRangeInfo {
                     CountryCode = country.Key,
-                    IpRanges = ipRange
+                    IpRange = ipRange
                 }));
         }
 
@@ -131,17 +131,17 @@ public static class Ip2LocationDbParser
     /// Rows with no country (<c>-</c>) and rows without four columns are skipped, a quoted column keeping its commas;
     /// <c>um</c>, the US Minor Outlying Islands, counts as <c>us</c>; IPv4-mapped IPv6 ranges become IPv4 ones.
     /// </remarks>
-    /// <param name="ipLocationsCrvStream">IP2Location's CSV; it is closed after.</param>
+    /// <param name="ipLocationsCsvStream">IP2Location's CSV; it is closed after.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result maps each country's code, in lower case, to its ranges.</returns>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     /// <exception cref="FormatException">A row has an address that is not a number.</exception>
-    public static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCrv(Stream ipLocationsCrvStream,
+    public static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCsv(Stream ipLocationsCsvStream,
         CancellationToken cancellationToken)
     {
         // extract IpGroups
         var ipGroupIpRanges = new Dictionary<string, List<IpRange>>();
-        using var streamReader = new StreamReader(ipLocationsCrvStream);
+        using var streamReader = new StreamReader(ipLocationsCsvStream);
         while (!streamReader.EndOfStream) {
             cancellationToken.ThrowIfCancellationRequested();
             var line = await streamReader.ReadLineAsync(cancellationToken).Vhc() ?? "";

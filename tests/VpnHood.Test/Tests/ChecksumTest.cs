@@ -52,7 +52,7 @@ public class ChecksumTest : TestBase
                     foreach (var start in new[] { 0, 1, 3 }) {
                         var data = buffer.AsSpan(start, length);
                         var expected = WordByWordChecksum(pseudoHeader, data);
-                        var actual = ChecksumUtils.OnesComplementSum(pseudoHeader, data);
+                        var actual = ChecksumUtils.ComputeChecksum(pseudoHeader, data);
                         if (actual != expected)
                             Assert.Fail($"PseudoHeader: {pseudoHeaderLength}, Fill: {fill}, Length: {length}, " +
                                         $"Start: {start}, Actual: {actual:X4}, Expected: {expected:X4}");

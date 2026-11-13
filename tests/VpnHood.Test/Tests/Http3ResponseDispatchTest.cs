@@ -465,7 +465,7 @@ public class Http3ResponseDispatchTest
 
     private static Http3RequestHeaders CreateHeaders(Http3ServerOptions options, string method = "GET")
     {
-        var headers = new Http3RequestHeaders(trailers: false, options.MaxRequestLineBytes);
+        var headers = new Http3RequestHeaders(trailers: false, options.MaxRequestLineSize);
         headers.Append(new KeyValuePair<string, string>(":method", method));
         headers.Append(new KeyValuePair<string, string>(":scheme", "https"));
         headers.Append(new KeyValuePair<string, string>(":path", "/"));

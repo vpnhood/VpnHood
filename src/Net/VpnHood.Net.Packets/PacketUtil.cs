@@ -51,7 +51,7 @@ public static class PacketUtil
             pseudoHeader[9] = protocol;
             pseudoHeader[10] = (byte)(data.Length >> 8);
             pseudoHeader[11] = (byte)data.Length;
-            return OnesComplementSum(pseudoHeader, data);
+            return ComputeChecksum(pseudoHeader, data);
         }
 
         if (sourceAddress.Length == 16 && destinationAddress.Length == 16) {
@@ -64,7 +64,7 @@ public static class PacketUtil
             pseudoHeader[37] = 0;
             pseudoHeader[38] = 0;
             pseudoHeader[39] = protocol; // the upper layer's protocol
-            return OnesComplementSum(pseudoHeader, data);
+            return ComputeChecksum(pseudoHeader, data);
         }
 
         throw new ArgumentException("Invalid address lengths for checksum calculation.");
@@ -72,24 +72,24 @@ public static class PacketUtil
 
     /// <summary>
     /// Computes the Internet checksum (RFC 1071) of some bytes. The same as
-    /// <see cref="ChecksumUtils.OnesComplementSum(ReadOnlySpan{byte})"/>.
+    /// <see cref="ChecksumUtils.ComputeChecksum(ReadOnlySpan{byte})"/>.
     /// </summary>
     /// <param name="data">The bytes to sum, with any checksum field among them zero.</param>
     /// <returns>The checksum, as a number to write in network byte order.</returns>
-    public static ushort OnesComplementSum(ReadOnlySpan<byte> data)
+    public static ushort ComputeChecksum(ReadOnlySpan<byte> data)
     {
-        return OnesComplementSum(ReadOnlySpan<byte>.Empty, data);
+        return ComputeChecksum(ReadOnlySpan<byte>.Empty, data);
     }
 
     /// <summary>
     /// Computes the Internet checksum (RFC 1071) of a pseudo-header followed by some bytes. The same as
-    /// <see cref="ChecksumUtils.OnesComplementSum(ReadOnlySpan{byte}, ReadOnlySpan{byte})"/>.
+    /// <see cref="ChecksumUtils.ComputeChecksum(ReadOnlySpan{byte}, ReadOnlySpan{byte})"/>.
     /// </summary>
     /// <param name="pseudoHeader">The bytes summed first, such as an IP pseudo-header; may be empty.</param>
     /// <param name="data">The bytes summed after them, with any checksum field among them zero.</param>
     /// <returns>The checksum, as a number to write in network byte order.</returns>
-    public static ushort OnesComplementSum(ReadOnlySpan<byte> pseudoHeader, ReadOnlySpan<byte> data)
+    public static ushort ComputeChecksum(ReadOnlySpan<byte> pseudoHeader, ReadOnlySpan<byte> data)
     {
-        return ChecksumUtils.OnesComplementSum(pseudoHeader, data);
+        return ChecksumUtils.ComputeChecksum(pseudoHeader, data);
     }
 }

@@ -131,7 +131,7 @@ public class IpLocationProvidersTest : TestBase
     {
         using var provider = new LocalIpLocationProvider([
             new LocalIpLocationProvider.IpRangeInfo {
-                CountryCode = "ir", IpRanges = new IpRange(IPAddress.Parse("5.2.0.0"), IPAddress.Parse("5.2.0.255"))
+                CountryCode = "ir", IpRange = new IpRange(IPAddress.Parse("5.2.0.0"), IPAddress.Parse("5.2.0.255"))
             }
         ]);
 
@@ -150,7 +150,7 @@ public class IpLocationProvidersTest : TestBase
     {
         using var provider = new LocalIpLocationProvider([
             new LocalIpLocationProvider.IpRangeInfo {
-                CountryCode = "ir", IpRanges = new IpRange(IPAddress.Parse("5.2.0.0"), IPAddress.Parse("5.2.0.255"))
+                CountryCode = "ir", IpRange = new IpRange(IPAddress.Parse("5.2.0.0"), IPAddress.Parse("5.2.0.255"))
             }
         ]);
         using var stream = new MemoryStream();

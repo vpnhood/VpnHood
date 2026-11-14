@@ -21,7 +21,8 @@ namespace VpnHood.Net.Toolkit.ApiClients;
 /// <remarks>
 /// A status outside 2xx throws: for an RFC 9457 problem or an <see cref="ApiError"/> body, the exception
 /// <see cref="ToException"/> makes, which is none by default; otherwise, an <see cref="ApiException"/>. Each call sent is
-/// logged.
+/// logged. The HTTP client's <see cref="System.Net.Http.HttpClient.Timeout"/> covers a whole call, its response's body
+/// included.
 /// </remarks>
 public class ApiClientBase : ApiClientCommon
 {
@@ -362,9 +363,10 @@ public class ApiClientBase : ApiClientCommon
         var client = HttpClient ?? throw new Exception("HttpClient has not been set.");
         await PrepareRequestAsync(client, request, urlBuilder, cancellationToken).Vhc();
 
-
+        // The whole response, not ResponseHeadersRead: the client's timeout ends where the send returns, so a body
+        // read after it has no limit, and one that stalls holds the call for ever
         using var response =
-            await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseContentRead, cancellationToken)
                 .Vhc();
         var headers = response.Headers.ToDictionary(h => h.Key, h => h.Value);
 

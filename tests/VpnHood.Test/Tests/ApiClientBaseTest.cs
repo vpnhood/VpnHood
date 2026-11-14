@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.IO.Pipelines;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json;
@@ -182,6 +184,27 @@ public class ApiClientBaseTest : TestBase
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => apiClient.Get(CancellationToken.None));
         CollectionAssert.Contains(TestLogCapture.Instance.GetLevels(message).ToArray(), LogLevel.Error);
+    }
+
+    // The client's timeout covers the body too: a response that starts and then stalls would hold its call for ever
+    [TestMethod]
+    public async Task A_response_whose_body_stalls_ends_at_the_clients_timeout()
+    {
+        // the body starts, and its end never comes
+        var body = new Pipe();
+        await body.Writer.WriteAsync("\"begin"u8.ToArray(), TestCt);
+        using var httpClient = CreateHttpClient((_, _) => Task.FromResult(
+            new HttpResponseMessage(HttpStatusCode.OK) {
+                Content = new StreamContent(body.Reader.AsStream()) {
+                    Headers = { ContentType = new MediaTypeHeaderValue("application/json") }
+                }
+            }));
+        httpClient.Timeout = TimeSpan.FromMilliseconds(500);
+        var apiClient = new TestApiClient(httpClient);
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            apiClient.Get(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30), TestCt));
+        Assert.IsInstanceOfType<TimeoutException>(exception.InnerException);
     }
 
     private static HttpClient CreateHttpClient(

@@ -1,5 +1,6 @@
 # Latest
 
+* Fix: A VpnHoodServer whose access manager stops in the middle of an answer gives that call up at its timeout and goes on, where it waited for ever, sent no more status, and stayed lost to the manager until a restart
 * Update: On Linux, VpnHoodServer keeps its NAT rules in chains of its own, named `vpnhood_nat_` and its adapter's name, in the nat and filter tables of `iptables` and `ip6tables`, and removes those alone when it stops. It used to delete every rule with the same text as its own, a firewall's or an administrator's too. Rules a server before this version left after a crash stay until the next boot
 * Fix: On Linux, VpnHoodServer turns on forwarding only for the IP versions it translates, and sends IPv6 out by the interface of the IPv6 default route, where it used the IPv4 route's for both
 * Fix: On Windows, a VpnHoodServer whose adapter stops taking packets starts it again, where it stayed up and dropped every packet without a word

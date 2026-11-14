@@ -6,6 +6,8 @@ namespace VpnHood.AppLib.App.Ios;
 // device runs low on storage, and only the app's defaults are kept: 500 KB of them, by Apple's guide;
 // tvOS warns at 512 KB and ends the app at 1 MB. The budget is half of that, leaving room for the
 // defaults' other users - the UI language, the system's own keys - and for the store's encoding.
+// The profiles' keys and the sign-in session go here with the rest, not to the Keychain: on an iPhone
+// they are plain files too, and moving them would be a change for both.
 internal sealed class UserDefaultsStorageProvider(string rootFolderPath)
     : KeyValueStorageProvider(rootFolderPath, budget: 256 * 1024)
 {

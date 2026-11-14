@@ -374,6 +374,11 @@ TV: a reviewer holds only the Siri Remote, so if your app needs an access key, s
 TV without typing it there, such as through the app's Remote Access page from a phone or computer on the
 same network.
 
+The pipeline uploads the Apple TV build and nothing of its version's listing: the Apple TV's description,
+promotional text, "What's New" and screenshots are yours to set in App Store Connect. Write them for a
+remote (press or click, not tap). `src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --platform TV_OS`
+uploads the screenshots from your store repo's `fastlane/screenshots/appletv`.
+
 **Each platform's first review asks a VPN app the same three questions.** An automated check finds the VPN
 and stops the review under 2.1.0, *App Completeness*, until you answer: what user information the app
 collects using the VPN, for what purposes, and whether it is shared with third parties, and where it is

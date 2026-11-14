@@ -1,252 +1,79 @@
-# iOS Network Extension — Memory & Throughput (consolidated)
+# VpnHood iOS Network Extension: Memory and Throughput
 
-**Status:** TCP forwarding working on iOS with good throughput + bounded memory (measured on a .NET 11 preview).
-**Investigation:** 2026-06-16 → 2026-06-19 • **Device:** iPhone 11 (A13, 16 KB pages, iOS 26.5),
-hardware UDID `00008030-001544500A38802E` • **Builds with:** the .NET 11 SDK
-(the measurements below were taken on SDK 11.0.100-preview.5, iOS workload `26.5.11546-net11-p5`; the
-repo now builds on **.NET 11** / `27.2.11039` — the numbers have not been re-measured since,
-so treat them as the preview.5 baseline).
+The packet tunnel extension on iOS and tvOS runs under a memory limit of about 50 MB. Past it, the system
+kills the extension (jetsam) and the VPN drops. This page maps what spends that budget and which code bounds
+it; the comments in that code hold the values and the measurements behind them. Read it before changing
+memory, throughput or TCP-stack code.
 
-> This file merges the three working docs (`ios-memory-jetsam-investigation`, `ios-net11-coreclr-proxy-speed`,
-> and Gemini's `upload-speed-and-memory-stabilization`) into one accurate record. Code changes live in the
-> core projects under `src/Core`; the app glue is under `src/Apps/{Client,Connect}/{Client,Connect}.Ios.{Apple,Extension}`. The
-> **batched native tun write** (Part 4) has since merged; everything described here is on `develop`.
+## What the limit counts
 
----
+- Jetsam counts `phys_footprint`: dirty plus compressed anonymous memory. File-backed code pages don't count,
+  so trimming, linking or AOT doesn't move it.
+- The runtime is most of the idle floor, not our code. CoreCLR (.NET 11) idles at about 23 MB where Mono idled
+  at about 42 MB, and its generational GC absorbs the per-packet allocation churn that Mono spiked on.
+- The managed heap is a small part of the footprint, but it can jump by megabytes in a burst of downloaded
+  packets. `IosMemoryGuard` forces collections and drains finalizers to keep it down; its comment says why it
+  must stay. The GC settings are CoreCLR's (`System.GC.ConserveMemory` in the extension's csproj): Mono's
+  `MONO_GC_PARAMS` has no effect.
+- `NSExtensionPrincipalClass` names the extension's own `PacketTunnelProvider`, a subclass of `IosVpnService`.
+  Naming the core class crashes the extension on launch: CoreCLR's registrar cannot find the core assembly.
 
-## Goals
-1. Stop the **~52 MB jetsam kill** of the Network Extension. ✅ (.NET 11 / CoreCLR)
-2. Keep **`UseTcpForwarding=true` viable on iOS** — split-domain tunneling *requires* it
-   (`AppFeatures.IsSplitDomainSupported = device.IsTcpForwardingSupported`). No packet-mode fallback. ✅
-3. **Restore throughput** (upload + download). ✅ (dynamic-window re-open)
-4. Fix the **shared TCP stack** so Android/desktop also bound memory, not just iOS.
+## TCP forwarding
 
----
+Memory grows with concurrent flows. A full tunnel carries every app's connections, not only the page on
+screen: a speed test opened 116 at once and browsing 192, most of them idle keep-alives.
+`LocalTcpStackOptions.Ios` bounds them:
 
-## Executive summary (what's true now)
-- The old ~42 MB floor was the **Mono runtime**, not our code. **.NET 11 / CoreCLR halves it to ~23 MB and
-  stays flat under load** → the jetsam crash is gone. (Required re-adding the `PacketTunnelProvider` subclass —
-  CoreCLR's registrar otherwise can't find the principal class's assembly.)
-- TCP forwarding had **two memory failure modes**, both fixed: (A) **connection pile-up** — full-tunnel browsing
-  opens ~190 concurrent flows × ~180 KB; (B) **upload-burst pipe balloon** — a fixed window never throttled the
-  sender. Fixes: **dynamic receive window** (B + bounds pipe memory; a global budget sat beside it until 2026-10,
-  when it went: it never bound), **connection cap (100, since 2026-07 40) + fast idle reaping (20 s)** (A).
-- **Throughput fix = the dynamic window's RE-OPEN**, not buffer sizes. A correct proactive window-update keeps
-  the device's send window sliding → **upload 38 Mbps / download 50 Mbps** (was ~2/4). Proven by A/B test.
-- **Native write is now batched** (Part 4): `SendPacketsAsync` flushes up to 32 packets per
-  `NEPacketTunnelFlow.WritePackets` instead of one native call per packet — fewer marshaling crossings on the
-  download hot path. (Also corrected a wrong "concurrent `WritePacket` race" verdict — see Part 4.)
+- At most 40 connections. At the cap, a new flow evicts the most idle one (idle 15 s or more), and idle flows
+  are reaped after 20 s.
+- A 64 KB receive window per flow, without window scaling, so 40 flows hold at most 2.5 MB unread.
 
----
+Throughput comes from the window re-opening, not from its size. A sender that saw a zero window sends nothing
+until it learns the window opened again; `ReceiveWindow` sends that update whenever the window slides open by
+a quarter. Without it, upload stalls at about 2 Mbps, and larger windows or buffers don't help.
 
-## Part 1 — The memory floor: Mono → CoreCLR
+## Memory gates
 
-- **`phys_footprint ≈ anon + comp`** (dirty + compressed anonymous). The ~50 MB of `code` (file-backed
-  AOT/runtime) is **NOT counted** by jetsam → trimming/linking/AOT changes can't move the footprint.
-- Of the floor, only ~6 MB was the managed GC heap; the rest (~36 MB) was **non-managed native** (Mono runtime,
-  TLS, stacks). So **GC/csproj knobs (`soft-heap-limit`, `ConserveMemory`) can't help** — they only touch the
-  ~6 MB managed slice. (They're still required to keep the managed heap from spiking; don't remove them.)
-- **NativeAOT** would shrink the floor but for iOS it only engages via whole-app publish and needs the entire
-  closure (incl. the local web server + reflection-based JSON) to be trim/AOT-safe — a large detour. **Superseded
-  by CoreCLR.**
-- **.NET 11 / CoreCLR** (the new default mobile runtime in net11 P4) cut the floor ~in half and, crucially, its
-  real generational GC **absorbs the per-packet allocation churn that Mono spiked on** → flat under load.
-- **CoreCLR boot fix (required):** under CoreCLR's managed-static registrar, pointing
-  `NSExtensionPrincipalClass` at the core `IosVpnService` crashes on launch:
-  `ObjCRuntime.RuntimeException: Could not find the assembly VpnHood.Core.Client.VpnServices.Host.Ios`. Fix = a thin
-  local **`src/Apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs`** subclass of `IosVpnService` (roots the core assembly), with
-  `Info.plist NSExtensionPrincipalClass = PacketTunnelProvider`. (Mono tolerated its absence.)
+The extension idles at about 30 MB, and a burst of traffic allocates about 10 MB of native buffers within
+moments. The gates act in turn as the footprint rises:
 
-| | Mono (net10) | **CoreCLR (net11)** |
-|--|--|--|
-| Connect floor (idle) | ~42 MB | **~23 MB** |
-| Packet mode, 32 conn, 1.1 GB | spikes → jetsam | **flat 26.4 MB** |
-| Production packet mode, 133 MB up | n/a | **flat ~30 MB** |
+| Footprint | Code | What it does |
+| --- | --- | --- |
+| 41 MB | `ConnectorService` | Holds new connections to the server |
+| 42 MB | `LocalTcpStackOptions.AdmissionMemoryLimitMb` | Drops new SYNs silently, so the apps' own SYN retries pace the flows; the QUIC download ingest gate closes at the same footprint |
+| 44 MB | `QuicStreamConnectionFactory` | A 250 ms watchdog recycles every QUIC connection, which frees their native buffers; flows reconnect |
 
----
+Gates set close to the idle footprint trip on ordinary bursts and cut the connection pool. The top gate leaves
+room below the limit for native allocations that land between two readings.
 
-## Part 2 — TCP forwarding (`UseTcpForwarding=true`) memory
+## Transport buffers
 
-Each forwarded TCP flow is **its own dedicated TLS connection to the server** (not multiplexed over the packet
-channel — so `PacketChannelBufferSize`/`MaxPacketChannelCount` are irrelevant with TCP forwarding), plus a
-`LocalTcpConnection` (16 KB retx) + a reassembly pipe. **~180 KB structural per flow.**
+iOS and tvOS take `ClientTransportOptions.LimitedMemory`:
 
-- **Real concurrency is ~20× the intuition:** full-tunnel routes *every* app/OS connection, not just the page
-  you see. Measured **peakConn 116** (speedtest) / **192** (browsing). `est=conn` always → these are *real open*
-  flows (mostly idle HTTP keep-alives), **not** un-reaped zombies. Memory scales with **connection count**.
-- **Mode A — connection pile-up:** ~190 × ~180 KB → jetsam. **Fix:** `MaxConnections = 40` (excess flows RST,
-  retried — a cap of 100 was initially tested, but under heavy browsing it still let memory drift up too close to the Jetsam limit. 40 keeps a healthy margin) + `IdleTimeout 2 min → 20 s` (`IdleCheckInterval 5 s`) so finished keep-alives free memory fast.
-- **Mode B — upload-burst pipe balloon:** a fixed receive window never throttled a fast uploader, so data backed
-  up unboundedly in the reassembly pipes + downstream write buffers (`pipeBuf` 8.4 MB, `gcLive` 34 MB → jetsam).
-  **Fix:** the dynamic receive window bounds it (`pipeBuf` → ~0); the global budget beside it never bound and went
-  in 2026-10.
+- Two packet channels, small packet-channel and UDP buffers, and 32 KB stream-forwarding buffers.
+- 64 KB kernel buffers for each forwarded or excluded socket, as up to 40 of them pay it.
+- The packet channels' kernel buffers are left to the OS. Setting `SO_SNDBUF` or `SO_RCVBUF` turns Darwin's
+  autotuning off: a fixed 256 KB capped download at about 26 Mbps at 75 ms RTT, where autotuning reached
+  210 Mbps down and about 100 Mbps up for about 1 MB more footprint.
 
----
+An iPad app running on an Apple-silicon Mac has no extension memory limit, so its `AppDelegate` takes
+`NormalMemory` there.
 
-## Part 3 — Throughput (the upload-speed fix) — the subtle one
+## Packet writes
 
-**The ~2 Mbps upload was a real goodput limit** (the pre-fix "fast upload" was an illusion — data piled into the
-unbounded pipe = the memory bug; real delivery was always ~2 Mbps). **Two suspects were tested on-device and
-RULED OUT — neither changed it:** (1) the receive window (16 KB → 64 KB), (2) the copy buffer
-`StreamForwardingBufferSize` (2 KB → 32 KB).
+`IosVpnAdapter.SendPacketsAsync` hands iOS up to 32 packets per `WritePackets` call, from reused arrays, in one
+autorelease pool per drain. A final, shorter chunk gets an array of its exact length, as `WritePackets` walks
+the whole array and aborts on a trailing null. The protocol-family numbers are cached: a new `NSNumber` per
+packet leaks native memory faster than finalization frees it.
 
-**The real fix was the dynamic window's RE-OPEN logic.** TCP flow control has two halves:
-- **Shrink** — advertise a smaller window as the pipe fills; at full, advertise 0 → the device **stops**.
-- **Re-open** — as we drain, advertise a bigger window. **A stopped (zero-window) sender sends nothing, so it
-  never sees a normal ACK; without a *proactive* window-update it just sends slow persist-probes → throughput
-  collapses.** The first implementation only sent the proactive update after a *full* window close
-  (`closed && win ≥ 4096`), which rarely fired under a steady upload → the device throttled/stalled
-  → ~2 Mbps. **This is why enlarging the window/buffer looked useless — the broken re-open was the real cap.**
+## Known limit: downloads share one packet channel
 
-**The fix** (today in `ReceiveWindow`, the connection's component): track the last window advertised
-(`LastAdvertised`, set by `Advertise()` on every send) and send a window-update ACK whenever the window **slides open by
-a quarter** (`win − LastAdvertised ≥ 16383` on the 64 KB window) — standard TCP window-update. The device's send window now stays
-fresh and large → full speed. Memory stays bounded because the *shrink* half (the per-connection window) is unchanged.
+`ChannelManager` picks a packet channel by `SourcePort % channelCount`. Download packets carry the service's
+port, 443 for nearly everything, so all downloads share one channel while uploads spread over all of them.
+Hashing both ports would need a server release. With autotuning, one channel carried 210 Mbps.
 
-**A/B proof (2026-06-19):** with that one clause disabled (everything else identical), upload **stalled** —
-`up` frozen at 10.5 MB while download flowed to 75 MB, and the stalled flows were reaped by the 20 s idle
-timeout (`conn` 51→12 = "connection dropped"); no crash. Re-enabled → **upload 38 Mbps**.
+## Diagnostics
 
-**Result (good build):** **upload 38 Mbps / download 50 Mbps**, footprint peak **34–38 MB** under load (with a connection cap of 40), `pipeBuf=0`. Note: 64 KB window sufficed (no window scaling needed) *because* the re-open keeps it sliding near full, so the effective BDP is covered on this path.
-
----
-
-## Part 4 — Native tun write path (batched)
-
-`IosVpnAdapter` writes inbound packets (server → device) into iOS via `NEPacketTunnelFlow.WritePackets`.
-Each such call **marshals managed arrays into temporary native `NSArray`/`NSData` and allocates autoreleased
-native temporaries**. Core's `PacketTransportBase` already drains its send channel in bulk (a single consumer,
-up to `QueueCapacity` ≈ 255 packets per cycle) and hands the whole list to `SendPacketsAsync`.
-
-- **Old path:** the adapter overrode only the per-packet `WritePacket`, so the base `SendPacketsAsync` looped
-  and issued **one native `WritePackets([1 packet])` per packet** → one marshaling crossing + autorelease churn
-  per packet. On a TCP forwarding download (many back-to-back MSS packets) that is the hot path.
-- **New path (shipped):** the adapter overrides `SendPacketsAsync` directly and flushes the
-  drained list to the native flow in **batches of up to 32** (`MaxWriteBatchSize`), using **reused,
-  allocation-free arrays** wrapped in **one autorelease pool per drain**. Far fewer native crossings per burst.
-  - Partial (final) chunks are handed an **exactly-sized** array (`_partialWrite*Batches[n]`, pre-allocated
-    length `n`) because `WritePackets` walks the full array length — a trailing `null` would `SIGABRT` natively.
-  - Each `NSData` is `FromBytes`-copied (so the reused `_writeBuffer` is safe to overwrite per slot) and
-    **disposed in the same chunk** after the native call, so native peers never accumulate toward jetsam.
-  - `WritePacket` (the per-packet override) is now **unreachable** and throws — `SendPacketsAsync` is the only
-    write path, mirroring how `ReadPacket` throws in favor of the `ReadPackets` callback.
-
-> **Corrected verdict (was a "double problem"):** an earlier comment asserted that concurrent `WritePacket`
-> calls from TCP forwarding pump threads *raced* on the shared write arrays and that the `_writeLock` fixed a data
-> race causing `SIGABRT`. That diagnosis was **wrong**. Core's send channel is `SingleReader=true` and this
-> transport is non-passthrough, so `SendPacketsAsync`/`WritePacket` is only ever invoked from the **single**
-> consumer loop — pump threads merely *enqueue*. The real `SIGABRT` was a **garbled/null `NSData` handed to
-> `WritePackets`** (lifetime/marshaling bug), not a thread race. The `_writeLock` is **kept** anyway as cheap
-> (once-per-drain, uncontended) defensive serialization in case a direct/passthrough write path is ever added.
-
-## Part 5 — Recent Tuning Experience: Watchdog Aggression & Optimal Thresholds
-
-In July 2026, we encountered an issue where the panic recycler was triggering aggressively (every 20–30 seconds) during speed tests. We analyzed the on-device logs and refined the memory threshold tuning with the following key findings:
-
-1. **Watchdog Aggression Root Cause**:
-   The baseline idle memory footprint of the extension is `30.1 MB` to `30.4 MB`. Setting the connection recycle threshold too close to this baseline (initially `41.0 MB`) meant that any normal burst of traffic (which allocates ~10 MB of native packet buffers) would immediately trip the watchdog and sever the connection pool.
-
-2. **Single-Flow vs. Multi-Flow Behavior**:
-   - **Large File Downloads**: Standard single-flow file downloads (even gigabyte-scale files) only use 1 or 2 concurrent connections. They run at full speed, maintain a stable memory footprint of `31–34 MB` (far below the gates), and **never** trigger connection recycling.
-   - **Concurrency Storms**: Speed tests and web page load stampedes spin up 40+ concurrent TCP flows. This high connection count allocates many native `NWConnection` objects and socket buffers, driving the footprint to `41–45 MB` rapidly.
-
-3. **How We Fixed It**:
-   We raised the cascading thresholds by `3.0 MB` to give active traffic breathing room:
-   - **`ConnectMemoryLimitMb`**: Raised from `39.0` to `41.0 MB` (stops handshaking new flows).
-   - **`AdmissionMemoryLimitMb`**: Raised from `40.0` to `42.0 MB` (silently drops new SYNs).
-   - **`PanicFootprintMb`**: Raised from `41.0` to `44.0 MB` (watchdog recycles).
-   
-   This shifts the panic boundary upwards. It allows normal browsing and large downloads to operate completely uninterrupted, while still maintaining a robust `8.0 MB` safety margin below the hard `52.0 MB` Jetsam limit to absorb native allocation lag and in-flight traffic.
-
----
-
-## Current configuration (working tree)
-
-**iOS TCP-stack profile** — `src/Net/VpnHood.Net.TcpStack/LocalTcpStackOptions.cs` `Ios`:
-- `ReceiveWindowSize=0xFFFF (64 KB)`, `RetransmitBufferSize=16 KB`. No global receive budget: `MaxConnections` bounds the
-  aggregate (40 × 64 KB = 2.5 MB unread at most; about 4.2 MB of TCP buffers with the pipes' 4 KB segments and the
-  retransmit rings).
-- **`MaxConnections=40`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.
-- **`AdmissionMemoryLimitMb=42.0`** — Memory admission gate. When the process footprint matches or exceeds 42.0 MB, new TCP SYNs are dropped silently so the peer's own SYN-retransmit backoff acts as a natural pacing mechanism until memory recedes.
-
-**Connector Service & QUIC Panic Recycler**:
-- **Connection Handshake Gate** — `ConnectMemoryLimitMb=41.0` (in `ConnectorService.cs`). When the process footprint reaches 41.0 MB, new server connection handshakes are held, serialized behind a thread-count gate (max 3 concurrent on iOS).
-- **Panic Watchdog Recycle** — `PanicFootprintMb=44.0` (in `QuicStreamConnectionFactory.cs`). A dedicated 250 ms watchdog thread runs on iOS. If the footprint reaches 44.0 MB, it triggers `RecycleAll()`, severing and disposing of all active QUIC connections to instantly release native buffers, recovering to baseline in ~130 ms.
-
-**Dynamic window** — `ReceiveWindow`, the connection's component: the advertised window `= ReceiveWindowSize −
-unread`; `Advertise()` records `LastAdvertised` on every segment out; `Consume` (the app's drain, `OnAppConsumed`) calls
-for a window-update ACK when `(closed && win ≥ 4096) || (win − LastAdvertised ≥ 16383)` on the 64 KB window.
-
-**Host** — nothing app-side tunes the transport any more: `MaxPacketChannelCount` is a preset knob
-(`LimitedMemory` = **2**, `NormalMemory` = `TransportDefaults.MaxPacketChannelCount`), not a user setting,
-so the iOS AppDelegates no longer rewrite it on launch. Installs that persisted the old force of 1 heal
-themselves — the stale `maxPacketChannelCount` in `settings.json` is simply ignored on load. The buffer
-sizes live in the same `LimitedMemory` preset in
-`src/Core/VpnHood.Core.Client.Abstractions/ClientTransportOptions.cs`: `PacketChannelBufferSize=16 KB`,
-`UdpForwardingBufferSize=16 KB`, `StreamForwardingBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude
-socket buffers), and `TcpPacketChannelKernelBufferSize=null` — the OS default — for the outer TCP packet
-channels.
-
-**TCP packet-mode throughput (settled 2026-08-30, iPhone 11, 75 ms-RTT server).** Throughput over the
-tunnel is `window / RTT`, and an explicit `SO_SNDBUF`/`SO_RCVBUF` disables Darwin's autotune (which
-otherwise grows to ~2 MB under load). The old pinned 256 KB therefore capped download at ~26 Mbps at
-75 ms while Android — which pins nothing — did 120+ Mbps on the same link. Pinning only the send side
-was tried in between and held upload to ~60 Mbps, so the preset now leaves **both** sides to the OS.
-Measured on-device: download 26 → **210 Mbps**, upload → **~100 Mbps** (the link ceiling, matching UDP),
-extension footprint peak 29.3 → 30.3 MB. Kernel socket memory here is charged once for the tunnel rather
-than per flow, which is why autotune is affordable at the ~52 MB cap while `TcpKernelBufferSize` — paid
-per passthru flow, up to 40 of them — is not.
-
-Null on this knob means the OS default and does **not** inherit `TcpKernelBufferSize`: the packet channel
-is sized independently of the per-flow sockets, which is the whole reason it is a separate knob
-(`TcpStreamConnectionFactory` always passes per-call options for a packet channel, and
-`ConfiguringSocketFactory` lets per-call options win as a whole rather than merging property-by-property).
-
-**Known limit — channel selection collapses download onto one channel.**
-`Tunnel.FindChannelForPacketInternal` picks `SourcePort % channelCount`; download packets carry the
-remote service's port (443 for nearly everything), so all download flows share one packet channel no
-matter how many are open, while upload (ephemeral source ports) spreads across all of them. The download
-side of that choice runs on the **server**, so fixing the hash (use both ports) needs a server release
-and farm rollout. With receive autotune this matters much less — one autotuned channel carried 210 Mbps —
-but it is why channel count alone never moved the download number.
-
-`ClientTransportOptions.ForCurrentPlatform()` picks `LimitedMemory` on iOS/tvOS and `NormalMemory` elsewhere.
-`AppDelegate` overrides the preset for the one case the check cannot see: **"Designed for iPad" running on an
-Apple-silicon Mac**, which has no Network-Extension memory cap and therefore takes `NormalMemory`.
-
-TFM `net11.0-ios` on App + Extension + the iOS core libs (Devices.Ios, VpnServices.Host.Ios, IosTun, AppLib.App.Ios, Quic.Ios).
-
----
-
-## Diagnostic probe — `Documents/ext-mem.log`
-```
-HH:mm:ss.fff footprint=MB peak=MB gcLive=MB gcHeap=MB native=MB anon=MB comp=MB code=MB \
-  conn=N est=N peakConn=N pipeBuf=MB win=KB maxC=N dn=MB up=MB \
-  tracker=live=[IosQuicStream:X LocalTcpConnection:Y] events=[IosQuicStream.created:A IosQuicStream.disposed:B ...]
-```
-`footprint ≈ anon + comp`. `conn/est/peakConn` = live/established/peak forwarding connections. `pipeBuf` = total
-reassembly backlog (Mode-B signal). `up`/`dn` cumulative MB and `rate` is their sampled aggregate rate. `tracker.live` is the post-GC weak census (including proxy channels and rented buffer owners/arrays); `tracker.events` contains cumulative lifecycle totals. Persistent connections are expected, so idle is traffic-based: after the rate remains below 32 KB/s for 10 seconds, `BASELINE` and per-cycle `IDLE_CHECKPOINT` records use the minimum footprint observed during the next 30-second idle window. Each checkpoint also records managed bytes and process footprint immediately after a forced compacting collection. File/census writes are capped at 2 Hz near the memory limit while the 100 ms sampler still retains the true peak.
-
----
-
-## Part 6 — NWConnection Callback Retention Investigation (July 2026)
-
-During speed tests, memory gradually drifted up under idle periods. One candidate is a callback retention cycle in the iOS QUIC stream wrapper (`IosQuicStream`):
-- `IosQuicStream` strongly owned the `NWConnection`.
-- The native connection owned the callbacks (e.g., `NWConnectionReceiveReadOnlySpanCompletion`) registered during read/write operations.
-- The callback delegates strongly captured the `owner` (`IosQuicStream`) instance, completing the circular root:
-  `IosQuicStream` ➔ `NWConnection` ➔ Native Closure ➔ Callback Delegate ➔ `IosQuicStream`
-- When connections/streams closed, if native read/write callbacks had not fired, the native runtime retained the blocks, leaking the C# `IosQuicStream` instances.
-
-**Candidate fix under test**: `IosQuicStreamReadOperation` and `IosQuicStreamWriteOperation` keep their owner while I/O is active, then clear that reference during deterministic stream disposal after pending tasks are completed. The diagnostic probe records 30-second idle minima, tracked live objects, and created/closed/callback/clear totals. Repeated work/idle cycles must show whether the footprint and object census return to baseline before this is considered resolved.
-
-The next A/B also detaches `QuicStreamConnection._stream` during disposal. Device census showed disposed `QuicStreamConnection` and `IosQuicStream` pairs surviving forced collections together after read/write operations had recovered; clearing the outer wrapper's stream reference determines whether that wrapper is the retaining owner without changing active I/O.
-
----
-
-## Key insight
-`memory = per-flow-cost × concurrent-flows`; `throughput = window/RTT` **but only if the window keeps
-re-opening.** On a 52 MB budget with concurrent flows the strategy is: **a connection cap (40) with a full 64 KB
-window per flow** (every flow at full speed; the cap bounds the aggregate at 40 × 64 KB; the global budget that
-once sat beside it never bound and went in 2026-10) + **a correct window re-open** (a window-update on the app
-drain so senders never stall) + **fast idle reaping** + **cascading memory gates (41 MB / 42 MB / 44 MB) to prevent Jetsam kills.** Callback retention remains under measurement; it is not yet treated as proven. CoreCLR provides the baseline headroom that makes it all fit.
+Logging below Information (the `/log:debug` debug command) turns on the extension's diagnostics: `vpn-ext.log`
+gets the TCP stack's and QUIC's connection lines, and `Documents/ext-mem.log` the footprint breakdown that
+`IosMemoryMonitor` describes.

@@ -14,7 +14,8 @@ namespace VpnHood.Core.Client.Devices.Android.Messaging;
 // A session that ended shows as Disconnected (VpnServiceNotReadyException); a failure keeps its dialog
 // (VpnServiceUnreachableException). Only Android 14 tells an update apart; before it an update is recorded as a
 // force-stop, so there every end is a session that ended. A revoke never comes here: the service writes it before
-// it stops.
+// it stops. Nor does a request already in flight as the process dies: it fails as unreachable, with the dialog, on
+// any Android; the next request, the usual case, is sorted here.
 internal static class AndroidVpnServiceEnd
 {
     // An app still gets its own services from Android 8 on; before it, every app's, and another app built on VpnHood

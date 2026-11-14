@@ -8,8 +8,8 @@ using Microsoft.Win32.SafeHandles;
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
 // Whether a folder may hold what the service runs. The service runs as SYSTEM, so a copy where
-// others may write - a folder made under C:\ - would let anyone swap a dll and run as SYSTEM
-// (desktop plan §3). Only SYSTEM, Administrators and TrustedInstaller may change the folder or
+// others may write - a folder made under C:\ - would let anyone swap a dll and run as SYSTEM.
+// Only SYSTEM, Administrators and TrustedInstaller may change the folder or
 // anything in it, or delete, rename or rewrite a folder on the way to it; adding a folder beside
 // one stays allowed, as C:\ lets everyone do. The service is registered under the path it was
 // started from, so that path must be the folder's own: reached through a link, a mapped drive or

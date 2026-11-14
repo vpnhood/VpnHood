@@ -43,7 +43,8 @@ public abstract class AndroidAvaloniaApplication<TUi>(IntPtr javaReference, JniH
     {
         // Avalonia's first class check opens the user's culture's ICU collator on the main thread
         // (AvaloniaUI/Avalonia#22582). Opening it ahead, on a background thread, was tried and
-        // dropped: on budget phones the collator takes 0.1-0.15 s of a 9.5 s first start.
+        // dropped: on budget phones the collator takes 0.1-0.15 s of a 9.5 s first start. Moving the
+        // app's own start work to a worker beside Avalonia's setup slowed that setup by more than it saved.
         VpnHoodAndroidApp.Init(CreateInitParams);
         if (!VpnHoodApp.IsInit)
             return; // Avalonia's OnCreate starts it; Android's own does nothing

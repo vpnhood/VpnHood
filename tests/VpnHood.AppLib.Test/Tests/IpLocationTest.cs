@@ -77,10 +77,10 @@ public class IpLocationTest : TestAppBase
         await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: true, interval: null,
             TestCt);
 
-        // commit project and sync
+        // commit the zip alone and sync: the push publishes the package, so no other edit in that repo may ride along
         try {
             var gitBase = $"--git-dir=\"{solutionFolder}/.git\" --work-tree=\"{solutionFolder}\"";
-            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -a -m Publish", TestCt);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -m Publish -- \"{ipLocationFile}\"", TestCt);
             await OsUtils.ExecuteCommandAsync("git", $"{gitBase} pull", TestCt);
             await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", TestCt);
         }

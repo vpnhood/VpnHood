@@ -92,7 +92,8 @@ a PNG.
    language the package declares (Store Policies 10.7). Each needs a description and at least one
    **Desktop** screenshot (PNG, 1366×768 or larger); a short description and up to 7 keywords help
    search — no prices or other publishers' product names among them (10.1.3). Describe the Windows
-   edition: it has no per-app split tunneling.
+   edition: it has no per-app split tunneling. An app that works only with something it does not
+   include, such as a VPN server and its access key, says so at the start of its description (10.2.4).
    - **A screenshot is kept once uploaded**, before **Save** and through a reload: remove a stray one
      with its tile's delete icon.
 6. **Submission options:** **Don't publish this submission until I select Publish now**, so a

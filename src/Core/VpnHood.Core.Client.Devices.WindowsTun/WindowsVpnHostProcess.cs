@@ -10,6 +10,8 @@ namespace VpnHood.Core.Client.Devices.WindowsTun;
 // The daemon's side of the VPN host (WindowsVpnHost): its process, started at each connect, one at a time. A job
 // ends it with the daemon's process, a crash's too; the updater, also the daemon's child, stays out of the job,
 // as it must outlive the daemon. daemonName: the daemon's Windows service; null in a dev run, which is none.
+// Per connect rather than for the daemon's life, as on the phones: nothing of the tunnel runs while disconnected, one
+// that dies takes only its session, and a long-lived one would need a connect request the API has on no platform.
 internal sealed class WindowsVpnHostProcess(string executablePath, string storageFolder, string? daemonName)
     : IDisposable
 {

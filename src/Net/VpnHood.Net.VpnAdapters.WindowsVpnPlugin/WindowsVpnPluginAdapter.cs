@@ -251,6 +251,8 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
                 []));
         }
 
+        // Windows may take seconds here: its firewall recomputed for the new interface, and 3 s of the IPv6 address's
+        // duplicate check, which stays: given IPv6 routes without that address, Windows ends the channel.
         vpnChannel.StartWithMainTransport(
             _clientIpV4List.Count == 0 ? null : _clientIpV4List,
             _clientIpV6List.Count == 0 ? null : _clientIpV6List,

@@ -157,7 +157,8 @@ internal sealed class WindowsVpnPluginService : IVpnServiceHandler
     }
 
     // VpnHood injects the decrypted packets through the channel's receive buffers itself; the associated
-    // transport carries no payload, so there is nothing to decapsulate.
+    // transport carries no payload, so there is nothing to decapsulate. Only data arriving on that transport would
+    // wake a host Windows froze with no app holding it: without the app, a reply waits until the device sends a packet.
     public void Decapsulate(VpnChannel channel, VpnPacketBuffer encapsulatedBuffer,
         VpnPacketBufferList decapsulatedPackets, VpnPacketBufferList controlPacketsToSend)
     {

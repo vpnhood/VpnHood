@@ -127,7 +127,7 @@ Automatic Alt-Svc advertisement remains off while this endpoint does not replace
 origin, including downloads. Moving the actual tunnel to standard HTTP/3 through Cloudflare or other
 web frontends is separate future work; proxy support must be verified for the chosen tunnel method.
 
-## Scope and remaining deployment checks
+## Scope and verification
 
 Omitting `ServerSecret` removes a redundant secret from the ordinary hello; it does **not** promise
 that a TLS-terminating proxy can never see a farm secret. Existing access-key updates in
@@ -169,23 +169,11 @@ responses must match the reference's wire form apart from Date. Controlled parse
 response-first cases remain release gates. Every burst row defaults to 200 samples, and separate
 500-stream tests check cleanup and reuse.
 
-Uncontrolled burst shares and sampled outcome presence are diagnostics. The historical 22-point
-share band is reported without deciding pass/fail: the same RC3 reference changes its shares with
-CPU availability and scheduling. Paired host and VM measurements on 2026-11-01 confirmed that
-dependence. A single racing request has several valid outcomes; matching one host's percentages
-is not a protocol requirement. Keep these observations for investigating persistent differences,
-without adding delays or parser scheduling rules to fit them.
-
-Post-header scheduling is implemented and tested locally. The final 2026-11-01 full run passed
-228/228 cases and all 669 TCP probes, including six added real-QUIC held-application checks for
-uppercase and malformed-QPACK trailers. The 65,537-byte reset share remained outside the historical
-band and is retained as a diagnostic. The committed production implementation was unchanged;
-experimental timing adjustments were rejected. Rerun the full suite on the release candidate.
-The same built test output passed all 25 selected burst/controlled-error cases on the Windows
-Server 2025 Desktop VM with .NET 11 RC3.
-Native Android/iOS device interoperability and memory measurements remain release checks. The
-[release checklist](ip-blocking-release.md) covers full-suite validation, package/dependent-reference
-checks and the end-user documentation to publish alongside the enforcing server release.
+Uncontrolled burst shares and sampled outcome presence are diagnostics, never pass/fail: the
+reference's own shares change with CPU availability and scheduling, so the same version gives other
+shares on another host. A single racing request has several valid outcomes; matching one host's
+percentages is not a protocol requirement. Keep these observations for investigating persistent
+differences, without adding delays or parser scheduling rules to fit them.
 
 ## Initial stream padding
 

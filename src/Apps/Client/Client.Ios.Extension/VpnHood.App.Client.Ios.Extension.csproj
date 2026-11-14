@@ -21,11 +21,6 @@
     <IsAppExtension>true</IsAppExtension>
     <!-- SdkOnly: trim system assemblies, but keep user assemblies. -->
     <MtouchLink>SdkOnly</MtouchLink>
-    <!-- iOS jetsam: cap the Mono SGen managed heap HARD. Device-measured, a 40-connection burst ballooned
-         the managed heap 6.7 -> 15 MB of transient garbage in ~1.7 s, tipping a ~41 MB load over the ~50 MB
-         jetsam line. soft-heap-limit=8m forces SGen to collect far sooner; a small nursery keeps gen0 cheap
-         under the packet-allocation storm. See docs/ios-extension-memory-and-throughput.md. -->
-    <MtouchExtraArgs>$(MtouchExtraArgs) --setenv=MONO_GC_PARAMS=soft-heap-limit=8m,nursery-size=2m</MtouchExtraArgs>
   </PropertyGroup>
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
@@ -34,8 +29,7 @@
   </PropertyGroup>
 
   <!-- The Apple TV, as in the app (Client.Ios.Apple's csproj): the first tvOS with Network Extension, and
-       tvOS's own libsqlite3 for the split filters. The heap cap above is iOS's until an Apple TV's own
-       limit is measured. -->
+       tvOS's own libsqlite3 for the split filters. -->
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tvos'">
     <RuntimeIdentifier>tvos-arm64</RuntimeIdentifier>
     <SupportedOSPlatformVersion>17.0</SupportedOSPlatformVersion>

@@ -98,7 +98,7 @@ internal static class UiCommand
 
     // The app's API; or null once the person has been told why it cannot be had, in the one message
     // the UI shows in its place. The tray started at sign-in tells nobody: a standard user's exits
-    // silently (desktop plan §3).
+    // silently.
     private static async Task<DaemonConnection?> TryReach(IDesktopPlatform platform, DesktopInitParams initParams,
         MainThreadQueue mainThread, bool startHidden, CancellationToken cancellationToken)
     {

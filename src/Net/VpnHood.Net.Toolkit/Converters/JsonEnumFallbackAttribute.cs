@@ -1,5 +1,7 @@
 namespace VpnHood.Net.Toolkit.Converters;
 
+// A fallback the enum names rather than an Unknown member added at zero: adding one renumbers an enum whose numbers
+// are already written in a protocol, a token or a file.
 /// <summary>
 /// Specifies the value <see cref="JsonStringEnumFallbackConverter{TEnum}"/> reads for a name the enum does not have:
 /// the one a reader takes when the other side is newer, so it must be safe to act on, such as an error for an unknown

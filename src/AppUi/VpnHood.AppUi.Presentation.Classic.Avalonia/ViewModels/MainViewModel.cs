@@ -80,8 +80,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string AddServerText => IsTv ? Strings.Current.AddOrRemoveServers : Strings.Current.AddServer;
     public string AddServerGlyph => IsTv ? Mdi.Cellphone : Mdi.PlusCircle;
 
-    // A TV hands everything but connecting to a phone (TV plan §3.1); the row that does so shows
-    // only there. The app's word, not the UI's - unless this UI is the phone's, driving the TV.
+    // A TV keeps what a remote does well - connecting, picking from a list - and hands typing to a phone,
+    // as a shortcut, never a gate: a store's review has the remote alone. Only a TV shows the row that does
+    // so. The app's word, not the UI's - unless this UI is the phone's, driving the TV.
     public bool IsTv => VhApp.IsTvUi;
     public bool IsNotTv => !IsTv;
 

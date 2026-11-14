@@ -3,8 +3,8 @@ using Microsoft.Win32;
 
 namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 
-// The machine PATH, with the install root on it so a command is typed by its name from any folder
-// (desktop plan §6.4). Written here rather than by the installer, whose NSIS strings stop at 1024
+// The machine PATH, with the install root on it so a command is typed by its name from any folder.
+// Written here rather than by the installer, whose NSIS strings stop at 1024
 // characters, and not through Environment.SetEnvironmentVariable, which writes the whole PATH back
 // as plain text with %SystemRoot% expanded: the value stays expandable, the other entries as they
 // were. Terminals opened afterwards see it; open ones do not.

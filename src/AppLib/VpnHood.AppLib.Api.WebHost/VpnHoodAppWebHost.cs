@@ -27,6 +27,8 @@ namespace VpnHood.AppLib.Api.WebHost;
 // differ only in where they bind, which token they ask for, and who ends them - so what they share
 // is everything below, and what differs is the flag. The listener state machine itself is
 // WebServerListener, once. Nothing is bound, and nothing is unpacked, until EnsureStarted is called.
+// Plain HTTP: no trusted certificate names a LAN address, a self-signed one teaches people to click
+// through warnings, and public names resolving to private addresses (Plex's way) need DNS and renewals.
 internal class VpnHoodAppWebHost : IAppWebHost
 {
     // The pairing: a short token in the QR's address that becomes a cookie on the first hit. Eight

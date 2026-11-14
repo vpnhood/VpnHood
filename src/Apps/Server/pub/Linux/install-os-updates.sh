@@ -16,7 +16,8 @@ if [[ ! "$action" =~ ^(status|on|off)$ ]] || [[ ! "$name" =~ ^[A-Za-z0-9._-]+$ ]
 fi
 
 # Our own files are the state, and the only ones written; beyond them, only the system's own update timers are
-# switched on where they are off
+# switched on where they are off. apt reads apt.conf.d in name order, the last setting winning: 90 follows the
+# distribution's 20auto-upgrades and 50unattended-upgrades, so the person's yes outweighs an older setting there.
 aptConf="/etc/apt/apt.conf.d/90$name-os-updates";
 aptTimer="/etc/systemd/system/apt-daily-upgrade.timer.d/90-$name-os-updates.conf";
 dnfConf="/etc/dnf/$name-os-updates.conf";
@@ -157,6 +158,8 @@ function enable_dnf() {
 	local runTime="$1";
 	if ! rpm -q dnf-automatic >/dev/null 2>&1; then
 		echo "Installing dnf-automatic, the system's own updater...";
+		# no time limit, unlike apt's lock wait: a dnf killed mid-transaction leaves the system worse off than a slow
+		# install, and the installer's own dnf installs wait the same
 		if ! dnf install -y -q dnf-automatic; then
 			error="could not install dnf-automatic";
 			return 1;

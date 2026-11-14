@@ -168,7 +168,7 @@ $manifest.Package.Properties.PublisherDisplayName = $app.VhAppMsixPublisherDispl
 foreach ($application in $manifest.Package.Applications.Application) {
 	if ($application.Id -eq "VpnPluginHost") {
 		$application.Executable = "$($vpnHost.AssemblyName).exe";
-		# its entry in Start, which opens the app and connects (Package.appxmanifest)
+		# its entry in Start, which opens the app and connects (Package.appxmanifest); never "Connect", a product's name
 		$application.VisualElements.DisplayName = "$($app.VhAppDisplayName) - Quick Launch";
 		# one server, the VPN host, for the VPN task and the app service
 		foreach ($extension in $application.Extensions.Extension) {

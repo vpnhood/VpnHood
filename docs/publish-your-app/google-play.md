@@ -186,7 +186,28 @@ test it. Nothing reaches a track or a user.
 
 ---
 
-## 10. Afterwards
+## 10. Android TV
+
+Skip if your app is for phones only.
+
+The app runs on an Android TV as it is built: a TV's launcher shows it with its banner, and it needs
+no touchscreen. Google reviews it for TVs on its own, against its TV quality guidelines, and TVs can
+install it only once that review passes. Have what the reviewer sees ready first:
+
+1. **TV screenshots** in your listing, of the app as it is now: Google refuses pictures of an older
+   version.
+2. **App content → App access:** the reviewer holds a remote and nothing else. Say how to use the
+   app with it, and how an access key reaches the TV without being typed there: through the app's
+   Remote Access page, from a phone or computer on the same network. The instructions take 500
+   characters, fewer than an access key, so link the key from a page the reviewer can open, and
+   confirm that the instructions give full access, which Play requires.
+3. **Advanced settings → Form factors:** add Android TV and opt in. The opt-in waits in the console
+   for your Submit, but the pipeline's next upload or listing run can send it to review along with
+   whatever else waits there, so opt in once steps 1 and 2 are done.
+
+---
+
+## 11. Afterwards
 
 Later releases are automatic: the pipeline builds, uploads and updates the listing. You return to
 the console only when Google asks you to re-confirm a declaration, or when you change something

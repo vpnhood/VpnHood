@@ -151,7 +151,9 @@ folder, and a head's folder is `<Product>.<Platform>.<Channel>` without the `Vpn
 **A head is `<Product>.<Platform>.<Channel>`.** The channel is who hands the app to the user:
 `Google` is Play, `Samsung` is the Galaxy Store, `Apple` is the App Store, `Microsoft` is the Microsoft
 Store, `Web` is our own site. Every head names its channel, so
-a second one on the same platform is a sibling rather than a rename.
+a second one on the same platform is a sibling rather than a rename. The Apple TV app is no head of
+its own but the second target (`net11.0-tvos`) of the iOS head and its extension: tvOS counts as iOS
+in these names, so they stay `*.Ios.Apple` and `*.Ios.Extension`.
 
 `Client.Android.Web` also builds the APK IzzyOnDroid takes, `VpnHoodClient-android-fdroid-arm64.apk`:
 the same app with no updater (`-p:VhAppNoUpdate=true`), as that repository's rules refuse an app that

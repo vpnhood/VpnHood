@@ -8,7 +8,7 @@ automated pipeline. What is left for you are the things the stores only accept f
 with a real company — opening accounts, signing agreements, entering your bank details, answering
 review questionnaires, pressing *Submit* — plus, today, **a handful of small text edits** to put
 your name and your identifiers into the project ([step 8](#8-making-it-yours)). They are
-find-and-replace edits, not programming, and the [managed path](#2-three-ways-to-get-there) removes
+find-and-replace edits, not programming, and the [managed path](#2-two-ways-to-get-there) removes
 even those.
 
 This page is the map. It tells you what to prepare, what order to do things in, and which of the
@@ -38,15 +38,14 @@ apps](#3-what-the-stores-demand-of-vpn-apps) before spending anything.
 
 ---
 
-## 2. Three ways to get there
+## 2. Two ways to get there
 
-| | How it works | Available |
-| --- | --- | --- |
-| **A — Managed** | You give us your app name, logo and colours, and add us to your store accounts as a team member. We build and upload; you press *Submit*, and remove us whenever you like. | **Planned** — ask us |
-| **B — Starter repo** | You get a small project of your own that pulls in our ready-made building blocks. You own it; our pipeline publishes it. | **Planned** |
-| **C — Fork** | You copy the whole VpnHood project into your own account and turn the publishing pipeline on. | **Available today** |
+| | How it works |
+| --- | --- |
+| **A — Managed** | You give us your app name, logo and colours, and add us to your store accounts as a team member. We build and upload; you press *Submit*, and remove us whenever you like. Ask us for it. |
+| **B — Fork** | You copy the whole VpnHood project into your own account and turn the publishing pipeline on. |
 
-This guide describes **C**, the path that works today. A and B take the technical middle of the
+This guide describes **B**, the path you take yourself. A takes the technical middle of the
 journey off your hands — copying the project, branding it, wiring up the pipeline. Everything the
 stores require of *you* as the publisher — accounts, agreements, bank details, questionnaires,
 submission — stays yours on every path. That is not only our preference: Apple rejects an app
@@ -196,7 +195,7 @@ Two warnings from experience:
   automation file and saving it registers them. The publish script checks this and tells you.
 
 Exactly which values, and where each one lives: [deployment](../cicd/deployment.md). This is the
-step the [managed and starter-repo paths](#2-three-ways-to-get-there) remove entirely.
+step the [managed path](#2-two-ways-to-get-there) removes entirely.
 
 ---
 

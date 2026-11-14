@@ -1,5 +1,7 @@
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
+// A bool per feature rather than an enum or a list of names: an enum's reader takes a feature it does not know as its
+// fallback, one it knows, and a name can be misspelled where a property cannot.
 /// <summary>
 /// Represents the optional parts of the contract a VPN engine has (<see cref="VpnEngineInfo.Features"/>); every engine
 /// has the rest.

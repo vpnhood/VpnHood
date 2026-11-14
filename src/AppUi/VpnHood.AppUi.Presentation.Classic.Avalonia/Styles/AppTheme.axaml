@@ -5,7 +5,7 @@
   <!-- The shapes, in the theme's keys: what a key is worth is the theme's, and lives in
        BlueTheme.axaml or VioletTheme.axaml, so a
        page paints in either theme. Nothing below names a
-       colour of its own. Type and focus fit a TV first (TV plan §3.4): every control wears a ring
+       colour of its own. Type and focus fit a TV first, read from across a room: every control wears a ring
        while a remote or a keyboard has it (:focus-visible - a finger's focus shows nothing), and the layouts query the page host's width (the "Page"
        container, MainView): under 600 logical px a two-column page stacks. -->
 

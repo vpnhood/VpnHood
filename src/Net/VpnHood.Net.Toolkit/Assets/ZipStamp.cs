@@ -7,6 +7,8 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Net.Toolkit.Assets;
 
+// A stamp in the file because a file's time and size are not reliable, an install's time changes with every update
+// whatever the zip holds, and a checksum file beside the zip cannot be reached by a reader handed the zip alone.
 /// <summary>
 /// Provides the stamp that names a zip's contents: in front of the zip, <c>VHSTAMP:</c>, 16 hex digits and a newline. The
 /// digits are the first 16 hex digits of the SHA-256 of the whole file, taken while they were still zero, so the stamp

@@ -1,25 +1,10 @@
-# Release & Versioning Strategy
+# VpnHood Release and Versioning Strategy
 
-Developer-facing notes on how VpnHood is versioned and released, why it is set up this way, and
-what we deliberately deferred. This is the source of truth for the release-pipeline direction; keep
-it updated when the model changes.
+How VpnHood is versioned and released, and why. The repo is one solution of about 70 projects, about
+60 of them NuGet libraries, plus the apps (Client, Connect, Server). This is the source of truth for
+the release pipeline; keep it current when the model changes.
 
-## The challenge
-
-The repo is one large solution (~70 projects, ~60 of them NuGet libraries) plus the apps
-(Client, Connect, Server). Historically:
-
-1. **One global version** ([pub/PubVersion.json](PubVersion.json)) is applied to *every* project
-   at pack time (`dotnet pack -p:Version=…` in
-   [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1)). Every release re-versions and re-pushes
-   all ~60 NuGets even when they did not change — pure churn.
-2. **The bump ran on a developer's machine** (inside `Publish.ps1 -bump`), so two people releasing
-   could collide on the version file.
-3. **`main` was updated with `push origin develop:main --force`**, which rewrites `main`'s
-   history and breaks every fork/clone that tracks it.
-4. **NuGet-in-development confusion**: "if I change a project, do I have to wait for a NuGet build?"
-
-## How NuGet actually works here (resolves the confusion)
+## How NuGet works here
 
 You do **not** publish/consume local NuGets during development. The standard SDK model:
 
@@ -35,23 +20,23 @@ You do **not** publish/consume local NuGets during development. The standard SDK
 Rule of thumb: **same repo = ProjectReference, third-party = PackageReference, release output =
 `.nupkg` with NuGet dependencies.**
 
-## Target model (current direction, monorepo — no submodules)
+## The model
 
 1. **CI owns the bump.** A dedicated `bump` action ([.github/workflows/bump.yml](../.github/workflows/bump.yml)
    → [pub/Invoke-VersionBump.ps1](Invoke-VersionBump.ps1)) increments `PubVersion.json` (+ `Directory.Build.props`), commits,
    and pushes to `develop` (a stable bump additionally fast-forwards `main`). The CHANGELOG is
    hand-maintained (leading `# Latest` section) and never rewritten by CI. Local machines never bump →
-   no cross-developer conflicts. It can optionally chain straight into the client publish and/or NuGet publish. **(Done.)**
+   no cross-developer conflicts. It can chain straight into the NuGet publish.
 2. **`develop` is the prerelease line; `main` is the stable/release line.** [pub/Invoke-VersionBump.ps1](Invoke-VersionBump.ps1)
    always pushes `HEAD:develop`; on a **stable** bump it ALSO fast-forwards `HEAD:main` **without
    `--force`** (a **prerelease** bump leaves `main` untouched — prereleases ship to TestFlight / Play
    alpha, not the App Store / Play production). `main` only ever fast-forwards from `develop`, so it is
    a clean fast-forward; a rejection signals a real divergence to reconcile by hand rather than
-   overwrite. Protects forkers. **(Done.)**
+   overwrite. Protects forkers.
 3. **NuGet is always a stable Release version.** Packing is `-c Release`; the version does not get a
    `-prerelease` suffix from the app flag ([pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1)).
    One clean library version line, decoupled from app prereleases. (The `smoke` input is the only
-   exception — see below.) **(Done.)**
+   exception — see below.)
 4. **Release tags are immutable, and pinned to an exact commit.**
    [pub/lib/Publish-GithubRelease.ps1](lib/Publish-GithubRelease.ps1) replaces the *release object* on a
    re-publish but never the *tag* — no `--cleanup-tag` — and creates a new tag with an explicit
@@ -62,51 +47,38 @@ Rule of thumb: **same repo = ProjectReference, third-party = PackageReference, r
    commits unreachable from `main`), and leaves every clone that already fetched it unable to push tags
    (`! [rejected] … already exists`) until it re-syncs with `git fetch --tags --force`. `target_commitish`
    is *unused when the tag already exists*, so the pin applies at creation and the tag is frozen after.
-   Same principle as `main` never being force-pushed: published refs are not rewritten. **(Done.)**
+   Same principle as `main` never being force-pushed: published refs are not rewritten.
    - A thin caller repo carries no source, so its tag pins its *own* commit (the fastlane/config used) and
-     the built monorepo commit is recorded in the release note instead. **(Done.)**
+     the built monorepo commit is recorded in the release note instead.
 5. **One shared version for everything in `src/`.** All projects (apps + libraries) carry the
    single `PubVersion.json` version and bump together on a release — the standard, lowest-maintenance
    model. We accept that unchanged libraries get a new version number on a release; chasing
-   per-library churn is not worth the machinery. Genuine per-component independence is deferred to a
-   future `modules/` folder (see Deferred options). This supersedes an earlier idea of a separate
-   library-publish trigger.
+   per-library churn is not worth the machinery (see "Not done, and why"). The look's submodule
+   (`src/AppUi/VpnHood.AppUi.Assets.Classic`) is no exception: `publish_nugets.yml` checks it out and
+   packs it with the libraries, at their version.
    - **A new Major or Minor is set by hand**, since the bump increments only Build: change it in
      `PubVersion.json` and `Directory.Build.props`, keep Build (`8.2.854` → `9.0.854`), commit, push,
      then bump as usual. Build is Android's `versionCode`, so it must never go back; restarting it at 0
      makes Play refuse every later upload. Module repos take the new line at their next publish (see
      Module repos).
 
-## Deferred options (recorded for the future)
+## Not done, and why
 
-These were considered and intentionally **not** done now. Revisit if the pain grows.
+Considered and not adopted. Revisit one only if its pain grows.
 
-- **Central Package Management (CPM).** Add a root `Directory.Packages.props`
-  (`ManagePackageVersionsCentrally=true`) for *third-party* versions, and a root
-  `Directory.Build.props` for the *produced* package version/metadata. Strongly recommended as the
-  next structural cleanup — one place for dependency versions across ~70 projects — but it is a
-  separate mechanical migration (strip per-csproj versions) with build-breakage risk, so it is kept
-  out of the pipeline refactor. Neither file exists today.
-- **Git submodules for independent libraries.** The right tool *only* if a library has a genuinely
+- **Central Package Management (CPM).** A root `Directory.Packages.props`
+  (`ManagePackageVersionsCentrally=true`) would hold every *third-party* version in one place, but
+  moving to it is a separate mechanical migration (strip per-csproj versions) with build-breakage
+  risk.
+- **Git submodules with versions of their own.** The right tool *only* if a library has a genuinely
   independent life (outside consumers, its own cadence, a different team). A submodule boundary is
   a natural "independent version / bump-only-when-changed" boundary, but it adds real cost:
   cross-repo release ordering (the submodule's NuGet must be published before a consumer packs a
   dependency on it) and `Directory.Build.props`/`Directory.Packages.props` upward-search leakage (a
   submodule with no props of its own silently inherits the parent's version). If adopted: group a
-  *few* cohesive repos (not 60), place them outside `src/` (e.g. `/modules`), and make each
-  self-contained. Deferred — no submodules for now.
-  - Note: libraries that already live in a fully **separate repo** (not an in-tree submodule) are a
-    different, now-implemented story — see "Module repos" below.
-  - **Planned interaction with NuGet publishing:** when submodules arrive, we still want to
-    **publish their NuGets from this repo's `publish_nugets.yml`** (one publishing pipeline), but with
-    **each submodule owning its own version scope** (its own `Directory.Build.props`/version),
-    decoupled from the monorepo's `PubVersion.json`. Implementation note for that day:
-    [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1) currently packs every discovered project
-    with a single `-p:Version` — it must **exclude submodule projects** (or pack them separately) so
-    their independent versions are respected.
-  - The first in-tree submodule, the look (`src/AppUi/VpnHood.AppUi.Assets.Classic`, 2026-09-22), takes
-    the simple road instead: `publish_nugets.yml` checks it out and packs it with the libraries, **at
-    their version** (owner, 2026-10-04).
+  *few* cohesive repos (not 60), place them outside `src/`, make each self-contained, and keep them
+  out of [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1)'s single-version pack.
+  Libraries in repos of their own are another matter: see "Module repos" below.
 - **Full per-package independent versioning.** "Bump only the changed package" in a monorepo
   requires a dependency-graph change-detection engine (changed set = directly-changed ∪ all
   transitive dependents) plus per-package tags. High complexity/risk. The suite-level granularity
@@ -158,7 +130,7 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    **not** touch the changelog, and it does **not** chain an app publish — every app now publishes
    from its own brand repo, which this repo deliberately holds no credential to trigger.
 
-`pub/Client/Publish.ps1` is now **build-only** for local smoke testing (no bump, no distribute, no
+`pub/Client/Publish.ps1` is **build-only**, for local smoke tests (no bump, no distribution, no
 push).
 
 ### The channel is asserted, never chosen twice
@@ -248,13 +220,10 @@ does **not** opt out with `<IsPackable>false</IsPackable>` — the standard .NET
 `src/Net`, `src/Core` and `src/AppLib` is packable by default. To publish a new library, just add it — no script
 edit. To keep one out, set `IsPackable=false` on it.
 
-This replaced ~48 identical per-project `_publish.ps1` forwarder scripts and the explicit list that
-lived in `Publish-NugetPackages.ps1`. That list had silently drifted (a trailing-dot path typo that only
-failed on Linux CI *after* real packages had been pushed, and two packable libraries —
-`VpnHood.AppLib.Linux.Common` and `VpnHood.AppLib.Ios.Common`, today `VpnHood.AppLib.App.Linux` and
-`VpnHood.AppLib.App.Ios` — that were never being published);
-discovery makes that class of bug impossible. Per-app build scripts (`src/Apps/*/*/_publish.ps1`) are
-unrelated and remain — they are real build logic invoked directly by the app CI workflows.
+Don't go back to a hand-kept list: one drifted silently, with a path typo that failed on Linux CI
+only *after* real packages had been pushed, and two packable libraries that were never published.
+The per-app `src/Apps/*/*/_publish.ps1` scripts are unrelated: they are build logic the app CI
+workflows call.
 
 ### Build environment, speed, and the publishing gate
 
@@ -266,16 +235,15 @@ unrelated and remain — they are real build logic invoked directly by the app C
 - **One parallel pack pass.** The orchestrator writes a throwaway solution (`_nuget_pack.slnx` at the
   repo root — git-ignored, removed in a `finally`) containing exactly the discovered packable
   projects, then runs a single `dotnet pack` on it: MSBuild builds shared dependencies once and packs
-  the projects in parallel, after which every produced `.nupkg` (and its `.snupkg`) is pushed. This
-  replaced ~49 sequential per-project `dotnet pack` processes (and the old `pub/lib/PublishNuget.ps1`),
-  cutting the pack phase from ~6 min to ~2.5 min. A build failure in any project fails the whole pack
-  (it never half-publishes) and MSBuild names the culprit.
+  the projects in parallel, after which every produced `.nupkg` (and its `.snupkg`) is pushed. The
+  pass takes about 2.5 minutes, where a pack per project took about 6. A build failure in any project
+  fails the whole pack (it never half-publishes) and MSBuild names the culprit.
 - **Publishing is gated to the `vpnhood` org.** The publish job has `if:
   github.repository_owner == 'vpnhood'`, so forks skip it entirely and never push the shared package
   IDs. Inside the org the key comes from nuget.org Trusted Publishing (the workflow's `NuGet/login`
   step, no stored key); without one the publish throws — no warn-and-skip.
 
-## Server release (done — same split as Connect)
+## Server release
 
 The **server** releases to a **separate repo** (`vpnhood/VpnHood.App.Server`), the same split as
 Connect: the server's code + version live here in the monorepo, but the release is produced by
@@ -293,7 +261,7 @@ and `-changelogFileName CHANGELOG.Server.md`), so one release creator serves eve
   cross-builds on Linux); a second job pushes the multi-arch image (skip-with-warning if the
   `DOCKERHUB_*` secrets are absent).
 - **Trigger.** `pub/Server/PublishByGithub.ps1` bumps this monorepo (its NuGet publish off), waits, then
-  dispatches `server_publish.yml`. `pub/Server/Publish.ps1` is now build-only for local smoke tests
+  dispatches `server_publish.yml`. `pub/Server/Publish.ps1` is build-only for local smoke tests
   (no bump, no distribute, no push) — distribution is CI-only, matching Client/Connect.
 
 Design + validation notes: [docs/cicd/server-publishing.md](../docs/cicd/server-publishing.md).
@@ -333,25 +301,3 @@ silent org gate, pwsh-7-only encoding): [pub/MODULE-REPOS.md](MODULE-REPOS.md).*
 
 **Shipping an executable instead of a library — a `VpnHood.Tools.*` .NET tool on its own version
 line, published with Trusted Publishing: [pub/TOOL-REPOS.md](TOOL-REPOS.md).**
-
-## Next steps (not yet implemented)
-
-1. **(Later) `modules/` folder** for any library that earns independent versioning/consumers — as
-   git submodules, each self-contained (own props), released on its own cadence.
-2. **(Optional) Adopt CPM** as an isolated follow-up PR.
-
-## What changed in this pass
-
-- **CI-owned bump**: new [pub/Invoke-VersionBump.ps1](Invoke-VersionBump.ps1) + [.github/workflows/bump.yml](../.github/workflows/bump.yml).
-- **Standalone NuGet publishing**: new [.github/workflows/publish_nugets.yml](../.github/workflows/publish_nugets.yml).
-- [pub/lib/Common.ps1](lib/Common.ps1) — the local commit-to-main helpers were removed; `pub/Invoke-VersionBump.ps1`
-  owns the push to `develop` (and the fast-forward to `main` on a stable bump, no `--force`).
-- **NuGet publish is one parallel pack pass** ([pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1))
-  driven by `IsPackable` discovery; the old per-project `pub/lib/PublishNuget.ps1` was removed. Version
-  is stable `X.Y.Z` except under the `smoke` input.
-- [pub/Client/Publish.ps1](Client/Publish.ps1) — build-only (removed bump/distribute/push).
-- [pub/Client/Publish-GithubRelease.ps1](Client/Publish-GithubRelease.ps1) — no longer stamps the changelog or
-  commits/pushes (the bump step owns that); it only reads the changelog and creates the release.
-- **Renamed `pub/Core` → `pub/lib`** (the shared publish-script library) and updated all references.
-- **Deleted `pub/Android.GooglePlay`** — the obsolete pre-Fastlane manual APK→release uploader.
-- This document.

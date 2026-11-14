@@ -8,6 +8,8 @@ namespace VpnHood.Core.Client.Devices.Linux;
 
 // The daemon's side of the VPN host (LinuxVpnHost): its process, started at each connect, one at a time. The
 // unit's cgroup ends it with the daemon: a stop's SIGTERM reaches both, and a crash's restart stops what is left.
+// Per connect rather than for the daemon's life, as on the phones: nothing of the tunnel runs while disconnected, one
+// that dies takes only its session, and a long-lived one would need a connect request the API has on no platform.
 internal sealed class LinuxVpnHostProcess(string executablePath, string storageFolder) : IDisposable
 {
     private readonly AsyncLock _startLock = new();

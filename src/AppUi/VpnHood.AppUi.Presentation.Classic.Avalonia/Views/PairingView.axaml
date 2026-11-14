@@ -6,7 +6,8 @@
   <!-- The code and its address on one side, every
        line of text on the other, Done under the remote, the two together in the screen's middle,
        as a TV app shows its code. Under 600 logical px the text drops under the code and the page
-       scrolls. The listener lives exactly as long as this page is shown (TV plan §4.3). -->
+       scrolls. The listener lives exactly as long as this page is shown - no timer, no grace period -
+       so the person who opened it sees the whole time the TV can be reached. -->
   <UserControl.Styles>
     <Style Selector="StackPanel.code-pane">
       <Setter Property="Grid.Column" Value="0" />

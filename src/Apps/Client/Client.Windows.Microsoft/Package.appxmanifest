@@ -7,7 +7,9 @@
      tray, a service, the machine's own tunnel - is the website edition's. _publish.ps1 stamps the
      identity, the version, the names, the executables and the server, and draws the logos from the app's
      icon. Windows activates the VPN host's task and app service by their own class names, whatever the
-     package's identity. -->
+     package's identity. Two applications, not one: beside an application's own executable Windows refuses
+     the shared server name, and the app service then ran outside the VPN host. Not Win32 app isolation,
+     whose broker would give a tray and file dialogs: it takes no other application type in its package. -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"

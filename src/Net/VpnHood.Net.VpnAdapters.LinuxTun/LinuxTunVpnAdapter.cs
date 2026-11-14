@@ -999,7 +999,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         var builder = new StringBuilder(CreateDnsRedirectRemoval(adapterName));
         foreach (var addressFamily in new[] { AddressFamily.InterNetwork, AddressFamily.InterNetworkV6 }) {
             var ownNetworks = localNetworks.Where(x => x.AddressFamily == addressFamily).ToArray();
-            var targets = ownNetworks.Concat(servers.Where(x => x.AddressFamily == addressFamily)).Sort().ToArray();
+            var targets = ownNetworks.Concat(servers.Where(x => x.AddressFamily == addressFamily)).SortAndMerge().ToArray();
             if (targets.Length == 0)
                 continue;
 

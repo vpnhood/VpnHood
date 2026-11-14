@@ -17,7 +17,7 @@ public enum IpProtocol : byte
     Igmp = 2,
 
     /// <summary>The Gateway-to-Gateway Protocol, GGP (3).</summary>
-    Gpg = 3,
+    Ggp = 3,
 
     /// <summary>IPv4 encapsulated in IP (4).</summary>
     IPv4 = 4,
@@ -100,14 +100,6 @@ public enum IpProtocol : byte
     /// <summary>Reserved for experiments and tests, RFC 3692 (254).</summary>
     Reserved254 = 254,
 
-    /// <summary>
-    /// The value 255, which IANA reserves. <see cref="Raw"/> has the same value, so 255 may print as either name.
-    /// </summary>
-    Mask = 255,
-
-    /// <summary>
-    /// The value 255, which a raw socket takes as its protocol. <see cref="Mask"/> has the same value, so 255 may print
-    /// as either name.
-    /// </summary>
+    /// <summary>The value 255, which IANA reserves and a raw socket takes as its protocol.</summary>
     Raw = 255
 }

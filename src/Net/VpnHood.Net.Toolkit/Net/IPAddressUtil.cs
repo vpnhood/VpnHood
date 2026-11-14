@@ -81,15 +81,15 @@ public static class IPAddressUtil
 
     /// <summary>
     /// Gets the addresses this device sends from to reach the internet, IPv4 then IPv6, as
-    /// <see cref="GetPrivateIpAddress(AddressFamily)"/> finds them.
+    /// <see cref="GetPrimaryIpAddress(AddressFamily)"/> finds them.
     /// </summary>
     /// <returns>A task whose result is the addresses: none, one or two.</returns>
-    public static async Task<IReadOnlyList<IPAddress>> GetPrivateIpAddresses()
+    public static async Task<IReadOnlyList<IPAddress>> GetPrimaryIpAddresses()
     {
         var ret = new List<IPAddress>();
 
-        var ipV4Task = GetPrivateIpAddress(AddressFamily.InterNetwork);
-        var ipV6Task = GetPrivateIpAddress(AddressFamily.InterNetworkV6);
+        var ipV4Task = GetPrimaryIpAddress(AddressFamily.InterNetwork);
+        var ipV6Task = GetPrimaryIpAddress(AddressFamily.InterNetworkV6);
         await Task.WhenAll(ipV4Task, ipV6Task).Vhc();
 
         if (ipV4Task.Result != null) ret.Add(ipV4Task.Result);
@@ -312,11 +312,11 @@ public static class IPAddressUtil
     /// the OS chose for it; no packet is sent. The address is private only on a private network: a device with a public address
     /// gets that. The task is complete when returned, and the method never throws.
     /// </remarks>
-    public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
+    public static Task<IPAddress?> GetPrimaryIpAddress(AddressFamily addressFamily)
     {
         try {
             using var udpClient = new UdpClient(addressFamily); // it may throw exception
-            return GetPrivateIpAddress(udpClient);
+            return GetPrimaryIpAddress(udpClient);
         }
         catch {
             return Task.FromResult<IPAddress?>(null);
@@ -336,7 +336,7 @@ public static class IPAddressUtil
     /// connect.
     /// </returns>
     /// <remarks>No packet is sent. The task is complete when returned, and the method never throws.</remarks>
-    public static Task<IPAddress?> GetPrivateIpAddress(UdpClient udpClient)
+    public static Task<IPAddress?> GetPrimaryIpAddress(UdpClient udpClient)
     {
         try {
             var addressFamily = udpClient.Client.AddressFamily;
@@ -420,7 +420,7 @@ public static class IPAddressUtil
             .Distinct()
             .ToList();
 
-        var defaultRouteAddress = await GetPrivateIpAddress(addressFamily).Vhc();
+        var defaultRouteAddress = await GetPrimaryIpAddress(addressFamily).Vhc();
         if (defaultRouteAddress != null && addresses.Remove(defaultRouteAddress))
             addresses.Insert(0, defaultRouteAddress);
 

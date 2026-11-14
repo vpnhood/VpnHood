@@ -21,12 +21,9 @@ public static class IpNetworkExtension
         /// ends then compare out of order.
         /// </exception>
         /// <remarks>
-        /// The count may change: <c>10.0.0.0/25</c> and <c>10.0.0.128/25</c> come back as <c>10.0.0.0/24</c>. On an
-        /// array, C# binds <c>networks.Sort()</c> to <see cref="MemoryExtensions.Sort{T}(Span{T})"/> instead, which
-        /// sorts in place and can fail when it compares two different networks, as a network is not comparable: call it
-        /// on an <see cref="IEnumerable{T}"/>.
+        /// The count may change: <c>10.0.0.0/25</c> and <c>10.0.0.128/25</c> come back as <c>10.0.0.0/24</c>.
         /// </remarks>
-        public IOrderedEnumerable<IpNetwork> Sort()
+        public IOrderedEnumerable<IpNetwork> SortAndMerge()
         {
             return ipNetworks
                 .ToIpRanges()
@@ -52,7 +49,7 @@ public static class IpNetworkExtension
     }
 
     /// <summary>
-    /// Provides the checks of a sorted and merged sequence of networks, as <c>Sort</c> and
+    /// Provides the checks of a sorted and merged sequence of networks, as <c>SortAndMerge</c> and
     /// <see cref="IpRangeOrderedList.ToIpNetworks"/> give it.
     /// </summary>
     /// <param name="ipNetworks">The networks.</param>

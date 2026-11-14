@@ -685,7 +685,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         if (_autoMetric) {
             // ReSharper disable once PossibleMultipleEnumeration
-            var sortedIpNetworks = ipNetworks.Sort();
+            var sortedIpNetworks = ipNetworks.SortAndMerge();
 
             // ReSharper disable once PossibleMultipleEnumeration
             if (addressFamily.IsV4 && sortedIpNetworks.IsAllV4())

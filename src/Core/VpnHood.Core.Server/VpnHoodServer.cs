@@ -234,7 +234,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             var freeQuicPortV6 = ServerUtils.GetFreeUdpPort(AddressFamily.InterNetworkV6, 443);
 
             VhLogger.Instance.LogDebug("Finding public addresses...");
-            var privateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses().Vhc();
+            var privateIpAddresses = await IPAddressUtil.GetPrimaryIpAddresses().Vhc();
 
             VhLogger.Instance.LogDebug("Finding public addresses..., PublicIpDiscovery: {PublicIpDiscovery}",
                 _publicIpDiscovery);

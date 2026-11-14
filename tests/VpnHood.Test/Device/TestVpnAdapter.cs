@@ -7,7 +7,6 @@ public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions)
     : WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
         AdapterName = "VpnHoodTestAdapter",
         Blocking = false,
-        AutoDisposePackets = true,
         SimulateDns = vpnAdapterOptions.SimulateDns
     })
 {

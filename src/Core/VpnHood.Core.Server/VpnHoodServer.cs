@@ -57,6 +57,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private readonly ISystemInfoProvider _systemInfoProvider;
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
     private readonly NetFilter _netFilter;
+    private readonly IReadOnlyList<IpNetwork> _nonPublicNetworks;
     private readonly ReverseProxyTrust _reverseProxyTrust;
     private readonly UnauthenticatedConnections _unauthenticatedConnections = new();
     internal int UnauthenticatedConnectionCount => _unauthenticatedConnections.Count;
@@ -93,6 +94,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
         AccessManager = accessManager;
         _netFilter = options.NetFilter;
+        _nonPublicNetworks = options.NonPublicNetworks;
         _systemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         _socketFactory = new ConfiguringSocketFactory(new BindingSocketFactory(options.SocketFactory));
         SessionManager = new SessionManager(accessManager,
@@ -293,7 +295,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 isIpV6Supported: serverInfo.PublicIpAddresses.Any(x => x.IsV6),
                 dnsServers: serverConfig.DnsServersValue,
                 virtualIpNetworkV4: SessionManager.VirtualIpNetworkV4,
-                virtualIpNetworkV6: SessionManager.VirtualIpNetworkV6);
+                virtualIpNetworkV6: SessionManager.VirtualIpNetworkV6,
+                nonPublicNetworks: _nonPublicNetworks);
             SessionManager.NetFilter = new NetFilter {
                 IpFilter = ipFilter,
                 DomainFilter = _netFilter.DomainFilter,
@@ -454,7 +457,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
     private static StaticIpFilter ConfigIpFilter(IIpFilter? ipFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
         IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported, IEnumerable<IPAddress> dnsServers,
-        IpNetwork virtualIpNetworkV4, IpNetwork virtualIpNetworkV6)
+        IpNetwork virtualIpNetworkV4, IpNetwork virtualIpNetworkV6, IReadOnlyList<IpNetwork> nonPublicNetworks)
     {
         var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToOrderedList();
 
@@ -480,11 +483,13 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 .Union(virtualIpNetworkV6.ToIpRange());
         }
 
-        // exclude listening ip
+        // The server's own addresses and every network that is not public, not the local networks alone: TCP and
+        // UDP forwarding open their sockets from the server's own process, which reaches what listens on its
+        // loopback alone and its provider's services, such as a cloud's instance metadata.
         if (!netFilterOptions.IncludeLocalNetworkValue)
             blockedIpRanges = blockedIpRanges
                 .Union(privateAddresses.Select(x => new IpRange(x)))
-                .Union(IpNetwork.LocalNetworks.ToIpRanges());
+                .Union(nonPublicNetworks.ToIpRanges());
 
         // log blocked ranges
         VhLogger.Instance.LogDebug("BlockedIpRanges: {BlockedIpRanges}",

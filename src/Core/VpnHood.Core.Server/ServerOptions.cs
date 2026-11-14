@@ -33,6 +33,11 @@ public class ServerOptions
     /// </summary>
     public ISystemInfoProvider? SystemInfoProvider { get; init; }
     internal NetFilter NetFilter { get; init; } = new();
+
+    // What the sessions may not reach unless the local network is included. A test's servers stand in for public
+    // hosts at addresses that are not public, so its list leaves those out.
+    internal IReadOnlyList<IpNetwork> NonPublicNetworks { get; init; } = IpNetwork.NonPublicNetworks;
+
     /// <summary>
     /// Gets what manages the machine's network, as the server's configuration asks, or <see langword="null"/> for none.
     /// </summary>

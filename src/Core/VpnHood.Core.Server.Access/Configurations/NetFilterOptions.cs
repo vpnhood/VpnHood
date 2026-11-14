@@ -10,7 +10,8 @@ namespace VpnHood.Core.Server.Access.Configurations;
 /// <remarks>
 /// A setting left <see langword="null"/> takes its default, which the property of its name ending in <c>Value</c>
 /// gives. The DNS servers the server gives its clients are let through these ranges, though the isolation, local-network
-/// and port blocks still apply to them.
+/// and port blocks still apply to them: a DNS server at an address that is not public works only with
+/// <see cref="IncludeLocalNetwork"/>.
 /// </remarks>
 public class NetFilterOptions
 {
@@ -24,6 +25,12 @@ public class NetFilterOptions
     /// Gets or sets a value indicating whether the clients may reach the server's local networks and its own addresses,
     /// and their VPN adapters capture local networks, or <see langword="null"/> for <see langword="false"/>.
     /// </summary>
+    /// <remarks>
+    /// Without it the server blocks its own addresses and every network that is not public
+    /// (<see cref="IpNetwork.NonPublicNetworks"/>): its loopback, its local networks, and its provider's network,
+    /// such as the carriers' shared space, where a cloud's instance metadata may be. With it all of them are open,
+    /// the loopback too, so a service that listens there for the machine alone is the clients' to reach.
+    /// </remarks>
     public bool? IncludeLocalNetwork { get; set; }
 
     /// <summary>
@@ -159,8 +166,9 @@ public class NetFilterOptions
     /// <returns>The ranges.</returns>
     /// <remarks>
     /// The server lets its DNS servers out of these ranges, then blocks more besides, DNS servers in them included: its
-    /// clients' virtual addresses under <see cref="NetworkIsolation"/>, and its local networks and own addresses unless
-    /// <see cref="IncludeLocalNetwork"/>; the blocked ports apply too.
+    /// clients' virtual addresses under <see cref="NetworkIsolation"/>, and its own addresses and every network that
+    /// is not public (<see cref="IpNetwork.NonPublicNetworks"/>) unless <see cref="IncludeLocalNetwork"/>; the blocked
+    /// ports apply too.
     /// </remarks>
     public IpRangeOrderedList GetBlockedIpRanges()
     {

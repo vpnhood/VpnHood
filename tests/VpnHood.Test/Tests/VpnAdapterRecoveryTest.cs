@@ -641,7 +641,7 @@ public class VpnAdapterRecoveryTest : TestBase
         using var adapter = new CopyingVpnAdapter();
         await adapter.Start(CreateAdapterOptions(), TestCt);
 
-        // nothing takes a packet on from an adapter: its transport disposes it, with AutoDisposePackets off too
+        // nothing takes a packet on from an adapter: its transport disposes it
         var packet = BuildPacket();
         adapter.SendPacketQueued(packet);
         await AssertEqualsWait(1L, () => adapter.PacketStat.SentPackets);
@@ -754,8 +754,7 @@ public class VpnAdapterRecoveryTest : TestBase
     // packets' disposal off
     private sealed class CopyingVpnAdapter() : NullVpnAdapter(new VpnAdapterSettings {
         AdapterName = "CopyingAdapter",
-        Blocking = false,
-        AutoDisposePackets = false
+        Blocking = false
     })
     {
         protected override bool WritePacket(IpPacket ipPacket)
@@ -764,7 +763,7 @@ public class VpnAdapterRecoveryTest : TestBase
         }
     }
 
-    private sealed class ReaderCountingNullVpnAdapter() : NullVpnAdapter(autoDisposePackets: true, blocking: false)
+    private sealed class ReaderCountingNullVpnAdapter() : NullVpnAdapter(blocking: false)
     {
         public int ReaderCount;
         public int WaitCount;

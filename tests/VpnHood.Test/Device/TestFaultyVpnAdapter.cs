@@ -10,7 +10,6 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     : NullVpnAdapter(new VpnAdapterSettings {
         AdapterName = "VpnHoodFaultyAdapter",
         Blocking = false,
-        AutoDisposePackets = true,
         AutoRestart = autoRestart,
         MaxPacketSendDelay = maxPacketSendDelay ?? TimeSpan.FromMilliseconds(500)
     })

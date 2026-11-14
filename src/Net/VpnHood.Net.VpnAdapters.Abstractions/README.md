@@ -29,7 +29,7 @@ Its namespaces are `System.Net`, `VpnHood.Net.VpnAdapters.Abstractions`, `VpnHoo
 
 ```csharp Snippet:VpnAdapterStart
 // in an app, a platform's adapter: WinTunVpnAdapter, LinuxTunVpnAdapter, AndroidVpnAdapter...
-using var adapter = new NullVpnAdapter(autoDisposePackets: true, blocking: false);
+using var adapter = new NullVpnAdapter(blocking: false);
 
 // what the host routes into the tunnel arrives here, on the adapter's reader task
 adapter.PacketReceived += (_, ipPacket) => {

@@ -7,10 +7,10 @@ namespace VpnHood.Net.VpnAdapters.Abstractions;
 /// the next is in <see cref="VpnAdapterOptions"/>.
 /// </summary>
 /// <remarks>
-/// <see cref="PacketTransportOptions.AutoDisposePackets"/> has no effect on an adapter: it hands its packets on to no
-/// one, so each is disposed once it is written.
+/// An adapter hands its packets on to no one, so it disposes each one once it is written: it has no setting for that,
+/// as a packet transport's options do.
 /// </remarks>
-public class VpnAdapterSettings : PacketTransportOptions
+public class VpnAdapterSettings
 {
     /// <summary>
     /// Gets the name of the adapter's interface.
@@ -26,6 +26,28 @@ public class VpnAdapterSettings : PacketTransportOptions
     /// its OS takes, derived from it where needed.
     /// </remarks>
     public string? AppId { get; init; }
+
+    /// <summary>
+    /// Gets the number of packets the adapter's send queue holds, or <see langword="null"/> for
+    /// <see cref="PacketTransportOptions.DefaultQueueCapacity"/>.
+    /// </summary>
+    public int? QueueCapacity { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether a send to a full queue waits for room, up to <see cref="BlockingTimeout"/>.
+    /// When <see langword="false"/>, a full queue drops its oldest packet instead.
+    /// </summary>
+    /// <remarks>
+    /// A waiting <see cref="IPacketTransport.SendPacketQueued"/> holds its thread; the async send waits without one.
+    /// Disposing the adapter releases the waits.
+    /// </remarks>
+    public required bool Blocking { get; init; }
+
+    /// <summary>
+    /// Gets how long a blocking send waits for room before it drops its packet, or <see langword="null"/> to wait
+    /// until there is room or the adapter is disposed.
+    /// </summary>
+    public TimeSpan? BlockingTimeout { get; init; }
 
     /// <summary>
     /// Gets the backoff limit for a packet the interface cannot take. The delay starts at 5 milliseconds; after each

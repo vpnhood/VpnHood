@@ -39,6 +39,15 @@ public class TestHelper : IDisposable
     // all test temp lives under %TEMP%\vh: one folder to clean
     public static string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "vh", "VpnHood.Test");
 
+    // The tests' servers stand in for public hosts at addresses that are not public, which a server blocks by
+    // default: the benchmarking network and the documentation prefix.
+    public static IReadOnlyList<IpNetwork> ServerNonPublicNetworks { get; } = IpNetwork.NonPublicNetworks
+        .ToIpRanges()
+        .Exclude(IpNetwork.Parse("198.18.0.0/15").ToIpRange())
+        .Exclude(IpNetwork.Parse("2001:db8::/32").ToIpRange())
+        .ToIpNetworks()
+        .ToArray();
+
     public class TestAppUiContext : IUiContext
     {
         public Task<bool> IsActive() => Task.FromResult(true);
@@ -249,6 +258,7 @@ public class TestHelper : IDisposable
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
             NetFilter = ServerNetFilter,
+            NonPublicNetworks = ServerNonPublicNetworks,
             NetConfigurationProvider = netConfigurationProvider,
             SwapMemoryProvider = swapMemoryProvider,
             VpnAdapter = vpnAdapter,

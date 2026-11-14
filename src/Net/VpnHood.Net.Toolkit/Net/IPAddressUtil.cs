@@ -579,6 +579,19 @@ public static class IPAddressUtil
         return value1.CompareAddress(value2);
     }
 
+    // The order of the ends of ranges and networks: every IPv4 address before every IPv6 address, then by number,
+    // an IPv4-mapped address where its number puts it, among the IPv6 ones. Compare, which takes one as its IPv4
+    // address, is for an address someone asks about.
+    internal static int CompareUnmapped(IPAddress ipAddress1, IPAddress ipAddress2)
+    {
+        if (ipAddress1.AddressFamily != ipAddress2.AddressFamily)
+            return ipAddress1.IsV4 ? -1 : +1;
+
+        var span1 = ipAddress1.GetAddressBytesFast(stackalloc byte[16]);
+        var span2 = ipAddress2.GetAddressBytesFast(stackalloc byte[16]);
+        return span1.SequenceCompareTo(span2);
+    }
+
     /// <summary>
     /// Converts an IPv4 address to its number, its first byte highest: <c>10.0.0.1</c> is <c>0x0A000001</c>.
     /// </summary>

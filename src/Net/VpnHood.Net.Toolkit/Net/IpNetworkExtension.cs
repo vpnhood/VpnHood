@@ -12,14 +12,9 @@ public static class IpNetworkExtension
         /// fewest networks per merged range.
         /// </summary>
         /// <returns>
-        /// The networks, in <see cref="IPAddressUtil.Compare(System.Net.IPAddress, System.Net.IPAddress)"/>'s order of
-        /// their first addresses.
+        /// The networks, in the order of their first addresses, the IPv4 networks before the IPv6 ones.
         /// </returns>
         /// <exception cref="ArgumentNullException">The sequence is <see langword="null"/>.</exception>
-        /// <exception cref="InvalidOperationException">
-        /// A network reaches from other IPv6 addresses into the IPv4-mapped ones, as <c>::/80</c> does, whose range's
-        /// ends then compare out of order.
-        /// </exception>
         /// <remarks>
         /// The count may change: <c>10.0.0.0/25</c> and <c>10.0.0.128/25</c> come back as <c>10.0.0.0/24</c>.
         /// </remarks>
@@ -36,10 +31,6 @@ public static class IpNetworkExtension
         /// </summary>
         /// <returns>The list.</returns>
         /// <exception cref="ArgumentNullException">The sequence is <see langword="null"/>.</exception>
-        /// <exception cref="InvalidOperationException">
-        /// A network reaches from other IPv6 addresses into the IPv4-mapped ones, as <c>::/80</c> does, whose range's
-        /// ends then compare out of order.
-        /// </exception>
         public IpRangeOrderedList ToIpRanges()
         {
             return ipNetworks

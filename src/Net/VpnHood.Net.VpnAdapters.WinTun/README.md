@@ -19,7 +19,6 @@ but does not run there, as it needs an administrator's rights. Its namespaces ar
 // LinuxTunVpnAdapter, AndroidVpnAdapter and IosVpnAdapter take the same calls
 using var adapter = new WinTunVpnAdapter(new WinVpnAdapterSettings {
     AdapterName = "MyVpn",
-    AutoDisposePackets = true, // the adapter disposes each packet it has written to the host
     Blocking = false // a full queue drops its oldest packet instead of making a send wait
 });
 

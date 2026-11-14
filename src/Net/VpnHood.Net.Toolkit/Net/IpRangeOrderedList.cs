@@ -12,25 +12,25 @@ namespace VpnHood.Net.Toolkit.Net;
 /// <para>
 /// The list cannot be changed: <see cref="Union(IEnumerable{IpRange})"/>, <see cref="Exclude(IpRangeOrderedList)"/>,
 /// <see cref="Intersect(IpRangeOrderedList)"/> and <see cref="Invert(bool, bool)"/> return another list, or this one
-/// where nothing changes. The ranges are in <see cref="IPAddressUtil.Compare(IPAddress, IPAddress)"/>'s order of their
-/// first addresses, and <see cref="Contains(IpAddressValue)"/> finds an address by binary search.
+/// where nothing changes. The ranges are in the order of their first addresses, the IPv4 ranges before the IPv6 ones,
+/// and <see cref="Contains(IpAddressValue)"/> finds an address by binary search.
 /// </para>
 /// <para>
-/// That order takes an IPv4-mapped IPv6 address as its IPv4 address, so a range of such addresses sorts among the
-/// IPv4 ranges, while merging, inverting and intersecting take it with the IPv6 ranges. One between two IPv4 ranges
-/// keeps them apart, unmerged; inverting or excluding next to one can make a range whose ends are out of order, which
-/// throws <see cref="InvalidOperationException"/>; and an IPv4 range and a mapped one never intersect.
-/// </para>
-/// <para>
-/// <see cref="IsAll"/>, <see cref="IsAllV6"/> and <see cref="Invert(bool, bool)"/> compare ends with
-/// <see cref="IPAddress.Equals(object)"/>, scope id included: a scoped end can make the first two
-/// <see langword="false"/>, and inverting <c>::%3</c> keeps <c>::</c>.
+/// An IPv4-mapped IPv6 address is an IPv4 address in IPv6's form: <see cref="IpRange"/> makes a range of such
+/// addresses the range of their IPv4 addresses, and <see cref="Contains(IpAddressValue)"/> asks about one as its IPv4
+/// address. A range that only reaches into the mapped addresses, as that of <c>::/80</c> does, is a range of IPv6
+/// addresses like any other, which holds none of them for a lookup. So two IPv6 ranges with nothing between them but
+/// mapped addresses are one range, and what an intersection would leave wholly among them is left out.
 /// </para>
 /// </remarks>
 public class IpRangeOrderedList :
     IOrderedEnumerable<IpRange>,
     IReadOnlyList<IpRange>
 {
+    // the IPv6 addresses on both sides of the IPv4-mapped ones, ::ffff:0:0/96
+    private static readonly IPAddress LastBeforeMapped = IPAddress.Parse("::fffe:ffff:ffff");
+    private static readonly IPAddress FirstAfterMapped = IPAddress.Parse("::1:0:0:0");
+
     private readonly List<IpRange> _orderedList;
 
     // the ranges' ends as values, for a search that makes no object (see BuildSearchRanges)
@@ -55,7 +55,7 @@ public class IpRangeOrderedList :
         IComparer<TKey>? comparer, bool descending) =>
         // this list's order first, as its first addresses give it, and the key for what that leaves equal
         _orderedList
-            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer())
+            .OrderBy(x => x.FirstIpAddress.ToValue())
             .CreateOrderedEnumerable(keySelector, comparer, descending);
 
     /// <inheritdoc/>
@@ -92,7 +92,8 @@ public class IpRangeOrderedList :
     {
     }
 
-    // orderedList must be sorted so this constructor is private
+    // orderedList must be sorted and merged already. Inside this class C# takes this constructor, not the public
+    // one, for anything declared a List: pass one only from Sort, or from an operation that leaves the ranges so.
     private IpRangeOrderedList(List<IpRange> orderedList)
     {
         _orderedList = orderedList;
@@ -141,15 +142,18 @@ public class IpRangeOrderedList :
         using var reader = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
         var length = ReadCount(reader);
 
-        // no room made for a count the stream only claims: the list grows as the ranges come
-        var ipRanges = new List<IpRange>(Math.Min(length, 4096));
-        for (var i = 0; i < length; i++) {
+        // Sorted and merged again, as the bytes may be anyone's. The ranges are read as the list takes them, so no
+        // room is made for a count the stream only claims.
+        return new IpRangeOrderedList(ReadRanges(reader, length));
+    }
+
+    private static IEnumerable<IpRange> ReadRanges(BinaryReader reader, int count)
+    {
+        for (var i = 0; i < count; i++) {
             var firstIpBytes = ReadAddress(reader);
             var lastIpBytes = ReadAddress(reader);
-            ipRanges.Add(new IpRange(new IPAddress(firstIpBytes), new IPAddress(lastIpBytes)));
+            yield return new IpRange(new IPAddress(firstIpBytes), new IPAddress(lastIpBytes));
         }
-
-        return new IpRangeOrderedList(ipRanges);
     }
 
     private static int ReadCount(BinaryReader reader)
@@ -231,8 +235,7 @@ public class IpRangeOrderedList :
 
     /// <summary>Determines whether an address is in one of the ranges.</summary>
     /// <param name="ipAddress">
-    /// The address. An IPv4-mapped IPv6 address is looked up as its IPv4 address, and a scope id is ignored, as
-    /// <see cref="IPAddressUtil.Compare(IPAddress, IPAddress)"/> orders addresses.
+    /// The address. An IPv4-mapped IPv6 address is looked up as its IPv4 address, and a scope id is ignored.
     /// </param>
     /// <returns><see langword="true"/> if a range holds the address; otherwise, <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="ipAddress"/> is <see langword="null"/>.</exception>
@@ -240,25 +243,26 @@ public class IpRangeOrderedList :
 
     /// <summary>Determines whether an address is in one of the ranges, with no object made.</summary>
     /// <param name="ipAddress">
-    /// The address. An IPv4-mapped IPv6 address is looked up as its IPv4 address, and a scope id is ignored, as
-    /// <see cref="IPAddressUtil.Compare(IpAddressValue, IpAddressValue)"/> orders addresses; the default value is in
-    /// no range.
+    /// The address. An IPv4-mapped IPv6 address is looked up as its IPv4 address, and a scope id is ignored; the
+    /// default value is in no range.
     /// </param>
     /// <returns><see langword="true"/> if a range holds the address; otherwise, <see langword="false"/>.</returns>
     public bool Contains(IpAddressValue ipAddress)
     {
+        var value = ipAddress.IsIPv4MappedToIPv6 ? ipAddress.MapToIPv4() : ipAddress;
+
         // the last range that starts at or before the address is the only one that may hold it
         var low = 0;
         var high = _searchFirsts.Length - 1;
         while (low <= high) {
             var middle = low + (high - low) / 2;
-            if (IPAddressUtil.Compare(_searchFirsts[middle], ipAddress) <= 0)
+            if (_searchFirsts[middle].CompareAddress(value) <= 0)
                 low = middle + 1;
             else
                 high = middle - 1;
         }
 
-        return high >= 0 && IPAddressUtil.Compare(ipAddress, _searchLasts[high]) <= 0;
+        return high >= 0 && value.CompareAddress(_searchLasts[high]) <= 0;
     }
 
     /// <summary>Determines whether the list holds no range.</summary>
@@ -269,16 +273,14 @@ public class IpRangeOrderedList :
     }
 
     /// <summary>Converts each range to the fewest networks that hold its addresses.</summary>
-    /// <returns>
-    /// The networks, in <see cref="IPAddressUtil.Compare(IPAddress, IPAddress)"/>'s order of their first addresses.
-    /// </returns>
+    /// <returns>The networks, in the order of their first addresses, the IPv4 networks before the IPv6 ones.</returns>
     public IOrderedEnumerable<IpNetwork> ToIpNetworks()
     {
         var ipNetworkList = new List<IpNetwork>();
         foreach (var ipRange in _orderedList)
             ipNetworkList.AddRange(ipRange.ToIpNetworks());
 
-        return ipNetworkList.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+        return ipNetworkList.OrderBy(x => x.FirstIpAddress.ToValue());
     }
 
     /// <summary>Returns a list of this list's addresses and one more.</summary>
@@ -311,10 +313,6 @@ public class IpRangeOrderedList :
     /// <summary>Returns a list of this list's addresses but one.</summary>
     /// <param name="ipAddress">The address to leave out.</param>
     /// <returns>The new list.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// A range's ends would compare out of order, which happens only with IPv4-mapped addresses: see the remarks of
-    /// <see cref="IpRangeOrderedList"/>.
-    /// </exception>
     public IpRangeOrderedList Exclude(IPAddress ipAddress)
     {
         return Exclude(new IpRange(ipAddress));
@@ -323,10 +321,6 @@ public class IpRangeOrderedList :
     /// <summary>Returns a list of this list's addresses outside a range.</summary>
     /// <param name="ipRange">The range to leave out.</param>
     /// <returns>The new list.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// A range's ends would compare out of order, which happens only with IPv4-mapped addresses: see the remarks of
-    /// <see cref="IpRangeOrderedList"/>.
-    /// </exception>
     public IpRangeOrderedList Exclude(IpRange ipRange)
     {
         return Exclude([ipRange]);
@@ -336,10 +330,6 @@ public class IpRangeOrderedList :
     /// <param name="ipRanges">The ranges to leave out, in any order.</param>
     /// <returns>The new list, which may be this list itself when <paramref name="ipRanges"/> is empty.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="ipRanges"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">
-    /// A range's ends would compare out of order, which happens only with IPv4-mapped addresses: see the remarks of
-    /// <see cref="IpRangeOrderedList"/>.
-    /// </exception>
     public IpRangeOrderedList Exclude(IEnumerable<IpRange> ipRanges)
     {
         return Exclude(ipRanges.ToOrderedList());
@@ -348,10 +338,6 @@ public class IpRangeOrderedList :
     /// <summary>Returns a list of this list's addresses outside another list.</summary>
     /// <param name="ipRanges">The ranges to leave out.</param>
     /// <returns>The new list, which may be this list itself when <paramref name="ipRanges"/> is empty.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// A range's ends would compare out of order, which happens only with IPv4-mapped addresses: see the remarks of
-    /// <see cref="IpRangeOrderedList"/>.
-    /// </exception>
     public IpRangeOrderedList Exclude(IpRangeOrderedList ipRanges)
     {
         return Intersect(ipRanges.Invert());
@@ -389,18 +375,16 @@ public class IpRangeOrderedList :
     /// out of the result.
     /// </param>
     /// <returns>The new list. A family this list holds no range of comes back whole, when included.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// A range's ends would compare out of order, which happens only with IPv4-mapped addresses: see the remarks of
-    /// <see cref="IpRangeOrderedList"/>.
-    /// </exception>
     public IpRangeOrderedList Invert(bool includeIPv4 = true, bool includeIPv6 = true)
     {
         return Invert(this, includeIPv4: includeIPv4, includeIPv6: includeIPv6);
     }
 
+    // In the order of the ranges' own ends, by number: IPAddressUtil.Compare, which takes an IPv4-mapped address as
+    // its IPv4 address, would put a range that starts among the mapped addresses with the IPv4 ranges.
     private static List<IpRange> Sort(IEnumerable<IpRange> ipRanges)
     {
-        var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+        var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress.ToValue());
         return Unify(sortedRanges);
     }
 
@@ -408,10 +392,8 @@ public class IpRangeOrderedList :
     {
         List<IpRange> res = [];
         foreach (var ipRange in sortedIpRanges) {
-            if (res.Count > 0 &&
-                ipRange.AddressFamily == res[^1].AddressFamily &&
-                IPAddressUtil.Compare(IPAddressUtil.Decrement(ipRange.FirstIpAddress), res[^1].LastIpAddress) <= 0) {
-                if (IPAddressUtil.Compare(ipRange.LastIpAddress, res[^1].LastIpAddress) > 0)
+            if (res.Count > 0 && IsOneRange(res[^1], ipRange)) {
+                if (IPAddressUtil.CompareUnmapped(ipRange.LastIpAddress, res[^1].LastIpAddress) > 0)
                     res[^1] = new IpRange(res[^1].FirstIpAddress, ipRange.LastIpAddress);
             }
             else {
@@ -420,6 +402,34 @@ public class IpRangeOrderedList :
         }
 
         return res;
+    }
+
+    // Whether a range and the next one in the order are one range: they overlap or touch, or nothing lies between
+    // them but IPv4-mapped addresses, which no lookup asks about. Kept apart, the two ranges around the mapped
+    // addresses would hold every IPv6 address a lookup can ask about and yet not be all of IPv6, and the gap between
+    // them, inverted, would be a range IpRange takes for every IPv4 address.
+    private static bool IsOneRange(IpRange ipRange, IpRange nextIpRange)
+    {
+        if (ipRange.AddressFamily != nextIpRange.AddressFamily)
+            return false;
+
+        if (IPAddressUtil.CompareUnmapped(IPAddressUtil.Decrement(nextIpRange.FirstIpAddress), ipRange.LastIpAddress) <= 0)
+            return true;
+
+        return ipRange.AddressFamily == AddressFamily.InterNetworkV6 &&
+               IPAddressUtil.CompareUnmapped(ipRange.LastIpAddress, LastBeforeMapped) >= 0 &&
+               IPAddressUtil.CompareUnmapped(nextIpRange.FirstIpAddress, FirstAfterMapped) <= 0;
+    }
+
+    // What two ranges share. A piece wholly among the IPv4-mapped addresses, as ::/80 and a range that starts at the
+    // first of them share, is left out: it holds no address a lookup asks about, and IpRange would make it the IPv4
+    // range it is not.
+    private static void AddUnlessMapped(List<IpRange> ipRanges, IPAddress firstIpAddress, IPAddress lastIpAddress)
+    {
+        if (firstIpAddress.IsIPv4MappedToIPv6 && lastIpAddress.IsIPv4MappedToIPv6)
+            return;
+
+        ipRanges.Add(new IpRange(firstIpAddress, lastIpAddress));
     }
 
     private static IpRangeOrderedList Intersect(IpRangeOrderedList ipRanges1, IpRangeOrderedList ipRanges2)
@@ -452,24 +462,19 @@ public class IpRangeOrderedList :
         IEnumerable<IpRange> orderedIpRanges1,
         IpRange[] orderedIpRanges2)
     {
+        // what two ranges share runs from the higher of their first addresses to the lower of their last ones
         var ipRanges = new List<IpRange>();
         foreach (var ipRange1 in orderedIpRanges1)
         foreach (var ipRange2 in orderedIpRanges2) {
-            if (ipRange1.IsInRange(ipRange2.FirstIpAddress))
-                ipRanges.Add(new IpRange(ipRange2.FirstIpAddress,
-                    IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
+            var first = IPAddressUtil.CompareUnmapped(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress) >= 0
+                ? ipRange1.FirstIpAddress
+                : ipRange2.FirstIpAddress;
+            var last = IPAddressUtil.CompareUnmapped(ipRange1.LastIpAddress, ipRange2.LastIpAddress) <= 0
+                ? ipRange1.LastIpAddress
+                : ipRange2.LastIpAddress;
 
-            else if (ipRange1.IsInRange(ipRange2.LastIpAddress))
-                ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
-                    ipRange2.LastIpAddress));
-
-            else if (ipRange2.IsInRange(ipRange1.FirstIpAddress))
-                ipRanges.Add(new IpRange(ipRange1.FirstIpAddress,
-                    IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
-
-            else if (ipRange2.IsInRange(ipRange1.LastIpAddress))
-                ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
-                    ipRange1.LastIpAddress));
+            if (IPAddressUtil.CompareUnmapped(first, last) <= 0)
+                AddUnlessMapped(ipRanges, first, last);
         }
 
         return ipRanges;
@@ -518,6 +523,8 @@ public class IpRangeOrderedList :
             if (i == 0 && !IPAddressUtil.IsMinValue(ipRange.FirstIpAddress))
                 res.Add(new IpRange(minIpValue, IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
 
+            // never a gap of IPv4-mapped addresses alone, which IpRange would take for IPv4: the list holds the two
+            // ranges around such a gap as one
             if (i > 0)
                 res.Add(new IpRange(IPAddressUtil.Increment(orderedIpRanges[i - 1].LastIpAddress),
                     IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
@@ -529,29 +536,16 @@ public class IpRangeOrderedList :
         return res;
     }
 
-    // The list is in IPAddressUtil.Compare's order, which the search uses too, but Unify merges ranges only within an
-    // address family: an IPv4-mapped range may overlap an IPv4 one, as Compare takes a mapped address as IPv4. Ranges
-    // that overlap are merged here, so the last range that starts at or before an address is the only one that may
-    // hold it.
+    // The ranges are sorted and no two of them overlap, so the last range that starts at or before an address is the
+    // only one that may hold it.
     private static void BuildSearchRanges(List<IpRange> orderedList,
         out IpAddressValue[] firsts, out IpAddressValue[] lasts)
     {
-        var firstList = new List<IpAddressValue>(orderedList.Count);
-        var lastList = new List<IpAddressValue>(orderedList.Count);
-        foreach (var ipRange in orderedList) {
-            var first = ipRange.FirstIpAddress.ToValue();
-            var last = ipRange.LastIpAddress.ToValue();
-            if (lastList.Count > 0 && IPAddressUtil.Compare(first, lastList[^1]) <= 0) {
-                if (IPAddressUtil.Compare(last, lastList[^1]) > 0)
-                    lastList[^1] = last;
-            }
-            else {
-                firstList.Add(first);
-                lastList.Add(last);
-            }
+        firsts = new IpAddressValue[orderedList.Count];
+        lasts = new IpAddressValue[orderedList.Count];
+        for (var i = 0; i < orderedList.Count; i++) {
+            firsts[i] = orderedList[i].FirstIpAddress.ToValue();
+            lasts[i] = orderedList[i].LastIpAddress.ToValue();
         }
-
-        firsts = firstList.ToArray();
-        lasts = lastList.ToArray();
     }
 }

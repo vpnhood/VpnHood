@@ -354,7 +354,7 @@ public class PacketMemoryTest : TestBase
 
     // a TUN device whose every read gives the first readLength of the same bytes, over the rest from before
     private sealed class OnePacketVpnAdapter(byte[] bytes, int readLength)
-        : NullVpnAdapter(autoDisposePackets: true, blocking: false)
+        : NullVpnAdapter(blocking: false)
     {
         public IpPacket? ReadOnePacket(int mtu)
         {

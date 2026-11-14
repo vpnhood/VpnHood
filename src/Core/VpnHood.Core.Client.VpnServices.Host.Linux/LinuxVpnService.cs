@@ -82,7 +82,6 @@ internal class LinuxVpnService : IVpnServiceHandler, IDisposable
             AutoRestart = adapterSettings.AutoRestart,
             MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
             Blocking = adapterSettings.Blocking,
-            AutoDisposePackets = adapterSettings.AutoDisposePackets,
             QueueCapacity = adapterSettings.QueueCapacity
         });
 

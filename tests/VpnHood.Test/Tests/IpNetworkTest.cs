@@ -316,10 +316,197 @@ public class IpNetworkTest : TestBase
     }
 
     [TestMethod]
+    public void A_range_or_a_network_of_mapped_addresses_is_that_of_their_IPv4_addresses()
+    {
+        var range = IpRange.Parse("::ffff:10.0.0.1 - ::ffff:10.0.0.9");
+        Assert.AreEqual(IpRange.Parse("10.0.0.1 - 10.0.0.9"), range);
+        Assert.AreEqual(AddressFamily.InterNetwork, range.AddressFamily);
+        Assert.AreEqual(new IpRange(IPAddress.Parse("10.0.0.5")), new IpRange(IPAddress.Parse("::ffff:10.0.0.5")));
+        Assert.IsTrue(range.IsInRange(IPAddress.Parse("10.0.0.5")));
+        Assert.IsTrue(range.IsInRange(IPAddress.Parse("::ffff:10.0.0.5")));
+
+        var network = IpNetwork.Parse("::ffff:10.0.0.0/104");
+        Assert.AreEqual(IpNetwork.Parse("10.0.0.0/8"), network);
+        Assert.AreEqual("10.0.0.0/8", network.ToString());
+        Assert.AreEqual(IpNetwork.Parse("10.0.0.5/32"), new IpNetwork(IPAddress.Parse("::ffff:10.0.0.5")));
+        Assert.AreEqual(IpNetwork.AllV4, IpNetwork.Parse("::ffff:0:0/96"));
+        Assert.IsTrue(network.Contains(IPAddress.Parse("::ffff:10.9.9.9")));
+        CollectionAssert.AreEqual(IpNetwork.Parse("10.0.0.5/32").Invert().ToArray(),
+            IpNetwork.Parse("::ffff:10.0.0.5/128").Invert().ToArray());
+        CollectionAssert.AreEqual(new[] { IpNetwork.Parse("10.0.0.0/30") },
+            IpNetwork.FromRange(IPAddress.Parse("::ffff:10.0.0.0"), IPAddress.Parse("::ffff:10.0.0.3")).ToArray());
+    }
+
+    // by number, as any two IPv6 addresses: taken as the IPv4 address it carries, the mapped one came first
+    [TestMethod]
+    public void A_range_from_a_mapped_address_down_to_a_lower_address_is_refused()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            new IpRange(IPAddress.Parse("::ffff:10.0.0.5"), IPAddress.Parse("::1")));
+
+        // up from a lower address it is a range of IPv6 addresses like any other
+        var range = new IpRange(IPAddress.Parse("::1"), IPAddress.Parse("::ffff:10.0.0.5"));
+        Assert.AreEqual(AddressFamily.InterNetworkV6, range.AddressFamily);
+        Assert.IsTrue(range.Total > 0);
+        Assert.IsTrue(range.IsInRange(IPAddress.Parse("::2")));
+    }
+
+    [TestMethod]
+    public void A_network_that_reaches_into_the_mapped_addresses_is_an_IPv6_network_like_any_other()
+    {
+        var network = IpNetwork.Parse("::/80");
+        var range = network.ToIpRange();
+        Assert.AreEqual(IPAddress.Parse("::"), range.FirstIpAddress);
+        Assert.AreEqual(IPAddress.Parse("::ffff:255.255.255.255"), range.LastIpAddress);
+        Assert.IsTrue(network.Contains(IPAddress.Parse("::5")));
+        Assert.IsTrue(range.IsInRange(IPAddress.Parse("::5")));
+
+        // a mapped address is asked about as its IPv4 address, which no IPv6 network holds
+        Assert.IsFalse(network.Contains(IPAddress.Parse("::ffff:1.2.3.4")));
+        Assert.IsFalse(network.Contains(IPAddress.Parse("1.2.3.4")));
+
+        // it comes back from its range, and from two inversions
+        CollectionAssert.AreEqual(new[] { network }, new[] { network }.ToIpRanges().ToIpNetworks().ToArray());
+        CollectionAssert.AreEqual(new[] { network },
+            network.Invert().ToIpRanges().Invert(includeIPv4: false).ToIpNetworks().ToArray());
+    }
+
+    [TestMethod]
+    public void A_list_takes_mapped_ranges_as_IPv4_ranges()
+    {
+        // one between two IPv4 ranges it overlaps merges them
+        var merged = new[] {
+            IpRange.Parse("10.0.0.0 - 10.0.0.100"),
+            IpRange.Parse("::ffff:10.0.0.50 - ::ffff:10.0.0.60"),
+            IpRange.Parse("10.0.0.90 - 10.0.0.200")
+        }.ToOrderedList();
+        CollectionAssert.AreEqual(new[] { IpRange.Parse("10.0.0.0 - 10.0.0.200") }, merged.ToArray());
+
+        // an IPv4 list and a mapped address share that address
+        var shared = merged.Intersect([new IpRange(IPAddress.Parse("::ffff:10.0.0.5"))]);
+        CollectionAssert.AreEqual(new[] { IpRange.Parse("10.0.0.5") }, shared.ToArray());
+
+        // a list of an IPv6 address and a mapped one inverts, each in its own family
+        var inverted = new[] { IpRange.Parse("::1"), IpRange.Parse("::ffff:10.0.0.1") }.ToOrderedList().Invert();
+        Assert.HasCount(4, inverted);
+        Assert.IsFalse(inverted.Contains(IPAddress.Parse("10.0.0.1")));
+        Assert.IsFalse(inverted.Contains(IPAddress.Parse("::1")));
+        Assert.IsTrue(inverted.Contains(IPAddress.Parse("10.0.0.2")));
+        Assert.IsTrue(inverted.Contains(IPAddress.Parse("::2")));
+    }
+
+    // The mapped addresses alone lie between the two ranges around them, and no lookup asks about those: the two
+    // are one range. Kept apart, they would not be all of IPv6, and IpRange would take the gap between them, inverted,
+    // for every IPv4 address.
+    [TestMethod]
+    public void The_two_ranges_around_the_mapped_addresses_are_one_range()
+    {
+        var around = new[] {
+            IpRange.Parse(":: - ::fffe:ffff:ffff"),
+            IpRange.Parse("::1:0:0:0 - ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+        }.ToOrderedList();
+        Assert.IsTrue(around.IsAllV6());
+        Assert.IsTrue(around.Union(IpNetwork.AllV4.ToIpRange()).IsAll());
+
+        var inverted = around.Invert(includeIPv4: false);
+        Assert.IsFalse(inverted.Contains(IPAddress.Parse("8.8.8.8")));
+        Assert.IsFalse(inverted.Contains(IPAddress.Parse("::ffff:8.8.8.8")));
+        Assert.IsEmpty(inverted);
+
+        // so are two ranges that end and start among the mapped addresses
+        var inside = new[] { IpRange.Parse("::5 - ::ffff:1.2.3.4"), IpRange.Parse("::ffff:5.6.7.8 - 2001::1") }
+            .ToOrderedList();
+        CollectionAssert.AreEqual(new[] { IpRange.Parse("::5 - 2001::1") }, inside.ToArray());
+
+        // but not a range that ends below them and one that starts after them: other addresses lie between
+        var apart = new[] { IpRange.Parse(":: - ::5"), IpRange.Parse("::1:0:0:0 - 2001::1") }.ToOrderedList();
+        Assert.HasCount(2, apart);
+        Assert.IsFalse(apart.Contains(IPAddress.Parse("::7")));
+
+        // what ::/80 and a range that starts at the first mapped address share is mapped addresses alone: left out
+        var shared = new[] { IpNetwork.Parse("::/80").ToIpRange() }.ToOrderedList()
+            .Intersect([IpRange.Parse("::ffff:0.0.0.0 - 2001::1")]);
+        Assert.IsEmpty(shared);
+
+        // nor is the mapped block a network of a range around it: it would read as 0.0.0.0/0
+        CollectionAssert.AreEqual(
+            new[] { IpNetwork.Parse("::fffe:ffff:ffff/128"), IpNetwork.Parse("::1:0:0:0/128") },
+            IpNetwork.FromRange(IPAddress.Parse("::fffe:ffff:ffff"), IPAddress.Parse("::1:0:0:0")).ToArray());
+    }
+
+    // The bytes may be anyone's, or an older version's, which kept an IPv4-mapped range as it came.
+    [TestMethod]
+    public void Ranges_read_from_a_stream_are_sorted_and_merged()
+    {
+        using var stream = new MemoryStream(SerializeAsGiven(
+            "10.0.0.90", "10.0.0.200", "::ffff:10.0.0.50", "::ffff:10.0.0.60", "10.0.0.0", "10.0.0.100",
+            "9.0.0.0", "9.0.0.5"));
+
+        var list = IpRangeOrderedList.Deserialize(stream);
+        CollectionAssert.AreEqual(
+            new[] { IpRange.Parse("9.0.0.0 - 9.0.0.5"), IpRange.Parse("10.0.0.0 - 10.0.0.200") }, list.ToArray());
+        Assert.IsTrue(list.Contains(IPAddress.Parse("10.0.0.70")));
+        Assert.IsTrue(list.Contains(IPAddress.Parse("9.0.0.3")));
+    }
+
+    // Serialize's form, with the ranges as they are given: each one's first address, then its last.
+    private static byte[] SerializeAsGiven(params string[] addresses)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+        writer.Write(addresses.Length / 2);
+        foreach (var address in addresses) {
+            var bytes = IPAddress.Parse(address).GetAddressBytes();
+            writer.Write((byte)bytes.Length);
+            writer.Write(bytes);
+        }
+
+        writer.Flush();
+        return stream.ToArray();
+    }
+
+    [TestMethod]
+    public void The_non_public_networks_hold_what_is_not_public()
+    {
+        var nonPublic = IpNetwork.NonPublicNetworks.ToIpRanges();
+        string[] inside = [
+            "0.0.0.0", "0.255.255.255", "10.1.2.3", "100.64.0.0", "100.127.255.255", "127.0.0.1", "127.0.0.53",
+            "169.254.169.254", "172.16.0.1", "172.31.255.255", "192.0.0.8", "192.0.2.1", "192.168.1.1", "198.18.0.1",
+            "198.19.255.255", "198.51.100.1", "203.0.113.1", "224.0.0.1", "239.255.255.250", "240.0.0.1",
+            "255.255.255.255", "::", "::1", "64:ff9b::7f00:1", "100::1", "fc00::1", "fd00::1", "fe80::1", "ff02::1",
+            "2001::1", "2001:0:ffff::1", "2001:2::1", "2001:2:0:ffff::1", "2001:10::1", "2001:1f:ffff::1",
+            "2001:db8::1", "2002:7f00:1::1", "3fff::1", "3fff:fff::1", "4000::1", "8000::1",
+            "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
+        ];
+        string[] outside = [
+            "1.1.1.1", "8.8.8.8", "100.63.255.255", "100.128.0.0", "126.255.255.255", "128.0.0.1", "169.253.255.255",
+            "172.15.255.255", "172.32.0.0", "192.0.1.1", "192.0.3.1", "198.17.255.255", "198.20.0.0", "198.51.101.1",
+            "203.0.114.1", "223.255.255.255", "2000::1", "2001:200::1", "2001:4860:4860::8888", "2001:db7::1",
+            "2001:db9::1", "2003::1", "2606:4700:4700::1111", "3ffe::1", "3fff:1000::1",
+            // the parts of 2001::/23 the registry counts as reachable: the anycast addresses, AMT, AS112, ORCHIDv2
+            "2001:1::1", "2001:1::2", "2001:2:1::1", "2001:3::1", "2001:4:112::1", "2001:20::1", "2001:1ff:ffff::1"
+        ];
+
+        foreach (var text in inside)
+            Assert.IsTrue(nonPublic.Contains(IPAddress.Parse(text)), text);
+
+        foreach (var text in outside)
+            Assert.IsFalse(nonPublic.Contains(IPAddress.Parse(text)), text);
+
+        // every list of local addresses is in it, and so is all of IPv6 outside the global unicast space
+        var others = IpNetwork.LocalNetworks
+            .Concat(IpNetwork.LoopbackNetworks)
+            .Concat(IpNetwork.MulticastNetworks)
+            .Concat(IpNetwork.AllGlobalUnicastV6.Invert())
+            .ToIpRanges();
+        Assert.IsEmpty(others.Exclude(nonPublic));
+    }
+
+    [TestMethod]
     public void IpRangeOrderedList_Contains_searches_mapped_and_mixed_ranges()
     {
-        // an IPv4-mapped range is not merged into the IPv4 range it overlaps, yet both are searched as IPv4, and a
-        // range may run from a mapped address to a plain IPv6 one
+        // an IPv4-mapped range is the IPv4 range it names, and merges with those it overlaps or touches; a range from
+        // a mapped address to a plain IPv6 one is a range of IPv6 addresses, which holds no mapped address for a lookup
         var list = new[] {
             IpRange.Parse("10.0.0.0 - 10.0.0.255"),
             IpRange.Parse("::ffff:10.0.0.10 - ::ffff:10.0.0.20"),
@@ -328,14 +515,16 @@ public class IpNetworkTest : TestBase
             IpRange.Parse("::ffff:192.168.0.0 - 2001::1"),
             IpRange.Parse("2001:db8:: - 2001:db8::ffff")
         }.ToOrderedList();
+        Assert.HasCount(3, list);
+        Assert.AreEqual(IpRange.Parse("10.0.0.0 - 10.0.2.255"), list[0]);
 
         string[] inside = [
             "10.0.0.0", "10.0.0.15", "10.0.0.100", "10.0.0.255", "::ffff:10.0.0.100", "10.0.1.7", "10.0.2.1",
-            "::ffff:10.0.2.1", "192.168.0.1", "255.255.255.255", "::1", "2001::1", "2001:db8::1", "2001:db8::ffff",
-            "2001:db8::1%3"
+            "::ffff:10.0.2.1", "::1:0:0:0", "2001::1", "2001:db8::1", "2001:db8::ffff", "2001:db8::1%3"
         ];
         string[] outside = [
-            "9.255.255.255", "::ffff:9.255.255.255", "10.0.3.0", "192.167.255.255", "2001::2", "2001:db8::1:0", "fe80::1"
+            "9.255.255.255", "::ffff:9.255.255.255", "10.0.3.0", "192.167.255.255", "192.168.0.1", "::ffff:192.168.0.1",
+            "255.255.255.255", "::1", "2001::2", "2001:db8::1:0", "fe80::1"
         ];
 
         foreach (var text in inside)

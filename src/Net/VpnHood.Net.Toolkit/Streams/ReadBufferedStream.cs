@@ -9,6 +9,10 @@ namespace VpnHood.Net.Toolkit.Streams;
 /// <remarks>
 /// A read larger than the buffer, with the buffer empty, goes to the source directly. A read takes from the buffer while it
 /// holds data, and refills it only once it is empty, so a read never waits for more data while some is buffered.
+/// <para>
+/// It is made for a source whose reads and writes go their own ways, as a network stream's do. Over one that reads and
+/// writes at one position, as a file does, a write lands after what the buffer has read ahead.
+/// </para>
 /// </remarks>
 public class ReadBufferedStream : StreamDecoratorAsync
 {
@@ -70,10 +74,13 @@ public class ReadBufferedStream : StreamDecoratorAsync
     }
 
     /// <inheritdoc/>
-    /// <remarks>Reading it gives the source's position less the buffered bytes; setting it is not supported.</remarks>
-    /// <exception cref="NotSupportedException">The position is set, or the source cannot tell its position.</exception>
+    /// <remarks>
+    /// Not supported, as for any stream that cannot seek: the source's own position is ahead of what was read here by
+    /// what the buffer holds, and it is where a write lands.
+    /// </remarks>
+    /// <exception cref="NotSupportedException">Always.</exception>
     public override long Position {
-        get => base.Position - _bufferRemain;
+        get => throw new NotSupportedException();
         set => throw new NotSupportedException();
     }
 

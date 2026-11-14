@@ -85,7 +85,6 @@ internal class WindowsVpnService : IVpnServiceHandler, IDisposable
                 AutoRestart = adapterSettings.AutoRestart,
                 MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
                 Blocking = adapterSettings.Blocking,
-                AutoDisposePackets = adapterSettings.AutoDisposePackets,
                 QueueCapacity = adapterSettings.QueueCapacity,
                 ExcludeLocalNetwork = true
             })
@@ -94,7 +93,6 @@ internal class WindowsVpnService : IVpnServiceHandler, IDisposable
                 AutoRestart = adapterSettings.AutoRestart,
                 MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
                 Blocking = adapterSettings.Blocking,
-                AutoDisposePackets = adapterSettings.AutoDisposePackets,
                 AutoMetric = adapterSettings.AutoMetric,
                 QueueCapacity = adapterSettings.QueueCapacity
             });

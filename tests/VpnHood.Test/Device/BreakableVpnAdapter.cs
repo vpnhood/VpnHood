@@ -4,7 +4,7 @@ namespace VpnHood.Test.Device;
 
 // A null adapter the test breaks: from then on each read fails, until the adapter stops itself on the
 // errors and tells its owner (IVpnAdapter.Failed), as one whose interface went does.
-public sealed class BreakableVpnAdapter() : NullVpnAdapter(autoDisposePackets: true, blocking: false)
+public sealed class BreakableVpnAdapter() : NullVpnAdapter(blocking: false)
 {
     private readonly ManualResetEventSlim _brokenEvent = new(false);
 

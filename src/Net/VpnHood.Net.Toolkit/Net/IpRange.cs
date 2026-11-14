@@ -14,6 +14,12 @@ namespace VpnHood.Net.Toolkit.Net;
 /// form is <c>10.0.0.1-10.0.0.9</c>, or the address alone for a range of one address, and JSON reads and writes a range
 /// as that text, through <see cref="IpRangeConverter"/>.
 /// <see cref="IpRangeOrderedList"/> holds a sorted set of ranges.
+/// <para>
+/// An IPv4-mapped IPv6 address, such as <c>::ffff:10.0.0.1</c>, is an IPv4 address in IPv6's form. A range of such
+/// addresses is the range of their IPv4 addresses, and is made so: <c>::ffff:10.0.0.1-::ffff:10.0.0.9</c> is
+/// <c>10.0.0.1-10.0.0.9</c>. A range that only reaches into them, as that of <c>::/80</c> does, is a range of IPv6
+/// addresses like any other; and an address asked about is asked as its IPv4 address, which such a range does not hold.
+/// </para>
 /// </remarks>
 [JsonConverter(typeof(IpRangeConverter))]
 public class IpRange
@@ -31,7 +37,7 @@ public class IpRange
     /// </summary>
     /// <param name="firstIpAddress">The first address. Only its low 32 bits are read.</param>
     /// <param name="lastIpAddress">The last address. Only its low 32 bits are read.</param>
-    /// <exception cref="InvalidOperationException">The last address is below the first.</exception>
+    /// <exception cref="ArgumentException">The last address is below the first.</exception>
     public IpRange(long firstIpAddress, long lastIpAddress)
         : this(IPAddressUtil.FromLong(firstIpAddress), IPAddressUtil.FromLong(lastIpAddress))
     {
@@ -45,16 +51,21 @@ public class IpRange
     /// <paramref name="firstIpAddress"/>.
     /// </exception>
     /// <remarks>
-    /// The two are put in order as <see cref="IPAddressUtil.Compare(IPAddress, IPAddress)"/> does, which takes an
-    /// IPv4-mapped IPv6 address as its IPv4 address. So a range from <c>::ffff:10.0.0.5</c> to <c>::1</c> is accepted
-    /// though its first address is the higher: its <see cref="Total"/> is then negative, and it holds no networks.
+    /// Two IPv4-mapped IPv6 addresses make the range of their IPv4 addresses. Any other two are put in order by
+    /// number, so a range from <c>::ffff:10.0.0.5</c> to <c>::1</c> is refused.
     /// </remarks>
     public IpRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
     {
         if (firstIpAddress.AddressFamily != lastIpAddress.AddressFamily)
             throw new ArgumentException("Both ipAddress must have a same address family!");
 
-        if (IPAddressUtil.Compare(firstIpAddress, lastIpAddress) > 0)
+        // Kept as IPv6, the range held no address a lookup asks about, as a mapped address is asked as IPv4
+        if (firstIpAddress.IsIPv4MappedToIPv6 && lastIpAddress.IsIPv4MappedToIPv6) {
+            firstIpAddress = firstIpAddress.MapToIPv4();
+            lastIpAddress = lastIpAddress.MapToIPv4();
+        }
+
+        if (IPAddressUtil.CompareUnmapped(firstIpAddress, lastIpAddress) > 0)
             throw new ArgumentException(
                 $"{nameof(lastIpAddress)} must be equal or greater than {nameof(firstIpAddress)}");
 
@@ -67,25 +78,6 @@ public class IpRange
     /// <param name="ipAddress">The address.</param>
     /// <returns>The range.</returns>
     public static IpRange FromIpAddress(IPAddress ipAddress) => new(ipAddress);
-
-    /// <summary>Gets whether the range's first address is an IPv4-mapped IPv6 address.</summary>
-    /// <value><see langword="true"/> if it is; otherwise, <see langword="false"/>.</value>
-    public bool IsIPv4MappedToIPv6 => FirstIpAddress.IsIPv4MappedToIPv6;
-
-    /// <summary>Maps both ends to IPv4, as <see cref="IPAddress.MapToIPv4"/> does.</summary>
-    /// <returns>The IPv4 range. An IPv4 range comes back equal.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// The mapped ends are out of order, as when the range reaches beyond the IPv4-mapped addresses:
-    /// <see cref="IPAddress.MapToIPv4"/> takes any IPv6 address's last four bytes.
-    /// </exception>
-    public IpRange MapToIPv4() => new(FirstIpAddress.MapToIPv4(), LastIpAddress.MapToIPv4());
-
-    /// <summary>
-    /// Maps both ends to IPv6, as <see cref="IPAddress.MapToIPv6"/> does: an IPv4 address becomes its IPv4-mapped IPv6
-    /// address.
-    /// </summary>
-    /// <returns>The IPv6 range. An IPv6 range comes back equal.</returns>
-    public IpRange MapToIPv6() => new(FirstIpAddress.MapToIPv6(), LastIpAddress.MapToIPv6());
 
     /// <summary>Gets the address family of the range's addresses.</summary>
     public AddressFamily AddressFamily => FirstIpAddress.AddressFamily;
@@ -113,7 +105,7 @@ public class IpRange
     /// <exception cref="FormatException">
     /// <paramref name="value"/> is none of these forms, or an address in it is not valid.
     /// </exception>
-    /// <exception cref="InvalidOperationException">
+    /// <exception cref="ArgumentException">
     /// The two addresses are of different families, or the second comes before the first.
     /// </exception>
     public static IpRange Parse(string value)
@@ -167,27 +159,22 @@ public class IpRange
 
     /// <summary>Determines whether an address is in the range.</summary>
     /// <param name="ipAddress">
-    /// The address. An IPv4-mapped IPv6 address is compared as its IPv4 address, and a scope id is ignored, as
-    /// <see cref="IPAddressUtil.Compare(IPAddress, IPAddress)"/> orders addresses.
+    /// The address. An IPv4-mapped IPv6 address is asked about as its IPv4 address, and a scope id is ignored.
     /// </param>
     /// <returns><see langword="true"/> if the range holds the address; otherwise, <see langword="false"/>.</returns>
-    public bool IsInRange(IPAddress ipAddress)
-    {
-        return
-            IPAddressUtil.Compare(ipAddress, FirstIpAddress) >= 0 &&
-            IPAddressUtil.Compare(ipAddress, LastIpAddress) <= 0;
-    }
+    /// <exception cref="ArgumentNullException"><paramref name="ipAddress"/> is <see langword="null"/>.</exception>
+    public bool IsInRange(IPAddress ipAddress) => IsInRange(ipAddress.ToValue());
 
     /// <summary>Determines whether an address is in the range, with no object made.</summary>
     /// <param name="ipAddress">
-    /// The address. An IPv4-mapped IPv6 address is compared as its IPv4 address, and a scope id is ignored, as
-    /// <see cref="IPAddressUtil.Compare(IpAddressValue, IpAddressValue)"/> orders addresses.
+    /// The address. An IPv4-mapped IPv6 address is asked about as its IPv4 address, and a scope id is ignored; the
+    /// default value is in no range.
     /// </param>
     /// <returns><see langword="true"/> if the range holds the address; otherwise, <see langword="false"/>.</returns>
     public bool IsInRange(IpAddressValue ipAddress)
     {
-        return
-            IPAddressUtil.Compare(ipAddress, FirstIpAddress.ToValue()) >= 0 &&
-            IPAddressUtil.Compare(ipAddress, LastIpAddress.ToValue()) <= 0;
+        var value = ipAddress.IsIPv4MappedToIPv6 ? ipAddress.MapToIPv4() : ipAddress;
+        return value.CompareAddress(FirstIpAddress.ToValue()) >= 0 &&
+               value.CompareAddress(LastIpAddress.ToValue()) <= 0;
     }
 }

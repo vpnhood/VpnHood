@@ -18,7 +18,7 @@ public class VpnAdaptersReadmeExampleTest
     {
         #region Snippet:VpnAdapterStart
         // in an app, a platform's adapter: WinTunVpnAdapter, LinuxTunVpnAdapter, AndroidVpnAdapter...
-        using var adapter = new NullVpnAdapter(autoDisposePackets: true, blocking: false);
+        using var adapter = new NullVpnAdapter(blocking: false);
 
         // what the host routes into the tunnel arrives here, on the adapter's reader task
         adapter.PacketReceived += (_, ipPacket) => {
@@ -56,7 +56,6 @@ public class VpnAdaptersReadmeExampleTest
         // LinuxTunVpnAdapter, AndroidVpnAdapter and IosVpnAdapter take the same calls
         using var adapter = new WinTunVpnAdapter(new WinVpnAdapterSettings {
             AdapterName = "MyVpn",
-            AutoDisposePackets = true, // the adapter disposes each packet it has written to the host
             Blocking = false // a full queue drops its oldest packet instead of making a send wait
         });
 

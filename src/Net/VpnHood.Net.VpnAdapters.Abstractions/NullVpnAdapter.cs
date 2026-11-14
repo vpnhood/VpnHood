@@ -26,18 +26,14 @@ public class NullVpnAdapter : TunVpnAdapter
     /// <summary>
     /// Initializes a new instance of the <see cref="NullVpnAdapter"/> class, named "NullAdapter".
     /// </summary>
-    /// <param name="autoDisposePackets">
-    /// Not used: an adapter disposes each packet once it is written, whatever this says.
-    /// </param>
     /// <param name="blocking">
     /// <see langword="true"/> to make a send wait for room when the queue is full; <see langword="false"/> to drop
     /// the oldest packet instead.
     /// </param>
-    public NullVpnAdapter(bool autoDisposePackets, bool blocking)
+    public NullVpnAdapter(bool blocking)
         : this(new VpnAdapterSettings {
             AdapterName = "NullAdapter",
-            Blocking = blocking,
-            AutoDisposePackets = autoDisposePackets
+            Blocking = blocking
         })
     {
     }

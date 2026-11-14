@@ -165,7 +165,8 @@ public static class Ip2LocationDbParser
                 IPAddressUtil.FromBigInteger(BigInteger.Parse(items[0]), addressFamily),
                 IPAddressUtil.FromBigInteger(BigInteger.Parse(items[1]), addressFamily));
 
-            ipRanges.Add(ipRange.IsIPv4MappedToIPv6 ? ipRange.MapToIPv4() : ipRange);
+            // the IPv6 file gives the IPv4 addresses as IPv4-mapped ones, which a range takes as IPv4
+            ipRanges.Add(ipRange);
         }
 
         return ipGroupIpRanges;

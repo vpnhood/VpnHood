@@ -50,6 +50,20 @@ public class StreamDecoratorTest : TestBase
             await buffered.ReadAsync(new byte[1], TestCt));
     }
 
+    // the source's position is ahead of what was read by what the buffer holds, so the stream has none of its own
+    [TestMethod]
+    public async Task A_buffered_stream_has_no_position()
+    {
+        using var source = new MemoryStream(new byte[10]);
+        await using var buffered = new ReadBufferedStream(source, leaveOpen: true, bufferSize: 8);
+        Assert.AreEqual(1, await buffered.ReadAsync(new byte[1], TestCt));
+
+        Assert.IsFalse(buffered.CanSeek);
+        Assert.ThrowsExactly<NotSupportedException>(() => _ = buffered.Position);
+        Assert.ThrowsExactly<NotSupportedException>(() => buffered.Position = 0);
+        Assert.ThrowsExactly<NotSupportedException>(() => buffered.Seek(0, SeekOrigin.Begin));
+    }
+
     [TestMethod]
     public void A_disposed_window_reads_and_seeks_no_more_though_its_source_is_left_open()
     {

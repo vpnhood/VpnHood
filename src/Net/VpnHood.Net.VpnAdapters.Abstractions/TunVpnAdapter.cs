@@ -364,8 +364,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
     /// </exception>
     // An adapter hands its packets on to no one: its device takes their bytes. So the transport disposes each one
-    // once it is written, whatever the settings say; left to the settings, a written packet's memory was never
-    // returned with AutoDisposePackets off.
+    // once it is written, and the settings have no say in it: a written packet's memory would never be returned.
     protected TunVpnAdapter(VpnAdapterSettings adapterSettings)
         : base(new PacketTransportOptions {
             QueueCapacity = adapterSettings.QueueCapacity,

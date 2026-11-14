@@ -1,5 +1,7 @@
 # Latest
 
+* Fix: VpnHoodServer no longer lets its users reach the addresses of its own machine and network that are not public: its loopback, where a program may listen for the machine alone, the carriers' shared space `100.64.0.0/10`, where some clouds keep an instance's metadata, multicast, and the reserved IPv4 networks. It blocked the private networks (`10.x`, `172.16.x`, `192.168.x`), the link-local one and the local IPv6 space, but not these. `IncludeLocalNetwork` opens all of them, as it opens the private networks; a DNS server at such an address needs it
+* Update: An IPv4-mapped IPv6 entry in an IP range setting, such as `::ffff:10.0.0.0/104`, counts as the IPv4 addresses it carries, in every setting alike. In `ExcludeIpRanges` it did nothing before, so take `::ffff:0:0/96` out of it, which lists of IPv6 bogons hold: it is every IPv4 address now
 * Fix: On Linux and Windows, the installer stops on a machine whose processor lacks SSE4.2 and POPCNT, such as a VPS on a basic virtual processor, and says so, instead of installing a server that cannot start; an installed server keeps running
 * Fix: An HTTP request whose target holds a raw `#` gets a 400 and its connection closes, as Kestrel answers it since .NET 11.0.0
 

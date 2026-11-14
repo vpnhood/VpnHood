@@ -351,8 +351,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             var adapterSetting = new VpnAdapterSettings {
                 AdapterName = clientOptions.AdapterName,
                 AppId = clientOptions.AppId,
-                Blocking = false,
-                AutoDisposePackets = true
+                Blocking = false
             };
 
             // The machine's one tunnel, before an adapter comes up: an app that holds it drops its adapter
@@ -367,7 +366,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             // null-capture is host debug plumbing, so the adapter is resolved here and handed to the
             // handler ready-made
             var vpnAdapter = clientOptions.UseNullCapture
-                ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
+                ? new NullVpnAdapter(blocking: false)
                 : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1);
             _vpnAdapter = vpnAdapter;
             vpnAdapter.Started += VpnAdapter_Started;

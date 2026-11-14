@@ -39,7 +39,6 @@ public sealed class TcpStackIntegrationTest
             AdapterName = "VpnHoodDiag",
             ExcludeLocalNetwork = false,
             SimulateDns = false,
-            AutoDisposePackets = true,
             Blocking = true,
         };
 
@@ -233,7 +232,6 @@ public sealed class TcpStackIntegrationTest
             ExcludeLocalNetwork = false, // We want to capture local traffic for testing
             SimulateDns = false,
             // Required properties
-            AutoDisposePackets = true,
             Blocking = true,
         };
 

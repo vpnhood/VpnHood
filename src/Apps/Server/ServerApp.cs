@@ -504,7 +504,6 @@ public class ServerApp : IDisposable
                 AdapterName = AppName,
                 AppId = AppId,
                 Blocking = false,
-                AutoDisposePackets = true,
                 AutoRestart = true
             });
         }
@@ -514,7 +513,6 @@ public class ServerApp : IDisposable
                 AdapterName = AppName,
                 AppId = AppId,
                 Blocking = false,
-                AutoDisposePackets = true,
                 AutoRestart = true,
                 AutoMetric = false // as on Linux: the server routes nothing through its adapter
             });

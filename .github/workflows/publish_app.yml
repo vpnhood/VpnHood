@@ -49,12 +49,12 @@ on:
         type: boolean
         required: false
         default: true
-      # The Apple TV app beside the iPhone's, when its signing is set: off until the Apple TV app
-      # is released.
+      # The Apple TV app beside the iPhone's, when its signing is set: on, as a release that leaves
+      # it off leaves the Apple TV on its old version.
       publish_appletv:
         type: boolean
         required: false
-        default: false
+        default: true
       rollout:
         type: string
         required: false

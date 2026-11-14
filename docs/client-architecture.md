@@ -156,6 +156,9 @@ message client (`IMessageClient`), the VPN service answers through its listener 
 and both read the options and status files in the VPN service's folder. Each platform brings its own
 transport for that channel; the desktop uses TCP on loopback.
 
+Inside the VPN service, the engine takes the adapter the platform makes and carries each packet between it
+and the tunnel: [How the VPN Engine Works](vpn-engine.md).
+
 ## Where each half runs
 
 | Platform | The app runs in | The VPN service runs in | What starts the VPN service | The VPN service's type |
@@ -232,6 +235,7 @@ The rules the references keep:
 
 ## See also
 
+- [How the VPN Engine Works](vpn-engine.md) — inside the VPN service: how the engine takes its adapter, and how a packet travels to the tunnel
 - [source-layout.md](source-layout.md) — where each project lives, and what a head is made of
 - [linux/README.md](linux/README.md#how-it-fits-together) — the daemon, the window and the command line on Linux
 - [ios/architecture-and-ipc.md](ios/architecture-and-ipc.md) — the app and its Network Extension on iOS

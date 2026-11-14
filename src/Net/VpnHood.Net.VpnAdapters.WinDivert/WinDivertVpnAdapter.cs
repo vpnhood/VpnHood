@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Buffers.Binary;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,7 @@ namespace VpnHood.Net.VpnAdapters.WinDivert;
 /// address. The host's DNS settings stay as they are: with <see cref="WinDivertVpnAdapterSettings.SimulateDns"/>,
 /// every outbound UDP packet to port 53, wherever it goes, is captured too, but loopback ones and those of
 /// <see cref="ProtectedTtl"/>, and sent to one of the adapter's DNS servers of its IP version, if it has one; an answer
-/// comes back from the address the latest query from its port was sent to, while that is kept.
+/// comes back from the address its query was sent to, while that is kept.
 /// </para>
 /// <para>
 /// It runs as an administrator only, on x64 Windows in an x64 process: the first start in a process installs the
@@ -56,10 +57,12 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     private readonly List<IpNetwork> _includeIpNetworks = [];
     private IReadOnlyList<IPAddress> _dnsServers = [];
 
-    private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>>
+    // Where each DNS query was sent to, for its answer, by the query's source port and ID: one socket may ask
+    // several servers, and by its port alone the latest query's server answered for them all
+    private readonly TimeoutDictionary<uint, TimeoutItem<IPAddress>>
         _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
 
-    private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>>
+    private readonly TimeoutDictionary<uint, TimeoutItem<IPAddress>>
         _lastDnsServersV6 = new(TimeSpan.FromSeconds(30));
 
     private readonly bool _excludeLocalNetwork = adapterSettings.ExcludeLocalNetwork;
@@ -116,8 +119,9 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         // initialize devices
         _device = new WinDivertDevice { Flags = 0 };
 
-        // clean old configs
+        // clean old configs; the last run's capture header too, which names the interface of that run's network
         _includeIpNetworks.Clear();
+        _lastCaptureHeader = null;
         return Task.CompletedTask;
     }
 
@@ -148,26 +152,13 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// loads WinDivert's driver.
     /// </remarks>
     /// <exception cref="InvalidOperationException">A stop removed the capture while the start was under way.</exception>
-    /// <exception cref="Exception">
-    /// The open failed with an error whose message says, in English, that access is denied, as when the process is not
-    /// an administrator's.
-    /// </exception>
+    /// <exception cref="PcapException">WinDivert could not open the capture; the message has Windows' error.</exception>
+    // No words of its own for a process that is no administrator's: AdapterAdd has refused it by then
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
         var ipRanges = _includeIpNetworks.ToIpRanges();
         if (_excludeLocalNetwork)
             ipRanges = ipRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
-
-        // create include and exclude phrases
-        var phraseX = "true";
-        if (!ipRanges.IsAll()) {
-            var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
-                ? $"{Ip(x)}.DstAddr=={x.FirstIpAddress}"
-                : $"({Ip(x)}.DstAddr>={x.FirstIpAddress} and {Ip(x)}.DstAddr<={x.LastIpAddress})");
-            var phrase = string.Join(" or ", phrases);
-            phraseX += $" and ({phrase})";
-            phraseX = $"({phraseX})";
-        }
 
         // simulate dns servers
         var dnsPhrase = _simulateDns ? "(udp.DstPort==53)" : "false";
@@ -175,32 +166,39 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         // add outbound; filter loopback
         var filter = $"(ip.TTL!={ProtectedTtl} or ipv6.HopLimit!={ProtectedTtl}) and " +
                      $"outbound and !loopback and " +
-                     $"({dnsPhrase} or {phraseX})";
+                     $"({dnsPhrase} or {BuildRoutesPhrase(ipRanges)})";
 
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
-        try {
-            lock (_deviceLock) {
-                if (_device == null)
-                    throw new InvalidOperationException("Could not open WinDivert. The device has been removed.");
+        lock (_deviceLock) {
+            if (_device == null)
+                throw new InvalidOperationException("Could not open WinDivert. The device has been removed.");
 
-                _device.Filter = filter;
+            _device.Filter = filter;
 
-                // One open at a time in the process: with the driver not loaded, the first open installs and
-                // starts it, and a second that found none meanwhile fails to start it again (error 1058). Two
-                // processes opening at that moment still can; left so: a reconnect opens the running driver
-                lock (WinDivertOpenLock)
-                    _device.Open(new DeviceConfiguration());
-            }
-        }
-        catch (Exception ex) {
-            if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
-                throw new Exception(
-                    "Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.",
-                    ex);
-            throw;
+            // One open at a time in the process: with the driver not loaded, the first open installs and
+            // starts it, and a second that found none meanwhile fails to start it again (error 1058). Two
+            // processes opening at that moment still can; left so: a reconnect opens the running driver
+            lock (WinDivertOpenLock)
+                _device.Open(new DeviceConfiguration());
         }
 
         return Task.CompletedTask;
+    }
+
+    // The routes' part of the capture's filter. No route at all is "false", never an empty "()", which WinDivert
+    // refuses: routes that the local networks take whole leave nothing to capture, and the adapter still starts.
+    private static string BuildRoutesPhrase(IpRangeOrderedList ipRanges)
+    {
+        if (ipRanges.IsAll())
+            return "true";
+
+        if (ipRanges.Count == 0)
+            return "false";
+
+        var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
+            ? $"{Ip(x)}.DstAddr=={x.FirstIpAddress}"
+            : $"({Ip(x)}.DstAddr>={x.FirstIpAddress} and {Ip(x)}.DstAddr<={x.LastIpAddress})");
+        return $"({string.Join(" or ", phrases)})";
     }
 
     /// <inheritdoc/>
@@ -235,12 +233,12 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// <inheritdoc/>
     /// <exception cref="NotSupportedException">Always: there is no app filter.</exception>
     protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("App filtering is not supported on LinuxTun.");
+        throw new NotSupportedException("App filtering is not supported on WinDivert.");
 
     /// <inheritdoc/>
     /// <exception cref="NotSupportedException">Always: there is no app filter.</exception>
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("App filtering is not supported on LinuxTun.");
+        throw new NotSupportedException("App filtering is not supported on WinDivert.");
 
     /// <inheritdoc/>
     /// <remarks>It does nothing: there is no interface.</remarks>
@@ -267,7 +265,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// <exception cref="NotSupportedException">Always: there is no NAT.</exception>
     protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        throw new NotSupportedException("NAT is not supported on LinuxTun.");
+        throw new NotSupportedException("NAT is not supported on WinDivert.");
     }
 
     /// <inheritdoc/>
@@ -298,10 +296,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// <exception cref="ArgumentException">
     /// The captured bytes are no valid IP packet, or its payload is invalid for its protocol, which the rewrite's
     /// checksums read.
-    /// </exception>
-    /// <exception cref="InvalidDataException">
-    /// With <see cref="WinDivertVpnAdapterSettings.SimulateDns"/> and DNS servers, the packet is a UDP fragment, which
-    /// the DNS rewrite cannot take apart.
     /// </exception>
     protected override IpPacket ReadPacket(int mtu)
     {
@@ -363,15 +357,11 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// <param name="ipPacket">The packet, changed in place, with its checksums updated.</param>
     /// <remarks>
     /// A packet of an IP version the adapter has no virtual address of keeps its source. A query's destination is kept
-    /// for its answer by its IP version and source port, the latest for each, until 30 seconds pass with no query or
-    /// answer using it.
+    /// for its answer by its IP version, source port and query ID, the latest for each, until 30 seconds pass with no
+    /// query or answer using it. A fragment keeps its destination: it holds only a piece of its UDP packet.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// The packet's payload is invalid for its protocol, which the rewrite's checksums read.
-    /// </exception>
-    /// <exception cref="InvalidDataException">
-    /// With <see cref="WinDivertVpnAdapterSettings.SimulateDns"/> and DNS servers, the packet is a UDP fragment, which
-    /// the DNS rewrite cannot take apart.
     /// </exception>
     protected virtual void ProcessReadPacket(IpPacket ipPacket)
     {
@@ -386,7 +376,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// <summary>
     /// Writes one packet to the host as inbound, and blocks until WinDivert takes it: its destination becomes the host's
     /// primary address and, with <see cref="WinDivertVpnAdapterSettings.SimulateDns"/>, a DNS answer's source becomes the
-    /// address the latest query from its port was sent to, while that is kept.
+    /// address its query was sent to, while that is kept.
     /// </summary>
     /// <param name="ipPacket">The packet, changed in place, with its checksums updated.</param>
     /// <returns>Always <see langword="true"/>.</returns>
@@ -396,9 +386,6 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// </exception>
     /// <exception cref="ArgumentException">
     /// The packet's payload is invalid for its protocol, which the rewrite's checksums read.
-    /// </exception>
-    /// <exception cref="InvalidDataException">
-    /// With <see cref="WinDivertVpnAdapterSettings.SimulateDns"/> and DNS servers, the packet is a UDP fragment.
     /// </exception>
     protected override bool WritePacket(IpPacket ipPacket)
     {
@@ -480,14 +467,17 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         ipPacket.UpdateAllChecksums();
     }
 
-    private void SimulateDnsServers(IpPacket ipPacket, bool read)
+    // internal, for the tests: a capture with SimulateDns takes every DNS query of the machine, which no test may
+    internal void SimulateDnsServers(IpPacket ipPacket, bool read)
     {
         if (!_simulateDns)
             return;
 
         // Only rewrite when we actually have DNS servers to redirect to; otherwise there is nothing to
-        // simulate (the read branch below needs a non-empty pool to pick a target from).
-        if (ipPacket.Protocol != IpProtocol.Udp || !_dnsServers.Any())
+        // simulate (the read branch below needs a non-empty pool to pick a target from). A fragment passes as it
+        // is: it holds only a piece of its UDP packet, which cannot be taken apart, and refusing it failed every
+        // fragment of any UDP traffic.
+        if (ipPacket.Protocol != IpProtocol.Udp || ipPacket.IsFragment || !_dnsServers.Any())
             return;
 
         var udpPacket = ipPacket.ExtractUdp();
@@ -499,7 +489,8 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
                 return;
 
             // update the last dns server
-            lastDnsServers.AddOrUpdate(udpPacket.SourcePort, new TimeoutItem<IPAddress>(ipPacket.DestinationAddress));
+            lastDnsServers.AddOrUpdate(GetDnsQueryKey(udpPacket.SourcePort, udpPacket),
+                new TimeoutItem<IPAddress>(ipPacket.DestinationAddress));
 
             // select a random dns server by matching its ip version
             var filteredDnsServers = _dnsServers
@@ -523,11 +514,19 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
                 return;
 
             // update the last dns server
-            if (lastDnsServers.TryGetValue(udpPacket.DestinationPort, out var dnsServer))
+            if (lastDnsServers.TryGetValue(GetDnsQueryKey(udpPacket.DestinationPort, udpPacket), out var dnsServer))
                 ipPacket.SourceAddress = dnsServer.Value;
 
             ipPacket.UpdateAllChecksums();
         }
+    }
+
+    // The asker's port with the query's ID, a DNS message's first two bytes, which its answer repeats
+    private static uint GetDnsQueryKey(ushort clientPort, UdpPacket udpPacket)
+    {
+        var payload = udpPacket.Payload.Span;
+        var queryId = payload.Length >= 2 ? BinaryPrimitives.ReadUInt16BigEndian(payload) : (ushort)0;
+        return ((uint)clientPort << 16) | queryId;
     }
 
 
@@ -574,19 +573,5 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         _lastDnsServersV6.Dispose();
 
         base.DisposeManaged();
-    }
-
-    /// <summary>
-    /// Runs <see cref="VpnHood.Net.PacketTransports.PacketTransportBase.DisposeUnmanaged"/> for an adapter that was not
-    /// disposed. This adapter has no unmanaged resource of its own: the finalizer does not close the capture, so stop
-    /// or dispose the adapter.
-    /// </summary>
-    /// <remarks>
-    /// The adapter's handlers on the host's network-change events keep it reachable until it is disposed, so dispose it
-    /// rather than count on this.
-    /// </remarks>
-    ~WinDivertVpnAdapter()
-    {
-        Dispose(false);
     }
 }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Net.Packets;
@@ -302,6 +303,82 @@ public class VpnAdapterRecoveryTest : TestBase
         await startTask;
         Assert.IsTrue(adapter.IsStarted);
         Assert.AreEqual(1, adapter.StartCount);
+    }
+
+    [TestMethod]
+    public async Task An_owners_start_during_a_restart_ends_the_restart()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // the owner's start lands in the restart's pause: the restart ends there, where it started over the owner's
+        // run with the old options once its pause was over
+        var restartTask = adapter.Restart(TestCt);
+        await AssertEqualsWait(false, () => adapter.IsStarted);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(() => restartTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+        Assert.IsTrue(adapter.IsStarted);
+        Assert.AreEqual(2, adapter.StartCount);
+        Assert.AreEqual(2, adapter.OpenCount);
+    }
+
+    [TestMethod]
+    public async Task An_owners_start_on_a_started_adapter_ends_the_run_that_is_there()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(new VpnAdapterOptions {
+            SessionName = null,
+            VirtualIpNetworkV4 = IpNetwork.Parse("10.0.0.1/24"),
+            VirtualIpNetworkV6 = IpNetwork.Parse("fd00::1/64"),
+            IncludeNetworks = [IpNetwork.AllV4],
+            DnsServers = []
+        }, TestCt);
+        Assert.IsNotNull(adapter.GatewayIpV6);
+        Assert.IsNull(adapter.ReaderEndedAtClose);
+
+        // no stop first, and options without IPv6: the run that is up is closed, its reader waited for, and
+        // nothing of it stays under the new run
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+        Assert.IsTrue(adapter.IsStarted);
+        Assert.AreEqual(true, adapter.ReaderEndedAtClose);
+        Assert.IsNull(adapter.GatewayIpV6);
+        Assert.IsNotNull(adapter.GatewayIpV4);
+        Assert.AreEqual(2, adapter.OpenCount);
+    }
+
+    [TestMethod]
+    public async Task A_Started_handler_that_starts_a_started_adapter_leaves_the_others_only_the_new_run()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        var firstOptions = CreateAdapterOptions();
+        var secondOptions = CreateAdapterOptions();
+        Task? secondStart = null;
+        var heardOptions = new List<VpnAdapterOptions>(); // what the second subscriber is told, in order
+
+        // the first subscriber answers the first run with a start of its own, with no stop before it, which is
+        // still under way when the handler returns
+        adapter.Started += (_, options) => {
+            if (!ReferenceEquals(options, firstOptions))
+                return;
+
+            adapter.HoldBeforeAdd = true;
+            secondStart = adapter.Start(secondOptions, TestCt);
+        };
+        adapter.Started += (_, options) => {
+            lock (heardOptions)
+                heardOptions.Add(options);
+        };
+
+        await adapter.Start(firstOptions, TestCt);
+        Assert.IsNotNull(secondStart);
+        await AssertEqualsWait(true, () => adapter.IsStartHeld);
+        adapter.ReleaseStart();
+        await secondStart.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+
+        // the second subscriber hears of the run that is up, not of the one its start had ended by its turn
+        Assert.AreEqual(1, heardOptions.Count);
+        Assert.AreSame(secondOptions, heardOptions[0]);
+        Assert.IsTrue(adapter.IsStarted);
     }
 
     [TestMethod]
@@ -749,9 +826,34 @@ public class VpnAdapterRecoveryTest : TestBase
         ]));
     }
 
-    // a null adapter whose readers and their waits are counted
-    // as a platform adapter: its write copies the packet's bytes out and disposes nothing; its settings leave the
-    // packets' disposal off
+    [TestMethod]
+    public async Task An_adapter_that_was_never_disposed_is_collected()
+    {
+        // nothing of the process's own may hold an adapter its owner dropped: held, its finalizer never runs, and
+        // its handlers answer every change of the host's network for the process's life. The pool holds it until
+        // its send loop has begun to wait for packets, so the collection is tried for a while
+        var adapter = CreateDroppedAdapter();
+        await AssertEqualsWait(false, () => {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            return IsAlive(adapter);
+        }, timeout: 10000);
+    }
+
+    // not inlined, as the one below: a reference left in the caller's frame would hold the adapter
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool IsAlive(WeakReference<NullVpnAdapter> adapter)
+    {
+        return adapter.TryGetTarget(out _);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference<NullVpnAdapter> CreateDroppedAdapter()
+    {
+        return new WeakReference<NullVpnAdapter>(new NullVpnAdapter(blocking: false));
+    }
+
+    // as a platform adapter: its write copies the packet's bytes out and disposes nothing
     private sealed class CopyingVpnAdapter() : NullVpnAdapter(new VpnAdapterSettings {
         AdapterName = "CopyingAdapter",
         Blocking = false
@@ -763,6 +865,7 @@ public class VpnAdapterRecoveryTest : TestBase
         }
     }
 
+    // a null adapter whose readers and their waits are counted
     private sealed class ReaderCountingNullVpnAdapter() : NullVpnAdapter(blocking: false)
     {
         public int ReaderCount;

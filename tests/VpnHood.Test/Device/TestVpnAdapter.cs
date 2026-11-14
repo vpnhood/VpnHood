@@ -1,4 +1,6 @@
-﻿using VpnHood.Net.Toolkit.Net;
+﻿using System.Net;
+using VpnHood.Net.Packets;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.WinDivert;
 
 namespace VpnHood.Test.Device;
@@ -20,4 +22,11 @@ public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions)
 
     // as the adapter says once the host moved to other networks
     public void SimulatePrimaryNetworkChange() => OnPrimaryNetworkChanged();
+
+    // The DNS rewrite by itself, as a start and a captured or written packet reach it: with SimulateDns a real
+    // capture takes every DNS query of the machine, so no test starts one
+    public Task SetDnsServersForTest(IReadOnlyList<IPAddress> dnsServers) =>
+        SetDnsServers(dnsServers, CancellationToken.None);
+
+    public void RewriteDns(IpPacket ipPacket, bool read) => SimulateDnsServers(ipPacket, read);
 }

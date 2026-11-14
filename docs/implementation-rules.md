@@ -25,7 +25,9 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
 7. Native and OS helpers take names as parameters, never brand constants; a default is brand-neutral,
    and our products override it (`VhAppCommandName`).
 8. A library never enforces the app id's format; it derives from it what the OS needs.
-9. A helper is a private method, never a local function inside another method.
+9. A helper is a private method, never a local function inside another method. A helper class is an
+   `internal` class in a file of its own, not a class nested in the one it serves, unless it must reach
+   that class's private members and nothing smaller would do.
 10. A generic type that shares its name with another type has a file of its own, named for its type
     parameters' count, as .NET's own source does: `TimeoutItem_1.cs` beside `TimeoutItem.cs`. A
     generic type alone keeps the plain name.

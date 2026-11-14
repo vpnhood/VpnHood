@@ -63,7 +63,38 @@ public static class OsUtils
     public static Task<string> ExecuteCommandAsync(string fileName, string command,
         CancellationToken cancellationToken)
     {
-        return ExecuteAsync(CreateStartInfo(fileName, command), $"{fileName} {command}", cancellationToken);
+        return ExecuteAsync(CreateStartInfo(fileName, command), $"{fileName} {command}", Timeout.InfiniteTimeSpan,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a program with its arguments, and waits for it asynchronously at most a timeout, after which it is ended,
+    /// with the processes it started.
+    /// </summary>
+    /// <param name="fileName">The program.</param>
+    /// <param name="command">The arguments, as one string.</param>
+    /// <param name="timeout">How long to wait, or <see cref="Timeout.InfiniteTimeSpan"/> for no limit.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the program's standard output.</returns>
+    /// <remarks>
+    /// A cancellation stops the wait, not the program. The timeout ends the program, and the task waits up to 5 seconds
+    /// more for its end, so that nothing of it is still at work when the caller goes on.
+    /// </remarks>
+    /// <exception cref="TimeoutException">
+    /// The program was still running at the timeout, or its output had not ended, as a child it left behind holds it
+    /// open; both are ended.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
+    /// command line, is the message.
+    /// </exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">The program cannot be started.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    public static Task<string> ExecuteCommandAsync(string fileName, string command, TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        return ExecuteAsync(CreateStartInfo(fileName, command), $"{fileName} {command}", timeout, cancellationToken);
     }
 
     /// <summary>Runs a command line in bash, given to it as one argument, as written, and waits for it.</summary>
@@ -94,7 +125,8 @@ public static class OsUtils
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task<string> ExecuteShellCommandAsync(string command, CancellationToken cancellationToken)
     {
-        return ExecuteAsync(CreateShellStartInfo(command), $"/bin/bash -c {command}", cancellationToken);
+        return ExecuteAsync(CreateShellStartInfo(command), $"/bin/bash -c {command}", Timeout.InfiniteTimeSpan,
+            cancellationToken);
     }
 
     private static ProcessStartInfo CreateStartInfo(string fileName, string arguments)
@@ -153,29 +185,56 @@ public static class OsUtils
         return output;
     }
 
-    private static async Task<string> ExecuteAsync(ProcessStartInfo startInfo, string commandLine,
+    private static async Task<string> ExecuteAsync(ProcessStartInfo startInfo, string commandLine, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         // a cancel ends the wait for a command, not the command, so none starts after one
         cancellationToken.ThrowIfCancellationRequested();
+        using var timeoutCts = new CancellationTokenSource(timeout); // before the start: it refuses a bad timeout
+        using var waitCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
         VhLogger.Instance.LogDebug($"Executing: {commandLine}");
         using var process = new Process();
         process.StartInfo = startInfo;
         process.Start();
 
-        // both streams at once, as in Execute
-        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await errorTask.Vhc();
-        var output = await outputTask.Vhc();
+        try {
+            // both streams at once, as in Execute
+            var errorTask = process.StandardError.ReadToEndAsync(waitCts.Token);
+            var outputTask = process.StandardOutput.ReadToEndAsync(waitCts.Token);
+            var error = await errorTask.Vhc();
+            var output = await outputTask.Vhc();
 
-        await WaitForExitAsync(process, cancellationToken).Vhc();
-        if (process.ExitCode != 0) {
-            error += $". Command: {commandLine}.";
-            throw new ExternalException(error, process.ExitCode);
+            await WaitForExitAsync(process, waitCts.Token).Vhc();
+            if (process.ExitCode != 0) {
+                error += $". Command: {commandLine}.";
+                throw new ExternalException(error, process.ExitCode);
+            }
+
+            return output;
         }
+        catch (OperationCanceledException) {
+            // the caller's cancel stops the wait and leaves the command to run on; its own time limit ends it
+            if (cancellationToken.IsCancellationRequested || !timeoutCts.IsCancellationRequested)
+                throw;
 
-        return output;
+            await EndTimedOutAsync(process).Vhc();
+            throw new TimeoutException(
+                $"The command has not finished in {timeout.TotalSeconds} seconds. Command: {commandLine}.");
+        }
+    }
+
+    // Its children too, which hold the pipes, and its end is waited for: a caller cleans up after the command, which
+    // must not still be at work then. One that cannot be ended is logged, and must not hide the timeout.
+    private static async Task EndTimedOutAsync(Process process)
+    {
+        try {
+            process.Kill(entireProcessTree: true);
+            using var exitCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await process.WaitForExitAsync(exitCts.Token).Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not end a command that timed out.");
+        }
     }
 
     // fort .net standard compatibility

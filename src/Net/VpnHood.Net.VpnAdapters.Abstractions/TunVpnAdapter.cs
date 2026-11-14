@@ -59,6 +59,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private int _readErrorCount;
     private int _writeErrorCount;
     private readonly bool _autoMetric;
+    private readonly NetworkChangeListener _networkChangeListener;
     private HashSet<IPAddress> _lastPrimaryAdapterAddresses = [];
 
     private static readonly IpNetwork[] WebDeadNetworks =
@@ -377,8 +378,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         _autoRestart = adapterSettings.AutoRestart;
         _autoMetric = adapterSettings.AutoMetric;
         AdapterName = adapterSettings.AdapterName;
-        NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
-        NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
+        _networkChangeListener = new NetworkChangeListener(this);
     }
 
     /// <inheritdoc/>
@@ -412,8 +412,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// it and starts reading packets.
     /// </summary>
     /// <remarks>
-    /// Await one start before the next. From here the adapter keeps itself started until <see cref="Stop()"/>,
-    /// disposal, or a failure it does not recover from (without <see cref="VpnAdapterSettings.AutoRestart"/>).
+    /// Await one start before the next. A start on an adapter that is up, or that is restarting, first ends what is
+    /// there, as <see cref="Stop()"/> does, but logs a teardown that fails rather than throw it. From here the adapter
+    /// keeps itself started until <see cref="Stop()"/>, disposal, or a failure it does not recover from (without
+    /// <see cref="VpnAdapterSettings.AutoRestart"/>).
     /// <see cref="IsStarted"/> is <see langword="true"/> from the start's beginning, before the interface exists. A
     /// failed start tries to remove what it added and leaves the adapter stopped, with none of the run's addresses
     /// and gateways; it raises no <see cref="Failed"/>, as the caller has the exception. An IPv6 address the
@@ -438,6 +440,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
+        await StopBeforeStart(cancellationToken).Vhc();
 
         // the owner's start: from here the adapter keeps itself started, until the owner's Stop or Dispose
         _keepStarted = true;
@@ -451,7 +454,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             runId = await StartCore(options, startCts.Token).Vhc();
         }
         catch {
-            _keepStarted = false; // the caller has the exception: nothing to keep started
+            // the caller has the exception: nothing to keep started, unless a later start has taken over since
+            if (_keepStartedCts == keepStartedCts)
+                _keepStarted = false;
             throw;
         }
 
@@ -460,6 +465,18 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         // an address change or a disable during the start was left to it: see them now
         CheckPrimaryAdapterAddresses();
         await CheckAdapterInterface().Vhc();
+    }
+
+    // What is there ends before the owner's next start, as by its Stop. Left to run, a restart in its pause would
+    // start over the owner's new run with the old options, and stop that run if its own start failed; a run that is
+    // up would keep its reader and its gateways under the new one. A teardown that fails is logged: the start's own
+    // steps clear a leftover.
+    private async Task StopBeforeStart(CancellationToken cancellationToken)
+    {
+        _keepStarted = false;
+        _keepStartedCts.TryCancel();
+        using var restartLock = await _restartLock.LockAsync(cancellationToken).Vhc();
+        Stop(throwException: false);
     }
 
     // Tells the subscribers of a run that is up, its start's caller holding no lock but this one's own: a handler
@@ -1257,14 +1274,16 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return null;
     }
 
-    private void NetworkChange_NetworkAddressChanged(object? sender, EventArgs e)
+    // The OS's network events reach the adapter through its listener (NetworkChangeListener), never by a handler of
+    // its own on them, which would keep an adapter that was never disposed alive for the process's life
+    internal void HandleNetworkAddressChanged()
     {
         _ = CheckAdapterInterface();
         CheckPrimaryAdapterAddresses();
     }
 
     // a link set down on Linux keeps its address, so only this event tells of it
-    private void NetworkChange_NetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+    internal void HandleNetworkAvailabilityChanged()
     {
         _ = CheckAdapterInterface();
     }
@@ -1428,7 +1447,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="InvalidOperationException">The adapter has never been started.</exception>
-    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled, or the owner stopped the adapter meanwhile.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or the owner stopped the adapter or started it again meanwhile.
+    /// </exception>
     public async Task Restart(CancellationToken cancellationToken)
     {
         var startOptions = _startOptions ?? throw new InvalidOperationException("The adapter has not been started.");
@@ -1568,11 +1589,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// </summary>
     protected override void DisposeManaged()
     {
-        // notify the subscribers that the adapter is disposed
-        NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
-        NetworkChange.NetworkAvailabilityChanged -= NetworkChange_NetworkAvailabilityChanged;
+        _networkChangeListener.Dispose();
 
-        // a failed handler must not stop the release
+        // notify the subscribers that the adapter is disposed; a failed handler must not stop the release
         VhInvoker.TryInvoke("raise the adapter's Disposed event", LogLevel.Error,
             () => Disposed?.Invoke(this, EventArgs.Empty));
         Disposed = null;

@@ -3,22 +3,12 @@
 namespace VpnHood.Net.VpnAdapters.WinDivert;
 
 /// <summary>Represents the settings of a <see cref="WinDivertVpnAdapter"/>.</summary>
+/// <remarks>
+/// <see cref="VpnAdapterSettings.AutoMetric"/> has no effect here: with no interface there is no metric, and the
+/// capture takes the routes' networks whole or in halves alike.
+/// </remarks>
 public class WinDivertVpnAdapterSettings : VpnAdapterSettings
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WinDivertVpnAdapterSettings"/> class, with no automatic metric.
-    /// </summary>
-    public WinDivertVpnAdapterSettings()
-    {
-        base.AutoMetric = false;
-    }
-
-    /// <summary>
-    /// Gets <see langword="false"/>: with no interface, there is no metric. It hides
-    /// <see cref="VpnAdapterSettings.AutoMetric"/>, which the constructor sets to <see langword="false"/>.
-    /// </summary>
-    public new bool AutoMetric => false;
-
     /// <summary>
     /// Gets or sets whether the capture of the routes' networks leaves out the local networks
     /// (<see cref="VpnHood.Net.Toolkit.Net.IpNetwork.LocalNetworks"/>), whatever the routes; DNS queries to them are

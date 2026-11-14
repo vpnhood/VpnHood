@@ -49,7 +49,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private IntPtr _tunAdapter;
     private IntPtr _tunSession;
     private IntPtr _readEvent;
-    private readonly byte[] _writeBuffer = new byte[0xFFFF];
+    private readonly byte[] _writeBuffer = new byte[MaxPacketSize];
+    private bool _isLongPacketLogged; // a warning per session, not per packet
     private static readonly Lock WinTunDllLock = new();
     private static IntPtr _winTunDll; // the one wintun.dll of the process, once loaded
 
@@ -71,6 +72,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     // a live handle holds the adapter
     private const int ErrorAlreadyExists = 183;
     private const int ErrorAlreadyExistsHResult = unchecked((int)0x800700B7);
+
+    // what WintunAllocateSendPacket fails with: its ring has ended, or has no room now
+    private const int ErrorHandleEof = 38;
+    private const int ErrorBufferOverflow = 111;
+
+    // WINTUN_MAX_IP_PACKET_SIZE: the longest packet WinTun's driver takes
+    private const int MaxPacketSize = 0xFFFF;
 
     /// <summary>The smallest ring size WinTun takes, 128 KiB.</summary>
     public const int MinRingCapacity = 0x20000;
@@ -270,6 +278,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             if (_tunSession == IntPtr.Zero)
                 throw new Win32Exception("Failed to start WinTun session.");
 
+            _isLongPacketLogged = false;
+
             // create an event object to wait for packets
             VhLogger.Instance.LogDebug("Creating event object for WinTun...");
             _readEvent = WinTunApi.WintunGetReadWaitEvent(_tunSession); // do not close this handle by documentation
@@ -408,7 +418,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         if (_adapterIndex == 0)
-            throw new InvalidOperationException("Adapter index is not set. Call AdapterOpen() first.");
+            throw new InvalidOperationException("The adapter's interface has not been made: AdapterAdd has not run.");
 
         VhLogger.Instance.LogTrace("Adding route {IpNetwork} to {AdapterName}.", ipNetwork, AdapterName);
         Win32IpHelper.AddRoute(_adapterIndex, ipNetwork, cancellationToken);
@@ -481,7 +491,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                 await ExecutePowerShellCommandAsync(
                     $"Set-DnsClientServerAddress -InterfaceAlias '{AdapterName}' " +
                     $"-ServerAddresses @({string.Join(",", servers.Select(ip => $"'{ip}'"))})",
-                    cancellationToken).Vhc();
+                    Timeout.InfiniteTimeSpan, cancellationToken).Vhc();
         }
 
         // a server's adapter has none; a rule a crash left goes
@@ -506,13 +516,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     /// <remarks>
     /// It runs PowerShell's <c>New-NetNat</c>, after trying to remove a NAT of the adapter's name that a killed run
     /// left, as WinNAT keeps one after its process. A stop does not cut it off once begun, so a failed start's cleanup
-    /// comes after the command ends; after 60 seconds it stops waiting for PowerShell, which may go on and still make
-    /// the NAT.
+    /// comes after the command ends; after 60 seconds PowerShell is ended, with what it started, and the start fails.
     /// </remarks>
     /// <exception cref="ExternalException"><c>New-NetNat</c> failed, as WinNAT does for an IPv6 network.</exception>
     /// <exception cref="Win32Exception">PowerShell could not be started.</exception>
+    /// <exception cref="TimeoutException">The command ran 60 seconds, and was ended.</exception>
     /// <exception cref="OperationCanceledException">
-    /// <paramref name="cancellationToken"/> was canceled before the command began, or the command ran 60 seconds.
+    /// <paramref name="cancellationToken"/> was canceled before the command began.
     /// </exception>
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
@@ -520,13 +530,12 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // shows in New-NetNat's own
         VhInvoker.TryInvoke("remove the NAT a previous run left", LogLevel.Debug, RemoveNat);
 
-        // Never cut off by a stop once begun, only by its own time limit: a NAT the command made after
-        // the start's cleanup looked would stay.
+        // Never cut off by a stop once begun, only by its own time limit, which ends PowerShell: a NAT the command
+        // made after the start's cleanup looked would stay, whether a stop or the limit had left it running.
         cancellationToken.ThrowIfCancellationRequested();
-        using var timeoutCts = new CancellationTokenSource(NatAddTimeout);
         await ExecutePowerShellCommandAsync(
             $"New-NetNat -Name '{NatName}' -InternalIPInterfaceAddressPrefix '{ipNetwork}'",
-            timeoutCts.Token).Vhc();
+            NatAddTimeout, CancellationToken.None).Vhc();
     }
 
     // by the name alone: a NAT of this adapter's name is its own, whatever network a run gave it
@@ -537,10 +546,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             NatRemoveTimeout);
     }
 
-    private static Task<string> ExecutePowerShellCommandAsync(string command, CancellationToken cancellationToken)
+    private static Task<string> ExecutePowerShellCommandAsync(string command, TimeSpan timeout,
+        CancellationToken cancellationToken)
     {
         var ps = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"{command}\"";
-        return OsUtils.ExecuteCommandAsync("powershell.exe", ps, cancellationToken);
+        return OsUtils.ExecuteCommandAsync("powershell.exe", ps, timeout, cancellationToken);
     }
 
     private static void ExecutePowerShellCommand(string command, TimeSpan timeout)
@@ -615,9 +625,12 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     // the session, which a stop's wait for the sender counts on (WaitForSender)
     /// <inheritdoc/>
     /// <returns>
-    /// <see langword="true"/> if WinTun took the packet; <see langword="false"/> if it could not allocate the packet in
-    /// its ring, as when the ring is full, or if the session is closed.
+    /// <see langword="true"/> if WinTun took the packet, or the packet is longer than the 65,535 bytes WinTun takes,
+    /// and was dropped and counted as dropped, which is logged once a session; <see langword="false"/> if the ring is
+    /// full, or the session is closed.
     /// </returns>
+    /// <exception cref="IOException">WinTun has ended the session's ring, as when the interface is going away.</exception>
+    /// <exception cref="PInvokeException">WinTun failed with another error.</exception>
     [MethodImpl(MethodImplOptions.NoInlining)]
     protected override bool WritePacket(IpPacket ipPacket)
     {
@@ -627,10 +640,27 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
         var packetBytes = ipPacket.Buffer;
 
-        // Allocate memory for the packet inside WinTun ring buffer
+        // IPv6 allows a longer packet than WinTun takes. Its ring would take one all the same, and the driver ends
+        // the ring for good at the first it meets there, so none gets that far
+        if (packetBytes.Length > MaxPacketSize) {
+            DropLongPacket(ipPacket);
+            return true; // ends the base's tries for it
+        }
+
+        // Allocate memory for the packet inside WinTun ring buffer. A full ring is the one refusal a wait may end.
+        // Any other lasts, as a ring the driver has ended: taken for a full ring, it made every packet from then on
+        // a silent drop, the VPN up and nothing coming in. It is an error, which the sender counts and stops on
         var packetMemory = WinTunApi.WintunAllocateSendPacket(session, packetBytes.Length); // thread-safe
-        if (packetMemory == IntPtr.Zero)
-            return false;
+        if (packetMemory == IntPtr.Zero) {
+            var errorCode = Marshal.GetLastWin32Error();
+            return errorCode switch {
+                ErrorBufferOverflow => false,
+                ErrorHandleEof => throw new IOException("WinTun has ended the session."),
+                _ => throw new PInvokeException(
+                    $"WinTun could not take a packet. {new Win32Exception(errorCode).Message} ErrorCode: {errorCode}",
+                    errorCode)
+            };
+        }
 
         // Copy the raw packet data into WinTun memory
         var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
@@ -639,6 +669,18 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // Send the packet through WinTun
         WinTunApi.WintunSendPacket(session, packetMemory); // thread-safe
         return true;
+    }
+
+    private void DropLongPacket(IpPacket ipPacket)
+    {
+        if (!_isLongPacketLogged) {
+            _isLongPacketLogged = true;
+            VhLogger.Instance.LogWarning(
+                "WinTun dropped a packet longer than it takes. Packet: {PacketLength}, Limit: {Limit}",
+                ipPacket.PacketLength, MaxPacketSize);
+        }
+
+        DropPacket(ipPacket);
     }
 
     // The embedded wintun.dll, installed into a protected folder of its own under Common Files, not the
@@ -697,7 +739,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     /// <summary>Removes the interface of an adapter that was not disposed, as <see cref="DisposeUnmanaged"/> does.</summary>
     /// <remarks>
-    /// The adapter's handlers on the host's network-change events keep it reachable until it is disposed, so dispose it
+    /// It runs only once nothing holds the adapter, and a started adapter's reader holds it: stop or dispose an adapter
     /// rather than count on this.
     /// </remarks>
     ~WinTunVpnAdapter()

@@ -11,6 +11,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Net.VpnAdapters.Abstractions\VpnHood.Net.VpnAdapters.Abstractions.csproj" />
+		<InternalsVisibleTo Include="VpnHood.Test" />
 	</ItemGroup>
 
 	<!-- WinDivert's DLL and driver as its release ships them (x64 only), embedded and installed at run time

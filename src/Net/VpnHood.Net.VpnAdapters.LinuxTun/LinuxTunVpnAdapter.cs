@@ -28,15 +28,16 @@ namespace VpnHood.Net.VpnAdapters.LinuxTun;
 /// <c>ip6tables</c>, <c>nft</c> and <c>udevadm</c> through bash; a canceled step stops waiting for its command, which
 /// runs on. The kernel removes the TUN device, with its routes and systemd-resolved's DNS servers for it, when the
 /// process ends, a crash included. A resolvconf entry and the DNS redirect stay, which <see cref="RemoveLeftovers"/>
-/// clears, and so do NAT rules, until a start adds NAT for their network on the same primary interface again.
+/// clears, and so do the NAT chains, until the next start that adds NAT.
 /// </para>
 /// <para>
 /// The interface's alias carries a tag made from the app's ID, when there is one (<see cref="VpnAdapterSettings.AppId"/>),
-/// which tells a start whose an interface of its name is. A TUN device of the name that carries the tag, or, from
-/// versions before tags, none, is taken for one the app left and removed unless a process is known to hold it: a
-/// device that is down shows no holder, and the app's single-instance lock is relied on. Any other interface of the
-/// name refuses the start. A start also turns on IPv4 and IPv6 forwarding for the whole host, and leaves it on. There
-/// is no app filter.
+/// which tells a start whose an interface of its name is. A TUN device of the name that carries the tag is taken for
+/// one the app left and removed unless a process is known to hold it: a device that is down shows no holder, and the
+/// app's single-instance lock is relied on. One with no tag, as versions before tags made, is taken so too, but only
+/// while it is up, where it shows whether a process holds it. Any other interface of the name refuses the start. NAT,
+/// a server's, turns on forwarding for the whole host, for the IP versions it translates, and leaves it on. There is
+/// no app filter.
 /// </para>
 /// </remarks>
 public class LinuxTunVpnAdapter : TunVpnAdapter
@@ -54,6 +55,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private const int MaxAdapterAliasLength = 255;
     private const int KeptAliasLength = 64;
 
+    // the longest packet the parser takes: an IPv6 one, 40 bytes of header and the 65,535 its length field counts
+    private const int MaxPacketLength = 40 + 0xFFFF;
+
     // A closed tun's number is freed only once the reader and the batch being sent have left (as WinTun's
     // session): the reader once the device's removal wakes its poll, the batch, which may sleep in the send
     // backoff, within twice MaxPacketSendDelay. A thread held off the CPU with the stop gets a moment more.
@@ -70,7 +74,6 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private int _tunAdapterFd = InvalidFd;
     private int _retiredTunAdapterFd = InvalidFd;
     private int? _metric;
-    private string? _primaryAdapterName;
     private bool _isResolvconfDnsSet;
 
     // The VPN's servers while forwarded DNS goes to them. Set before the rule, so a stop's cleanup finds the rule of a
@@ -78,24 +81,17 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private readonly Lock _dnsRedirectLock = new();
     private IPAddress[]? _dnsRedirectServers;
 
-    // The networks AddNat added rules for, which AdapterRemove removes. Not the adapter's networks, which a stop
-    // clears, and kept after a removal: a start the stop overtook may still add rules, which its cleanup removes
-    private IpNetwork? _natNetworkV4;
-    private IpNetwork? _natNetworkV6;
+    // Whether AddNat has made the adapter's chains of an IP version, which AdapterRemove removes. Kept after a
+    // removal: a start the stop overtook may still add rules, which its cleanup removes
+    private bool _isNatAddedV4;
+    private bool _isNatAddedV6;
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
-    private readonly byte[] _writeBuffer = new byte[0xFFFF];
+    private readonly byte[] _writeBuffer = new byte[MaxPacketLength];
 
     /// <inheritdoc/>
     /// <value>Always <see langword="true"/>: <see cref="BindSocketToIp"/> binds a socket to an interface.</value>
     protected override bool IsSocketProtectedByBind => true;
-
-    /// <inheritdoc/>
-    /// <value>
-    /// <see langword="false"/> until a start has found the interface of the host's default route;
-    /// <see langword="true"/> from then on.
-    /// </value>
-    public override bool CanProtectSocket => !string.IsNullOrEmpty(_primaryAdapterName);
 
     /// <inheritdoc/>
     /// <remarks>Always <see langword="true"/>: iptables and ip6tables translate both IP versions.</remarks>
@@ -133,18 +129,24 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// </exception>
     /// <exception cref="ArgumentException">The adapter's name is not a valid interface name.</exception>
     public LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
-        : base(adapterSettings)
+        : base(ValidateSettings(adapterSettings))
     {
-        if (!IsValidAdapterName(AdapterName))
-            throw new ArgumentException(
-                $"'{AdapterName}' is not a valid Linux interface name; {nameof(GetValidAdapterName)} derives one.",
-                nameof(adapterSettings));
-
         _adapterAlias = adapterSettings.AppId == null ? null : GetAdapterAlias(adapterSettings.AppId);
         _senderStopWaitTimeout = StopWaitTimeout + adapterSettings.MaxPacketSendDelay * 2;
 
         // a client keeps its adapter on a new network, whose addresses the redirect names
         PrimaryNetworkChanged += (_, _) => ApplyDnsRedirect();
+    }
+
+    // Before the base is made, which starts its send loop and its watch of the host's network: a constructor that
+    // threw after it left that at work in an instance no one could dispose
+    private static LinuxVpnAdapterSettings ValidateSettings(LinuxVpnAdapterSettings adapterSettings)
+    {
+        return IsValidAdapterName(adapterSettings.AdapterName)
+            ? adapterSettings
+            : throw new ArgumentException(
+                $"'{adapterSettings.AdapterName}' is not a valid Linux interface name; {nameof(GetValidAdapterName)} derives one.",
+                nameof(adapterSettings));
     }
 
     /// <inheritdoc/>
@@ -233,8 +235,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     // Whether a tun is one this app left and may clear: nobody holds it, and it carries the app's id,
-    // or, from a version before tags, no tag and this adapter's name. A down one is cleared too: the
-    // app's single-instance lock leaves no other run of it to hold it.
+    // or, from a version before tags, no tag and this adapter's name. A tagged one that is down is cleared
+    // too: the app's single-instance lock leaves no other run of it to hold it.
     internal static bool IsOwnLeftover(LinuxTunInfo tun, string adapterName, string? adapterAlias)
     {
         if (tun.IsHeld)
@@ -247,11 +249,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 #pragma warning restore CS0618 // Type or member is obsolete
     }
 
-    // A version before tags left its tun untagged, known only by this adapter's name.
+    // A version before tags left its tun untagged, known only by this adapter's name, and up. One that is down
+    // shows no holder, and with no tag nothing says it is this app's: another app's, in use, would go under it.
     [Obsolete("Migration (2026-09): drop a few months after it ships, with its call in IsOwnLeftover.")]
     private static bool IsUntaggedLeftoverToMigrate(LinuxTunInfo tun, string adapterName)
     {
-        return tun.Name == adapterName;
+        return tun.Name == adapterName && !tun.IsDown;
     }
 
     /// <summary>
@@ -343,24 +346,34 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
-    // The first default route's interface: the word after "dev", as a route with no gateway has no "via" before it
-    // (default dev ppp0 scope link). NAT puts the name in root's commands and covers that one interface, so it
-    // refuses an invalid name and a multipath route; a client only needs one.
-    private static async Task<string> GetPrimaryAdapterName(bool useNat, CancellationToken cancellationToken)
+    // The interface NAT sends an IP version's traffic out by: that of the host's first default route of the version.
+    // Of the network's own version, as a host's IPv6 may leave by another interface than its IPv4, or be all it has.
+    private static async Task<string> GetNatInterfaceName(AddressFamily addressFamily,
+        CancellationToken cancellationToken)
     {
         // -o: a route a line, the preferred first
-        var route = (await ExecuteCommandAsync("ip -o route show default", cancellationToken).Vhc()).Split('\n')[0];
+        var ipVersion = addressFamily == AddressFamily.InterNetwork ? "-4" : "-6";
+        var routes = await ExecuteCommandAsync($"ip {ipVersion} -o route show default", cancellationToken).Vhc();
+        return ParseDefaultRouteInterface(routes);
+    }
+
+    // The word after "dev", as a route with no gateway has no "via" before it (default dev ppp0 scope link). NAT puts
+    // the name in root's commands and covers that one interface, so an invalid name and a multipath route are
+    // refused.
+    internal static string ParseDefaultRouteInterface(string routes)
+    {
+        var route = routes.Split('\n')[0];
         var words = route.Split([' ', '\t', '\\'], StringSplitOptions.RemoveEmptyEntries);
         var devIndex = Array.IndexOf(words, "dev");
         var mainInterface = devIndex >= 0 && devIndex < words.Length - 1 ? words[devIndex + 1] : "";
-        if (mainInterface.Length == 0)
-            throw new InvalidOperationException("No active network interface found.");
-
-        if (useNat && words.Contains("nexthop"))
+        if (words.Contains("nexthop"))
             throw new InvalidOperationException(
                 "NAT does not support a multipath default route: its rules name one interface.");
 
-        if (useNat && !IsValidAdapterName(mainInterface))
+        if (mainInterface.Length == 0)
+            throw new InvalidOperationException("NAT found no default route to send its traffic out by.");
+
+        if (!IsValidAdapterName(mainInterface))
             throw new InvalidOperationException(
                 $"The primary network interface's name is not supported in a command: {mainInterface}");
 
@@ -386,15 +399,13 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     /// <inheritdoc/>
     /// <remarks>
-    /// It finds the interface of the host's first IPv4 default route, removes what this adapter's last run left, and
-    /// tries to keep NetworkManager off the interface with a udev rule under <c>/run</c>, without which a desktop
-    /// announces the VPN's coming and going as a network connection; a failure there is logged. Then it makes the TUN
-    /// device, after removing a TUN device of the name that the app left (see the class's remarks), writes the app's
-    /// tag as its alias, turns on IPv4 and IPv6 forwarding for the host, and sets the interface up.
+    /// It removes what this adapter's last run left, and tries to keep NetworkManager off the interface with a udev
+    /// rule under <c>/run</c>, without which a desktop announces the VPN's coming and going as a network connection; a
+    /// failure there is logged. Then it makes the TUN device, after removing a TUN device of the name that the app left
+    /// (see the class's remarks), writes the app's tag as its alias, and sets the interface up.
     /// </remarks>
     /// <exception cref="InvalidOperationException">
-    /// The host has no IPv4 default route, or, with NAT, a multipath one or one whose interface has a name not valid
-    /// here; an interface of the adapter's name is not a TUN device, or is another app's or held by a process; or
+    /// An interface of the adapter's name is not a TUN device, or is another app's or held by a process; or
     /// <c>/dev/net/tun</c> could not be opened.
     /// </exception>
     /// <exception cref="PInvokeException">
@@ -407,11 +418,6 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         // a run's own: one that sets no metric adds its routes with the system's, not the last run's
         _metric = null;
-
-        // Get the primary adapter name
-        VhLogger.Instance.LogDebug("Getting the primary adapter name...");
-        _primaryAdapterName = await GetPrimaryAdapterName(UseNat, cancellationToken).Vhc();
-        VhLogger.Instance.LogDebug("Primary adapter name is {PrimaryAdapterName}", _primaryAdapterName);
 
         // the way clear: this adapter's own previous run, then whatever else has the name
         VhLogger.Instance.LogDebug("Clean previous tun adapter...");
@@ -433,11 +439,6 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // The alias derived from the app id lets a later start tell this tun from another app's.
         if (_adapterAlias != null)
             await ExecuteCommandAsync($"ip link set dev {AdapterName} alias {_adapterAlias}", cancellationToken).Vhc();
-
-        // Enable IP forwarding
-        VhLogger.Instance.LogDebug("Enabling IP forwarding...");
-        await ExecuteCommandAsync("sysctl -w net.ipv4.ip_forward=1", cancellationToken).Vhc();
-        await ExecuteCommandAsync("sysctl -w net.ipv6.conf.all.forwarding=1", cancellationToken).Vhc();
 
         // Bring up the interface
         VhLogger.Instance.LogDebug("Bringing up the TUN...");
@@ -483,9 +484,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// <remarks>
     /// <para>
     /// It removes only what this adapter added: its resolvconf entry and DNS redirect, the TUN device it made, and its
-    /// NAT rules, each deleted by its spec, every copy of it, rather than by restoring a table, so other rules stay. The
-    /// specs name the current primary interface, so rules an earlier run added for another one stay too. A failure is
-    /// logged, not thrown.
+    /// NAT, which is in chains of the adapter's own: the jumps to them and the chains go, and no rule of another
+    /// tool's. A failure is logged, not thrown.
     /// </para>
     /// <para>
     /// Before the device's descriptor is freed, it waits up to a second for the reader to leave, which the device's
@@ -525,16 +525,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // the device is gone, which wakes a reader in its poll
         FreeRetiredTunAdapterFd();
 
-        // Remove previous NAT iptables record
-        if (_natNetworkV4 != null || _natNetworkV6 != null) {
-            VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...",
-                AdapterName);
-            if (_natNetworkV4 != null)
-                TryRemoveNat(_natNetworkV4);
+        // the NAT this adapter added
+        if (_isNatAddedV4)
+            TryRemoveNat(AddressFamily.InterNetwork);
 
-            if (_natNetworkV6 != null)
-                TryRemoveNat(_natNetworkV6);
-        }
+        if (_isNatAddedV6)
+            TryRemoveNat(AddressFamily.InterNetworkV6);
     }
 
     /// <inheritdoc/>
@@ -643,58 +639,87 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     /// <inheritdoc/>
     /// <remarks>
-    /// After removing the rules it added before for the network, it adds three with <c>iptables</c>, or
-    /// <c>ip6tables</c> for IPv6: a masquerade of the network's traffic out of the primary interface, and two
-    /// forwarding rules between that interface and the tunnel's, the way back for related and established
-    /// connections only. Each command waits up to 5 seconds for the xtables lock another tool may hold. A canceled
-    /// start's command may still add its rule after the cleanup; the next start that adds NAT for the network on the same
-    /// primary interface removes it.
+    /// It finds the interface of the host's first default route of the network's IP version, and turns on forwarding
+    /// for that version, for the whole host, which stays on. After removing the chains an earlier run left, it makes
+    /// two of the adapter's own with <c>iptables</c>, or <c>ip6tables</c> for IPv6, named <c>vpnhood_nat_</c> and the
+    /// adapter's name: one in the nat table, with a masquerade of the network's traffic out of that interface, and one
+    /// in the filter table, with two forwarding rules between that interface and the tunnel's, the way back for related
+    /// and established connections only. POSTROUTING and FORWARD each get a jump to its chain. Each command waits up to
+    /// 5 seconds for the xtables lock another tool may hold. A canceled start's command may still add its rule after
+    /// the cleanup; the next start that adds NAT removes it.
     /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The host has no default route of the network's IP version, or a multipath one, or one whose interface has a name
+    /// not valid here.
+    /// </exception>
     /// <exception cref="ExternalException">A command failed.</exception>
     /// <exception cref="System.ComponentModel.Win32Exception">bash could not be started.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        // remove old NAT rule if any
-        TryRemoveNat(ipNetwork);
+        var natInterfaceName = await GetNatInterfaceName(ipNetwork.AddressFamily, cancellationToken).Vhc();
 
-        // recorded before its rules, so a removal finds a half-added set too
+        // NAT forwards, and nothing else here does. Turned on by every start, a client's too, forwarding stayed on
+        // for the whole host, and with IPv6 forwarding on the kernel takes no router advertisement on an interface
+        // whose accept_ra is 1: such a host could lose its IPv6 route. So here alone, and for this IP version alone.
+        // Left on at a stop: another service may count on it by then.
+        var forwardingKey = ipNetwork.IsV4 ? "net.ipv4.ip_forward" : "net.ipv6.conf.all.forwarding";
+        await ExecuteCommandAsync($"sysctl -w {forwardingKey}=1", cancellationToken).Vhc();
+
+        // what an earlier run left, whatever its network and its interface were
+        TryRemoveNat(ipNetwork.AddressFamily);
+
+        // recorded before its chains, so a removal finds a half-made set too
         if (ipNetwork.IsV4)
-            _natNetworkV4 = ipNetwork;
+            _isNatAddedV4 = true;
         else
-            _natNetworkV6 = ipNetwork;
+            _isNatAddedV6 = true;
 
         // Cancellable, unlike resolvconf's add: a rule a cancelled start's command adds after the cleanup serves
-        // only the removed tun, and the next start deletes it; uncancelled, -w 5 could hold such a start 15 s.
-        var iptables = IpTables(ipNetwork);
-        await ExecuteCommandAsync(
-            $"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE",
-            cancellationToken).Vhc();
-
-        await ExecuteCommandAsync($"{iptables} -A FORWARD -i {AdapterName} -o {_primaryAdapterName} -j ACCEPT",
-            cancellationToken).Vhc();
-
-        await ExecuteCommandAsync(
-            $"{iptables} -A FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT",
-            cancellationToken).Vhc();
+        // only the removed tun, and the next start deletes it; uncancelled, -w 5 could hold such a start 35 s.
+        foreach (var command in CreateNatCommands(AdapterName, ipNetwork, natInterfaceName))
+            await ExecuteCommandAsync(command, cancellationToken).Vhc();
     }
 
-    // The rules AddNat adds, each by its own spec: restoring a whole table would also drop a rule
-    // another tool, such as a firewall or Docker, adds meanwhile. The spec names the current primary
-    // interface, so rules an earlier run added for another one stay; left so: they only pass and NAT
-    // the tunnel's own traffic through that interface.
-    private void TryRemoveNat(IpNetwork ipNetwork)
+    // The adapter's NAT of a network: a chain of its own in each table, filled before the jump that leads to it. In
+    // chains, not among the other tools' rules: a rule there is known as the adapter's by its spec alone, so removing
+    // it took a rule of the same spec that a firewall or an administrator wrote.
+    internal static IReadOnlyList<string> CreateNatCommands(string adapterName, IpNetwork ipNetwork,
+        string natInterfaceName)
     {
-        var iptables = IpTables(ipNetwork);
-        TryDeleteRule(iptables, $"-t nat -D POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE");
-        TryDeleteRule(iptables, $"-D FORWARD -i {AdapterName} -o {_primaryAdapterName} -j ACCEPT");
-        TryDeleteRule(iptables,
-            $"-D FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT");
+        var iptables = IpTables(ipNetwork.AddressFamily);
+        var chain = GetNatChainName(adapterName);
+        return [
+            $"{iptables} -t nat -N {chain}",
+            $"{iptables} -t nat -A {chain} -s {ipNetwork} -o {natInterfaceName} -j MASQUERADE",
+            $"{iptables} -t nat -A POSTROUTING -j {chain}",
+            $"{iptables} -N {chain}",
+            $"{iptables} -A {chain} -i {adapterName} -o {natInterfaceName} -j ACCEPT",
+            $"{iptables} -A {chain} -i {natInterfaceName} -o {adapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT",
+            $"{iptables} -A FORWARD -j {chain}"
+        ];
+    }
+
+    // 12 characters and the name's 15 at most: iptables takes a chain name of up to 28
+    private static string GetNatChainName(string adapterName) => $"vpnhood_nat_{adapterName}";
+
+    // The adapter's NAT of an IP version: the jumps to its chains, every copy, then the chains with what is in them,
+    // whatever network and interface they were made for. Each step alone, as most find nothing to remove.
+    private void TryRemoveNat(AddressFamily addressFamily)
+    {
+        VhLogger.Instance.LogDebug("Removing the NAT of the {AdapterName} TUN adapter...", AdapterName);
+        var iptables = IpTables(addressFamily);
+        var chain = GetNatChainName(AdapterName);
+        TryDeleteRule(iptables, $"-t nat -D POSTROUTING -j {chain}");
+        TryRemoveChain(iptables, "-t nat", chain);
+        TryDeleteRule(iptables, $"-D FORWARD -j {chain}");
+        TryRemoveChain(iptables, "", chain);
     }
 
     // -w 5: up to 5 s for the xtables lock another tool, such as a firewall or Docker, may hold, rather
     // than fail at once; the nft backend has no such lock and accepts it all the same.
-    private static string IpTables(IpNetwork ipNetwork) => ipNetwork.IsV4 ? "iptables -w 5" : "ip6tables -w 5";
+    private static string IpTables(AddressFamily addressFamily) =>
+        addressFamily == AddressFamily.InterNetwork ? "iptables -w 5" : "ip6tables -w 5";
 
     // every copy: a delete prints nothing, and fails once none is left
     private static void TryDeleteRule(string iptables, string rule)
@@ -702,6 +727,13 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         string? res = "";
         while (res != null)
             res = VhInvoker.TryInvoke("remove a NAT rule", LogLevel.Debug, () => ExecuteCommand($"{iptables} {rule}"));
+    }
+
+    // emptied first: a chain with a rule in it cannot be deleted
+    private static void TryRemoveChain(string iptables, string table, string chain)
+    {
+        VhInvoker.TryInvoke("empty a NAT chain", LogLevel.Debug, () => ExecuteCommand($"{iptables} {table} -F {chain}"));
+        VhInvoker.TryInvoke("remove a NAT chain", LogLevel.Debug, () => ExecuteCommand($"{iptables} {table} -X {chain}"));
     }
 
     /// <inheritdoc/>
@@ -761,6 +793,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     private const string ResolvConfPath = "/etc/resolv.conf";
+    private static readonly IPAddress[] ResolvedStubServers = [IPAddress.Parse("127.0.0.53"), IPAddress.Parse("127.0.0.54")];
 
     // What systemd-resolved knows, every link's servers: not its stub, which a container cannot reach
     private const string ResolvedServersPath = "/run/systemd/resolve/resolv.conf";
@@ -865,7 +898,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// never meet the rule. A network change rewrites it; a failure is logged, as only forwarded DNS depends on it.
     /// </para>
     /// </remarks>
-    /// <exception cref="Exception">
+    /// <exception cref="InvalidOperationException">
     /// Neither <c>resolvectl</c> nor <c>resolvconf</c> took the servers, or <c>/etc/resolv.conf</c> does not use
     /// them.
     /// </exception>
@@ -894,7 +927,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             // Fail-closed: a VPN up without its DNS servers sends the device's DNS around it. A NetworkManager
             // box without systemd-resolved (Arch's default) gets here, as its resolvconf is systemd-resolved's
             catch (Exception fallbackEx) {
-                throw new Exception(
+                throw new InvalidOperationException(
                     $"{DnsServersError}\n" +
                     $"resolvectl error: {ex.Message}\n" +
                     $"resolvconf error: {fallbackEx.Message}", fallbackEx);
@@ -907,7 +940,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             ? await File.ReadAllTextAsync(ResolvConfPath, cancellationToken).Vhc()
             : string.Empty;
         if (!IsResolvConfOnVpnDns(resolvConf, dnsServers))
-            throw new Exception($"{DnsServersError}\n{ResolvConfPath} does not use them, so DNS would go around the VPN.");
+            throw new InvalidOperationException(
+                $"{DnsServersError}\n{ResolvConfPath} does not use them, so DNS would go around the VPN.");
 
         lock (_dnsRedirectLock)
             _dnsRedirectServers = dnsServers.ToArray();
@@ -916,12 +950,14 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     // Every server in resolv.conf is systemd-resolved's stub or one of the VPN's. A file with none counts as
-    // another server, as glibc then asks 127.0.0.1.
+    // another server, as glibc then asks 127.0.0.1. By address, not by its text: an IPv6 server written another
+    // way than .NET writes it is the same server. One that is no address counts as another server.
     internal static bool IsResolvConfOnVpnDns(string resolvConf, IEnumerable<IPAddress> dnsServers)
     {
-        var allowed = dnsServers.Select(x => x.ToString()).Concat(["127.0.0.53", "127.0.0.54"]).ToHashSet();
+        var allowed = dnsServers.Concat(ResolvedStubServers).ToHashSet();
         var servers = GetNameservers(resolvConf).ToArray();
-        return servers.Length > 0 && servers.All(allowed.Contains);
+        return servers.Length > 0 &&
+               servers.All(x => IPAddress.TryParse(x, out var ipAddress) && allowed.Contains(ipAddress));
     }
 
     private static IEnumerable<string> GetNameservers(string resolvConf)
@@ -1246,7 +1282,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     /// <summary>Removes the TUN device of an adapter that was not disposed, as <see cref="DisposeUnmanaged"/> does.</summary>
     /// <remarks>
-    /// The adapter's handlers on the host's network-change events keep it reachable until it is disposed, so dispose it
+    /// It runs only once nothing holds the adapter, and a started adapter's reader holds it: stop or dispose an adapter
     /// rather than count on this.
     /// </remarks>
     ~LinuxTunVpnAdapter()

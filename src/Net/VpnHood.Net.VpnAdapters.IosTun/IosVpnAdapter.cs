@@ -56,8 +56,19 @@ public class IosVpnAdapter(
     // the process's, as a reconnect makes a new adapter under the tunnel still up, where only the tunnel's can be read
     private static IReadOnlyList<IPAddress> _networkDnsServers = [];
 
+    // The servers the process's last open gave the tunnel, which the device's resolver reports while that tunnel is
+    // up: a reconnect that asks for other servers would take them for the network's.
+    private static IReadOnlyList<IPAddress> _tunnelDnsServers = [];
+
+    // This run's read callback and its number. iOS may still call a callback an earlier run of the adapter armed,
+    // which must arm no more: it would read on beside this run's.
+    private volatile Action<NSData[], NSNumber[]>? _readHandler;
+    private volatile int _readGeneration;
+
+    // the longest packet the parser takes: an IPv6 one, 40 bytes of header and the 65,535 its length field counts
+    private const int MaxPacketLength = 40 + 0xFFFF;
     private const int MaxWriteBatchSize = 32;
-    private readonly byte[] _writeBuffer = new byte[0xFFFF];
+    private readonly byte[] _writeBuffer = new byte[MaxPacketLength];
 
     // Core drains its send channel from a SINGLE consumer (Channel SingleReader=true, and this
     // transport is non-passthrough), so SendPacketsAsync is never invoked concurrently and this lock
@@ -290,6 +301,7 @@ public class IosVpnAdapter(
             throw;
         }
 
+        _tunnelDnsServers = _dnsServers.ToArray();
         _packetFlow = tunnelProvider.PacketFlow;
         VhLogger.Instance.LogDebug("iOS tun adapter has been established.");
 
@@ -384,9 +396,10 @@ public class IosVpnAdapter(
 
     /// <inheritdoc/>
     /// <value>The bundle identifier of the extension.</value>
-    /// <exception cref="Exception">The extension's bundle has no identifier.</exception>
+    /// <exception cref="InvalidOperationException">The extension's bundle has no identifier.</exception>
     protected override string AppPackageId =>
-        NSBundle.MainBundle.BundleIdentifier ?? throw new Exception("Could not get the app BundleIdentifier!");
+        NSBundle.MainBundle.BundleIdentifier ??
+        throw new InvalidOperationException("The extension's bundle has no identifier.");
 
     /// <summary>Does nothing to the socket, and returns <see langword="true"/>.</summary>
     /// <param name="socket">The socket.</param>
@@ -416,23 +429,25 @@ public class IosVpnAdapter(
     /// the tunnel serves the device's DNS.
     /// </summary>
     /// <returns>
-    /// The servers, link-local IPv6 ones and those the opening start asked the tunnel for left out; none before a
-    /// reading found any. They may be stale.
+    /// The servers, with link-local IPv6 ones, those the opening start asked the tunnel for and those the process's
+    /// last open gave it left out; none before a reading found any. They may be stale.
     /// </returns>
     /// <remarks>
     /// The reading is the process's: a reconnect makes a new adapter under the tunnel still up, whose open reads the
-    /// tunnel's servers. Those are left out when the new start asks for the same ones, so the last reading of the
-    /// network's stands; a start that asks for others can let the earlier tunnel's servers in.
+    /// tunnel's servers. Those are left out, whatever servers the new start asks for, so the last reading of the
+    /// network's stands.
     /// </remarks>
     public override IReadOnlyList<IPAddress> GetPrimaryAdapterDnsServers() => _networkDnsServers;
 
     // Read before the tunnel's settings take the device's DNS. An open under a tunnel still up, as a reconnect's, reads
-    // the tunnel's, which are left out, so the last read of the network's stands.
+    // the tunnel's, which are left out, so the last read of the network's stands: the servers that tunnel was given,
+    // and those this start asks for, as a start in a new process after a crash knows only these.
     private void TryReadNetworkDnsServers()
     {
         try {
+            var tunnelDnsServers = _tunnelDnsServers;
             var dnsServers = DeviceDnsServers.Read()
-                .Where(x => !_dnsServers.Contains(x) && !x.IsIPv6LinkLocal)
+                .Where(x => !_dnsServers.Contains(x) && !tunnelDnsServers.Contains(x) && !x.IsIPv6LinkLocal)
                 .ToArray();
             if (dnsServers.Length > 0)
                 _networkDnsServers = dnsServers;
@@ -485,9 +500,9 @@ public class IosVpnAdapter(
     /// <param name="ipPackets">The batch. The list is reused after the call.</param>
     /// <returns>A completed task.</returns>
     /// <remarks>
-    /// A chunk iOS refuses is dropped and counted as dropped, which is logged once until writes succeed again; unlike
-    /// the base's sender, no count of failures stops the adapter. An exception while a chunk is written ends the batch,
-    /// which the base then counts as dropped whole.
+    /// A chunk iOS refuses, or whose write fails, is dropped and counted as dropped, which is logged once until writes
+    /// succeed again, and the chunks after it are still written; unlike the base's sender, no count of failures stops
+    /// the adapter.
     /// </remarks>
     /// <exception cref="InvalidOperationException">The adapter is not open.</exception>
     // iOS ends a dead tunnel itself (stopTunnel), and Apple names no failure to stop on
@@ -508,23 +523,39 @@ public class IosVpnAdapter(
 
             for (var batchStart = 0; batchStart < ipPackets.Count; batchStart += MaxWriteBatchSize) {
                 var batchCount = Math.Min(MaxWriteBatchSize, ipPackets.Count - batchStart);
-                try {
-                    FillWriteBatch(ipPackets, batchStart, batchCount);
 
-                    // a chunk iOS refuses went nowhere: its packets are drops, not packets sent
-                    if (!FlushWriteBatch(flow, batchCount))
-                        for (var i = 0; i < batchCount; i++)
-                            DropPacket(ipPackets[batchStart + i]);
-                }
-                finally {
-                    ClearWriteBatch(batchCount);
-                }
+                // a chunk iOS did not take went nowhere: its packets are drops, not packets sent
+                if (!TryWriteChunk(flow, ipPackets, batchStart, batchCount))
+                    for (var i = 0; i < batchCount; i++)
+                        DropPacket(ipPackets[batchStart + i]);
             }
         }
 
         IosTunDiagnostics.EndTunWrite(writeStart);
 
         return ValueTask.CompletedTask;
+    }
+
+    // Whether iOS took the chunk. One whose write fails is this chunk's loss alone, as one iOS refuses: thrown out of
+    // the batch, the failure made the base count the chunks written before it as dropped, and left the ones after
+    // it untried. Logged at the change alone, as a refusal is.
+    private bool TryWriteChunk(NEPacketTunnelFlow flow, IReadOnlyList<IpPacket> ipPackets, int batchStart,
+        int batchCount)
+    {
+        try {
+            FillWriteBatch(ipPackets, batchStart, batchCount);
+            return FlushWriteBatch(flow, batchCount);
+        }
+        catch (Exception ex) {
+            if (!_writePacketsFailing)
+                VhLogger.Instance.LogError(ex, "iOS: could not write packets to the tunnel; packets are being dropped.");
+
+            _writePacketsFailing = true;
+            return false;
+        }
+        finally {
+            ClearWriteBatch(batchCount);
+        }
     }
 
     private void FillWriteBatch(IReadOnlyList<IpPacket> ipPackets, int batchStart, int batchCount)
@@ -586,7 +617,7 @@ public class IosVpnAdapter(
             // null-conditional is required: this runs in a finally block, and a mid-batch fill
             // failure (garbled packet) leaves the remaining slots null — a plain Dispose would
             // replace the real exception with a NullReferenceException.
-            _writeDataBatch[i].Dispose();
+            _writeDataBatch[i]?.Dispose();
             _writeDataBatch[i] = null!;
             _writeProtocolBatch[i] = null!;
         }
@@ -612,7 +643,8 @@ public class IosVpnAdapter(
     /// </summary>
     /// <remarks>
     /// A packet that does not parse is dropped. With no packet flow, as during a stop, it does nothing, and logs a
-    /// warning when the adapter is started.
+    /// warning when the adapter is started. A callback an earlier run of the adapter asked for, which iOS may still
+    /// call after a reopen, hands on its batch and asks for no more.
     /// </remarks>
     protected override void StartReadingPackets()
     {
@@ -628,10 +660,17 @@ public class IosVpnAdapter(
             return;
         }
 
-        flow.ReadPackets(OnPacketsReceived);
+        // A callback of the run's own, made once: none per batch. The number first: an earlier run's callback
+        // that is called meanwhile then finds it is not its own, and arms nothing.
+        var generation = _readGeneration + 1;
+        Action<NSData[], NSNumber[]> readHandler = (packets, protocols) =>
+            OnPacketsReceived(packets, protocols, generation);
+        _readGeneration = generation;
+        _readHandler = readHandler;
+        flow.ReadPackets(readHandler);
     }
 
-    private void OnPacketsReceived(NSData[] packets, NSNumber[] protocols)
+    private void OnPacketsReceived(NSData[] packets, NSNumber[] protocols, int generation)
     {
         // Freeze locator (diagnostics only): stamp the outbound-read callback time.
         IosTunDiagnostics.MarkTunReadCallback(packets.Length);
@@ -689,8 +728,12 @@ public class IosVpnAdapter(
         // appears "connected but no traffic" (public IP never changes).
         // Re-arm via the field, not a captured flow: if AdapterClose ran while this batch was
         // processing, the chain ends here instead of registering one more dead callback that
-        // could swallow a batch meant for a successor adapter.
-        _packetFlow?.ReadPackets(OnPacketsReceived);
+        // could swallow a batch meant for a successor adapter. Only this run's chain re-arms: an
+        // earlier run's callback, armed before its close and called after the reopen, has handed
+        // on the tunnel's packets above and ends here, or two chains would read side by side.
+        var readHandler = _readHandler;
+        if (generation == _readGeneration && readHandler != null)
+            _packetFlow?.ReadPackets(readHandler);
     }
 
     /// <summary>Not used: iOS hands the packets to <see cref="StartReadingPackets"/>'s callbacks.</summary>

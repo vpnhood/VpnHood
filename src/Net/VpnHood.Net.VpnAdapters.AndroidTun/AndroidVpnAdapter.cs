@@ -42,6 +42,9 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     // and re-checks its state, instead of sleeping on a closed fd until stray traffic arrives.
     private const int PollTimeoutMs = 1000;
 
+    // the longest packet the parser takes: an IPv6 one, 40 bytes of header and the 65,535 its length field counts
+    private const int MaxPacketLength = 40 + 0xFFFF;
+
     private ParcelFileDescriptor? _parcelFileDescriptor;
     private VpnService.Builder? _builder;
     private int _tunFd = -1; // -1 means closed; snapshot it under _readLock/_writeLock before syscalls
@@ -53,7 +56,11 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     private readonly Lock _writeLock = new();
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
-    private readonly byte[] _writeBuffer = new byte[0xFFFF];
+    private readonly byte[] _writeBuffer = new byte[MaxPacketLength];
+
+    // the interface's description, which AdapterAdd starts
+    private VpnService.Builder Builder =>
+        _builder ?? throw new InvalidOperationException("The VPN's builder is not made: AdapterAdd has not run.");
 
     /// <inheritdoc/>
     /// <value>Always <see langword="false"/>: Android moves the interface to the new network.</value>
@@ -101,31 +108,38 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     /// <inheritdoc/>
     /// <remarks>It establishes the interface the builder describes, and sets its file descriptor non-blocking.</remarks>
-    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
-    /// <exception cref="Exception">
-    /// Android did not establish the interface, as when the app is not prepared to run a VPN or its VPN was revoked.
+    /// <exception cref="InvalidOperationException">
+    /// The builder is not made, as <see cref="AdapterAdd"/> has not run; or Android did not establish the interface, as
+    /// when the app is not prepared to run a VPN or its VPN was revoked.
     /// </exception>
     /// <exception cref="PInvokeException">The file descriptor's flags could not be read or set.</exception>
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Establishing Android tun adapter...");
-        ArgumentNullException.ThrowIfNull(_builder);
-        _parcelFileDescriptor = _builder.Establish() ?? throw new Exception("Could not establish VpnService.");
+        var parcelFileDescriptor = Builder.Establish() ??
+                                   throw new InvalidOperationException("Android did not establish the VPN's interface.");
 
-        // Packet I/O goes through libc on the raw fd (see AndroidAPI); ParcelFileDescriptor keeps
-        // owning the fd and AdapterClose invalidates _tunFd before closing it.
-        _tunFd = _parcelFileDescriptor.Fd;
-        SetNonBlocking(_tunFd);
-        _pollFdReads = [
-            new StructPollfd {
-                Fd = _tunFd, Events = (short)OsConstants.Pollin
-            }
-        ];
-        _pollFdWrites = [
-            new StructPollfd {
-                Fd = _tunFd, Events = (short)OsConstants.Pollout
-            }
-        ];
+        // Packet I/O goes through libc on the raw fd (see AndroidAPI); ParcelFileDescriptor keeps owning the fd.
+        // Published and made non-blocking under the locks a close takes the descriptor under: a stop racing the
+        // open closed it in between, and fcntl then touched whatever had taken its number. Published first, so a
+        // failure below leaves it to the start's cleanup.
+        lock (_readLock)
+        lock (_writeLock) {
+            _parcelFileDescriptor = parcelFileDescriptor;
+            var tunFd = parcelFileDescriptor.Fd;
+            SetNonBlocking(tunFd);
+            _tunFd = tunFd;
+            _pollFdReads = [
+                new StructPollfd {
+                    Fd = tunFd, Events = (short)OsConstants.Pollin
+                }
+            ];
+            _pollFdWrites = [
+                new StructPollfd {
+                    Fd = tunFd, Events = (short)OsConstants.Pollout
+                }
+            ];
+        }
 
         VhLogger.Instance.LogDebug("Android tun adapter has been established.");
         _ = cancellationToken;
@@ -152,23 +166,29 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     /// </remarks>
     protected override void AdapterClose()
     {
-        if (_parcelFileDescriptor == null)
+        var parcelFileDescriptor = TakeDescriptor();
+        if (parcelFileDescriptor == null)
             return;
-
-        // invalidate the fd under both I/O locks: no syscall is in flight when the fd closes, and
-        // later syscalls see -1. Poll needs no lock; it only observes and self-heals via its timeout.
-        lock (_readLock)
-        lock (_writeLock) {
-            _tunFd = -1;
-            _pollFdReads = null;
-            _pollFdWrites = null;
-        }
 
         // the close ends the VPN, which the dispose alone does not; a failed close still releases the Java peer
         VhLogger.Instance.LogDebug("Closing tun ParcelFileDescriptor...");
-        VhInvoker.TryInvoke("close the VPN's descriptor", LogLevel.Error, _parcelFileDescriptor.Close);
-        _parcelFileDescriptor.Dispose();
-        _parcelFileDescriptor = null;
+        VhInvoker.TryInvoke("close the VPN's descriptor", LogLevel.Error, parcelFileDescriptor.Close);
+        parcelFileDescriptor.Dispose();
+    }
+
+    // The descriptor leaves the adapter under both I/O locks, the open's too: no syscall is in flight when it
+    // closes, and later ones see -1. Poll needs no lock; it only observes and self-heals via its timeout.
+    private ParcelFileDescriptor? TakeDescriptor()
+    {
+        lock (_readLock)
+        lock (_writeLock) {
+            var parcelFileDescriptor = _parcelFileDescriptor;
+            _parcelFileDescriptor = null;
+            _tunFd = -1;
+            _pollFdReads = null;
+            _pollFdWrites = null;
+            return parcelFileDescriptor;
+        }
     }
 
     /// <summary>
@@ -248,21 +268,19 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     /// <inheritdoc/>
     /// <remarks>It adds the address to the builder, for <see cref="AdapterOpen"/>.</remarks>
-    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
+    /// <exception cref="InvalidOperationException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(_builder);
-        _builder.AddAddress(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);
+        Builder.AddAddress(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     /// <remarks>It adds the route to the builder, for <see cref="AdapterOpen"/>.</remarks>
-    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
+    /// <exception cref="InvalidOperationException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(_builder);
-        _builder.AddRoute(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);
+        Builder.AddRoute(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength);
         return Task.CompletedTask;
     }
 
@@ -275,12 +293,11 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     /// <inheritdoc/>
     /// <remarks>It names the session on the builder, which Android shows in the VPN's settings and notification.</remarks>
-    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
+    /// <exception cref="InvalidOperationException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        ArgumentNullException.ThrowIfNull(_builder);
-        _builder.SetSession(sessionName);
+        Builder.SetSession(sessionName);
         return Task.CompletedTask;
     }
 
@@ -293,46 +310,46 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     /// <inheritdoc/>
     /// <remarks>It sets the MTU on the builder, for both IP versions.</remarks>
-    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
+    /// <exception cref="InvalidOperationException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(_builder);
-        _builder.SetMtu(mtu);
+        Builder.SetMtu(mtu);
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     /// <remarks>It adds the servers to the builder, for <see cref="AdapterOpen"/>.</remarks>
-    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
+    /// <exception cref="InvalidOperationException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(_builder);
+        var builder = Builder;
         foreach (var dnsServer in dnsServers)
-            _builder.AddDnsServer(dnsServer.ToString());
+            builder.AddDnsServer(dnsServer.ToString());
 
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     /// <value>The app's package name.</value>
-    /// <exception cref="Exception">Android gave the service no application context.</exception>
+    /// <exception cref="InvalidOperationException">Android gave the service no application context.</exception>
     protected override string AppPackageId =>
-        vpnService.ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PackageName!");
+        vpnService.ApplicationContext?.PackageName ??
+        throw new InvalidOperationException("Android gave the VPN service no application context.");
 
     /// <inheritdoc/>
     /// <remarks>
     /// It adds each app to the builder; one Android refuses, as an app that is not installed, is logged as an error and
     /// left out.
     /// </remarks>
-    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
+    /// <exception cref="InvalidOperationException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
 
-        ArgumentNullException.ThrowIfNull(_builder);
+        var builder = Builder;
         foreach (var packageId in packageIds)
             try {
-                _builder.AddAllowedApplication(packageId);
+                builder.AddAllowedApplication(packageId);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not add an allowed app. PackageId: {PackageId}", packageId);
@@ -346,15 +363,15 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     /// It adds each app to the builder; one Android refuses, as an app that is not installed, is logged as an error and
     /// left out.
     /// </remarks>
-    /// <exception cref="ArgumentNullException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
+    /// <exception cref="InvalidOperationException">The builder is not made: <see cref="AdapterAdd"/> has not run.</exception>
     protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
 
-        ArgumentNullException.ThrowIfNull(_builder);
+        var builder = Builder;
         foreach (var packageId in packageIds)
             try {
-                _builder.AddDisallowedApplication(packageId);
+                builder.AddDisallowedApplication(packageId);
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not add an disallowed app. PackageId: {PackageId}", packageId);

@@ -116,6 +116,27 @@ public class UtilTest : TestBase
         Assert.IsLessThan(TimeSpan.FromSeconds(15), stopwatch.Elapsed);
     }
 
+    // A command that outlives its time limit is ended, with what it started: left running, it would do its work
+    // after its caller has cleaned up behind it, as a NAT made after a failed start's cleanup
+    [TestMethod]
+    public async Task A_command_still_running_at_its_time_limit_is_ended()
+    {
+        Directory.CreateDirectory(TestHelper.WorkingPath);
+        var markerFile = Path.Combine(TestHelper.WorkingPath, "command-ran-on.txt");
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // three seconds of waiting, then its work: a file
+        await Assert.ThrowsExactlyAsync<TimeoutException>(() => OperatingSystem.IsWindows()
+            ? OsUtils.ExecuteCommandAsync("cmd.exe", $"/c ping -n 4 127.0.0.1 >nul & echo done > \"{markerFile}\"",
+                TimeSpan.FromSeconds(1), TestCt)
+            : OsUtils.ExecuteCommandAsync("/bin/sh", $"-c \"sleep 3; echo done > '{markerFile}'\"",
+                TimeSpan.FromSeconds(1), TestCt));
+        Assert.IsLessThan(TimeSpan.FromSeconds(3), stopwatch.Elapsed);
+
+        await Task.Delay(TimeSpan.FromSeconds(4), TestCt);
+        Assert.IsFalse(File.Exists(markerFile));
+    }
+
     [TestMethod]
     public void Common_files_take_single_names_only()
     {

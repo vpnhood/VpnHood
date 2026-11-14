@@ -59,8 +59,8 @@ public interface IVpnAdapter : IPacketTransport
     /// </summary>
     /// <remarks>
     /// It is raised on the starting thread, once the adapter is up and before the start or the restart completes. A
-    /// handler may stop or dispose the adapter, and start it again once it has stopped it; it must not wait for
-    /// another start or restart of it. A run that is over by a handler's turn is not announced to that handler, and
+    /// handler may stop or dispose the adapter, or start it again, which ends the run it was told of; it must not wait
+    /// for another start or restart of it. A run that is over by a handler's turn is not announced to that handler, and
     /// one run's handlers return before the next run's are called, except those of a run a handler itself starts.
     /// A stop or a disposal on another thread does not wait for the handlers: one may still run, or be called, as
     /// that stop returns.
@@ -119,7 +119,8 @@ public interface IVpnAdapter : IPacketTransport
     /// it and starts reading packets.
     /// </summary>
     /// <remarks>
-    /// Await one start before the next. From the start on, the adapter keeps itself started until
+    /// Await one start before the next. A start on an adapter that is up, or that is restarting, first ends what is
+    /// there, as <see cref="Stop"/> does. From the start on, the adapter keeps itself started until
     /// <see cref="Stop"/>, disposal, or a failure it does not recover from (without
     /// <see cref="VpnAdapterSettings.AutoRestart"/>), which raises <see cref="Failed"/>.
     /// </remarks>

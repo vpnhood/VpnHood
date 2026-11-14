@@ -43,6 +43,7 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
     private const int PollTimeoutMs = 1000;
     private const int ReceivePoolEmptyHResult = unchecked((int)0x8007000E);
     private static readonly TimeSpan SenderStopWaitTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan ReaderStopWaitTimeout = TimeSpan.FromSeconds(1);
 
     // The MTU and the frame size verified with packets end to end; another pair needs a packet-level test of its own.
     private const int WindowsMaxMtu = 1400;
@@ -270,9 +271,9 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
 
     /// <inheritdoc/>
     /// <remarks>
-    /// It closes the packet queue, dropping the packets in it, waits up to a second for a batch being sent, which it
-    /// logs when the batch is late, cancels <see cref="StartedTask"/> if it has not completed, and disposes the
-    /// channel's transport socket. The channel stays up.
+    /// It closes the packet queue, dropping the packets in it, waits up to a second for a batch being sent and up to a
+    /// second for the reader to leave, logging the one that is late, cancels <see cref="StartedTask"/> if it has not
+    /// completed, and disposes the channel's transport socket. The channel stays up.
     /// </remarks>
     protected override void AdapterClose()
     {
@@ -280,9 +281,14 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
 
         // The batch being sent leaves before this returns, as the plug-in stops the channel next and a write must not
         // be inside it then: the batch ends at its next packet, the adapter no longer ready. Bounded, as Windows'
-        // Disconnect waits on it. The reader needs no wait: it touches only the managed queue.
+        // Disconnect waits on it.
         if (!WaitForSender(SenderStopWaitTimeout))
             VhLogger.Instance.LogWarning("The VPN adapter's sender did not leave in time; the channel may stop under it.");
+
+        // The reader too, which the closed queue has woken, though it touches only the managed queue: one that
+        // outlived the close could take a packet of the adapter's next open and hand it on beside that run's reader.
+        if (!WaitForReader(ReaderStopWaitTimeout))
+            VhLogger.Instance.LogWarning("The VPN adapter's reader did not leave in time; it may read into the next start.");
 
         _started.TrySetCanceled();
 
@@ -443,20 +449,21 @@ public sealed class WindowsVpnPluginAdapter(VpnChannel vpnChannel, VpnAdapterSet
         if (_closed)
             return false;
 
-        var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
-
         // StartWithMainTransport sizes its receive-buffer pool from the MTU argument. maxFrameSize
-        // applies to the send pool, so checking only 1500 can overrun a 1280/1400-byte buffer.
-        if (length > _mtu) {
+        // applies to the send pool, so checking only 1500 can overrun a 1280/1400-byte buffer. Before the packet's
+        // bytes are taken: one longer than the write buffer, which IPv6 allows, failed in the copy instead.
+        if (ipPacket.PacketLength > _mtu) {
             if (Interlocked.Exchange(ref _inboundSizeWarningLogged, 1) == 0)
                 VhLogger.Instance.LogWarning(
                     "Windows VPN dropped an inbound packet larger than the channel MTU. Packet: {PacketLength}, MTU: {Mtu}",
-                    length, _mtu);
+                    ipPacket.PacketLength, _mtu);
 
             // true ends the base's tries for it; the drop is told, or the packet would count as sent
             DropPacket(ipPacket);
             return true;
         }
+
+        var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
 
         // Windows' receive pool runs dry when the host falls behind it - frozen between VPN events while no app holds
         // it, Windows' rule for a plug-in - and says so as E_OUTOFMEMORY. A full ring drops the packet, as a TUN's

@@ -17,7 +17,8 @@ namespace VpnHood.Core.Server;
 /// Each reply carries when its request went out, so a session skips it once a later request's reply has applied,
 /// such as a rewarded ad's, which goes on its own.
 /// </summary>
-internal class SessionUsageReporter(IAccessManager accessManager, ISessionResponseHandler sessionResponseHandler)
+internal class SessionUsageReporter(IAccessManager accessManager, ISessionResponseHandler sessionResponseHandler,
+    TimeSpan statusTimeout)
 {
     // after a failed request, a sync waits this long to try again: an access manager that is down gets no
     // request from every bye
@@ -76,13 +77,32 @@ internal class SessionUsageReporter(IAccessManager accessManager, ISessionRespon
     private async Task<ServerCommand> UpdateStatus(ServerStatus status, CancellationToken cancellationToken)
     {
         try {
-            var serverCommand = await accessManager.Server_UpdateStatus(status, cancellationToken).Vhc();
+            var serverCommand = await UpdateStatusInTime(status, cancellationToken).Vhc();
             _retryTime = DateTime.MinValue;
             return serverCommand;
         }
         catch {
             MergeBackCloses(status.SessionUsages);
             throw;
+        }
+    }
+
+    // A status has a limit of its own, shorter than its interval: left to the access manager's, as an HTTP client's
+    // 100 seconds, one that is never answered holds the next one back until the server is counted lost
+    private async Task<ServerCommand> UpdateStatusInTime(ServerStatus status, CancellationToken cancellationToken)
+    {
+        using var timeoutCts = new CancellationTokenSource(statusTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+        try {
+            return await accessManager.Server_UpdateStatus(status, linkedCts.Token).Vhc();
+        }
+        // the caller's own cancellation passes as it is
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
+        catch (OperationCanceledException ex) when (timeoutCts.IsCancellationRequested) {
+            throw new TimeoutException(
+                $"The access manager has not answered the status in {statusTimeout.TotalSeconds} seconds.", ex);
         }
     }
 

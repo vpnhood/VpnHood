@@ -107,6 +107,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             options: new SessionManagerOptions {
                 DeadSessionTimeout = options.DeadSessionTimeout,
                 HeartbeatInterval = options.HeartbeatInterval,
+                StatusTimeout = options.StatusTimeout,
                 VirtualIpNetworkV4 = options.VirtualIpNetworkV4,
                 VirtualIpNetworkV6 = options.VirtualIpNetworkV6
             });

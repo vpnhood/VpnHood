@@ -56,6 +56,10 @@ public class ServerOptions
     public IVpnAdapter? VpnAdapter { get; init; }
     internal bool AutoDisposeAccessManager { get; init; } = true;
     internal TimeSpan ConfigureInterval { get; init; } = TimeSpan.FromSeconds(60);
+
+    // Well inside a status interval: an access manager counts a server lost after a few intervals without a status,
+    // and a status that may wait as long as its HTTP client lets it, 100 seconds, holds the next one back past them
+    internal TimeSpan StatusTimeout { get; init; } = TimeSpan.FromSeconds(30);
     /// <summary>
     /// Gets the server's folder for its own files, as the sessions it recovers after a restart and its last
     /// configuration. The default is the current directory.

@@ -95,7 +95,7 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
         RequestProof = new RequestProof(_serverSecret);
         _deadSessionTimeout = options.DeadSessionTimeout;
         _sessionLocalService = new SessionLocalService(Path.Combine(storagePath, "sessions"), Sessions);
-        _usageReporter = new SessionUsageReporter(_accessManager, this);
+        _usageReporter = new SessionUsageReporter(_accessManager, this, options.StatusTimeout);
         _virtualIpManager = new VirtualIpManager(options.VirtualIpNetworkV4, options.VirtualIpNetworkV6,
             Path.Combine(storagePath, "last-virtual-ips.json"));
 

@@ -11,6 +11,7 @@ using VpnHood.Core.Server.Access.Messaging;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -117,6 +118,37 @@ public class SessionUsageTest : TestBase
         await syncTask;
 
         await AssertBilled(server, token, session);
+    }
+
+    // An access manager counts a server lost after a few intervals without a status: one it leaves unanswered ends
+    // at the server's own timeout, long before the HTTP client's, and the next one goes
+    [TestMethod]
+    public async Task A_status_left_unanswered_ends_at_its_timeout_and_the_next_one_goes()
+    {
+        using var accessManager = await CreateAccessManager();
+        await using var server = new VpnHoodServer(accessManager, new ServerOptions {
+            SocketFactory = new TestSocketFactory(),
+            StoragePath = TestHelper.WorkingPath,
+            AutoDisposeAccessManager = false,
+            PublicIpDiscovery = false,
+            StatusTimeout = TimeSpan.FromMilliseconds(500)
+        });
+        await server.Start(TestCt);
+        Assert.AreEqual(ServerState.Ready, server.State);
+        var baseAccessManager = (TestAccessManager)accessManager.HttpAccessManagerServer.BaseAccessManager;
+        var lastServerStatus = baseAccessManager.LastServerStatus;
+
+        // the access manager holds a status and never answers it
+        var statusRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        accessManager.HttpAccessManagerServer.StatusArrived = () => statusRelease.Task;
+        await server.ConfigureAndSendStatus(TestCt).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestCt);
+        Assert.AreSame(lastServerStatus, baseAccessManager.LastServerStatus);
+
+        // the next one is answered
+        accessManager.HttpAccessManagerServer.StatusArrived = null;
+        await server.ConfigureAndSendStatus(TestCt);
+        Assert.AreNotSame(lastServerStatus, baseAccessManager.LastServerStatus, "The status was not sent.");
+        statusRelease.SetResult();
     }
 
     [TestMethod]

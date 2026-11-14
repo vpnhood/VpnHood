@@ -98,7 +98,8 @@ made by the server, outbound:
 
 Note the direction of `Server_UpdateStatus`: the manager does **not** poll servers. It
 answers a heartbeat and can piggyback an instruction on the reply — that is the whole
-mechanism by which a panel "controls" a server.
+mechanism by which a panel "controls" a server. A manager has 30 seconds to answer a
+heartbeat: the server then gives it up as failed and sends the next one at its interval.
 
 Transport is plain HTTPS to `api/tower/` under the configured base URL, with a static
 `Authorization` header — see

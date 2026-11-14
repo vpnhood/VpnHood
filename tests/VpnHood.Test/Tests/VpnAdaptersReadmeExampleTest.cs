@@ -54,7 +54,7 @@ public class VpnAdaptersReadmeExampleTest
     {
         #region Snippet:VpnAdapterWinTun
         // LinuxTunVpnAdapter, AndroidVpnAdapter and IosVpnAdapter take the same calls
-        using var adapter = new WinTunVpnAdapter(new WinVpnAdapterSettings {
+        using var adapter = new WinTunVpnAdapter(new WinTunVpnAdapterSettings {
             AdapterName = "MyVpn",
             Blocking = false // a full queue drops its oldest packet instead of making a send wait
         });

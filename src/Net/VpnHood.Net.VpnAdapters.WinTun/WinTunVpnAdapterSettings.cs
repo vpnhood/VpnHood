@@ -3,7 +3,7 @@
 namespace VpnHood.Net.VpnAdapters.WinTun;
 
 /// <summary>Represents the settings of a <see cref="WinTunVpnAdapter"/>.</summary>
-public class WinVpnAdapterSettings : VpnAdapterSettings
+public class WinTunVpnAdapterSettings : VpnAdapterSettings
 {
     /// <summary>
     /// Gets or initializes the size of each of the session's two rings, the one for each direction, in bytes: a power

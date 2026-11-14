@@ -17,7 +17,7 @@ but does not run there, as it needs an administrator's rights. Its namespaces ar
 
 ```csharp Snippet:VpnAdapterWinTun
 // LinuxTunVpnAdapter, AndroidVpnAdapter and IosVpnAdapter take the same calls
-using var adapter = new WinTunVpnAdapter(new WinVpnAdapterSettings {
+using var adapter = new WinTunVpnAdapter(new WinTunVpnAdapterSettings {
     AdapterName = "MyVpn",
     Blocking = false // a full queue drops its oldest packet instead of making a send wait
 });
@@ -37,7 +37,7 @@ await adapter.Start(new VpnAdapterOptions {
 
 ## How it works
 
-- `WinTunVpnAdapter` is an `IVpnAdapter`: make it with a `WinVpnAdapterSettings`, whose `AdapterName` names the
+- `WinTunVpnAdapter` is an `IVpnAdapter`: make it with a `WinTunVpnAdapterSettings`, whose `AdapterName` names the
   interface. The
   [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
   goes on from here: sending packets to the host, and stopping.

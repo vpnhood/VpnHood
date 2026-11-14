@@ -509,7 +509,7 @@ public class ServerApp : IDisposable
         }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return new WinTunVpnAdapter(new WinVpnAdapterSettings {
+            return new WinTunVpnAdapter(new WinTunVpnAdapterSettings {
                 AdapterName = AppName,
                 AppId = AppId,
                 Blocking = false,

@@ -40,7 +40,7 @@ namespace VpnHood.Net.VpnAdapters.WinTun;
 /// <exception cref="ArgumentOutOfRangeException">
 /// The settings' blocking timeout is negative or too long, or their queue capacity is not above zero.
 /// </exception>
-public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
+public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
     private uint _adapterIndex;
@@ -259,7 +259,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     }
 
     /// <inheritdoc/>
-    /// <remarks>It starts a WinTun session with rings of <see cref="WinVpnAdapterSettings.RingCapacity"/>.</remarks>
+    /// <remarks>It starts a WinTun session with rings of <see cref="WinTunVpnAdapterSettings.RingCapacity"/>.</remarks>
     /// <exception cref="InvalidOperationException">A stop removed the interface while the start was under way.</exception>
     /// <exception cref="Win32Exception">
     /// WinTun could not start the session, as for a ring size it does not take.

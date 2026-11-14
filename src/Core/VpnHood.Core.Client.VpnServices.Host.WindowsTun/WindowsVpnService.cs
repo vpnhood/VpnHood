@@ -88,7 +88,7 @@ internal class WindowsVpnService : IVpnServiceHandler, IDisposable
                 QueueCapacity = adapterSettings.QueueCapacity,
                 ExcludeLocalNetwork = true
             })
-            : new WinTunVpnAdapter(new WinVpnAdapterSettings {
+            : new WinTunVpnAdapter(new WinTunVpnAdapterSettings {
                 AdapterName = adapterSettings.AdapterName,
                 AutoRestart = adapterSettings.AutoRestart,
                 MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,

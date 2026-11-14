@@ -1,6 +1,6 @@
 # VpnHood! MANAGER - Privacy Policy
 
-*Effective: 2026-11-14.*
+*Effective: 2026-11-16.*
 
 **PLEASE NOTE:** This privacy policy applies just to "VpnHood! MANAGER". To see the privacy policies of our other products, visit the following page: https://www.vpnhood.com/legal/  
 

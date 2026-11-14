@@ -107,7 +107,7 @@ public class TestHttpAccessManagerServer : IDisposable
 
         public override void AddRoutes(IRouteMapper mapper)
         {
-            const string baseUrl = "/api/agent/";
+            const string baseUrl = "/api/tower/";
 
             mapper.AddStatic(HttpMethod.GET, baseUrl + "sessions", async ctx => {
                 var res = await AccessManager.Session_GetAll(ctx.Token);

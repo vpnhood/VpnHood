@@ -61,7 +61,7 @@ public sealed class StatusAddressFamilyHandler : HttpMessageHandler
     private static bool IsStatus(HttpRequestMessage request)
     {
         return request.Method == HttpMethod.Post &&
-               request.RequestUri?.AbsolutePath.EndsWith("/agent/status", StringComparison.Ordinal) == true;
+               request.RequestUri?.AbsolutePath.EndsWith("/tower/status", StringComparison.Ordinal) == true;
     }
 
     private async ValueTask<Stream> Connect(SocketsHttpConnectionContext context, CancellationToken cancellationToken)

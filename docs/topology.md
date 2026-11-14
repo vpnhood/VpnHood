@@ -13,7 +13,7 @@ dials into a client, and nothing dials into a server except clients.
 
 | Piece | What it is | Where it runs |
 | --- | --- | --- |
-| **VpnHood! MANAGER** | The control panel and its agent API. Holds servers, farms, access tokens, usage. | A web service (hosted for you, or your own Access Manager implementation) |
+| **VpnHood! MANAGER** | The control panel and its tower, the API the servers call. Holds servers, farms, access tokens, usage. | A web service (hosted for you, or your own Access Manager implementation) |
 | **VpnHood! SERVER** | The node that carries traffic. | A VPS or dedicated box you rent — not the user's device — [`src/Apps/Server`](../src/Apps/Server) |
 | **VpnHood! CLIENT / CONNECT** | The end-user app. | The user's phone, desktop, or TV |
 | **Access key** | A base64 blob the user pastes. Not a component, but it is how a client learns anything at all. | Issued by the manager, delivered by you |
@@ -23,7 +23,7 @@ dials into a client, and nothing dials into a server except clients.
 ```mermaid
 graph LR
     subgraph one["one manager"]
-        M["VpnHood! MANAGER<br/>agent API + panel"]
+        M["VpnHood! MANAGER<br/>tower + panel"]
     end
 
     subgraph many["many servers — VPSes you rent"]
@@ -100,7 +100,7 @@ Note the direction of `Server_UpdateStatus`: the manager does **not** poll serve
 answers a heartbeat and can piggyback an instruction on the reply — that is the whole
 mechanism by which a panel "controls" a server.
 
-Transport is plain HTTPS to `api/agent/` under the configured base URL, with a static
+Transport is plain HTTPS to `api/tower/` under the configured base URL, with a static
 `Authorization` header — see
 [`HttpAccessManager`](../src/Core/VpnHood.Core.Server.Access/Managers/HttpAccessManagers/HttpAccessManager.cs)
 and its

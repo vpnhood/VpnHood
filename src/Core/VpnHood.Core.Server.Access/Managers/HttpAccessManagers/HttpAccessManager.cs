@@ -12,11 +12,11 @@ using VpnHood.Net.Toolkit.Utils;
 namespace VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 
 /// <summary>
-/// Represents an access manager reached over HTTP, at its agent API under <c>api/agent/</c>.
+/// Represents an access manager reached over HTTP, at its API under <c>api/tower/</c>.
 /// </summary>
 /// <remarks>
-/// JSON goes in camel case. The agent's 503, a gateway's 502 or 504, Cloudflare's 520 to 524, and a refused connection
-/// are taken as maintenance, and fail a call with <see cref="MaintenanceException"/>; 500 is the agent's own error.
+/// JSON goes in camel case. The access manager's 503, a gateway's 502 or 504, Cloudflare's 520 to 524, and a refused connection
+/// are taken as maintenance, and fail a call with <see cref="MaintenanceException"/>; 500 is the access manager's own error.
 /// </remarks>
 public class HttpAccessManager : ApiClientBase, IAccessManager
 {
@@ -41,7 +41,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpAccessManager"/> class over an HTTP client, at the options'
-    /// address under <c>api/agent/</c>, with their authorization where it parses.
+    /// address under <c>api/tower/</c>, with their authorization where it parses.
     /// </summary>
     /// <param name="httpClient">The HTTP client, which stays the caller's.</param>
     /// <param name="options">The access manager's address and authorization.</param>
@@ -49,7 +49,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         : base(httpClient)
     {
         DefaultBaseAddress =
-            new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/agent/").Uri;
+            new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/tower/").Uri;
 
         if (AuthenticationHeaderValue.TryParse(options.Authorization, out var authenticationHeaderValue))
             DefaultAuthorization = authenticationHeaderValue;

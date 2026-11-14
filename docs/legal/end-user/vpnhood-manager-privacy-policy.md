@@ -1,6 +1,6 @@
 # VpnHood! MANAGER - Privacy Policy
 
-*Effective: 2026-11-05.*
+*Effective: 2026-11-14.*
 
 **PLEASE NOTE:** This privacy policy applies just to "VpnHood! MANAGER". To see the privacy policies of our other products, visit the following page: https://www.vpnhood.com/legal/  
 
@@ -64,9 +64,19 @@ You can choose one of the following options for your clients' Activities, and yo
 
 We do not sell or share any data of you and your clients with any third party.  
 
+## How Long We Keep Data
+
+- **Usage history:** your clients' traffic and sessions, for 6 months.  
+- **Server status history:** 3 months.  
+- **Client devices:** a device that has not connected for 6 months is deleted, with its usage on your access keys.  
+- **What you delete:** access keys, servers, server farms, certificates and profiles you delete are removed 6 months later.  
+- **Unused free projects:** a free project that was never used is deleted 6 months after it was created. A free project that has had no activity for a year gets one email to its people, and is deleted 30 days later unless someone uses it in the meantime. Paid projects are never deleted this way.  
+- **Deleted projects:** when you delete a project, we remove it and everything in it 30 days later.  
+- **Your account:** if you have no project and have not signed in for a year, we delete your account.  
+
 ## Delete Your Account
 
-You can request to delete your account and data from the Manager database. Still, it is almost impossible to erase your data from our old backups, which were created by database cloud services such as Azure Database.  
+You can request to delete your account and data from the Manager database. Deleted data stays in our backups for up to 14 days.  
 
 ## Changes to This Privacy Policy
 

@@ -10,7 +10,7 @@ namespace VpnHood.Test.Tests;
 public class LinuxTunVpnAdapterTest
 {
     [TestMethod]
-    public void An_adapter_can_protect_a_socket_before_its_first_start()
+    public void An_adapter_says_it_can_protect_a_socket_before_its_first_start()
     {
         // the client asks once, when it is made, before any start: told no, it never bound a socket out of the tunnel
         using var adapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {

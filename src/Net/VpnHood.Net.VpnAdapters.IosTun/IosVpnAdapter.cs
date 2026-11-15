@@ -61,9 +61,12 @@ public class IosVpnAdapter(
     private static IReadOnlyList<IPAddress> _tunnelDnsServers = [];
 
     // This run's read callback and its number. iOS may still call a callback an earlier run of the adapter armed,
-    // which must arm no more: it would read on beside this run's.
+    // which must arm no more: it would read on beside this run's. An open numbers itself, and leaves the number
+    // as a ticket that one starter of reads takes (TakeReadHandler).
     private volatile Action<NSData[], NSNumber[]>? _readHandler;
     private volatile int _readGeneration;
+    private int _readTicket;
+    private readonly Lock _readStartLock = new();
 
     // the longest packet the parser takes: an IPv6 one, 40 bytes of header and the 65,535 its length field counts
     private const int MaxPacketLength = 40 + 0xFFFF;
@@ -262,9 +265,11 @@ public class IosVpnAdapter(
             }
         }
 
-        // Set DNS servers if any are provided
-        if (_dnsServers.Count > 0) {
-            using var dnsSettings = new NEDnsSettings(_dnsServers.Select(x => x.ToString()).ToArray());
+        // Set DNS servers if any are provided. A copy, taken before the waits below: it is what the tunnel gets, and
+        // what is recorded as the tunnel's once it has them, whatever a stop does to the list meanwhile
+        var tunnelDnsServers = _dnsServers.ToArray();
+        if (tunnelDnsServers.Length > 0) {
+            using var dnsSettings = new NEDnsSettings(tunnelDnsServers.Select(x => x.ToString()).ToArray());
             networkSettings.DnsSettings = dnsSettings;
         }
 
@@ -277,7 +282,7 @@ public class IosVpnAdapter(
         // about to install so the host extension can verify what actually reaches iOS ("connected but no
         // traffic" diagnosis).
         await IosTunDiagnostics.WriteRouteDumpAsync(remoteAddress, _mtu, networkSettings,
-            _ipv4Networks, _ipv4Routes, _ipv6Networks, _ipv6Routes, _dnsServers, cancellationToken).Vhc();
+            _ipv4Networks, _ipv4Routes, _ipv6Networks, _ipv6Routes, tunnelDnsServers, cancellationToken).Vhc();
 
         // CRITICAL: apply the network settings to iOS. Without this call the tunnel never
         // installs its routes, the OS-level tun is never brought up (no VPN status-bar
@@ -301,8 +306,17 @@ public class IosVpnAdapter(
             throw;
         }
 
-        _tunnelDnsServers = _dnsServers.ToArray();
-        _packetFlow = tunnelProvider.PacketFlow;
+        _tunnelDnsServers = tunnelDnsServers;
+
+        // This open's number, and the ticket for its one read chain. The flow with them: a starter that took the
+        // ticket before the flow was there would find no flow, and leave this open with no reads at all.
+        lock (_readStartLock) {
+            var readGeneration = _readGeneration + 1;
+            _readGeneration = readGeneration;
+            _readTicket = readGeneration;
+            _packetFlow = tunnelProvider.PacketFlow;
+        }
+
         VhLogger.Instance.LogDebug("iOS tun adapter has been established.");
 
         // Notify the deferred start-tunnel completion handler that the tunnel is live.
@@ -643,11 +657,17 @@ public class IosVpnAdapter(
     /// </summary>
     /// <remarks>
     /// A packet that does not parse is dropped. With no packet flow, as during a stop, it does nothing, and logs a
-    /// warning when the adapter is started. A callback an earlier run of the adapter asked for, which iOS may still
-    /// call after a reopen, hands on its batch and asks for no more.
+    /// warning when the adapter is started. An open has one chain of reads: a second call for the same open does
+    /// nothing. A callback an earlier run of the adapter asked for, which iOS may still call after a reopen, hands on
+    /// its batch and asks for no more.
     /// </remarks>
     protected override void StartReadingPackets()
     {
+        // the open's read is asked for already, by the starter that came first
+        var readHandler = TakeReadHandler();
+        if (readHandler == null)
+            return;
+
         // Base fires this from a fire-and-forget Task.Run after AdapterOpen, so a throw here would
         // fault an unobserved task and vanish. A null flow during a concurrent Stop is normal;
         // a null flow on a started adapter means outbound traffic would silently never be read
@@ -660,14 +680,26 @@ public class IosVpnAdapter(
             return;
         }
 
-        // A callback of the run's own, made once: none per batch. The number first: an earlier run's callback
-        // that is called meanwhile then finds it is not its own, and arms nothing.
-        var generation = _readGeneration + 1;
-        Action<NSData[], NSNumber[]> readHandler = (packets, protocols) =>
-            OnPacketsReceived(packets, protocols, generation);
-        _readGeneration = generation;
-        _readHandler = readHandler;
         flow.ReadPackets(readHandler);
+    }
+
+    // The callback of an open's read chain, made once: none per batch. One starter gets it, by the ticket the open
+    // left. Counted by each starter for itself, two starters, one of a run that has ended and one of the next,
+    // could come to the same number and each keep a chain of reads going. Under the lock the open numbers itself
+    // under, so the handler left for the chain's later reads is that open's own, never an older starter's.
+    private Action<NSData[], NSNumber[]>? TakeReadHandler()
+    {
+        lock (_readStartLock) {
+            var generation = _readTicket;
+            if (generation == 0)
+                return null;
+
+            _readTicket = 0;
+            Action<NSData[], NSNumber[]> readHandler = (packets, protocols) =>
+                OnPacketsReceived(packets, protocols, generation);
+            _readHandler = readHandler;
+            return readHandler;
+        }
     }
 
     private void OnPacketsReceived(NSData[] packets, NSNumber[] protocols, int generation)

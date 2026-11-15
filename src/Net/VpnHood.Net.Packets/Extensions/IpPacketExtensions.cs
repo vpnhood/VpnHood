@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Buffers.Binary;
+using System.Net;
 using System.Runtime.InteropServices;
 using VpnHood.Net.Toolkit.Net;
 
@@ -324,7 +325,8 @@ public static class IpPacketExtensions
         /// </summary>
         /// <remarks>
         /// A fragment's payload checksum is left as it is, since it covers the whole datagram, which no fragment
-        /// holds. A payload of another protocol is left as it is.
+        /// holds; after a change of an address, <see cref="UpdatePayloadChecksum"/> brings it in line. A payload of
+        /// another protocol is left as it is.
         /// </remarks>
         /// <exception cref="ArgumentException">The payload is not a valid packet of its protocol.</exception>
         public void UpdateAllChecksums()
@@ -347,6 +349,66 @@ public static class IpPacketExtensions
 
             if (ipPacket.Protocol == IpProtocol.IcmpV6)
                 ipPacket.ExtractIcmpV6().UpdateChecksum(ipPacket);
+        }
+
+        /// <summary>
+        /// Updates the checksum of the packet's TCP, UDP or ICMPv6 payload for a change of one of the packet's
+        /// addresses, from the change alone (RFC 1624), without reading the rest of the payload.
+        /// </summary>
+        /// <remarks>
+        /// It is for a fragment, whose payload checksum <see cref="UpdateAllChecksums"/> leaves as it is: the fragment
+        /// that holds the checksum takes the change, and one that holds none is left as it is. That is the datagram's
+        /// first fragment, or, in IPv4, the second where the first ends before a TCP checksum. An IPv6 fragment after
+        /// the first is never changed: where its piece lies in the payload is not known from it alone, and the first
+        /// holds the payload's header (RFC 7112). Nothing changes either for a payload of another protocol, whose
+        /// checksum covers no address, or for a UDP checksum of zero, which means none. A checksum that was wrong
+        /// before the address changed stays wrong.
+        /// </remarks>
+        /// <param name="oldAddress">The address as it was, in network byte order.</param>
+        /// <param name="newAddress">The address as it is now, of the same IP version.</param>
+        /// <exception cref="ArgumentException">The addresses are not both 4 or both 16 bytes long.</exception>
+        public void UpdatePayloadChecksum(ReadOnlySpan<byte> oldAddress, ReadOnlySpan<byte> newAddress)
+        {
+            if (oldAddress.Length != newAddress.Length || oldAddress.Length is not (4 or 16))
+                throw new ArgumentException("The addresses must be of one IP version.", nameof(newAddress));
+
+            // where the protocol keeps a checksum that covers the addresses
+            var checksumOffset = ipPacket.Protocol switch {
+                IpProtocol.Udp => 6,
+                IpProtocol.Tcp => 16,
+                IpProtocol.IcmpV6 => 2,
+                _ => -1
+            };
+
+            // its place in this packet, which holds the payload from payloadOffset on
+            var payloadOffset = GetPayloadOffset(ipPacket);
+            var payload = ipPacket.Payload.Span;
+            if (checksumOffset < 0 || payloadOffset < 0 || checksumOffset < payloadOffset ||
+                payload.Length < checksumOffset - payloadOffset + 2)
+                return;
+
+            var checksumField = payload.Slice(checksumOffset - payloadOffset, 2);
+            var checksum = BinaryPrimitives.ReadUInt16BigEndian(checksumField);
+            var isUdp = ipPacket.Protocol == IpProtocol.Udp;
+            if (isUdp && checksum == 0)
+                return;
+
+            // RFC 1624's HC' = ~(~HC + ~m + m'), as the checksum of those words: the old checksum's complement, the
+            // old address's, and the new address
+            Span<byte> words = stackalloc byte[2 + 16 + 16];
+            words = words[..(2 + oldAddress.Length * 2)];
+            BinaryPrimitives.WriteUInt16BigEndian(words, (ushort)~checksum);
+            for (var i = 0; i < oldAddress.Length; i++)
+                words[2 + i] = (byte)~oldAddress[i];
+
+            newAddress.CopyTo(words[(2 + oldAddress.Length)..]);
+            var newChecksum = ChecksumUtils.ComputeChecksum(words);
+
+            // UDP sends a computed zero as all ones, as zero means no checksum
+            if (isUdp && newChecksum == 0)
+                newChecksum = 0xFFFF;
+
+            BinaryPrimitives.WriteUInt16BigEndian(checksumField, newChecksum);
         }
     }
 
@@ -469,6 +531,22 @@ public static class IpPacketExtensions
             length = ipPacket.Buffer.Length;
             return backupBuffer;
         }
+    }
+
+    // Where the packet's payload begins in its upper-layer packet, in bytes: at its start, but for a fragment after
+    // its datagram's first, which holds a later piece. An IPv4 fragment's offset says where. An IPv6 one's counts
+    // the extension headers before the upper-layer packet too, which only the first fragment holds, so there it
+    // is not known: -1.
+    private static int GetPayloadOffset(IpPacket ipPacket)
+    {
+        if (!ipPacket.IsFragment)
+            return 0;
+
+        if (ipPacket is IpV4Packet ipV4Packet)
+            return ipV4Packet.FragmentOffset * 8;
+
+        IpV6ExtensionHeaders.FindUpperLayer(ipPacket.Buffer.Span, out _, out _, out var fragmentOffset);
+        return fragmentOffset == 0 ? 0 : -1;
     }
 
     // a fragment's payload is a piece of its upper-layer packet, which reads as one only by chance

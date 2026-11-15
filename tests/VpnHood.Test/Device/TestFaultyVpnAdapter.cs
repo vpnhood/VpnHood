@@ -1,3 +1,4 @@
+using System.Net;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -16,12 +17,23 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
 {
     private readonly ManualResetEventSlim _readerRelease = new(false);
     private readonly ManualResetEventSlim _senderRelease = new(false);
+    private readonly ManualResetEventSlim _heldPacketRelease = new(false);
+    private readonly ManualResetEventSlim _readRelease = new(false);
+    private readonly ManualResetEventSlim _interfaceCheckRelease = new(false);
     private readonly TaskCompletionSource _startRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public volatile bool HoldBeforeAdd; // the start holds before it adds the adapter until ReleaseStart
     public volatile bool IsStartHeld;
     public volatile bool FailStart;
     public volatile bool FailRead;
     public volatile bool FailWrite;
+    public volatile IpPacket? FailingPacket; // the one packet whose write fails
+    public volatile IpPacket? HeldPacket; // the one packet whose write holds until ReleaseHeldPacket
+    public volatile bool IsPacketHeld;
+    public volatile bool HoldRead; // the reader's next read holds until ReleaseRead, then gives a packet
+    public volatile bool IsReadHeld;
+    public volatile bool CheckInterface; // the adapter looks for its interface when the network changes
+    public volatile bool HoldInterfaceCheck; // that look holds, under the restart lock, until ReleaseInterfaceCheck
+    public volatile bool IsInterfaceCheckHeld;
     public volatile bool FailClose;
     public volatile bool FailAddIpV6; // the interface refuses its IPv6 address
     public volatile bool RefuseWrite; // the interface takes no packet: every write finds it full
@@ -39,14 +51,30 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     public volatile bool IsReading;
     public int ReadingCount; // readers running, this run's and any that outlived their stop
     public TimeSpan ReaderWaitTimeout = TimeSpan.FromSeconds(5); // the stop's wait for the reader
+    public TimeSpan SenderWaitTimeout = TimeSpan.FromSeconds(5); // the stop's wait for the batch being sent
     public int StartCount; // starts tried
     public int RouteCount; // routes the starts added
     public int OpenCount; // starts completed: IsStarted is true from a start's first step on
+    public int WriteCount; // writes tried
     public bool? ReaderEndedAtClose; // what the stop's wait for the reader answered
     public bool? SenderEndedAtClose; // what the stop's wait for the sender answered
     public bool? WasReadingAtClose;
 
     protected override TimeSpan AutoRestartDelay => TimeSpan.FromMilliseconds(200);
+
+    protected override bool CheckAdapterInterfaceAfterNetworkChanged => CheckInterface;
+
+    // the null adapter has no interface to lose: the look only holds
+    protected override bool IsAdapterInterfaceEnabled()
+    {
+        if (HoldInterfaceCheck) {
+            IsInterfaceCheckHeld = true;
+            _interfaceCheckRelease.Wait();
+            IsInterfaceCheckHeld = false;
+        }
+
+        return true;
+    }
 
     protected override async Task AdapterAdd(CancellationToken cancellationToken)
     {
@@ -111,7 +139,15 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     protected override IpPacket? ReadPacket(int mtu)
     {
         ReadBufferSize = mtu;
-        return base.ReadPacket(mtu);
+        if (!HoldRead)
+            return base.ReadPacket(mtu);
+
+        // one reader's read: a later run's reader beside it reads on
+        HoldRead = false;
+        IsReadHeld = true;
+        _readRelease.Wait();
+        IsReadHeld = false;
+        return PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.3"), IPAddress.Parse("10.0.0.2"), 53, 1000, new byte[16]);
     }
 
     protected override int ReadPacket(byte[] buffer)
@@ -136,8 +172,15 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
 
     protected override bool WritePacket(IpPacket ipPacket)
     {
-        if (FailWrite)
+        Interlocked.Increment(ref WriteCount);
+        if (FailWrite || ReferenceEquals(ipPacket, FailingPacket))
             throw new IOException("Test: the adapter could not be written.");
+
+        if (ReferenceEquals(ipPacket, HeldPacket)) {
+            IsPacketHeld = true;
+            _heldPacketRelease.Wait();
+            IsPacketHeld = false;
+        }
 
         if (HoldSender) {
             IsSenderHeld = true;
@@ -167,6 +210,24 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         _senderRelease.Set();
     }
 
+    public void ReleaseHeldPacket()
+    {
+        HeldPacket = null;
+        _heldPacketRelease.Set();
+    }
+
+    public void ReleaseRead()
+    {
+        HoldRead = false;
+        _readRelease.Set();
+    }
+
+    public void ReleaseInterfaceCheck()
+    {
+        HoldInterfaceCheck = false;
+        _interfaceCheckRelease.Set();
+    }
+
     // as WinTun's: the reader and the batch being sent leave before what they use is freed
     protected override void AdapterClose()
     {
@@ -175,7 +236,7 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
 
         ReaderEndedAtClose = WaitForReader(ReaderWaitTimeout);
         WasReadingAtClose = IsReading;
-        SenderEndedAtClose = WaitForSender(TimeSpan.FromSeconds(5));
+        SenderEndedAtClose = WaitForSender(SenderWaitTimeout);
         base.AdapterClose();
         IsOpen = false;
     }
@@ -184,6 +245,9 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     {
         _readerRelease.Set();
         _senderRelease.Set();
+        _heldPacketRelease.Set();
+        _readRelease.Set();
+        _interfaceCheckRelease.Set();
         _startRelease.TrySetResult();
         base.DisposeManaged();
     }

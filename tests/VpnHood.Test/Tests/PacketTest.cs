@@ -474,6 +474,117 @@ public class PacketTest : TestBase
         Assert.IsTrue(ipPacket.IsFragment);
     }
 
+    private static IpPacket BuildDatagram(IPAddress source, IPAddress destination, IpProtocol protocol)
+    {
+        byte[] payload = [1, 2, 3, 4, 5, 6, 7];
+        var ipPacket = protocol == IpProtocol.Udp
+            ? PacketBuilder.BuildUdp(source, destination, 1000, 2000, payload)
+            : PacketBuilder.BuildTcp(source, destination, 1000, 2000, [], payload);
+        ipPacket.UpdateAllChecksums();
+        return ipPacket;
+    }
+
+    // the packet as a fragment of its datagram: all of it, with a place in the datagram and more to come or not
+    private static IpPacket BuildFragment(IpPacket ipPacket, int offset, bool moreFragments)
+    {
+        if (ipPacket.Version == IpVersion.IPv6)
+            return IpV6ExtensionHeaderBuilder.Insert(ipPacket,
+                IpV6ExtensionHeaderBuilder.Fragment(offset, moreFragments));
+
+        using var copy = (IpV4Packet)ipPacket.Clone();
+        copy.MoreFragments = moreFragments;
+        copy.FragmentOffset = offset;
+        copy.UpdateHeaderChecksum();
+        return PacketBuilder.Parse(copy.Buffer.Span);
+    }
+
+    [TestMethod]
+    [DataRow("10.0.0.2", "192.168.5.7", "198.51.100.9", IpProtocol.Udp)]
+    [DataRow("10.0.0.2", "192.168.5.7", "198.51.100.9", IpProtocol.Tcp)]
+    [DataRow("2001:db8::1", "fd00::7", "2001:db8::2", IpProtocol.Udp)]
+    [DataRow("2001:db8::1", "fd00::7", "2001:db8::2", IpProtocol.Tcp)]
+    public void A_fragments_checksum_follows_a_change_of_its_address(string source, string newSource,
+        string destination, IpProtocol protocol)
+    {
+        var sourceAddress = IPAddress.Parse(source);
+        var newSourceAddress = IPAddress.Parse(newSource);
+        using var datagram = BuildDatagram(sourceAddress, IPAddress.Parse(destination), protocol);
+        using var expected = BuildDatagram(newSourceAddress, IPAddress.Parse(destination), protocol);
+
+        // A datagram's first fragment holds its checksum, which covers the addresses and the whole payload: the
+        // fragment cannot compute it again, and takes the change of its source alone
+        using var firstFragment = BuildFragment(datagram, offset: 0, moreFragments: true);
+        firstFragment.SourceAddress = newSourceAddress;
+        firstFragment.UpdateAllChecksums();
+        CollectionAssert.AreNotEqual(expected.Payload.ToArray(), firstFragment.Payload.ToArray());
+        firstFragment.UpdatePayloadChecksum(sourceAddress.GetAddressBytes(), newSourceAddress.GetAddressBytes());
+        CollectionAssert.AreEqual(expected.Payload.ToArray(), firstFragment.Payload.ToArray());
+
+        // a fragment from past the checksum's place holds a piece of the payload, and no checksum to update
+        using var laterFragment = BuildFragment(datagram, offset: 3, moreFragments: false);
+        var laterPayload = laterFragment.Payload.ToArray();
+        laterFragment.SourceAddress = newSourceAddress;
+        laterFragment.UpdatePayloadChecksum(sourceAddress.GetAddressBytes(), newSourceAddress.GetAddressBytes());
+        CollectionAssert.AreEqual(laterPayload, laterFragment.Payload.ToArray());
+    }
+
+    // a piece of the datagram's payload as a fragment of its own, as a router cuts an IPv4 datagram
+    private static IpV4Packet BuildIpV4Piece(IpPacket datagram, int offset, int length, bool moreFragments)
+    {
+        var piece = (IpV4Packet)PacketBuilder.BuildIp(datagram.SourceAddress, datagram.DestinationAddress,
+            datagram.Protocol, length);
+        datagram.Payload.Span.Slice(offset, length).CopyTo(piece.Payload.Span);
+        piece.MoreFragments = moreFragments;
+        piece.FragmentOffset = offset / 8;
+        piece.UpdateHeaderChecksum();
+        return piece;
+    }
+
+    // An IPv4 datagram may be cut at any multiple of 8 bytes, so a TCP checksum, 16 bytes in, is in the second
+    // fragment when the first is that short. Each row cuts once: the pieces, put together after the change, must
+    // be the payload as the new source would have sent it
+    [TestMethod]
+    [DataRow(IpProtocol.Udp, 8)]
+    [DataRow(IpProtocol.Tcp, 8)]
+    [DataRow(IpProtocol.Tcp, 16)]
+    [DataRow(IpProtocol.Tcp, 24)]
+    public void A_cut_IPv4_datagrams_checksum_follows_a_change_of_its_address(IpProtocol protocol, int firstLength)
+    {
+        var sourceAddress = IPAddress.Parse("10.0.0.2");
+        var newSourceAddress = IPAddress.Parse("192.168.5.7");
+        var destinationAddress = IPAddress.Parse("198.51.100.9");
+        using var datagram = BuildDatagram(sourceAddress, destinationAddress, protocol);
+        using var expected = BuildDatagram(newSourceAddress, destinationAddress, protocol);
+
+        using var first = BuildIpV4Piece(datagram, 0, firstLength, moreFragments: true);
+        using var second = BuildIpV4Piece(datagram, firstLength, datagram.Payload.Length - firstLength,
+            moreFragments: false);
+        IpV4Packet[] fragments = [first, second];
+        foreach (var fragment in fragments) {
+            fragment.SourceAddress = newSourceAddress;
+            fragment.UpdateAllChecksums();
+            fragment.UpdatePayloadChecksum(sourceAddress.GetAddressBytes(), newSourceAddress.GetAddressBytes());
+            Assert.IsTrue(fragment.IsHeaderChecksumValid());
+        }
+
+        var reassembled = first.Payload.ToArray().Concat(second.Payload.ToArray()).ToArray();
+        CollectionAssert.AreEqual(expected.Payload.ToArray(), reassembled);
+    }
+
+    [TestMethod]
+    public void A_fragments_UDP_checksum_of_zero_stays_zero()
+    {
+        // built with no checksum, which is what zero says in UDP
+        using var datagram = PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("198.51.100.9"),
+            1000, 2000, [1, 2, 3]);
+        using var fragment = BuildFragment(datagram, offset: 0, moreFragments: true);
+        var payload = fragment.Payload.ToArray();
+        fragment.SourceAddress = IPAddress.Parse("192.168.5.7");
+        fragment.UpdatePayloadChecksum(IPAddress.Parse("10.0.0.2").GetAddressBytes(),
+            IPAddress.Parse("192.168.5.7").GetAddressBytes());
+        CollectionAssert.AreEqual(payload, fragment.Payload.ToArray());
+    }
+
     [TestMethod]
     [DataRow(IpVersion.IPv4)]
     [DataRow(IpVersion.IPv6)]

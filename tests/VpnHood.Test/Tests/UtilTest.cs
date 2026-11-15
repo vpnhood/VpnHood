@@ -137,6 +137,27 @@ public class UtilTest : TestBase
         Assert.IsFalse(File.Exists(markerFile));
     }
 
+    // A timeout the wait refuses must be refused before the command starts: started first, the command ran on
+    // with nothing to end it, and its caller was told only of a bad argument
+    [TestMethod]
+    public async Task A_command_with_a_bad_timeout_is_not_started()
+    {
+        Directory.CreateDirectory(TestHelper.WorkingPath);
+        var markerFile = Path.Combine(TestHelper.WorkingPath, $"command-started-{Guid.NewGuid():N}.txt");
+        var badTimeout = TimeSpan.FromMilliseconds(-2);
+
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => {
+            if (OperatingSystem.IsWindows())
+                OsUtils.ExecuteCommand("cmd.exe", $"/c echo done > \"{markerFile}\"", badTimeout);
+            else
+                OsUtils.ExecuteCommand("/bin/sh", $"-c \"echo done > '{markerFile}'\"", badTimeout);
+        });
+
+        // time for a command that was started to do its work
+        await Task.Delay(TimeSpan.FromSeconds(1), TestCt);
+        Assert.IsFalse(File.Exists(markerFile));
+    }
+
     [TestMethod]
     public void Common_files_take_single_names_only()
     {

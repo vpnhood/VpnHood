@@ -110,7 +110,7 @@ public class IpV6Packet : IpPacket
         // a packet without extension headers pays this one check
         if (IpV6ExtensionHeaders.IsExtensionHeader(NextHeader))
             _upperLayerProtocol =
-                IpV6ExtensionHeaders.FindUpperLayer(buffer.Span, out _headerLength, out _isFragment);
+                IpV6ExtensionHeaders.FindUpperLayer(buffer.Span, out _headerLength, out _isFragment, out _);
     }
 
     private Span<byte> Span => Buffer.Span;

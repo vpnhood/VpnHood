@@ -29,4 +29,7 @@ public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions)
         SetDnsServers(dnsServers, CancellationToken.None);
 
     public void RewriteDns(IpPacket ipPacket, bool read) => SimulateDnsServers(ipPacket, read);
+
+    // what the adapter does to a packet it has captured, before it hands it on
+    public void RewriteCaptured(IpPacket ipPacket) => ProcessReadPacket(ipPacket);
 }

@@ -221,6 +221,34 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_reader_retired_while_it_read_hands_nothing_on()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        adapter.ReaderWaitTimeout = TimeSpan.FromMilliseconds(100);
+        var receivedCount = 0;
+        adapter.PacketReceived += (_, ipPacket) => {
+            Interlocked.Increment(ref receivedCount);
+            ipPacket.Dispose();
+        };
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // the reader is held in a read, past its stop's wait, and the next run starts beside it
+        adapter.HoldRead = true;
+        await AssertEqualsWait(true, () => adapter.IsReadHeld);
+        adapter.Stop();
+        Assert.IsFalse(adapter.ReaderEndedAtClose);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+        await AssertEqualsWait(2, () => adapter.ReadingCount);
+
+        // The read ends with a packet, in a run that is not its reader's. Handed on, it reached the receivers
+        // beside the new run's own reader: a real adapter's late reader may take a packet of the next open
+        adapter.ReleaseRead();
+        await AssertEqualsWait(1, () => adapter.ReadingCount);
+        Assert.AreEqual(0, receivedCount);
+        Assert.IsTrue(adapter.IsStarted);
+    }
+
+    [TestMethod]
     public async Task Start_overtaken_by_a_stop_starts_no_reader()
     {
         using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { StopAfterOpen = true };
@@ -320,6 +348,30 @@ public class VpnAdapterRecoveryTest : TestBase
         Assert.IsTrue(adapter.IsStarted);
         Assert.AreEqual(2, adapter.StartCount);
         Assert.AreEqual(2, adapter.OpenCount);
+    }
+
+    [TestMethod]
+    public async Task A_start_canceled_while_it_waits_still_ends_the_run_that_is_there()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { CheckInterface = true };
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // a look for the interface holds the restart lock, which the owner's next start waits for
+        adapter.HoldInterfaceCheck = true;
+        var checkTask = Task.Run(adapter.HandleNetworkAvailabilityChanged, TestCt);
+        await AssertEqualsWait(true, () => adapter.IsInterfaceCheckHeld);
+        using var startCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var startTask = adapter.Start(CreateAdapterOptions(), startCts.Token);
+
+        // The start is canceled in that wait. It has taken the run's keeping by then, so it ends the run all the
+        // same: left up by the canceled wait, the run had no one to restart it, or to tell of its failure
+        await startCts.CancelAsync();
+        adapter.ReleaseInterfaceCheck();
+        await checkTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            startTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+        Assert.IsFalse(adapter.IsStarted);
+        Assert.AreEqual(1, adapter.OpenCount);
     }
 
     [TestMethod]
@@ -751,7 +803,7 @@ public class VpnAdapterRecoveryTest : TestBase
         await adapter.Start(CreateAdapterOptions(), TestCt);
 
         // the write errors stop the adapter on the sender's thread: at once, not after the wait's 5 s.
-        // One packet per batch, as a batch ends at its first error: each sent before the next is queued
+        // One packet per batch: each is sent before the next is queued
         adapter.FailWrite = true;
         var stopwatch = Stopwatch.StartNew();
         for (var i = 0; i < 30 && adapter.IsStarted; i++) {
@@ -782,6 +834,87 @@ public class VpnAdapterRecoveryTest : TestBase
         });
         Assert.IsInstanceOfType<IOException>(ex);
         Assert.IsFalse(adapter.IsStarted);
+    }
+
+    [TestMethod]
+    public async Task A_packet_whose_write_fails_is_its_own_drop()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // the sender is held in one packet's write, so the three queued behind it go out as one batch
+        adapter.HoldSender = true;
+        adapter.SendPacketQueued(BuildPacket());
+        await AssertEqualsWait(true, () => adapter.IsSenderHeld);
+        var failingPacket = BuildPacket();
+        adapter.FailingPacket = failingPacket;
+        adapter.SendPacketQueued(BuildPacket());
+        adapter.SendPacketQueued(failingPacket);
+        adapter.SendPacketQueued(BuildPacket());
+        adapter.ReleaseSender();
+
+        // The second of the three is the batch's one drop. Its failure used to end the batch: the first, though
+        // written, counted as dropped with it, and the third was never tried
+        await AssertEqualsWait(3L, () => adapter.PacketStat.SentPackets);
+        Assert.AreEqual(1L, adapter.PacketStat.DroppedPackets);
+        Assert.AreEqual(4, adapter.WriteCount);
+        Assert.IsTrue(adapter.IsStarted);
+    }
+
+    [TestMethod]
+    public async Task Ten_failed_writes_in_one_batch_stop_the_adapter()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // twelve packets wait behind a held write, and go out as one batch whose writes all fail
+        adapter.HoldSender = true;
+        adapter.SendPacketQueued(BuildPacket());
+        await AssertEqualsWait(true, () => adapter.IsSenderHeld);
+        for (var i = 0; i < 12; i++)
+            adapter.SendPacketQueued(BuildPacket());
+
+        adapter.FailWrite = true;
+        adapter.ReleaseSender();
+
+        // the tenth failure stops the adapter, and the two packets behind it go with the run, unwritten
+        await AssertEqualsWait(false, () => adapter.IsStarted);
+        await AssertEqualsWait(12L, () => adapter.PacketStat.DroppedPackets);
+        Assert.AreEqual(1L, adapter.PacketStat.SentPackets);
+        Assert.AreEqual(11, adapter.WriteCount);
+    }
+
+    [TestMethod]
+    public async Task A_batch_cut_by_a_stop_does_not_go_on_into_the_next_run()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        adapter.SenderWaitTimeout = TimeSpan.FromMilliseconds(100);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // three packets wait behind a held write, and go out as one batch, which holds in its first packet
+        adapter.HoldSender = true;
+        adapter.SendPacketQueued(BuildPacket());
+        await AssertEqualsWait(true, () => adapter.IsSenderHeld);
+        var heldPacket = BuildPacket();
+        adapter.HeldPacket = heldPacket;
+        adapter.SendPacketQueued(heldPacket);
+        adapter.SendPacketQueued(BuildPacket());
+        adapter.SendPacketQueued(BuildPacket());
+        adapter.ReleaseSender();
+        await AssertEqualsWait(true, () => adapter.IsPacketHeld);
+
+        // a stop that does not wait the batch out, as the sender's own on its errors, and the next run is up
+        // before the batch goes on
+        adapter.Stop();
+        Assert.IsFalse(adapter.SenderEndedAtClose);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // The batch's other two packets were sent to the run that is over, and go with it: written on, they
+        // reached the new run's interface
+        adapter.ReleaseHeldPacket();
+        await AssertEqualsWait(2L, () => adapter.PacketStat.DroppedPackets);
+        Assert.AreEqual(2, adapter.WriteCount);
+        Assert.IsTrue(adapter.IsStarted);
     }
 
     [TestMethod]

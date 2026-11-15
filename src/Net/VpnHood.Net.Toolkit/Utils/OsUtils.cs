@@ -26,18 +26,24 @@ public static class OsUtils
     }
 
     /// <summary>
-    /// Runs a program with its arguments, and waits for it at most a timeout, after which it is killed; reading the rest of
-    /// its output then is not timed.
+    /// Runs a program with its arguments, and waits for it and its output at most a timeout, after which it is killed,
+    /// with the processes found under it.
     /// </summary>
     /// <param name="fileName">The program.</param>
     /// <param name="command">The arguments, as one string.</param>
     /// <param name="timeout">How long to wait, or <see cref="Timeout.InfiniteTimeSpan"/> for no limit.</param>
     /// <returns>The program's standard output.</returns>
+    /// <remarks>
+    /// A process whose parent has ended by the timeout, as one a shell put in the background, may not be found then, and
+    /// runs on: on Linux and macOS none is found once the program itself has ended.
+    /// </remarks>
     /// <exception cref="TimeoutException">
-    /// The program was still running at the timeout, or its output had not ended, as a child it left behind holds it
-    /// open; both are ended.
+    /// The program was still running at the timeout, or its output had not ended, as a process it left behind holds it
+    /// open.
     /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The timeout is negative, other than infinite, or too long; the program is not started.
+    /// </exception>
     /// <exception cref="System.Runtime.InteropServices.ExternalException">
     /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
     /// command line, is the message.
@@ -68,8 +74,8 @@ public static class OsUtils
     }
 
     /// <summary>
-    /// Runs a program with its arguments, and waits for it asynchronously at most a timeout, after which it is ended,
-    /// with the processes it started.
+    /// Runs a program with its arguments, and waits for it and its output asynchronously at most a timeout, after which
+    /// it is killed, with the processes found under it.
     /// </summary>
     /// <param name="fileName">The program.</param>
     /// <param name="command">The arguments, as one string.</param>
@@ -77,14 +83,18 @@ public static class OsUtils
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the program's standard output.</returns>
     /// <remarks>
-    /// A cancellation stops the wait, not the program. The timeout ends the program, and the task waits up to 5 seconds
-    /// more for its end, so that nothing of it is still at work when the caller goes on.
+    /// A cancellation stops the wait, not the program. The timeout kills the program, and the task waits up to 5 seconds
+    /// more for its end, so that it is not still at work when the caller goes on. A process whose parent has ended by
+    /// the timeout, as one a shell put in the background, may not be found then, and runs on: on Linux and macOS none
+    /// is found once the program itself has ended.
     /// </remarks>
     /// <exception cref="TimeoutException">
-    /// The program was still running at the timeout, or its output had not ended, as a child it left behind holds it
-    /// open; both are ended.
+    /// The program was still running at the timeout, or its output had not ended, as a process it left behind holds it
+    /// open.
     /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The timeout is negative, other than infinite, or too long; the program is not started.
+    /// </exception>
     /// <exception cref="System.Runtime.InteropServices.ExternalException">
     /// The command ended with an exit code other than 0, which is the exception's error code; its error output, with the
     /// command line, is the message.
@@ -151,6 +161,12 @@ public static class OsUtils
 
     private static string Execute(ProcessStartInfo startInfo, string commandLine, TimeSpan timeout)
     {
+        // Before the start, by WaitForExit's own limits: left to it, a bad timeout is refused once the command runs,
+        // and nothing ends that command.
+        var timeoutMilliseconds = (long)timeout.TotalMilliseconds;
+        ArgumentOutOfRangeException.ThrowIfLessThan(timeoutMilliseconds, -1, nameof(timeout));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(timeoutMilliseconds, int.MaxValue, nameof(timeout));
+
         VhLogger.Instance.LogDebug($"Executing: {commandLine}");
         using var process = new Process();
         process.StartInfo = startInfo;
@@ -170,7 +186,7 @@ public static class OsUtils
         }
 
         if (!isFinished) {
-            // its children too, which hold the pipes; one that cannot be ended must not hide the timeout
+            // the processes under it too, which hold the pipes; one that cannot be ended must not hide the timeout
             VhInvoker.TryInvoke("end a command that timed out", LogLevel.Warning,
                 () => process.Kill(entireProcessTree: true));
             throw new TimeoutException(
@@ -223,8 +239,10 @@ public static class OsUtils
         }
     }
 
-    // Its children too, which hold the pipes, and its end is waited for: a caller cleans up after the command, which
-    // must not still be at work then. One that cannot be ended is logged, and must not hide the timeout.
+    // The processes under it too, which hold the pipes, and its end is waited for: a caller cleans up after the
+    // command, which must not still be at work then. One that cannot be ended is logged, and must not hide the
+    // timeout. A process whose parent has ended is not always found (see the public overloads' remarks): ending
+    // those too takes a process group or a job of the command's own, which nothing here needs yet.
     private static async Task EndTimedOutAsync(Process process)
     {
         try {

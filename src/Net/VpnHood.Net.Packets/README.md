@@ -23,6 +23,9 @@ dotnet add package VpnHood.Net.Packets
   memory, which it returns when disposed. A rented array needs no owner object.
 - `BuildIp`, `BuildUdp`, `BuildTcp`, `BuildIcmpV4`, `BuildIcmpV6` and `BuildDns` compute no checksum: call
   `UpdateAllChecksums()` before sending. The echo, reset and ICMP error builders compute them unless told not to.
+- A fragment's TCP, UDP or ICMPv6 checksum covers its whole datagram, so `UpdateAllChecksums()` leaves it as it is.
+  After changing a fragment's address, `UpdatePayloadChecksum(oldAddress, newAddress)` brings it in line from the
+  change alone.
 - An IPv6 packet reads through its Hop-by-Hop, Destination Options, Fragment and Authentication headers to the
   upper layer.
 

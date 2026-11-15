@@ -28,7 +28,7 @@ namespace VpnHood.Net.VpnAdapters.LinuxTun;
 /// <c>ip6tables</c>, <c>nft</c> and <c>udevadm</c> through bash; a canceled step stops waiting for its command, which
 /// runs on. The kernel removes the TUN device, with its routes and systemd-resolved's DNS servers for it, when the
 /// process ends, a crash included. A resolvconf entry and the DNS redirect stay, which <see cref="RemoveLeftovers"/>
-/// clears, and so do the NAT chains, until the next start that adds NAT.
+/// clears, and so do the NAT chains, of both IP versions, until the next start that uses NAT.
 /// </para>
 /// <para>
 /// The interface's alias carries a tag made from the app's ID, when there is one (<see cref="VpnAdapterSettings.AppId"/>),
@@ -36,8 +36,9 @@ namespace VpnHood.Net.VpnAdapters.LinuxTun;
 /// one the app left and removed unless a process is known to hold it: a device that is down shows no holder, and the
 /// app's single-instance lock is relied on. One with no tag, as versions before tags made, is taken so too, but only
 /// while it is up, where it shows whether a process holds it. Any other interface of the name refuses the start. NAT,
-/// a server's, turns on forwarding for the whole host, for the IP versions it translates, and leaves it on. There is
-/// no app filter.
+/// a server's, turns on forwarding for the whole host, for the IP versions it translates, and leaves it on; for IPv6
+/// an interface that takes router advertisements goes on taking them (<c>accept_ra</c> 2), but for the adapter's own.
+/// There is no app filter.
 /// </para>
 /// </remarks>
 public class LinuxTunVpnAdapter : TunVpnAdapter
@@ -57,6 +58,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     // the longest packet the parser takes: an IPv6 one, 40 bytes of header and the 65,535 its length field counts
     private const int MaxPacketLength = 40 + 0xFFFF;
+
+    // a folder of settings for each interface, and "all" and "default" beside them
+    private const string Ipv6InterfaceSettingsFolder = "/proc/sys/net/ipv6/conf";
 
     // A closed tun's number is freed only once the reader and the batch being sent have left (as WinTun's
     // session): the reader once the device's removal wakes its poll, the batch, which may sleep in the send
@@ -81,8 +85,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private readonly Lock _dnsRedirectLock = new();
     private IPAddress[]? _dnsRedirectServers;
 
-    // Whether AddNat has made the adapter's chains of an IP version, which AdapterRemove removes. Kept after a
-    // removal: a start the stop overtook may still add rules, which its cleanup removes
+    // Whether AddNat has made the adapter's chains of an IP version, which AdapterRemove removes, and the record
+    // with them. A record kept after its removal would take another adapter's chains: one that has the name by
+    // the time this one starts again, before the start finds the name taken.
     private bool _isNatAddedV4;
     private bool _isNatAddedV6;
     private StructPollfd[]? _pollFdReads;
@@ -402,7 +407,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// It removes what this adapter's last run left, and tries to keep NetworkManager off the interface with a udev
     /// rule under <c>/run</c>, without which a desktop announces the VPN's coming and going as a network connection; a
     /// failure there is logged. Then it makes the TUN device, after removing a TUN device of the name that the app left
-    /// (see the class's remarks), writes the app's tag as its alias, and sets the interface up.
+    /// (see the class's remarks), writes the app's tag as its alias, and sets the interface up. A start that uses NAT
+    /// removes, once the device is made, the NAT chains of the adapter's name that an earlier run left, as one that
+    /// ended in a crash does, of both IP versions; a start without NAT leaves them.
     /// </remarks>
     /// <exception cref="InvalidOperationException">
     /// An interface of the adapter's name is not a TUN device, or is another app's or held by a process; or
@@ -434,6 +441,15 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             ClearAdapterName();
             VhLogger.Instance.LogDebug("Creating tun adapter...");
             _ownTunAdapterFd = OpenTunAdapter(AdapterName, false);
+        }
+
+        // The NAT an earlier run left, as one that ended in a crash, whose chains are still at work. Of both IP
+        // versions, whatever this run's are: left to AddNat, the version this run does not translate stayed. Once
+        // the name is this adapter's, never before: the chains are known by the name alone, and a start that is
+        // refused the name must not take its owner's. Only with NAT: a start without it runs no iptables.
+        if (UseNat) {
+            TryRemoveNat(AddressFamily.InterNetwork);
+            TryRemoveNat(AddressFamily.InterNetworkV6);
         }
 
         // The alias derived from the app id lets a later start tell this tun from another app's.
@@ -525,12 +541,16 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // the device is gone, which wakes a reader in its poll
         FreeRetiredTunAdapterFd();
 
-        // the NAT this adapter added
-        if (_isNatAddedV4)
+        // the NAT this adapter added, and its record (see the fields)
+        if (_isNatAddedV4) {
+            _isNatAddedV4 = false;
             TryRemoveNat(AddressFamily.InterNetwork);
+        }
 
-        if (_isNatAddedV6)
+        if (_isNatAddedV6) {
+            _isNatAddedV6 = false;
             TryRemoveNat(AddressFamily.InterNetworkV6);
+        }
     }
 
     /// <inheritdoc/>
@@ -640,34 +660,38 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// <inheritdoc/>
     /// <remarks>
     /// It finds the interface of the host's first default route of the network's IP version, and turns on forwarding
-    /// for that version, for the whole host, which stays on. After removing the chains an earlier run left, it makes
-    /// two of the adapter's own with <c>iptables</c>, or <c>ip6tables</c> for IPv6, named <c>vpnhood_nat_</c> and the
-    /// adapter's name: one in the nat table, with a masquerade of the network's traffic out of that interface, and one
-    /// in the filter table, with two forwarding rules between that interface and the tunnel's, the way back for related
-    /// and established connections only. POSTROUTING and FORWARD each get a jump to its chain. Each command waits up to
-    /// 5 seconds for the xtables lock another tool may hold. A canceled start's command may still add its rule after
-    /// the cleanup; the next start that adds NAT removes it.
+    /// for that version, for the whole host, which stays on. For IPv6 it first sets <c>accept_ra</c> to 2 on every
+    /// interface that takes router advertisements now, which is one that does not forward yet and has it at 1, other
+    /// than the adapter's own and the loopback; that stays too. The kernel otherwise drops the routes the host has
+    /// from router advertisements, and takes no more of them. Then it makes two chains of the adapter's own with
+    /// <c>iptables</c>, or <c>ip6tables</c> for IPv6, named <c>vpnhood_nat_</c> and the adapter's name: one in the
+    /// nat table, with a masquerade of the network's traffic out of that interface, and one in the filter table,
+    /// with two forwarding rules between that interface and the tunnel's, the way back for related and established
+    /// connections only. POSTROUTING and FORWARD each get a jump to its chain. Each command waits up to 5 seconds
+    /// for the xtables lock another tool may hold. A canceled start's command may still add its rule after the
+    /// cleanup; the next start that uses NAT removes it (see <see cref="AdapterAdd"/>).
     /// </remarks>
     /// <exception cref="InvalidOperationException">
     /// The host has no default route of the network's IP version, or a multipath one, or one whose interface has a name
     /// not valid here.
     /// </exception>
     /// <exception cref="ExternalException">A command failed.</exception>
+    /// <exception cref="IOException">An interface's <c>accept_ra</c> could not be read or set.</exception>
+    /// <exception cref="UnauthorizedAccessException">An interface's <c>accept_ra</c> could not be set.</exception>
     /// <exception cref="System.ComponentModel.Win32Exception">bash could not be started.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         var natInterfaceName = await GetNatInterfaceName(ipNetwork.AddressFamily, cancellationToken).Vhc();
 
-        // NAT forwards, and nothing else here does. Turned on by every start, a client's too, forwarding stayed on
-        // for the whole host, and with IPv6 forwarding on the kernel takes no router advertisement on an interface
-        // whose accept_ra is 1: such a host could lose its IPv6 route. So here alone, and for this IP version alone.
-        // Left on at a stop: another service may count on it by then.
+        // NAT forwards, and nothing else here does: turned on by every start, a client's too, forwarding stayed on
+        // for the whole host. So here alone, and for this IP version alone. Left on at a stop: another service may
+        // count on it by then.
+        if (ipNetwork.IsV6)
+            await KeepRouterAdvertisements(cancellationToken).Vhc();
+
         var forwardingKey = ipNetwork.IsV4 ? "net.ipv4.ip_forward" : "net.ipv6.conf.all.forwarding";
         await ExecuteCommandAsync($"sysctl -w {forwardingKey}=1", cancellationToken).Vhc();
-
-        // what an earlier run left, whatever its network and its interface were
-        TryRemoveNat(ipNetwork.AddressFamily);
 
         // recorded before its chains, so a removal finds a half-made set too
         if (ipNetwork.IsV4)
@@ -679,6 +703,49 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         // only the removed tun, and the next start deletes it; uncancelled, -w 5 could hold such a start 35 s.
         foreach (var command in CreateNatCommands(AdapterName, ipNetwork, natInterfaceName))
             await ExecuteCommandAsync(command, cancellationToken).Vhc();
+    }
+
+    // As IPv6 forwarding goes on, the kernel drops the default route an interface has from a router advertisement
+    // and takes no more of them where accept_ra is 1: a host that has its IPv6 route that way lost it for good. 2
+    // keeps both under forwarding, so it is set first, on every interface that takes advertisements now: the switch
+    // is for all of them, and a second uplink loses its route as the first does. Left at a stop, as forwarding is.
+    private async Task KeepRouterAdvertisements(CancellationToken cancellationToken)
+    {
+        foreach (var interfaceFolder in Directory.GetDirectories(Ipv6InterfaceSettingsFolder)) {
+            // Not the adapter's own: its advertisements would be a VPN client's, which forwarding keeps out.
+            // "all" and "default" are no interfaces, and default is what an interface made later starts with,
+            // the adapter's next one too.
+            var interfaceName = Path.GetFileName(interfaceFolder);
+            if (interfaceName is "all" or "default" or "lo" || interfaceName == AdapterName)
+                continue;
+
+            try {
+                await KeepRouterAdvertisements(interfaceFolder, interfaceName, cancellationToken).Vhc();
+            }
+            catch (IOException) when (!Directory.Exists(interfaceFolder)) {
+                // an interface that has gone since the list was made, as a container's does, has no route to keep
+            }
+        }
+    }
+
+    // Only where the interface does not forward yet, which the switch for all of them is about to change: one that
+    // forwards already takes no advertisement, by its host's own arrangement.
+    private static async Task KeepRouterAdvertisements(string interfaceFolder, string interfaceName,
+        CancellationToken cancellationToken)
+    {
+        var forwarding = await File.ReadAllTextAsync(Path.Combine(interfaceFolder, "forwarding"), cancellationToken).Vhc();
+        if (forwarding.Trim() != "0")
+            return;
+
+        var acceptRaPath = Path.Combine(interfaceFolder, "accept_ra");
+        var acceptRa = await File.ReadAllTextAsync(acceptRaPath, cancellationToken).Vhc();
+        if (acceptRa.Trim() != "1")
+            return;
+
+        VhLogger.Instance.LogInformation(
+            "Setting accept_ra to 2 on {InterfaceName}, so it keeps its route from router advertisements under IPv6 forwarding.",
+            interfaceName);
+        await File.WriteAllTextAsync(acceptRaPath, "2", cancellationToken).Vhc();
     }
 
     // The adapter's NAT of a network: a chain of its own in each table, filled before the jump that leads to it. In

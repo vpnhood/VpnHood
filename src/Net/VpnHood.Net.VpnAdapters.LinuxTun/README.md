@@ -26,7 +26,10 @@ dotnet add package VpnHood.Net.VpnAdapters.LinuxTun
   such as a container's, for the local network or a server systemd-resolved knows.
 - For a server, `UseNat` masquerades each virtual network, IPv4 and IPv6, out of the interface of the default route
   of its IP version, with `iptables` and `ip6tables` rules in chains of the adapter's own (`vpnhood_nat_` and its
-  name), and turns on forwarding for the whole host, for the IP versions it translates. There is no app filter.
+  name), and turns on forwarding for the whole host, for the IP versions it translates. For IPv6 it first sets
+  `accept_ra` to 2 on every interface that takes router advertisements now (one that does not forward yet, with
+  `accept_ra` at 1), other than the adapter's own, so the host keeps the IPv6 routes it has from them. A start with
+  `UseNat` removes the chains an earlier run left, as after a crash, of both IP versions. There is no app filter.
 - Call `LinuxTunVpnAdapter.RemoveLeftovers` when the app starts: it removes the DNS settings a crashed run left.
 
 ## Requirements

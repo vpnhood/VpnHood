@@ -102,6 +102,36 @@ public class WinDivertVpnAdapterTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_captured_fragment_keeps_its_datagrams_checksum()
+    {
+        using var adapter = TestHelper.CreateTestVpnAdapter();
+
+        // started with nothing to capture: only a started adapter has the address a captured packet's source becomes
+        await adapter.Start(new VpnAdapterOptions {
+            SessionName = null,
+            VirtualIpNetworkV4 = IpNetwork.Parse("10.255.0.2/24"),
+            IncludeNetworks = [IpNetwork.Parse("192.168.0.0/16")],
+            DnsServers = []
+        }, TestCt);
+
+        // a UDP datagram's first fragment as the host sends it, from the host's own address; here it holds the
+        // whole datagram, so clearing its flag puts the datagram together
+        using var datagram = (IpV4Packet)PacketBuilder.BuildUdp(new IPEndPoint(IPAddress.Parse("192.0.2.10"), 5353),
+            new IPEndPoint(IPAddress.Parse("198.51.100.1"), 4000), new byte[64]);
+        datagram.UpdateAllChecksums();
+        datagram.MoreFragments = true;
+        using var fragment = (IpV4Packet)PacketBuilder.Parse(datagram.Buffer.Span);
+        adapter.RewriteCaptured(fragment);
+
+        // Its source is the adapter's now, which the datagram's checksum covers, and a fragment cannot compute that
+        // checksum again: left as it was, the datagram failed it at the far end
+        Assert.AreEqual(IPAddress.Parse("10.255.0.2"), fragment.SourceAddress);
+        fragment.MoreFragments = false;
+        using var whole = PacketBuilder.Parse(fragment.Buffer.Span);
+        Assert.IsTrue(whole.ExtractUdp().IsChecksumValid(whole));
+    }
+
+    [TestMethod]
     public async Task A_new_run_does_not_write_with_the_last_runs_capture_header()
     {
         using var adapter = TestHelper.CreateTestVpnAdapter();

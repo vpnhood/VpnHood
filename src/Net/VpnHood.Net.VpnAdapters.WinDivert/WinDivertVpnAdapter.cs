@@ -299,14 +299,19 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// </exception>
     protected override IpPacket ReadPacket(int mtu)
     {
-        if (_device == null)
-            throw new InvalidOperationException("Device is not initialized.");
+        var device = _device ?? throw new InvalidOperationException("Device is not initialized.");
 
         // a blocking read gives a packet or fails: any other status is an error for the reader to count, as
         // a null would loop at once, uncounted (ERROR_NO_DATA after a shutdown of the handle would spin it)
-        var status = _device.GetNextPacket(out var packetCapture);
+        var status = device.GetNextPacket(out var packetCapture);
         if (status != GetPacketStatus.PacketRead)
             throw new InvalidOperationException($"Could not read from WinDivert. Status: {status}");
+
+        // Of the capture that is open now alone: a reader of the last run that is still here after a stop and the
+        // next start would put back the header that start cleared, and the new run would write by the old one's
+        // interface
+        if (!ReferenceEquals(device, _device))
+            throw new InvalidOperationException("The capture this packet was read from has been closed.");
 
         _lastCaptureHeader = (WinDivertHeader)packetCapture.Header;
         var rawPacket = packetCapture.GetPacket();
@@ -358,7 +363,8 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     /// <remarks>
     /// A packet of an IP version the adapter has no virtual address of keeps its source. A query's destination is kept
     /// for its answer by its IP version, source port and query ID, the latest for each, until 30 seconds pass with no
-    /// query or answer using it. A fragment keeps its destination: it holds only a piece of its UDP packet.
+    /// query or answer using it. A fragment keeps its destination: it holds only a piece of its UDP packet. Its source
+    /// changes as any packet's, and the checksum of its datagram, which the first fragment holds, takes that change.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// The packet's payload is invalid for its protocol, which the rewrite's checksums read.
@@ -454,17 +460,35 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
                 return;
             }
 
-            ipPacket.SourceAddress = adapterIp;
+            ChangeAddress(ipPacket, source: true, adapterIp);
         }
         else {
             var primaryAdapterIp = GetPrimaryAdapterAddress(ipPacket.Version);
             if (primaryAdapterIp == null)
                 throw new InvalidOperationException("Could not send packet to inbound. there is no internal IP.");
 
-            ipPacket.DestinationAddress = primaryAdapterIp;
+            ChangeAddress(ipPacket, source: false, primaryAdapterIp);
         }
+    }
+
+    // A fragment's payload checksum covers its whole datagram, so it cannot be computed again: the fragment that
+    // holds it takes the address's change alone, or the datagram put together at the far end fails its checksum
+    private static void ChangeAddress(IpPacket ipPacket, bool source, IPAddress address)
+    {
+        Span<byte> oldAddress = stackalloc byte[16];
+        var currentAddress = source ? ipPacket.SourceAddressSpan : ipPacket.DestinationAddressSpan;
+        oldAddress = oldAddress[..currentAddress.Length];
+        currentAddress.CopyTo(oldAddress);
+
+        if (source)
+            ipPacket.SourceAddress = address;
+        else
+            ipPacket.DestinationAddress = address;
 
         ipPacket.UpdateAllChecksums();
+        if (ipPacket.IsFragment)
+            ipPacket.UpdatePayloadChecksum(oldAddress,
+                source ? ipPacket.SourceAddressSpan : ipPacket.DestinationAddressSpan);
     }
 
     // internal, for the tests: a capture with SimulateDns takes every DNS query of the machine, which no test may

@@ -20,7 +20,7 @@ namespace VpnHood.App.AvaloniaUI.Dev;
 // can pair with it exactly as with a TV, and the UI in the window a desktop head opens
 // (DesktopWindowFit): a phone's shape where the screen has room for it, a TV's panel with --tv.
 // Never shipped.
-// "--sample-key" starts it with a server profile, which the location pages need.
+// "--test-key" starts it with a server profile, which the location pages need.
 // "--tv" runs it as a TV (AppDescriptor.IsTv: the pairing row, the ring on arrival); without it, as
 // a phone or a desktop. "--connect" runs it as the Connect product - the violet look, no keys to
 // add (AppOptions.UiTheme, IsAddAccessKeySupported); without it, as the client. "--store google"
@@ -93,11 +93,11 @@ internal static class Program
             // shows on a first run, and a run that skips it shows a build no one ships
             IsAddAccessKeySupported = !isConnect, // a connect head ships one built-in profile and takes no keys
             UiTheme = isConnect ? "violet" : "blue",
-            // "--sample-key" starts with the engine's own sample token, so the run has a server
+            // "--test-key" starts with the test server's access key, so the run has a server
             // profile: without one the app has no location to show and no page behind the location
             // row, which is a walk through a build no one ships. It reaches no server of ours, and
             // it is the key the debug heads already embed.
-            AccessKeys = args.Contains("--sample-key") ? [ClientOptions.SampleAccessKey] : [],
+            AccessKeys = args.Contains("--test-key") ? [ClientOptions.TestAccessKey] : [],
             // a store build: the store's account and tier as that head sets them - Play lets a buyer type
             // a code in, the App Store does not - and no terms screen, which a store's install replaces;
             // Google Play has no subscriptions screen on a TV

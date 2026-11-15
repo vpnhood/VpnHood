@@ -14,11 +14,17 @@ nor build VpnHood itself, and taking a newer VpnHood means changing one version 
      your app connects to; keep it out of a public repository.
    - `branding/` and `icons/`: your logo, the first-run privacy summary and your icons.
 3. **Build it.** Build each platform's head with `dotnet build`, for example `dotnet build src/VpnApp.Windows.Web`. A
-   Debug build without an access key connects to VpnHood's sample server, so your first run needs no server of your
+   Debug build without an access key connects to VpnHood's test server, so your first run needs no server of your
    own.
 
 The template's [README](https://github.com/vpnhood/VpnHood.App.Template#readme) has every setting, what each
 platform's build needs, and how to publish.
+
+## The samples
+
+To see VpnHood at work in a smaller app first, or to use only part of it, such as the VPN engine in an app of your
+own, read [the samples](https://github.com/vpnhood/VpnHood.App.Samples): each is a small app, connected to VpnHood's
+test server.
 
 ## Heads: one for each platform and store
 

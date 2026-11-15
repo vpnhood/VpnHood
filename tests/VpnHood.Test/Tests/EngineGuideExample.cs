@@ -28,8 +28,8 @@ internal static class EngineGuideExample
         var options = new ClientOptions {
             AdapterName = "MyVpn",
             ClientId = Guid.NewGuid().ToString(), // the device's: make it once, then keep it
-            // VpnHood's sample server, for tests: your app uses your own server's access key
-            AccessKey = ClientOptions.SampleAccessKey
+            // VpnHood's test server: your app uses your own server's access key
+            AccessKey = ClientOptions.TestAccessKey
         };
 
         var workingFolder = Path.Combine(
@@ -63,8 +63,8 @@ internal static class EngineGuideExample
             ClientOptions = new ClientOptions {
                 AdapterName = "MyVpn",
                 ClientId = Guid.NewGuid().ToString(), // the device's: make it once, then keep it
-                // VpnHood's sample server, for tests: your app uses your own server's access key
-                AccessKey = ClientOptions.SampleAccessKey
+                // VpnHood's test server: your app uses your own server's access key
+                AccessKey = ClientOptions.TestAccessKey
             }
         }, cancellationToken);
 

@@ -30,8 +30,8 @@ using var adapter = new WinTunVpnAdapter(new WinTunVpnAdapterSettings {
 var options = new ClientOptions {
     AdapterName = "MyVpn",
     ClientId = Guid.NewGuid().ToString(), // the device's: make it once, then keep it
-    // VpnHood's sample server, for tests: your app uses your own server's access key
-    AccessKey = ClientOptions.SampleAccessKey
+    // VpnHood's test server: your app uses your own server's access key
+    AccessKey = ClientOptions.TestAccessKey
 };
 
 var workingFolder = Path.Combine(
@@ -51,7 +51,7 @@ while (client.State != ClientState.Disposed)
 
 1. **The adapter is the platform's.** WinTun's adds a network interface, so the program runs as an administrator;
    `LinuxTunVpnAdapter` takes the same calls on Linux.
-2. **The access key names the server.** `ClientOptions.SampleAccessKey` is VpnHood's sample server, which ends each
+2. **The access key names the server.** `ClientOptions.TestAccessKey` is VpnHood's test server, which ends each
    session after a few minutes; your app connects with an access key of your own server.
 3. **The client ID is the device's.** Make it once and keep it: the server counts a device by it.
 4. **Disposing the client disconnects.** The session also ends on its own, when the server ends it.
@@ -73,8 +73,8 @@ await serviceManager.Start(uiContext, new VpnServiceOptions {
     ClientOptions = new ClientOptions {
         AdapterName = "MyVpn",
         ClientId = Guid.NewGuid().ToString(), // the device's: make it once, then keep it
-        // VpnHood's sample server, for tests: your app uses your own server's access key
-        AccessKey = ClientOptions.SampleAccessKey
+        // VpnHood's test server: your app uses your own server's access key
+        AccessKey = ClientOptions.TestAccessKey
     }
 }, cancellationToken);
 

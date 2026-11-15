@@ -37,8 +37,8 @@ It runs `VpnHoodAvaloniaDev`, the developer tool under `src/Apps/Tools/AvaloniaU
 own. Your installed client is never read, changed or deleted. The folder is removed before and
 after each run, so every run is a first run and the terms page is part of what gets checked.
 
-`--sample-key` gives it the engine's own sample token, so there is a server profile and the
-location page has something to draw. The walk never connects, and that token reaches no server of
+`--test-key` gives it the test server's access key, so there is a server profile and the
+location page has something to draw. The walk never connects, and that key reaches no server of
 ours. The folder starts with `/null-capture` in its `settings.json`, so a stray key press on Connect
 would still dial no adapter and leave the machine's routes and DNS alone.
 

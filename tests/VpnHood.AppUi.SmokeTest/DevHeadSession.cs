@@ -37,9 +37,9 @@ internal sealed class DevHeadSession : IDisposable
 
         DeleteStorageFolder(storageFolderPath);
         WriteNullCaptureSettings(storageFolderPath);
-        // --sample-key gives the run a server profile, without which the location row raises a
+        // --test-key gives the run a server profile, without which the location row raises a
         // notice instead of opening a page. It reaches no server; the walk never connects.
-        string[] arguments = ["--connect", "--sample-key", "--no-activate", "--storage", StorageFolderName];
+        string[] arguments = ["--connect", "--test-key", "--no-activate", "--storage", StorageFolderName];
         if (Environment.GetEnvironmentVariable(PicturesVariable) != "1")
             arguments = [.. arguments, "--minimized"];
 

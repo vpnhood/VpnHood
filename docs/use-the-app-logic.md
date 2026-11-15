@@ -24,8 +24,8 @@ var initParams = new AppInitParams {
         // a UI's logo and first-run consent, from its assets; your screens may skip them
         LogoAssetPath = "images/logo.png",
         PrivacyConsentAssetName = "privacy-consent",
-        // VpnHood's sample server, for tests: your app uses your own server's access key
-        AccessKeys = [ClientOptions.SampleAccessKey]
+        // VpnHood's test server: your app uses your own server's access key
+        AccessKeys = [ClientOptions.TestAccessKey]
     }
 };
 ```
@@ -33,7 +33,7 @@ var initParams = new AppInitParams {
 1. **The host starts it.** In MAUI, `VpnHoodAppMaui.Init(initParams)` in `MauiProgram`, from the
    `VpnHood.AppUi.Hosting.Maui` package; the app then runs in your app's process, and the VPN service where the
    platform runs it.
-2. **The access keys are the servers it connects to.** `ClientOptions.SampleAccessKey` is VpnHood's sample server,
+2. **The access keys are the servers it connects to.** `ClientOptions.TestAccessKey` is VpnHood's test server,
    which ends each session after a few minutes; your app comes with an access key of your own server.
 3. **The rest of the options** turn on what you need: ads, billing, a premium plan, updates. Each is on the options'
    page of the API reference, `AppOptions`.

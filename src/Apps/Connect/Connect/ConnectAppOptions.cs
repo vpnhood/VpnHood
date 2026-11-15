@@ -27,7 +27,7 @@ public static class ConnectAppOptions
         // engine's sample
         var defaultAccessKey = appConfigs.DefaultAccessKey ??
                                // ReSharper disable once HeuristicUnreachableCode
-                               (AppConstants.IsDebugMode ? ClientOptions.SampleAccessKey : null);
+                               (AppConstants.IsDebugMode ? ClientOptions.TestAccessKey : null);
         return new AppOptions(context, AppConstants.IsDebugMode) {
             PackageTitle = AppConstants.PackageTitle,
             CompanyName = AppConstants.CompanyName,

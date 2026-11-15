@@ -11,7 +11,7 @@ public class AccessKeyTest : TestBase
     [TestMethod]
     public void A_key_is_vh_and_its_base64_which_any_uri_parser_takes()
     {
-        var accessKey = Token.FromAccessKey(ClientOptions.SampleAccessKey).ToAccessKey();
+        var accessKey = Token.FromAccessKey(ClientOptions.TestAccessKey).ToAccessKey();
 
         StringAssert.StartsWith(accessKey, "vh:eyJ");
         Assert.IsTrue(Uri.TryCreate(accessKey, UriKind.Absolute, out var uri), "a key is a link");
@@ -23,7 +23,7 @@ public class AccessKeyTest : TestBase
     [TestMethod]
     public void A_key_given_out_before_as_vh_slash_slash_reads_the_same()
     {
-        var token = Token.FromAccessKey(ClientOptions.SampleAccessKey);
+        var token = Token.FromAccessKey(ClientOptions.TestAccessKey);
         var oldKey = "vh://" + token.ToAccessKey()["vh:".Length..];
 
         Assert.AreEqual(token.ToAccessKey(), Token.FromAccessKey(oldKey).ToAccessKey());
@@ -34,7 +34,7 @@ public class AccessKeyTest : TestBase
     [TestMethod]
     public void A_vh_slash_slash_link_with_the_root_path_reads_the_same()
     {
-        var token = Token.FromAccessKey(ClientOptions.SampleAccessKey);
+        var token = Token.FromAccessKey(ClientOptions.TestAccessKey);
         var link = "vh://" + token.ToAccessKey()["vh:".Length..] + "/";
 
         Assert.AreEqual(token.ToAccessKey(), Token.FromAccessKey(link).ToAccessKey());
@@ -44,7 +44,7 @@ public class AccessKeyTest : TestBase
     [TestMethod]
     public void A_vhkey_key_reads_the_same_and_is_a_link()
     {
-        var token = Token.FromAccessKey(ClientOptions.SampleAccessKey);
+        var token = Token.FromAccessKey(ClientOptions.TestAccessKey);
         var vhkeyKey = "vhkey:" + token.ToAccessKey()["vh:".Length..];
 
         Assert.AreEqual(token.ToAccessKey(), Token.FromAccessKey(vhkeyKey).ToAccessKey());

@@ -26,8 +26,8 @@ internal static class AppLogicGuideExample
                 // a UI's logo and first-run consent, from its assets; your screens may skip them
                 LogoAssetPath = "images/logo.png",
                 PrivacyConsentAssetName = "privacy-consent",
-                // VpnHood's sample server, for tests: your app uses your own server's access key
-                AccessKeys = [ClientOptions.SampleAccessKey]
+                // VpnHood's test server: your app uses your own server's access key
+                AccessKeys = [ClientOptions.TestAccessKey]
             }
         };
         #endregion

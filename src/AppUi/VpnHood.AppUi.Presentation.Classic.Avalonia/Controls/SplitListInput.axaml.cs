@@ -33,9 +33,9 @@ public partial class SplitListInput : UserControl
     public void UseDomainFormat()
     {
         var s = Strings.Current;
+        // no * sample: an entry covers its subdomains, and the lists take no * (DomainTextFileParser.Verify)
         SetHints([
             (s.ExactDomain, "example.com"),
-            (s.WildcardDomain, "*.example.com"),
             (s.Comment, s.CommentDesc),
             (s.DomainRulesHint, null)
         ]);

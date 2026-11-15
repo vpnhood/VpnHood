@@ -41,6 +41,11 @@ internal class SplitDomainSettings(Storage storage)
 
     public void Set(SplitDomains value)
     {
+        // all before any is written: a refused one would leave the lists half saved
+        Validate(value.Includes);
+        Validate(value.Excludes);
+        Validate(value.Blocks);
+
         var changed = Includes != value.Includes || Excludes != value.Excludes || Blocks != value.Blocks;
 
         Includes = value.Includes;
@@ -51,5 +56,5 @@ internal class SplitDomainSettings(Storage storage)
             Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    protected override void Validate(string content) => DomainTextFileParser.Parse(content);
+    protected override void Validate(string content) => DomainTextFileParser.Verify(content);
 }

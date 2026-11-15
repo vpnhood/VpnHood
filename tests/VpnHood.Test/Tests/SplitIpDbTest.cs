@@ -2,6 +2,7 @@
 using System.Net;
 using Microsoft.Data.Sqlite;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.App.Premium;
 using VpnHood.AppLib.App.Services;
 using VpnHood.AppLib.App.Settings;
@@ -473,6 +474,32 @@ public class SplitIpDbTest : TestBase
         Assert.IsNotNull(dbPath3);
         using (var filter = new SqliteIpFilter(next: null, dbPath3))
             Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("1.0.0.200")));
+    }
+
+    // All the lists or none: a refused one left those before it saved, under the page's Revert too.
+    [TestMethod]
+    public void A_refused_ip_list_leaves_every_list_as_it_was()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, $"split-ip-refused-{Guid.NewGuid()}");
+        Directory.CreateDirectory(storagePath);
+        var settingsService = new AppSettingsService(new Storage(new FileSystemStorageProvider(), storagePath),
+            remoteSettingsUrl: null);
+        var appSettings = settingsService.SplitIpViaAppSettings;
+        var deviceSettings = settingsService.SplitIpViaDeviceSettings;
+        appSettings.Set(new SplitIpsViaApp { Includes = "1.0.0.0/8", Excludes = "3.0.0.0/8", Blocks = "" });
+        deviceSettings.Set(new SplitIpsViaDevice { Includes = "1.0.0.0/8", Excludes = "" });
+
+        // in each list after the first, so that list's own check is what keeps the ones before it unsaved
+        Assert.Throws<FormatException>(() =>
+            appSettings.Set(new SplitIpsViaApp { Includes = "2.0.0.0/8", Excludes = "not-an-address", Blocks = "" }));
+        Assert.Throws<FormatException>(() =>
+            appSettings.Set(new SplitIpsViaApp { Includes = "2.0.0.0/8", Excludes = "4.0.0.0/8", Blocks = "not-an-address" }));
+        Assert.Throws<FormatException>(() =>
+            deviceSettings.Set(new SplitIpsViaDevice { Includes = "2.0.0.0/8", Excludes = "not-an-address" }));
+        Assert.AreEqual("1.0.0.0/8", appSettings.Includes);
+        Assert.AreEqual("3.0.0.0/8", appSettings.Excludes);
+        Assert.AreEqual("", appSettings.Blocks);
+        Assert.AreEqual("1.0.0.0/8", deviceSettings.Includes);
     }
 
     private sealed class AllowAllPremiumFeatures : IPremiumFeatureChecker

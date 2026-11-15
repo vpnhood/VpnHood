@@ -32,6 +32,10 @@ internal class SplitIpViaDeviceSettings(Storage storage)
 
     public void Set(SplitIpsViaDevice value)
     {
+        // both before either is written: a refused one would leave the lists half saved
+        Validate(value.Includes);
+        Validate(value.Excludes);
+
         var changed = Includes != value.Includes || Excludes != value.Excludes;
 
         Includes = value.Includes;

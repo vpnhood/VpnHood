@@ -1,6 +1,8 @@
 # Latest
 
 * Fix: With Split DNS on Always use VPN, a name under your network's own DNS domain is no longer looked up outside the VPN. A name that only your network's DNS server knows, such as `nas.lan`, no longer resolves while connected; choose Allow Bypass VPN if you need such names. Where the system does not let the app do this, as Ubuntu 20.04 and 22.04 on a network of that kind that systemd-networkd manages, the app does not connect and says so #linux
+* Update: Split Domains takes no `*`: `example.com` covers the domain and all its subdomains, as `*.example.com` did, and a `*` anywhere else, as `*ads.example.com`, never matched anything. A list with one is refused when you save it, and the app says which entry; a list saved before keeps working as it did
+* Fix: A split list that is refused when you save no longer saves the lists above it on the same page
 * Update: The app has a new icon, its name on a ribbon across the top
 * Feature: The app runs on Android TV, and Remote Access lets you set it up from a phone or computer on the same network #android #store
 * Feature: The app runs on Apple TV, and Remote Access lets you set it up from a phone or computer on the same network #ios

@@ -81,7 +81,7 @@ public interface IAppApi
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was canceled: over HTTP always, in process where the call honours it.
     /// </exception>
-    /// <remarks>The lists are written one at a time, so a list that fails leaves those before it saved.</remarks>
+    /// <remarks>A list that is refused leaves all of them as they were.</remarks>
     Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken);
 
     /// <summary>Gets the IP ranges the device's VPN adapter includes or excludes.</summary>
@@ -111,7 +111,7 @@ public interface IAppApi
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was canceled: over HTTP always, in process where the call honours it.
     /// </exception>
-    /// <remarks>The lists are written one at a time, so a list that fails leaves those before it saved.</remarks>
+    /// <remarks>A list that is refused leaves both as they were.</remarks>
     Task SetSplitIpsViaDevice(SplitIpsViaDevice value, CancellationToken cancellationToken);
 
     /// <summary>Gets the domains the split tunneling includes or excludes.</summary>
@@ -131,6 +131,7 @@ public interface IAppApi
     /// <param name="value">The domains.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="FormatException">A line has a <c>*</c>.</exception>
     /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
     /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, which
     /// <see cref="VpnHood.Net.Toolkit.ApiClients.ApiException.ExceptionTypeName"/> names, or answered with an error
@@ -139,6 +140,10 @@ public interface IAppApi
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was canceled: over HTTP always, in process where the call honours it.
     /// </exception>
+    /// <remarks>
+    /// An entry matches its domain and every subdomain of it, so it needs no <c>*</c>. A list that is refused leaves all
+    /// of them as they were.
+    /// </remarks>
     Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken);
 
     /// <summary>Gets the app's state as it stands, which the UI reads to refresh.</summary>

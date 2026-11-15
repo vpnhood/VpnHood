@@ -41,6 +41,11 @@ internal class SplitIpViaAppSettings(Storage storage)
 
     public void Set(SplitIpsViaApp value)
     {
+        // all before any is written: a refused one would leave the lists half saved
+        Validate(value.Includes);
+        Validate(value.Excludes);
+        Validate(value.Blocks);
+
         var changed = Includes != value.Includes || Excludes != value.Excludes || Blocks != value.Blocks;
 
         Includes = value.Includes;

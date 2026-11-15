@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.App.Premium;
 using VpnHood.AppLib.App.Services;
 using VpnHood.AppLib.App.Settings;
@@ -327,7 +328,7 @@ public class SplitDomainDbTest : TestBase
         // the sets mirror the source files (comments stripped by the parser). A changed source gets a
         // NEW file name, so a running service could keep the old db open until it swaps.
         settingsService.SplitDomainSettings.Includes = "include.com # tunnel me";
-        settingsService.SplitDomainSettings.Excludes = "exclude.com\n; a comment line\n*.exclude.org";
+        settingsService.SplitDomainSettings.Excludes = "exclude.com\n; a comment line\nexclude.org";
         settingsService.SplitDomainSettings.Blocks = "block.com";
         var dbPath2 = await service.EnsureSplitDomainDb(storagePath, TestCt);
         Assert.IsNotNull(dbPath2);
@@ -347,6 +348,66 @@ public class SplitDomainDbTest : TestBase
         Assert.IsNotNull(dbPath3);
         using (var filter = new SqliteDomainFilter(next: null, dbPath3))
             Assert.AreEqual(FilterAction.Default, filter.Process("block.com"));
+    }
+
+    // An entry matches its subdomains already, so a leading "*." changed nothing, and the filters take any other * as a
+    // letter no name has: such an entry matched nothing while it looked like a rule. The lists before the refused one
+    // are not saved either.
+    [TestMethod]
+    [DataRow("*.example.com")]
+    [DataRow("*ads.example.com")]
+    [DataRow("mail.*.example.com")]
+    [DataRow("*.*.example.com")]
+    [DataRow("*")]
+    public void A_domain_with_a_star_anywhere_but_its_start_is_refused(string domain)
+    {
+        var settings = CreateSettingsService(CreateStoragePath()).SplitDomainSettings;
+        settings.Set(new SplitDomains { Includes = "old.com", Excludes = "old.org", Blocks = "" });
+
+        // in each list after the first, so that list's own check is what keeps the ones before it unsaved
+        var exception = Assert.Throws<FormatException>(() =>
+            settings.Set(new SplitDomains { Includes = "new.com", Excludes = $"new.org\n{domain}", Blocks = "" }));
+        StringAssert.Contains(exception.Message, domain);
+        Assert.Throws<FormatException>(() =>
+            settings.Set(new SplitDomains { Includes = "new.com", Excludes = "new.org", Blocks = $"block.com\n{domain}" }));
+        Assert.AreEqual("old.com", settings.Includes);
+        Assert.AreEqual("old.org", settings.Excludes);
+        Assert.AreEqual("", settings.Blocks);
+    }
+
+    // Only a save checks: a list stored before, or edited by hand, is built as it is, rather than a connect that
+    // fails. A leading "*." still means its domain, and a * inside still matches nothing, as they always did.
+    [TestMethod]
+    public async Task A_list_stored_with_a_star_still_builds()
+    {
+        var storagePath = CreateStoragePath();
+        var settingsService = CreateSettingsService(storagePath);
+        settingsService.UserSettings.SplitTunneling.UseDomain = true;
+        var service = new SplitDomainService(settingsService, new AllowAllPremiumFeatures());
+        var listFolder = Path.Combine(storagePath, "splits", "domains");
+        Directory.CreateDirectory(listFolder);
+        await File.WriteAllTextAsync(Path.Combine(listFolder, "blocks.txt"),
+            "block.com\n*.legacy.org\n*ads.example.com", TestCt);
+
+        var dbPath = await service.EnsureSplitDomainDb(storagePath, TestCt);
+        Assert.IsNotNull(dbPath);
+        using var filter = new SqliteDomainFilter(next: null, dbPath);
+        Assert.AreEqual(FilterAction.Block, filter.Process("block.com"));
+        Assert.AreEqual(FilterAction.Block, filter.Process("legacy.org"));
+        Assert.AreEqual(FilterAction.Block, filter.Process("www.legacy.org"));
+        Assert.AreEqual(FilterAction.Default, filter.Process("xads.example.com"));
+    }
+
+    private string CreateStoragePath()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, $"split-domain-{Guid.NewGuid()}");
+        Directory.CreateDirectory(storagePath);
+        return storagePath;
+    }
+
+    private static AppSettingsService CreateSettingsService(string storagePath)
+    {
+        return new AppSettingsService(new Storage(new FileSystemStorageProvider(), storagePath), remoteSettingsUrl: null);
     }
 
     private sealed class AllowAllPremiumFeatures : IPremiumFeatureChecker

@@ -26,8 +26,8 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="11.0.0" />
 		<PackageReference Include="NLog" Version="6.2.2" />
-		<PackageReference Include="NLog.Extensions.Logging" Version="6.2.2" />
-		<PackageReference Include="System.CommandLine" Version="2.0.14" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="6.3.0" />
+		<PackageReference Include="System.CommandLine" Version="3.0.0" />
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="11.0.0" />
 	</ItemGroup>
 	<ItemGroup>

@@ -192,6 +192,30 @@ public class SplitDomainDbTest : TestBase
         Assert.AreEqual(FilterAction.Default, filter.Process("example.com"));
     }
 
+    // The most specific entry decides, whichever set holds it, so an entry under another is an exception to it; only
+    // between entries of the same domain do the sets' order decide. Before, the set decided: a block or an exclude of
+    // a parent took every subdomain whatever else was listed for it.
+    [TestMethod]
+    public async Task The_most_specific_entry_decides()
+    {
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-domain-filter", "most-specific.db");
+        await new DomainListDbBuilder(() => "sig-1",
+            includesFactory: () => ["mail.google.com", "a.b.example.com", "same.org"],
+            excludesFactory: () => ["google.com", "business.facebook.com", "same.org"],
+            blocksFactory: () => ["facebook.com", "b.example.com", "same.org"]
+        ).BuildAsync(dbPath, TestCt);
+        using var filter = new SqliteDomainFilter(next: null, dbPath);
+
+        Assert.AreEqual(FilterAction.Include, filter.Process("mail.google.com"));
+        Assert.AreEqual(FilterAction.Include, filter.Process("x.mail.google.com"));
+        Assert.AreEqual(FilterAction.Exclude, filter.Process("www.google.com"));
+        Assert.AreEqual(FilterAction.Exclude, filter.Process("business.facebook.com"));
+        Assert.AreEqual(FilterAction.Block, filter.Process("www.facebook.com"));
+        Assert.AreEqual(FilterAction.Include, filter.Process("a.b.example.com"));
+        Assert.AreEqual(FilterAction.Block, filter.Process("c.b.example.com"));
+        Assert.AreEqual(FilterAction.Block, filter.Process("www.same.org"));
+    }
+
     [TestMethod]
     public async Task Filter_matches_subdomains_but_not_parents()
     {

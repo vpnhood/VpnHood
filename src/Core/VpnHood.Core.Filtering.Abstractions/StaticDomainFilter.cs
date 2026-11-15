@@ -6,9 +6,11 @@
 /// </summary>
 /// <remarks>
 /// An entry matches its domain and its subdomains, with or without a leading <c>*.</c>, and names and entries are
-/// compared as <see cref="DomainUtils.NormalizeDomain"/> gives them. A name on the block list is blocked, one on the
-/// exclude list excluded, and one on the include list included, in that order; any other name gets the next stage's
-/// verdict. Setting a list copies it and raises <see cref="Changed"/>.
+/// compared as <see cref="DomainUtils.NormalizeDomain"/> gives them. The most specific entry that matches decides,
+/// so an entry under another is an exception to it: with <c>google.com</c> excluded and <c>mail.google.com</c>
+/// included, <c>mail.google.com</c> is included. Where the same domain is on more than one list, Block goes before
+/// Exclude, and Exclude before Include. Any other name gets the next stage's verdict. Setting a list copies it and
+/// raises <see cref="Changed"/>.
 /// </remarks>
 public class StaticDomainFilter : IDomainFilter
 {
@@ -104,8 +106,8 @@ public class StaticDomainFilter : IDomainFilter
     /// <summary>Decides what happens to a flow for a domain name, by the lists, then by the next stage.</summary>
     /// <param name="domain">The name, or <see langword="null"/>.</param>
     /// <returns>
-    /// The verdict of the first list that matches the name, or else the next stage's; <see cref="FilterAction.Default"/>
-    /// for a null, empty or white-space name, which the next stage is not asked about.
+    /// The verdict of the most specific entry that matches the name, or else the next stage's;
+    /// <see cref="FilterAction.Default"/> for a null, empty or white-space name, which the next stage is not asked about.
     /// </returns>
     public FilterAction Process(string? domain)
     {
@@ -113,37 +115,38 @@ public class StaticDomainFilter : IDomainFilter
         if (normalizedDomain.Length == 0)
             return FilterAction.Default;
 
-        if (IsMatch(normalizedDomain, _blocks))
-            return FilterAction.Block;
-
-        if (IsMatch(normalizedDomain, _excludes))
-            return FilterAction.Exclude;
-
-        if (IsMatch(normalizedDomain, _includes))
-            return FilterAction.Include;
-
-        return _nextFilter?.Process(domain) ?? FilterAction.Default;
+        return FindMostSpecific(normalizedDomain, _blocks, _excludes, _includes) ??
+               _nextFilter?.Process(domain) ?? FilterAction.Default;
     }
 
-    // Whether the name or a parent of it is listed. Each is asked for by itself: a sorted list read at the name's
-    // place alone misses a parent whenever another entry sorts between the two, as example-cdn.com does between
-    // example.com and www.example.com
-    private static bool IsMatch(string domain, HashSet<string> domains)
+    // The name, then each parent, nearest first, so the most specific entry decides; at each, the lists in their
+    // order. Each is asked for by itself: a sorted list read at the name's place alone misses a parent whenever
+    // another entry sorts between the two, as example-cdn.com does between example.com and www.example.com
+    private static FilterAction? FindMostSpecific(string domain, HashSet<string> blocks, HashSet<string> excludes,
+        HashSet<string> includes)
     {
-        if (domains.Count == 0)
-            return false;
-
-        var lookup = domains.GetAlternateLookup<ReadOnlySpan<char>>();
         var name = domain.AsSpan();
-        while (!lookup.Contains(name)) {
+        while (true) {
+            if (Contains(blocks, name))
+                return FilterAction.Block;
+
+            if (Contains(excludes, name))
+                return FilterAction.Exclude;
+
+            if (Contains(includes, name))
+                return FilterAction.Include;
+
             var dotIndex = name.IndexOf('.');
             if (dotIndex < 0)
-                return false;
+                return null;
 
             name = name[(dotIndex + 1)..];
         }
+    }
 
-        return true;
+    private static bool Contains(HashSet<string> domains, ReadOnlySpan<char> name)
+    {
+        return domains.Count > 0 && domains.GetAlternateLookup<ReadOnlySpan<char>>().Contains(name);
     }
 
     /// <inheritdoc/>

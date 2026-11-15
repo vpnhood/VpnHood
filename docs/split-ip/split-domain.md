@@ -20,8 +20,10 @@ validated on write, premium-gated by `AppFeature.SplitDomain`):
 | `excludes.txt` | These domains bypass the tunnel (empty ⇒ None). |
 | `blocks.txt` | These domains are dropped entirely at app level (empty ⇒ None). |
 
-Entries match themselves and their subdomains (`google.com` matches `mail.google.com`; the `*.` spelling
-is accepted and equivalent). Comments (`#`, `;`) and blank lines are ignored by `DomainTextFileParser`.
+Entries match themselves and their subdomains (`google.com` matches `mail.google.com`), so an entry takes
+no `*`: a list with one is refused when it is saved (`SplitEntryException`, which the UI words with the
+entry), and a list stored before is read without an entry's leading `*.`, which meant the same
+(`SplitFileSettings.Normalize`). Comments (`#`, `;`) and blank lines are ignored by `DomainTextFileParser`.
 
 The on/off gate is `UserSettings.SplitTunneling.UseDomain`, checked together with the premium feature by the
 service itself (it returns null when inactive) — there is no emptiness short path. Missing files count as
@@ -39,7 +41,12 @@ Set semantics differ from the IP dbs in one deliberate way — the include set i
 - **include** — members return `Include`, the explicit override lane: the flow is forced through the
   tunnel and the IP gates are skipped. Non-members pass as `Default` (the set constrains nothing else).
 - **exclude** — members bypass the tunnel (`Exclude`).
-- **block** — members are dropped entirely (`Block`). Within the db: block > exclude > include.
+- **block** — members are dropped entirely (`Block`).
+
+Within the db the most specific entry that matches decides, whichever set holds it, so an entry under
+another is an exception to it: `google.com` excluded with `mail.google.com` included sends mail through
+the tunnel and the rest of Google around it. Only between entries of the same domain is the order
+block > exclude > include.
 
 Why the asymmetry: every packet has an IP, so IP gates can be pure vetoes; but a domain is *more
 specific* knowledge than an IP, and an exception to an IP-level exclusion can only be expressed by a

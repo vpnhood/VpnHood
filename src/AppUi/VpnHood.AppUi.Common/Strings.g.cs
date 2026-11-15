@@ -1568,7 +1568,7 @@ public sealed partial class Strings
     /// <summary>Domain and all its subdomains:</summary>
     public string ExactDomain => Get("EXACT_DOMAIN");
 
-    /// <summary>Rules: case-insensitive, one domain per line. Block &gt; Exclude &gt; Include.</summary>
+    /// <summary>Rules: case-insensitive, one domain per line. The most specific domain wins; for the same domain, Block &gt; Exclude &gt; I...</summary>
     public string DomainRulesHint => Get("DOMAIN_RULES_HINT");
 
     /// <summary>Asterisk (*) is not supported; remove it. A domain already covers all its subdomains: {entry}</summary>

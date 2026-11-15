@@ -18,8 +18,11 @@ namespace VpnHood.Net.Toolkit.Converters;
 public class JsonStringEnumFallbackConverter<TEnum> : JsonConverter<TEnum>
     where TEnum : struct, Enum
 {
+    // the factory's result may be null by its signature, never for an enum it was made for
     private static readonly JsonConverter<TEnum> Inner =
-        (JsonConverter<TEnum>)new JsonStringEnumConverter<TEnum>().CreateConverter(typeof(TEnum), JsonSerializerOptions.Default);
+        new JsonStringEnumConverter<TEnum>().CreateConverter(typeof(TEnum), JsonSerializerOptions.Default) as
+            JsonConverter<TEnum> ??
+        throw new InvalidOperationException($"System.Text.Json gave no converter of {typeof(TEnum).Name}'s names.");
 
     private static readonly bool IsSigned = Type.GetTypeCode(Enum.GetUnderlyingType(typeof(TEnum))) is
         TypeCode.SByte or TypeCode.Int16 or TypeCode.Int32 or TypeCode.Int64;

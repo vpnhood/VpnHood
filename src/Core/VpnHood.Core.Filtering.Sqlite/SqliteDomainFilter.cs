@@ -15,7 +15,9 @@ namespace VpnHood.Core.Filtering.Sqlite;
 //   include set: member ⇒ Include (force through the tunnel, skip the ip gates)
 // Every entry matches itself and its subdomains ("google.com" matches "mail.google.com"), so a lookup
 // probes the inverted domain and each of its label ancestors with exact point queries — a single
-// greatest-prefix seek would miss an ancestor hiding behind a more specific sibling entry.
+// greatest-prefix seek would miss an ancestor hiding behind a more specific sibling entry. The nearest
+// one that is in any set decides, so an entry under another is an exception to it; the sets' order above
+// decides only between entries of the same domain.
 // The db is immutable at runtime (built once, opened read-only): which sets are populated is probed once
 // at construction, so absent sets cost nothing. All threads share ONE read-only connection, serialized
 // by a lock (same rationale as SqliteIpFilter: lookups are microsecond index seeks, CachedDomainFilter
@@ -31,8 +33,10 @@ namespace VpnHood.Core.Filtering.Sqlite;
 /// <para>
 /// Its own sets decide first: a name in the block set is blocked, one in the exclude set excluded, and one in the
 /// include set included, which sends its flows through the tunnel past every IP filter; any other name gets the next
-/// stage's verdict. An entry matches its domain and every subdomain: a lookup tries the name and each of its parent
-/// domains. Names are compared as <see cref="DomainUtils.NormalizeDomain"/> gives them.
+/// stage's verdict. An entry matches its domain and every subdomain, and the most specific entry that matches decides,
+/// so an entry under another is an exception to it: with <c>google.com</c> excluded and <c>mail.google.com</c>
+/// included, <c>mail.google.com</c> is included. Where the same domain is in more than one set, Block goes before
+/// Exclude, and Exclude before Include. Names are compared as <see cref="DomainUtils.NormalizeDomain"/> gives them.
 /// </para>
 /// <para>
 /// The database is opened read-only when the stage is made and held until its disposal, so it stays readable while a
@@ -113,8 +117,8 @@ public sealed class SqliteDomainFilter : IDomainFilter
     /// <summary>Decides what happens to a flow for a domain name, by the database's sets, then by the next stage.</summary>
     /// <param name="domain">The name, or <see langword="null"/>.</param>
     /// <returns>
-    /// The verdict of the first set that matches the name, or else the next stage's; <see cref="FilterAction.Default"/>
-    /// for a null, empty or white-space name, which the next stage is not asked about.
+    /// The verdict of the most specific entry that matches the name, or else the next stage's;
+    /// <see cref="FilterAction.Default"/> for a null, empty or white-space name, which the next stage is not asked about.
     /// </returns>
     public FilterAction Process(string? domain)
     {
@@ -122,40 +126,43 @@ public sealed class SqliteDomainFilter : IDomainFilter
         if (normalizedDomain.Length == 0)
             return FilterAction.Default;
 
-        var invertedDomain = DomainUtils.InvertDomain(normalizedDomain);
-
-        if (_hasBlocks && Contains(FilterAction.Block, invertedDomain))
-            return FilterAction.Block;
-
-        if (_hasExcludes && Contains(FilterAction.Exclude, invertedDomain))
-            return FilterAction.Exclude;
-
-        if (_hasIncludes && Contains(FilterAction.Include, invertedDomain))
-            return FilterAction.Include;
-
-        return _next?.Process(domain) ?? FilterAction.Default;
+        return FindMostSpecific(DomainUtils.InvertDomain(normalizedDomain)) ??
+               _next?.Process(domain) ?? FilterAction.Default;
     }
 
-    private bool Contains(FilterAction action, string invertedDomain)
+    // The domain itself, then each label ancestor, nearest first ("com.google.www" → "com.google" → "com"), so the
+    // most specific entry decides; at each, the sets in their order. Each candidate is one index seek per set that
+    // has rows, and the walk is as deep as the domain has labels.
+    private FilterAction? FindMostSpecific(string invertedDomain)
     {
         lock (_readerLock) {
-            // teardown race: a lookup that loses the race to Dispose answers "not a member" instead of
-            // touching the disposed connection
+            // teardown race: a lookup that loses the race to Dispose finds no member instead of touching the
+            // disposed connection
             if (_disposed)
-                return false;
+                return null;
 
-            var command = _sharedReader.GetCommand(action);
-
-            // probe the domain itself and every label ancestor ("com.google.www" → "com.google" → "com");
-            // each candidate is one index seek, and the walk is as deep as the domain has labels
             for (var length = invertedDomain.Length; length > 0; length = invertedDomain.LastIndexOf('.', length - 1)) {
-                command.Parameters[0].Value = invertedDomain[..length];
-                if ((long)command.ExecuteScalar()! == 1)
-                    return true;
+                var candidate = invertedDomain[..length];
+                if (_hasBlocks && IsMember(FilterAction.Block, candidate))
+                    return FilterAction.Block;
+
+                if (_hasExcludes && IsMember(FilterAction.Exclude, candidate))
+                    return FilterAction.Exclude;
+
+                if (_hasIncludes && IsMember(FilterAction.Include, candidate))
+                    return FilterAction.Include;
             }
 
-            return false;
+            return null;
         }
+    }
+
+    // under the reader's lock
+    private bool IsMember(FilterAction action, string invertedDomain)
+    {
+        var command = _sharedReader.GetCommand(action);
+        command.Parameters[0].Value = invertedDomain;
+        return (long)command.ExecuteScalar()! == 1;
     }
 
     private static Reader CreateReader(string connectionString)

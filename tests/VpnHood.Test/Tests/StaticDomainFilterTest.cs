@@ -301,6 +301,28 @@ public class StaticDomainFilterTest : TestBase
         Assert.AreEqual(FilterAction.Default, resolver.Process("com"));
     }
 
+    // The most specific entry decides, whichever list holds it, so an entry under another is an exception to it; only
+    // between entries of the same domain do the lists' order decide. Before, the list decided: a block or an exclude of
+    // a parent took every subdomain whatever else was listed for it.
+    [TestMethod]
+    public void The_most_specific_entry_decides()
+    {
+        var resolver = new StaticDomainFilter(null) {
+            Blocks = ["facebook.com", "b.example.com", "same.org"],
+            Excludes = ["google.com", "business.facebook.com", "same.org"],
+            Includes = ["mail.google.com", "a.b.example.com", "same.org"]
+        };
+
+        Assert.AreEqual(FilterAction.Include, resolver.Process("mail.google.com"));
+        Assert.AreEqual(FilterAction.Include, resolver.Process("x.mail.google.com"));
+        Assert.AreEqual(FilterAction.Exclude, resolver.Process("www.google.com"));
+        Assert.AreEqual(FilterAction.Exclude, resolver.Process("business.facebook.com"));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("www.facebook.com"));
+        Assert.AreEqual(FilterAction.Include, resolver.Process("a.b.example.com"));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("c.b.example.com"));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("www.same.org"));
+    }
+
     [TestMethod]
     public void A_list_is_copied_when_it_is_set()
     {

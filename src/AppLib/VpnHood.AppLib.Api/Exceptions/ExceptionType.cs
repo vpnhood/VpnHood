@@ -114,6 +114,10 @@ public enum ExceptionType
     [EnumMember(Value = "VpnServiceRevokedException")]
     VpnServiceRevoked,
 
+    /// <summary>A split tunneling list refused an entry; the error's data carries the entry and why.</summary>
+    [EnumMember(Value = "SplitEntryException")]
+    SplitEntry,
+
     // a store failure in store-agnostic words; the BillingErrorCode rides in Data
 
     /// <summary>A store failed; the error's data carries its billing error code.</summary>

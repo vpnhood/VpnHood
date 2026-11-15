@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.App.Premium;
 using VpnHood.AppLib.App.Services;
@@ -364,11 +365,14 @@ public class SplitDomainDbTest : TestBase
         var settings = CreateSettingsService(CreateStoragePath()).SplitDomainSettings;
         settings.Set(new SplitDomains { Includes = "old.com", Excludes = "old.org", Blocks = "" });
 
-        // in each list after the first, so that list's own check is what keeps the ones before it unsaved
-        var exception = Assert.Throws<FormatException>(() =>
+        // in each list after the first, so that list's own check is what keeps the ones before it unsaved; the error
+        // names the entry and why, for the UI to say it in the person's language
+        var exception = Assert.Throws<SplitEntryException>(() =>
             settings.Set(new SplitDomains { Includes = "new.com", Excludes = $"new.org\n{domain}", Blocks = "" }));
+        Assert.AreEqual(nameof(SplitEntryError.Asterisk), exception.Data["Reason"]);
+        Assert.AreEqual(domain, exception.Data["Entry"]);
         StringAssert.Contains(exception.Message, domain);
-        Assert.Throws<FormatException>(() =>
+        Assert.Throws<SplitEntryException>(() =>
             settings.Set(new SplitDomains { Includes = "new.com", Excludes = "new.org", Blocks = $"block.com\n{domain}" }));
         Assert.AreEqual("old.com", settings.Includes);
         Assert.AreEqual("old.org", settings.Excludes);
@@ -396,6 +400,49 @@ public class SplitDomainDbTest : TestBase
         Assert.AreEqual(FilterAction.Block, filter.Process("legacy.org"));
         Assert.AreEqual(FilterAction.Block, filter.Process("www.legacy.org"));
         Assert.AreEqual(FilterAction.Default, filter.Process("xads.example.com"));
+    }
+
+    // A list stored before the lists took no *, or edited by hand: a leading "*." meant what the domain alone means, so
+    // it goes as the list is read, and the person meets no refusal for it at the next save, which writes the list
+    // without it. The lines end as the parser reads them: at \r\n, \r or \n.
+    [TestMethod]
+    [DataRow("\r\n")]
+    [DataRow("\r")]
+    [DataRow("\n")]
+    public void A_stored_lists_leading_star_goes_as_it_is_read(string lineBreak)
+    {
+        var storagePath = CreateStoragePath();
+        var listFolder = Path.Combine(storagePath, "splits", "domains");
+        Directory.CreateDirectory(listFolder);
+        File.WriteAllText(Path.Combine(listFolder, "blocks.txt"),
+            string.Join(lineBreak, "*.legacy.org", "  *.spaced.org # *.a comment", "*.", "plain.org"));
+        var settings = CreateSettingsService(storagePath).SplitDomainSettings;
+
+        var expected = string.Join(lineBreak, "legacy.org", "  spaced.org # *.a comment", "", "plain.org");
+        Assert.AreEqual(expected, settings.Blocks);
+        settings.Set(settings.Get());
+        Assert.AreEqual(expected, File.ReadAllText(Path.Combine(listFolder, "blocks.txt")));
+    }
+
+    // Only where the leading "*." goes without a change of what the entry matches: with another *, or with white space
+    // after it, the entry matched nothing, and without the "*." it would match example.com. Such an entry stays as it
+    // is, for the save to name.
+    [TestMethod]
+    [DataRow("*.*.example.com")]
+    [DataRow("*. example.com")]
+    [DataRow("*.\texample.com")]
+    [DataRow("*ads.example.com")]
+    public void A_stored_entry_that_matched_nothing_keeps_its_star(string entry)
+    {
+        var storagePath = CreateStoragePath();
+        var listFolder = Path.Combine(storagePath, "splits", "domains");
+        Directory.CreateDirectory(listFolder);
+        File.WriteAllText(Path.Combine(listFolder, "blocks.txt"), $"plain.org\n{entry}");
+        var settings = CreateSettingsService(storagePath).SplitDomainSettings;
+
+        Assert.AreEqual($"plain.org\n{entry}", settings.Blocks);
+        var exception = Assert.Throws<SplitEntryException>(() => settings.Set(settings.Get()));
+        Assert.AreEqual(entry.Trim(), exception.Data["Entry"]);
     }
 
     private string CreateStoragePath()

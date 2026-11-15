@@ -45,5 +45,5 @@ internal class SplitIpViaDeviceSettings(Storage storage)
             Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    protected override void Validate(string content) => IpRangeTextFileParser.Parse(content);
+    protected override void Validate(string content) => IpRangeTextFileParser.Verify(content);
 }

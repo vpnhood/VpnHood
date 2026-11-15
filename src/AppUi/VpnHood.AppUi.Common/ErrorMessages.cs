@@ -131,6 +131,8 @@ public static class ErrorMessages
                 return new ErrorMessage.Dialog(strings.UnreachableProxiesMessage);
             case ExceptionType.Billing:
                 return Billing(data);
+            case ExceptionType.SplitEntry:
+                return SplitEntry(data, error.Message);
             default:
                 return new ErrorMessage.Dialog(error.Message);
         }
@@ -215,6 +217,23 @@ public static class ErrorMessages
         return feature switch {
             AppFeature.QuickLaunch => new ErrorMessage.Dialog(strings.QuickLaunchNotSupportedMsg),
             AppFeature.AlwaysOn => new ErrorMessage.Dialog(strings.AlwaysOnNotSupportedMsg),
+            _ => new ErrorMessage.Dialog(message)
+        };
+    }
+
+    // a split list's refused entry, named in the person's language; a reason this version does not know keeps the
+    // app's own words
+    private static ErrorMessage SplitEntry(IReadOnlyDictionary<string, string?> data, string message)
+    {
+        var strings = Strings.Current;
+        data.TryGetValue("Reason", out var reasonText);
+        if (!data.TryGetValue("Entry", out var entry) || entry is null ||
+            !Enum.TryParse<SplitEntryError>(reasonText, true, out var reason))
+            return new ErrorMessage.Dialog(message);
+
+        return reason switch {
+            SplitEntryError.Asterisk => new ErrorMessage.Dialog(strings.SplitDomainAsteriskError(entry)),
+            SplitEntryError.InvalidIpRange => new ErrorMessage.Dialog(strings.SplitIpInvalidError(entry)),
             _ => new ErrorMessage.Dialog(message)
         };
     }

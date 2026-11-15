@@ -2,6 +2,7 @@
 using System.Net;
 using Microsoft.Data.Sqlite;
 using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Exceptions;
 using VpnHood.AppLib.Api.SplitTunneling;
 using VpnHood.AppLib.App.Premium;
 using VpnHood.AppLib.App.Services;
@@ -490,16 +491,34 @@ public class SplitIpDbTest : TestBase
         deviceSettings.Set(new SplitIpsViaDevice { Includes = "1.0.0.0/8", Excludes = "" });
 
         // in each list after the first, so that list's own check is what keeps the ones before it unsaved
-        Assert.Throws<FormatException>(() =>
+        Assert.Throws<SplitEntryException>(() =>
             appSettings.Set(new SplitIpsViaApp { Includes = "2.0.0.0/8", Excludes = "not-an-address", Blocks = "" }));
-        Assert.Throws<FormatException>(() =>
+        Assert.Throws<SplitEntryException>(() =>
             appSettings.Set(new SplitIpsViaApp { Includes = "2.0.0.0/8", Excludes = "4.0.0.0/8", Blocks = "not-an-address" }));
-        Assert.Throws<FormatException>(() =>
+        Assert.Throws<SplitEntryException>(() =>
             deviceSettings.Set(new SplitIpsViaDevice { Includes = "2.0.0.0/8", Excludes = "not-an-address" }));
         Assert.AreEqual("1.0.0.0/8", appSettings.Includes);
         Assert.AreEqual("3.0.0.0/8", appSettings.Excludes);
         Assert.AreEqual("", appSettings.Blocks);
         Assert.AreEqual("1.0.0.0/8", deviceSettings.Includes);
+    }
+
+    // The refusal names the entry and why, for the UI to say it in the person's language: a line that is no address,
+    // range or network, and a range whose ends are reversed. A comment, indented too, is no entry.
+    [TestMethod]
+    [DataRow("10.0.0.300")]
+    [DataRow("10.0.0.9-10.0.0.1")]
+    public void A_refused_ip_entry_is_named(string entry)
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, $"split-ip-named-{Guid.NewGuid()}");
+        Directory.CreateDirectory(storagePath);
+        var settings = new AppSettingsService(new Storage(new FileSystemStorageProvider(), storagePath),
+            remoteSettingsUrl: null).SplitIpViaAppSettings;
+
+        var exception = Assert.Throws<SplitEntryException>(() =>
+            settings.Set(new SplitIpsViaApp { Includes = $"  # a comment\n1.0.0.0/8\n{entry} # why", Excludes = "", Blocks = "" }));
+        Assert.AreEqual(nameof(SplitEntryError.InvalidIpRange), exception.Data["Reason"]);
+        Assert.AreEqual(entry, exception.Data["Entry"]);
     }
 
     private sealed class AllowAllPremiumFeatures : IPremiumFeatureChecker

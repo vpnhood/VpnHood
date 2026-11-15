@@ -1565,14 +1565,21 @@ public sealed partial class Strings
     /// <summary># YOUR COMMENT example.com</summary>
     public string SplitDomainPlaceHolder => Get("SPLIT_DOMAIN_PLACE_HOLDER");
 
-    /// <summary>Exact domain:</summary>
+    /// <summary>Domain and all its subdomains:</summary>
     public string ExactDomain => Get("EXACT_DOMAIN");
-
-    /// <summary>Wildcard (all subdomains):</summary>
-    public string WildcardDomain => Get("WILDCARD_DOMAIN");
 
     /// <summary>Rules: case-insensitive, one domain per line. Block &gt; Exclude &gt; Include.</summary>
     public string DomainRulesHint => Get("DOMAIN_RULES_HINT");
+
+    /// <summary>Asterisk (*) is not supported; remove it. A domain already covers all its subdomains: {entry}</summary>
+    /// <param name="entry">The value in place of <c>{entry}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
+    public string SplitDomainAsteriskError(object entry) => Get("SPLIT_DOMAIN_ASTERISK_ERROR", ("entry", entry));
+
+    /// <summary>This is not an IP address, range or network: {entry}</summary>
+    /// <param name="entry">The value in place of <c>{entry}</c>.</param>
+    /// <returns>The words, with the values in place.</returns>
+    public string SplitIpInvalidError(object entry) => Get("SPLIT_IP_INVALID_ERROR", ("entry", entry));
 
     /// <summary>Increasing the number of IPs in this section may be limited by your operating system, potentially preventing the VPN ...</summary>
     public string CautionIncreaseNumberOfIp => Get("CAUTION_INCREASE_NUMBER_OF_IP");

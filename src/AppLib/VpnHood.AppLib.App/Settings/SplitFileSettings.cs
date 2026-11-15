@@ -4,7 +4,8 @@ namespace VpnHood.AppLib.App.Settings;
 
 // List settings core: one text file per list in the storage. A missing list reads as empty and signs as
 // missing until its first write, so a change signature taken before a build describes what the build
-// reads. Writes validate first: an unparsable list is never kept.
+// reads. Writes validate first: an unparsable list is never kept. Reads normalize: a flavor may take a
+// list stored before in a form it writes no more.
 internal abstract class SplitFileSettings(Storage storage)
 {
     // One access at a time: a reconfigure reads the lists, connected or not, while the person may be
@@ -14,10 +15,17 @@ internal abstract class SplitFileSettings(Storage storage)
     // throw when the content is not a valid list for this settings flavor
     protected abstract void Validate(string content);
 
+    // the content as this flavor takes it, which must match what the stored content matched: the file keeps
+    // its own until the next write, and the change signature follows the file
+    protected virtual string Normalize(string content) => content;
+
     protected string Read(string fileTitle)
     {
+        string content;
         lock (_fileLock)
-            return storage.Read(GetFileName(fileTitle)) ?? string.Empty;
+            content = storage.Read(GetFileName(fileTitle)) ?? string.Empty;
+
+        return Normalize(content);
     }
 
     protected void Write(string fileTitle, string content)

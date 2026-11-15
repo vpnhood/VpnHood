@@ -3,7 +3,8 @@
 /// <summary>Represents the domains of the split tunneling, as text.</summary>
 /// <remarks>
 /// An entry matches its domain and every subdomain of it, and takes no <c>*</c>: the lists are refused when saved with
-/// one. Text after <c>#</c> or <c>;</c> is a comment.
+/// one. A list stored before, or edited by hand, is read without an entry's leading <c>*.</c>, which meant the same.
+/// Text after <c>#</c> or <c>;</c> is a comment.
 /// </remarks>
 public class SplitDomains
 {

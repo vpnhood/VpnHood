@@ -71,8 +71,10 @@ public interface IAppApi
     /// <param name="value">The ranges.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="InvalidOperationException">A range's two ends are of different families, or reversed.</exception>
-    /// <exception cref="FormatException">A line is not an address, a range or a network.</exception>
+    /// <exception cref="SplitEntryException">
+    /// A line is not an address, a range or a network, or a range's two ends are of different families, or reversed
+    /// (<see cref="SplitEntryError.InvalidIpRange"/>).
+    /// </exception>
     /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
     /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, which
     /// <see cref="VpnHood.Net.Toolkit.ApiClients.ApiException.ExceptionTypeName"/> names, or answered with an error
@@ -101,8 +103,10 @@ public interface IAppApi
     /// <param name="value">The ranges.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="InvalidOperationException">A range's two ends are of different families, or reversed.</exception>
-    /// <exception cref="FormatException">A line is not an address, a range or a network.</exception>
+    /// <exception cref="SplitEntryException">
+    /// A line is not an address, a range or a network, or a range's two ends are of different families, or reversed
+    /// (<see cref="SplitEntryError.InvalidIpRange"/>).
+    /// </exception>
     /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
     /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, which
     /// <see cref="VpnHood.Net.Toolkit.ApiClients.ApiException.ExceptionTypeName"/> names, or answered with an error
@@ -125,13 +129,17 @@ public interface IAppApi
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was canceled: over HTTP always, in process where the call honours it.
     /// </exception>
+    /// <remarks>
+    /// An entry's leading <c>*.</c>, which a list stored before may hold, is left out, as it meant the same; an entry with
+    /// another <c>*</c> is given as it is, for <see cref="SetSplitDomains"/> to refuse.
+    /// </remarks>
     Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken);
 
     /// <summary>Sets the domains the split tunneling includes or excludes, and saves them.</summary>
     /// <param name="value">The domains.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    /// <exception cref="FormatException">A line has a <c>*</c>.</exception>
+    /// <exception cref="SplitEntryException">A line has a <c>*</c> (<see cref="SplitEntryError.Asterisk"/>).</exception>
     /// <exception cref="VpnHood.Net.Toolkit.ApiClients.ApiException">
     /// Over HTTP, the app failed with an exception of a type the transport does not rebuild, which
     /// <see cref="VpnHood.Net.Toolkit.ApiClients.ApiException.ExceptionTypeName"/> names, or answered with an error

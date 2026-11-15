@@ -57,4 +57,7 @@ internal class SplitDomainSettings(Storage storage)
     }
 
     protected override void Validate(string content) => DomainTextFileParser.Verify(content);
+
+    // without a leading "*.", which a list stored before the lists took no * may hold, and which a save refuses
+    protected override string Normalize(string content) => DomainTextFileParser.RemoveLeadingWildcards(content);
 }

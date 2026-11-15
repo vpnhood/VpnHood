@@ -525,4 +525,33 @@ public class SplitIpDbTest : TestBase
         CollectionAssert.AreEquivalent(available, codes);
         Assert.AreEqual(FilterAction.Exclude, action);
     }
+
+    [TestMethod]
+    public async Task A_build_whose_new_file_cannot_take_the_targets_place_leaves_the_old_db()
+    {
+        if (!OperatingSystem.IsWindows())
+            Assert.Inconclusive("Only Windows refuses to move a file that is open.");
+
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "range-list-kept.db");
+        var ranges = new[] { IpRange.Parse("1.0.0.0 - 1.0.0.255") }.ToOrderedList();
+        await new IpRangeListDbBuilder(() => "sig-1", includesFactory: () => ranges).BuildAsync(dbPath, TestCt);
+
+        // the next build's new file is held open, as a scanner holds one, so it cannot be moved to the target's path
+        FileStream? heldFile = null;
+        var builder = new IpRangeListDbBuilder(() => "sig-2", includesFactory: () => {
+            heldFile = new FileStream(dbPath + ".tmp", FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            return ranges;
+        });
+
+        try {
+            await Assert.ThrowsAsync<IOException>(() => builder.BuildAsync(dbPath, TestCt));
+        }
+        finally {
+            heldFile?.Dispose();
+        }
+
+        // the build deleted the target before the move, so the move that failed left no db at all
+        Assert.IsTrue(File.Exists(dbPath));
+        Assert.AreEqual("sig-1", ReadMeta(dbPath, "source_signature"));
+    }
 }

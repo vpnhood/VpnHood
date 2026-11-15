@@ -69,9 +69,6 @@ public sealed class SqliteIpFilter : IIpFilter
         _next = next;
         _autoDisposeNextFilter = autoDisposeNextFilter;
 
-        // this gate's own db is immutable; roll a change announced below it up the pipe
-        if (next != null)
-            next.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
         var connectionString = new SqliteConnectionStringBuilder {
             DataSource = dbPath,
             Mode = SqliteOpenMode.ReadOnly,
@@ -80,11 +77,29 @@ public sealed class SqliteIpFilter : IIpFilter
         }.ToString();
 
         _sharedReader = CreateReader(connectionString);
+        try {
+            // a set is one logical list spanning both families (only-v4 includes still constrain v6 addresses)
+            _hasIncludes = HasRows(_sharedReader.Connection, FilterAction.Include);
+            _hasExcludes = HasRows(_sharedReader.Connection, FilterAction.Exclude);
+            _hasBlocks = HasRows(_sharedReader.Connection, FilterAction.Block);
+        }
+        // A file without the tables, as a db of another kind: no one gets this gate to dispose, so the
+        // connection, which holds the file open, is closed here
+        catch {
+            _sharedReader.Dispose();
+            VhTypeTracker.Record("SqliteIpFilter.Reader.disposed");
+            throw;
+        }
 
-        // a set is one logical list spanning both families (only-v4 includes still constrain v6 addresses)
-        _hasIncludes = HasRows(_sharedReader.Connection, FilterAction.Include);
-        _hasExcludes = HasRows(_sharedReader.Connection, FilterAction.Exclude);
-        _hasBlocks = HasRows(_sharedReader.Connection, FilterAction.Block);
+        // This gate's own db is immutable; roll a change announced below it up the pipe. Last, as a gate that
+        // failed above must not stay on the next stage's event
+        if (next != null)
+            next.Changed += Next_Changed;
+    }
+
+    private void Next_Changed(object? sender, EventArgs e)
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     /// <inheritdoc/>
@@ -175,6 +190,10 @@ public sealed class SqliteIpFilter : IIpFilter
     {
         if (Interlocked.Exchange(ref _disposed, true))
             return;
+
+        // or a next stage that lives on would hold this gate
+        if (_next != null)
+            _next.Changed -= Next_Changed;
 
         lock (_readerLock) {
             _sharedReader.Dispose();

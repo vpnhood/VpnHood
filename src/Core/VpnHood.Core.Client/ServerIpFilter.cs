@@ -26,10 +26,14 @@ internal class ServerIpFilter : IIpFilter
     {
         _nextFilter = nextFilter;
         _autoDisposeNextFilter = autoDisposeNextFilter;
-
-        // roll a change announced below this stage up the pipe (this stage's own rules are unaffected)
         if (nextFilter != null)
-            nextFilter.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
+            nextFilter.Changed += NextFilter_Changed;
+    }
+
+    // roll a change announced below this stage up the pipe (this stage's own rules are unaffected)
+    private void NextFilter_Changed(object? sender, EventArgs e)
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     // The setters raise Changed: the server's declaration arrives with the session, and the caches above
@@ -123,6 +127,10 @@ internal class ServerIpFilter : IIpFilter
 
     public void Dispose()
     {
+        // or a next stage that lives on would hold this one
+        if (_nextFilter != null)
+            _nextFilter.Changed -= NextFilter_Changed;
+
         if (_autoDisposeNextFilter)
             _nextFilter?.Dispose();
     }

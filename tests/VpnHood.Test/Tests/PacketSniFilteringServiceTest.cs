@@ -18,10 +18,10 @@ public class PacketSniFilteringServiceTest : TestBase
         private int _packetCount;
         protected override string ProtocolName => "Test";
 
-        protected override bool TryValidateAndExtractPayload(IpPacket ipPacket, out IpEndPointValue flowKey,
+        protected override bool TryValidateAndExtractPayload(IpPacket ipPacket, out FlowKey flowKey,
             out ReadOnlySpan<byte> payload)
         {
-            flowKey = new IpEndPointValue(ipPacket.SourceAddress, 50000);
+            flowKey = new FlowKey(new IpEndPointValue(ipPacket.SourceAddress, 50000), default);
             payload = default;
             return true;
         }

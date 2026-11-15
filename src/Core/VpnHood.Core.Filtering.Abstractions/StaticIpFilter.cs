@@ -7,11 +7,11 @@ namespace VpnHood.Core.Filtering.Abstractions;
 /// ranges, and blocked TCP and UDP ports.
 /// </summary>
 /// <remarks>
-/// The next stage decides first, and its verdict stands unless it is <see cref="FilterAction.Default"/>. Then a
-/// destination in the blocked ranges or on a blocked port is blocked; one in the excluded ranges is excluded; and,
-/// when the included ranges are not empty, one outside them is excluded too. The rest get
-/// <see cref="FilterAction.Default"/>: the stage's own sets never give <see cref="FilterAction.Include"/>. Setting a
-/// set raises <see cref="Changed"/>.
+/// A destination in the blocked ranges or on a blocked port is blocked, whatever the next stage would say. For any
+/// other, the next stage decides first, and its verdict stands unless it is <see cref="FilterAction.Default"/>. Then
+/// a destination in the excluded ranges is excluded; and, when the included ranges are not empty, one outside them
+/// is excluded too. The rest get <see cref="FilterAction.Default"/>: the stage's own sets never give
+/// <see cref="FilterAction.Include"/>. Setting a set raises <see cref="Changed"/>.
 /// </remarks>
 public class StaticIpFilter : IIpFilter
 {
@@ -28,7 +28,9 @@ public class StaticIpFilter : IIpFilter
     /// <summary>
     /// Initializes a new instance of the <see cref="StaticIpFilter"/> class, with empty sets.
     /// </summary>
-    /// <param name="nextFilter">The stage that decides first, or <see langword="null"/>.</param>
+    /// <param name="nextFilter">
+    /// The stage that decides what this stage's blocks let through, before its other sets, or <see langword="null"/>.
+    /// </param>
     /// <param name="autoDisposeNextFilter">
     /// <see langword="true"/> to dispose <paramref name="nextFilter"/> with this stage.
     /// </param>
@@ -36,10 +38,14 @@ public class StaticIpFilter : IIpFilter
     {
         _nextFilter = nextFilter;
         _autoDisposeNextFilter = autoDisposeNextFilter;
-
-        // roll a change announced below this stage up the pipe (this stage's own sets are unaffected)
         if (nextFilter != null)
-            nextFilter.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
+            nextFilter.Changed += NextFilter_Changed;
+    }
+
+    // roll a change announced below this stage up the pipe (this stage's own sets are unaffected)
+    private void NextFilter_Changed(object? sender, EventArgs e)
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     // the setters raise Changed: the ranges are set/replaced at runtime (e.g. the server∩device allow
@@ -80,20 +86,22 @@ public class StaticIpFilter : IIpFilter
     }
 
     /// <inheritdoc/>
-    /// <remarks>The next stage decides first; see the class's remarks for the order of the sets.</remarks>
+    /// <remarks>
+    /// This stage's blocks come first, then the next stage; see the class's remarks for the order of the sets.
+    /// </remarks>
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
-        var result = _nextFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
-        if (result != FilterAction.Default)
-            return result;
-
-        // blocked IP ranges
+        // The blocks before the next stage: asked first, its Include or Exclude took a destination past them, and
+        // a server, which acts on Block alone, then reached what it blocks
         if (BlockedRanges.Count > 0 && BlockedRanges.Contains(endPoint.AddressValue))
             return FilterAction.Block;
 
-        // blocked ports
         if (IsPortBlocked(protocol, endPoint.Port))
             return FilterAction.Block;
+
+        var result = _nextFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
+        if (result != FilterAction.Default)
+            return result;
 
         // excluded IP ranges
         if (ExcludeRanges.Count > 0 && ExcludeRanges.Contains(endPoint.AddressValue))
@@ -140,9 +148,13 @@ public class StaticIpFilter : IIpFilter
         _blockedUdpPorts.Length == 0 &&
         (_nextFilter?.IsEmpty ?? true);
 
-    /// <summary>Disposes the next stage when this stage was made to.</summary>
+    /// <summary>Stops listening to the next stage, and disposes it when this stage was made to.</summary>
     public void Dispose()
     {
+        // or a next stage that lives on would hold this one
+        if (_nextFilter != null)
+            _nextFilter.Changed -= NextFilter_Changed;
+
         if (_autoDisposeNextFilter)
             _nextFilter?.Dispose();
     }

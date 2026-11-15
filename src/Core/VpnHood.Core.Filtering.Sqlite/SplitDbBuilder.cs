@@ -18,8 +18,8 @@ namespace VpnHood.Core.Filtering.Sqlite;
 /// <para>
 /// Derive from <see cref="SplitIpDbBuilder"/> or <see cref="SplitDomainDbBuilder"/>, which give the schema. A build
 /// writes a new file beside the target, its path plus <c>.tmp</c>, with no journal: the rows in one transaction, the
-/// indexes after them, and the mark that the file is complete last. It then deletes the target and moves the new
-/// file to its path, so a crash never leaves a half-built database there.
+/// indexes after them, and the mark that the file is complete last. It then moves the new file over the target in
+/// one step, so a crash never leaves a half-built database there, nor none.
 /// </para>
 /// <para>
 /// The target must not be open while it is replaced: give a changed source a new file name, from
@@ -77,10 +77,12 @@ public abstract class SplitDbBuilder
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
-    /// The target's <c>-wal</c>, <c>-shm</c> and <c>-journal</c> files are deleted with it. A build that fails before its
-    /// new file is complete leaves the target as it was, and the new file, which the next build deletes; as the target
-    /// is deleted before the new file is moved to its path, a failure between the two leaves neither there.
+    /// A build that fails, in its new file or in the move, leaves the target's file as it was, and the new file, which
+    /// the next build deletes. The target's <c>-wal</c>, <c>-shm</c> and <c>-journal</c> files are deleted before the
+    /// move: a database this builder made has none, and one that another writer left with changes only in such a file
+    /// loses those changes, even when the move then fails.
     /// </remarks>
+    /// <exception cref="IOException">The new file could not be moved to the target's path.</exception>
     /// <exception cref="ArgumentException"><paramref name="dbPath"/> has no parent folder.</exception>
     /// <exception cref="SqliteException">SQLite refused a row of the build.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -98,8 +100,11 @@ public abstract class SplitDbBuilder
         await BuildTempDbAsync(tempPath, cancellationToken).Vhc();
         SqliteConnection.ClearAllPools();
 
-        // atomic replace (target is never open — connections are exclusive)
-        DeleteDbFiles(dbPath);
+        // Atomic replace (target is never open — connections are exclusive). Only the old db's side files go
+        // first: the old db itself deleted before the move left none at all when the move then failed. Before
+        // the move, not after it: for the moment between the two, and for good after a crash in it, the new db
+        // would lie beside the old one's journal, which SQLite takes for its own and plays back into it.
+        DeleteSideFiles(dbPath);
         File.Move(tempPath, dbPath, overwrite: true);
     }
 
@@ -172,7 +177,14 @@ public abstract class SplitDbBuilder
 
     private static void DeleteDbFiles(string dbPath)
     {
-        foreach (var suffix in new[] { "", "-wal", "-shm", "-journal" }) {
+        DeleteSideFiles(dbPath);
+        if (File.Exists(dbPath))
+            File.Delete(dbPath);
+    }
+
+    private static void DeleteSideFiles(string dbPath)
+    {
+        foreach (var suffix in new[] { "-wal", "-shm", "-journal" }) {
             var path = dbPath + suffix;
             if (File.Exists(path))
                 File.Delete(path);

@@ -280,4 +280,38 @@ public class StaticDomainFilterTest : TestBase
         Assert.AreEqual(FilterAction.Block, resolver.Process("local"));
         Assert.AreEqual(FilterAction.Block, resolver.Process("my-server.local"));
     }
+
+    [TestMethod]
+    public void A_subdomain_is_matched_whatever_else_is_on_the_list()
+    {
+        // by their reversed labels, example-cdn.com sorts between example.com and www.example.com: a lookup that
+        // read only the entry before the name's place found example-cdn.com there, and missed the parent
+        var resolver = new StaticDomainFilter(null) {
+            Blocks = ["example.com", "example-cdn.com", "example.com.au", "a.example.org"]
+        };
+
+        Assert.AreEqual(FilterAction.Block, resolver.Process("www.example.com"));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("deep.www.example.com"));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("img.example-cdn.com"));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("x.a.example.org"));
+
+        // a name that only ends with an entry's letters is no subdomain of it
+        Assert.AreEqual(FilterAction.Default, resolver.Process("notexample.com"));
+        Assert.AreEqual(FilterAction.Default, resolver.Process("example.org"));
+        Assert.AreEqual(FilterAction.Default, resolver.Process("com"));
+    }
+
+    [TestMethod]
+    public void A_list_is_copied_when_it_is_set()
+    {
+        var blocks = new List<string> { "block.com" };
+        var resolver = new StaticDomainFilter(null) { Blocks = blocks };
+
+        // The caller's list changes after: the verdicts came from a copy, and IsEmpty from the caller's own list, so
+        // the stage said it held no rule while it blocked
+        blocks.Clear();
+        Assert.AreEqual(FilterAction.Block, resolver.Process("block.com"));
+        Assert.IsFalse(resolver.IsEmpty);
+        CollectionAssert.AreEqual(new[] { "block.com" }, resolver.Blocks.ToArray());
+    }
 }

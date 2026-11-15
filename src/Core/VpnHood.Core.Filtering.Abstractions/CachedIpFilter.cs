@@ -4,18 +4,27 @@ using VpnHood.Net.Toolkit.Net;
 namespace VpnHood.Core.Filtering.Abstractions;
 
 /// <summary>
-/// Provides a stage of an IP filter pipe that remembers its next stage's verdict for each destination.
+/// Provides a stage of an IP filter pipe that remembers its next stage's verdict for each protocol and destination.
 /// </summary>
 /// <remarks>
-/// A verdict is remembered by the destination alone, whatever the flow's protocol, so the next stage's verdicts must
-/// not depend on the protocol. A verdict expires once it has gone unused for the timeout. When the next stage raises
-/// <see cref="Changed"/>, every remembered verdict is dropped, and the event is raised as this stage's own.
+/// A verdict is remembered by the flow's protocol with its destination, as a stage below may decide by the protocol.
+/// It expires once it has gone unused for the timeout. When the next stage raises <see cref="Changed"/>, every
+/// remembered verdict is dropped, and the event is raised as this stage's own; a verdict being looked up at that
+/// moment answers its own lookup, and is remembered for no later one.
 /// </remarks>
 public class CachedIpFilter : IIpFilter
 {
     private readonly IIpFilter _nextFilter;
     private readonly bool _autoDisposeNextFilter;
-    private readonly TimeoutDictionary<IpEndPointValue, TimeoutItem<FilterAction>> _cache;
+    private readonly TimeSpan _timeout;
+
+    // Replaced, not emptied, when the rules change: a lookup under way then puts its verdict, which may be the old
+    // rules', into the cache it began with, which no later lookup reads. Emptied instead, the cache gave that
+    // verdict to a lookup that began after the change. The lock is for the replacing and the disposal, so that no
+    // cache is made after the disposal.
+    private volatile TimeoutDictionary<(IpProtocol Protocol, IpEndPointValue EndPoint), TimeoutItem<FilterAction>> _cache;
+    private readonly Lock _cacheLock = new();
+    private bool _isDisposed;
 
     /// <inheritdoc/>
     public event EventHandler? Changed;
@@ -32,27 +41,31 @@ public class CachedIpFilter : IIpFilter
     {
         _nextFilter = nextFilter;
         _autoDisposeNextFilter = autoDisposeNextFilter;
-        _cache = new TimeoutDictionary<IpEndPointValue, TimeoutItem<FilterAction>>(timeout);
+        _timeout = timeout;
+        _cache = new TimeoutDictionary<(IpProtocol Protocol, IpEndPointValue EndPoint), TimeoutItem<FilterAction>>(timeout);
+        nextFilter.Changed += NextFilter_Changed;
+    }
 
-        // self-invalidation: when the inner chain announces a change (a live gate swap somewhere below),
-        // drop every memoized verdict so none outlives the chain that produced it, and roll the event up
-        nextFilter.Changed += (_, _) => {
-            ClearCache();
-            Changed?.Invoke(this, EventArgs.Empty);
-        };
+    // self-invalidation: when the inner chain announces a change (a live gate swap somewhere below),
+    // drop every memoized verdict so none outlives the chain that produced it, and roll the event up
+    private void NextFilter_Changed(object? sender, EventArgs e)
+    {
+        ClearCache();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// The verdict remembered for the destination answers, whatever protocol asked for it first.
-    /// </remarks>
+    /// <remarks>The verdict remembered for the protocol and the destination answers.</remarks>
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
-        if (_cache.TryGetValue(endPoint, out var cachedAction))
+        // one cache for the whole lookup, the one it began with (see the field)
+        var cache = _cache;
+        var key = (protocol, endPoint);
+        if (cache.TryGetValue(key, out var cachedAction))
             return cachedAction.Value;
 
         var action = _nextFilter.Process(protocol, endPoint);
-        _cache.TryAdd(endPoint, new TimeoutItem<FilterAction>(action));
+        cache.TryAdd(key, new TimeoutItem<FilterAction>(action));
         return action;
     }
 
@@ -65,15 +78,34 @@ public class CachedIpFilter : IIpFilter
     public bool IsEmpty => _nextFilter.IsEmpty;
 
     /// <summary>Drops every remembered verdict, expired or not.</summary>
+    /// <remarks>A verdict being looked up at that moment is remembered for no later lookup.</remarks>
     public void ClearCache()
     {
-        _cache.RemoveAll();
+        TimeoutDictionary<(IpProtocol Protocol, IpEndPointValue EndPoint), TimeoutItem<FilterAction>> oldCache;
+        lock (_cacheLock) {
+            if (_isDisposed)
+                return;
+
+            oldCache = _cache;
+            _cache = new TimeoutDictionary<(IpProtocol Protocol, IpEndPointValue EndPoint), TimeoutItem<FilterAction>>(_timeout);
+        }
+
+        oldCache.Dispose();
     }
 
-    /// <summary>Releases the remembered verdicts, and disposes the next stage when this stage was made to.</summary>
+    /// <summary>
+    /// Releases the remembered verdicts, stops listening to the next stage, and disposes it when this stage was made
+    /// to.
+    /// </summary>
     public void Dispose()
     {
-        _cache.Dispose();
+        // or a next stage that lives on would hold this one, and clear its released cache at every change
+        _nextFilter.Changed -= NextFilter_Changed;
+        lock (_cacheLock) {
+            _isDisposed = true;
+            _cache.Dispose();
+        }
+
         if (_autoDisposeNextFilter)
             _nextFilter.Dispose();
     }

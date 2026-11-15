@@ -312,4 +312,54 @@ public class SqliteFilterChainTest : TestBase
         Assert.IsNull(firstError, $"a lookup raced a swap: {firstError}");
         Assert.AreEqual(FilterAction.Block, filter.Process("stress.com"));
     }
+
+    [TestMethod]
+    public async Task A_closed_chain_passes_no_reconfigure_on()
+    {
+        var folder = CreateDbFolder("closed-next");
+        var ipDbPath = await BuildIpDb(folder, "closed-next.1.db", "1.0.0.1");
+        await SplitDbManifest.Write(folder, [ipDbPath], TestCt);
+        var ipNext = new StubIpFilter();
+        var ipChain = await SqliteIpFilterChain.Create(ipNext, folder, autoDisposeNextFilter: true, TestCt);
+
+        var domainFolder = CreateDbFolder("closed-next-domain");
+        var domainDbPath = await BuildDomainDb(domainFolder, "closed-next-domain.1.db", "old.com");
+        await SplitDbManifest.Write(domainFolder, [domainDbPath], TestCt);
+        var domainNext = new StubDomainFilter();
+        var domainChain = await SqliteDomainFilterChain.Create(domainNext, domainFolder, autoDisposeNextFilter: true, TestCt);
+
+        // The close disposes the next stage. With the same dbs in the manifest there is no swap to find the chain
+        // closed, and the call went on to that disposed stage
+        ipChain.Dispose();
+        domainChain.Dispose();
+        Assert.IsTrue(ipNext.IsDisposed);
+        Assert.IsTrue(domainNext.IsDisposed);
+        await ipChain.Reconfigure(TestCt);
+        await domainChain.Reconfigure(TestCt);
+        Assert.AreEqual(0, ipNext.ReconfigureCount);
+        Assert.AreEqual(0, domainNext.ReconfigureCount);
+    }
+
+    [TestMethod]
+    public async Task A_gate_that_cannot_read_its_db_leaves_the_file_closed()
+    {
+        // the proof is a delete, which only Windows refuses for a file that is open
+        if (!OperatingSystem.IsWindows()) {
+            Assert.Inconclusive("Only Windows refuses to delete an open file.");
+            return;
+        }
+
+        // each gate on the other kind's db, which has none of its tables
+        var folder = CreateDbFolder("wrong-kind");
+        var ipDbPath = await BuildIpDb(folder, "wrong-kind-ip.db", "1.0.0.1");
+        var domainDbPath = await BuildDomainDb(folder, "wrong-kind-domain.db", "old.com");
+        Assert.Throws<Exception>(() => new SqliteIpFilter(next: null, domainDbPath));
+        Assert.Throws<Exception>(() => new SqliteDomainFilter(next: null, ipDbPath));
+
+        // Windows deletes no file that is open: the gate that failed left its connection open, with no one to close it
+        File.Delete(domainDbPath);
+        File.Delete(ipDbPath);
+        Assert.IsFalse(File.Exists(domainDbPath));
+        Assert.IsFalse(File.Exists(ipDbPath));
+    }
 }

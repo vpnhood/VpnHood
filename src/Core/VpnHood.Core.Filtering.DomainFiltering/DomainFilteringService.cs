@@ -49,7 +49,7 @@ public class DomainFilteringService : IDisposable
     /// The event ID of the log entries of the names found: each QUIC flow's, and each name the observer records.
     /// </param>
     /// <param name="tlsBufferSize">
-    /// The size of the one read that takes a TCP stream's first bytes, which must hold its TLS ClientHello.
+    /// The most bytes read from the start of a TCP stream for its name, which must hold its TLS ClientHello.
     /// </param>
     /// <param name="trackObservations">
     /// <see langword="true"/> to record each name in <see cref="DomainObserver"/>.
@@ -96,8 +96,8 @@ public class DomainFilteringService : IDisposable
     /// </returns>
     /// <remarks>
     /// <para>
-    /// A flow is known by the packet's source address and port alone, whatever its destination: once decided, its
-    /// verdict answers every later packet from them, until a periodic sweep finds the flow unused for two minutes. A
+    /// A flow is known by the packet's source and its destination, each an address and a port: once decided, its
+    /// verdict answers every later packet between them, until a periodic sweep finds the flow unused for two minutes. A
     /// flow whose first packets are not QUIC gets <see cref="FilterAction.Default"/>. A held packet is the service's
     /// until a later result releases it: route nothing for a result that needs more, and route the released packets
     /// before the packet given. A flow forgotten with packets held leaves them undisposed.
@@ -153,10 +153,11 @@ public class DomainFilteringService : IDisposable
     /// <see cref="FilterAction.Default"/>.
     /// </returns>
     /// <remarks>
-    /// It reads from the stream once, up to the buffer size the service was made with, and looks for the name in what
-    /// that read returned: a stream with no name there, as when the ClientHello comes in pieces, gets the verdict of a
-    /// null name. A name found counts in <see cref="TcpStat"/>, and is recorded in <see cref="DomainObserver"/> when
-    /// the service tracks names.
+    /// It reads the stream's first bytes, up to the buffer size the service was made with: one read, and, where they
+    /// begin a TLS ClientHello, more reads until its record is in or the stream ends, as a large ClientHello comes in
+    /// pieces. It waits for those bytes with no time limit of its own. A stream with no name in them gets the verdict
+    /// of a null name. A name found counts in <see cref="TcpStat"/>, and is recorded in <see cref="DomainObserver"/>
+    /// when the service tracks names.
     /// </remarks>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public async Task<StreamSniFilterResult> ProcessStream(Stream tlsStream, IPEndPoint remoteEndPoint,

@@ -24,7 +24,7 @@ internal class TcpSniFilteringService(
 
     protected override bool TryValidateAndExtractPayload(
         IpPacket ipPacket,
-        out IpEndPointValue flowKey,
+        out FlowKey flowKey,
         out ReadOnlySpan<byte> payload)
     {
         flowKey = default;
@@ -42,7 +42,9 @@ internal class TcpSniFilteringService(
         if (tcpPacket.Payload.Length == 0)
             return false;
 
-        flowKey = new IpEndPointValue(ipPacket.SourceAddressValue, tcpPacket.SourcePort);
+        flowKey = new FlowKey(
+            new IpEndPointValue(ipPacket.SourceAddressValue, tcpPacket.SourcePort),
+            new IpEndPointValue(ipPacket.DestinationAddressValue, tcpPacket.DestinationPort));
         payload = tcpPacket.Payload.Span;
         return true;
     }

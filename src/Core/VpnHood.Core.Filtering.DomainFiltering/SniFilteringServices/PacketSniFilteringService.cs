@@ -3,7 +3,6 @@ using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering.SniExtractors;
 using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Logging;
-using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 
@@ -69,7 +68,7 @@ internal abstract class PacketSniFilteringService(
     /// </summary>
     protected abstract bool TryValidateAndExtractPayload(
         IpPacket ipPacket,
-        out IpEndPointValue flowKey,
+        out FlowKey flowKey,
         out ReadOnlySpan<byte> payload);
 
     /// <summary>
@@ -96,7 +95,7 @@ internal abstract class PacketSniFilteringService(
     }
 
     private PacketSniFilterResult HandleSniFound(
-        IpEndPointValue flowKey, FlowInfo? flowInfo,
+        FlowKey flowKey, FlowInfo? flowInfo,
         string domainName, long nowTicks)
     {
         var action = DomainFilter.Process(domainName);
@@ -117,7 +116,7 @@ internal abstract class PacketSniFilteringService(
     }
 
     private PacketSniFilterResult HandleNeedMore(
-        IpEndPointValue flowKey, IpPacket ipPacket, FlowInfo? flowInfo,
+        FlowKey flowKey, IpPacket ipPacket, FlowInfo? flowInfo,
         object sniState, long nowTicks)
     {
         // Buffer this packet and wait for more
@@ -131,7 +130,7 @@ internal abstract class PacketSniFilteringService(
     }
 
     private PacketSniFilterResult HandleGiveUp(
-        IpEndPointValue flowKey, FlowInfo? flowInfo, long nowTicks)
+        FlowKey flowKey, FlowInfo? flowInfo, long nowTicks)
     {
         // Collect all previous buffered first: the state below is the same flow's, and takes a new list
         var packets = flowInfo?.BufferedPackets;

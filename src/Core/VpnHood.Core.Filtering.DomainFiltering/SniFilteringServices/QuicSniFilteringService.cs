@@ -22,7 +22,7 @@ internal class QuicSniFilteringService(
 
     protected override bool TryValidateAndExtractPayload(
         IpPacket ipPacket,
-        out IpEndPointValue flowKey,
+        out FlowKey flowKey,
         out ReadOnlySpan<byte> payload)
     {
         flowKey = default;
@@ -33,7 +33,9 @@ internal class QuicSniFilteringService(
             return false;
 
         var udpPacket = ipPacket.ExtractUdp();
-        flowKey = new IpEndPointValue(ipPacket.SourceAddressValue, udpPacket.SourcePort);
+        flowKey = new FlowKey(
+            new IpEndPointValue(ipPacket.SourceAddressValue, udpPacket.SourcePort),
+            new IpEndPointValue(ipPacket.DestinationAddressValue, udpPacket.DestinationPort));
         payload = udpPacket.Payload.Span;
         return true;
     }

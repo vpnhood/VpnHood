@@ -17,6 +17,7 @@
 * Fix: On Linux, a Docker container no longer asks a DNS server on the local network while the VPN is connected, where that server saw the names it looked up: its DNS goes through the VPN #linux
 * Fix: On Linux, the VPN no longer fails to start on a network that has only IPv6, where it said it found no network interface #linux
 * Fix: On Linux, connecting no longer turns on packet forwarding for the whole computer #linux
+* Fix: A split tunneling rule for a domain no longer misses a connection whose first message arrives in parts, as a browser's large TLS hello can
 * Fix: On Linux, the installer stops on Alpine and other systems built on musl, where the app cannot run, instead of saying it is installed #linux
 * Fix: On Linux, the installer for the wrong CPU stops and says which one to download, instead of installing an app that cannot start #linux
 * Update: On Windows and Linux, the app needs a processor with SSE4.2 and POPCNT, as every processor of the last ten years has; on an older one, the installer stops and says so #windows #linux

@@ -1,13 +1,12 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using VpnHood.Net.Toolkit.Jobs;
-using VpnHood.Net.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 
 internal class FlowCacheService : IDisposable
 {
-    private readonly ConcurrentDictionary<IpEndPointValue, FlowInfo> _flowCache = new();
+    private readonly ConcurrentDictionary<FlowKey, FlowInfo> _flowCache = new();
     private readonly TimeSpan _flowTimeout;
     private readonly Job _cleanupJob;
     private bool _disposed;
@@ -20,18 +19,18 @@ internal class FlowCacheService : IDisposable
         _cleanupJob = new Job(CleanupExpiredFlows, cleanupInterval, "FlowCacheCleanup");
     }
 
-    public bool TryGetValue(IpEndPointValue key, [NotNullWhen(true)] out FlowInfo? value)
+    public bool TryGetValue(FlowKey key, [NotNullWhen(true)] out FlowInfo? value)
     {
         return _flowCache.TryGetValue(key, out value);
     }
 
     // ReSharper disable once OutParameterValueIsAlwaysDiscarded.Global
-    public bool TryRemove(IpEndPointValue key, out FlowInfo? value)
+    public bool TryRemove(FlowKey key, out FlowInfo? value)
     {
         return _flowCache.TryRemove(key, out value);
     }
 
-    public void Set(IpEndPointValue key, FlowInfo value)
+    public void Set(FlowKey key, FlowInfo value)
     {
         _flowCache[key] = value;
     }

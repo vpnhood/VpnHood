@@ -79,13 +79,19 @@ public sealed class SqliteIpFilterChain : IIpFilter
         _dbFolder = dbFolder;
         _autoDisposeNextFilter = autoDisposeNextFilter;
 
-        // roll a change announced below this stage up the pipe
-        if (next != null)
-            next.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
-
         // construction is not a change: build the initial gates directly — no swap, no Changed, no log
         _dbPaths = dbPaths;
         _gates = BuildGates(_dbPaths);
+
+        // Roll a change announced below this stage up the pipe. Last, as a chain whose gates failed above must
+        // not stay on the next stage's event
+        if (next != null)
+            next.Changed += Next_Changed;
+    }
+
+    private void Next_Changed(object? sender, EventArgs e)
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     // the inner filter runs first and its veto wins; the gates only see traffic it passed as Default.
@@ -113,7 +119,8 @@ public sealed class SqliteIpFilterChain : IIpFilter
     /// It reads the manifest again. When the list of databases has changed, it opens the new ones, swaps them in once
     /// the lookups under way on the old ones have left, closes the old ones, tries to delete the files of those the new
     /// list leaves out, and raises <see cref="Changed"/>; when a new database cannot be opened, the old ones stay and
-    /// the error is thrown. Then it passes the call to the next stage. A disposed stage takes no new databases.
+    /// the error is thrown. Then it passes the call to the next stage. A stage disposed before the call does neither;
+    /// one disposed while the call is under way may still pass it on, to a next stage disposed with it.
     /// </remarks>
     /// <exception cref="System.Text.Json.JsonException">The manifest is not valid JSON.</exception>
     /// <exception cref="InvalidDataException">The manifest is the JSON <c>null</c>.</exception>
@@ -133,6 +140,12 @@ public sealed class SqliteIpFilterChain : IIpFilter
     private async Task<bool> SwapGates(CancellationToken cancellationToken)
     {
         using var scopeLock = await _reconfigureLock.LockAsync(cancellationToken).Vhc();
+
+        // Asked before the manifest is read: with the same dbs there is no swap to find the chain closed, and
+        // the call went on to a next stage the close had disposed
+        if (IsClosed())
+            return false;
+
         var dbPaths = await SplitDbManifest.Read(_dbFolder, cancellationToken).Vhc();
         if (dbPaths.SequenceEqual(_dbPaths))
             return true;
@@ -174,6 +187,10 @@ public sealed class SqliteIpFilterChain : IIpFilter
         if (!TrySwap(null, close: true, out var gates))
             return;
 
+        // or a next stage that lives on would hold this chain
+        if (_next != null)
+            _next.Changed -= Next_Changed;
+
         gates?.Dispose();
         if (_autoDisposeNextFilter)
             _next?.Dispose();
@@ -182,6 +199,17 @@ public sealed class SqliteIpFilterChain : IIpFilter
     // Only the pointer swap excludes lookups; the write lock waits for every in-flight lookup to
     // leave the old gates, so the caller can dispose them with nobody inside. A closed chain takes no
     // new gates: a reconfigure under way would leave them open after the close
+    private bool IsClosed()
+    {
+        _swapLock.EnterReadLock();
+        try {
+            return _disposed;
+        }
+        finally {
+            _swapLock.ExitReadLock();
+        }
+    }
+
     private bool TrySwap(IIpFilter? gates, bool close, out IIpFilter? oldGates)
     {
         _swapLock.EnterWriteLock();

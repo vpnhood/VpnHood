@@ -8,6 +8,7 @@ you are trying to do.
 | **Build my own VPN app**, from the template | [build-your-app.md](build-your-app.md) ← start here |
 | Put my own screens over VpnHood's app logic, the whole app without its UI | [use-the-app-logic.md](use-the-app-logic.md) |
 | Use the VPN engine alone in my own app, in my process or through the VPN service | [use-the-engine.md](use-the-engine.md) |
+| Run a VPN server from my own code, with access keys kept in files | [run-a-server.md](run-a-server.md) |
 | Know what my app's head writes at start - who the app is, its options, its store's providers - and what VpnHood builds from them | [app-startup.md](app-startup.md) |
 | Publish my own branded VPN app to the stores | [publish-your-app/](publish-your-app/README.md) |
 | Know which component talks to which, and in which direction | [topology.md](topology.md) |

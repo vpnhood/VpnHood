@@ -36,7 +36,9 @@ context's policy in its sibling `split-country.md` / `split-ip-via-app.md` / `sp
 
 ## Database format
 
-One **self-describing** db per selection context, static filename. Three logical sets — include,
+One **self-describing** db per selection context, named by `SplitDbBuilder.GetFileName(prefix)`: the
+prefix, then a hash of the schema version and the source signature, so a changed source or a new schema
+builds a new file and never replaces one a running filter holds open. Three logical sets — include,
 exclude, block. All tables always exist; which sets are populated IS the db's semantic, so nothing but
 the file path needs to travel.
 
@@ -61,7 +63,7 @@ CREATE INDEX ix_include_v4 ON include_v4(start_ip); -- …and likewise for the o
 - A set is one logical list spanning both families: a set with only IPv4 rows still constrains IPv6
   addresses (an include set that lists only v4 ranges vetoes every v6 address).
 
-**Split-domain** (schema version 1): one table per set (the `_domains` suffix keeps the names clear of
+**Split-domain** (schema version 2): one table per set (the `_domains` suffix keeps the names clear of
 SQL keywords).
 
 ```sql
@@ -73,8 +75,10 @@ CREATE INDEX ix_include_domains ON include_domains(domain); -- …and likewise f
 ```
 
 - Rows hold the canonical `DomainUtils` form: normalized (trimmed, lower-case, leading `*.` stripped —
-  every entry matches itself and its subdomains anyway) and **part-inverted** (`com.google` for
-  `google.com`), so an ancestor domain is an ordinal prefix of its subdomains at a `.` boundary.
+  every entry matches itself and its subdomains anyway — and a fully qualified name's final dot
+  dropped) and **part-inverted** (`com.google` for `google.com`), so an ancestor domain is an ordinal
+  prefix of its subdomains at a `.` boundary. Version 2 drops the final dot; a version 1 db kept it on
+  its row, which then matched nothing, and the app builds a version 2 db beside it, by its new name.
 
 ### Meta keys (rebuild detection)
 
@@ -83,7 +87,7 @@ requires ALL of:
 
 | Key | Meaning |
 | --- | --- |
-| `schema_version` | Must equal the schema's version (`SplitIpDb` 3 / `SplitDomainDb` 1). |
+| `schema_version` | Must equal the schema's version (`SplitIpDb` 3 / `SplitDomainDb` 2). |
 | `source_signature` | Context-defined identity of the source; mismatch ⇒ source changed ⇒ rebuild. |
 | `built_complete` | `"1"` only after indexes exist; a crash mid-build can never be mistaken for a valid db. |
 
@@ -105,7 +109,8 @@ its `-wal`/`-shm`/`-journal`/`.tmp` siblings).
 VpnService):
 
 1. Build into `<dbPath>.tmp`, then atomically `File.Move` over the target. A crash never leaves a
-   half-built db in place; VPN connections are exclusive, so the target is never in use.
+   half-built db in place. The target is never in use, as long as its name comes from `GetFileName`: a
+   running filter holds a file of another source or schema.
 2. Durability is irrelevant for a rebuildable file: `journal_mode=OFF; synchronous=OFF`.
 3. The derived builder streams its rows through `SplitIpDbInserter.Insert(action, start, end)` — raw
    big-endian address bytes, so sources that are already serialized (the `.ips` assets, read via
@@ -150,23 +155,27 @@ Chained as an `IDomainFilter` pipe stage. Unlike the IP gates it consults its **
 (mirroring `StaticDomainFilter`) and MAY return `Include`: domains are more specific knowledge than
 IPs, so the include set is the explicit override lane that forces a domain through the tunnel past any
 IP-gate veto (e.g. "tunnel nothing except aaa.com" = include `aaa.com` here + exclude `0.0.0.0/0` in
-the via-app IP gate).
-
-| Check (in order) | Verdict |
-| --- | --- |
-| block set matches the domain | `Block` |
-| exclude set matches the domain | `Exclude` |
-| include set matches the domain | `Include` (force-tunnel, skips the IP gates) |
-| otherwise | inner `next`, else `Default` |
+the via-app IP gate; DNS and pings still go through the tunnel, see `docs/split-ip/split-domain.md`).
 
 Every entry matches itself and its subdomains, so a lookup probes the inverted domain and each of its
-label ancestors (`com.google.www` → `com.google` → `com`) with exact point queries — a single
-greatest-prefix seek would miss an ancestor hiding behind a more specific sibling entry (e.g. querying
-`www.google.com` against `{google.com, mail.google.com}`). The walk is as deep as the domain has
+label ancestors, nearest first (`com.google.www` → `com.google` → `com`), with exact point queries — a
+single greatest-prefix seek would miss an ancestor hiding behind a more specific sibling entry (e.g.
+querying `www.google.com` against `{google.com, mail.google.com}`). The first of them that is in any set
+decides, so the most specific entry wins and an entry under another is an exception to it:
+
+| At each candidate, from the domain itself up (in order) | Verdict |
+| --- | --- |
+| block set holds the candidate | `Block` |
+| exclude set holds the candidate | `Exclude` |
+| include set holds the candidate | `Include` (force-tunnel, skips the IP gates) |
+| no candidate in any set | inner `next`, else `Default` |
+
+So with `google.com` excluded and `mail.google.com` included, `www.mail.google.com` is `Include`; the
+sets' order decides only between entries of the same domain. The walk is as deep as the domain has
 labels, only on cache miss: the surrounding `CachedDomainFilter` memoizes per domain.
 
-Which sets are populated is probed once at construction; `IsEmpty` lets the client skip enabling SNI
-extraction when a db constrains nothing.
+Which sets are populated is probed once at construction: a db with no rows goes straight to `next`, and
+`IsEmpty` lets the client skip enabling SNI extraction when a db constrains nothing.
 
 ## Packaging
 

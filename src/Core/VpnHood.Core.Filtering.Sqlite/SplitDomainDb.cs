@@ -9,7 +9,8 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // "*.google.com"), so an entry is an ordinal prefix of every subdomain it matches.
 internal static class SplitDomainDb
 {
-    public const int SchemaVersion = 1;
+    // 2: the canonical form drops a name's final dot; a db built before kept it on the row, which matched nothing
+    public const int SchemaVersion = 2;
 
     // "_domains" suffix keeps the names clear of SQL keywords (EXCLUDE) and reads as the set it is
     public const string CreateTablesSql =

@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 
@@ -9,7 +10,7 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // context's business: what identifies the source (GetSourceSignature) and what rows to stream. Builds
 // run in the app process (memory is fine there); the resulting file is opened read-only by the VpnService.
 // A crash never leaves a half-built db in place — the build targets a temp file that atomically replaces
-// the target (VPN connections are exclusive, so the target is never in use).
+// the target, which is never in use while its name comes from GetFileName.
 /// <summary>
 /// Provides the build of a split database: a SQLite file of include, exclude and block sets, which a filter of this
 /// package reads.
@@ -22,12 +23,26 @@ namespace VpnHood.Core.Filtering.Sqlite;
 /// one step, so a crash never leaves a half-built database there, nor none.
 /// </para>
 /// <para>
-/// The target must not be open while it is replaced: give a changed source a new file name, from
-/// <see cref="GetSourceSignature"/>, so a running filter keeps the old file until it swaps.
+/// The target must not be open while it is replaced: name it by <see cref="GetFileName"/>, which changes with the
+/// source and with the schema, so a running filter keeps the old file until it swaps.
 /// </para>
 /// </remarks>
 public abstract class SplitDbBuilder
 {
+    /// <summary>
+    /// Gets a file name for the database, one that changes with its source and with its schema.
+    /// </summary>
+    /// <param name="prefix">The start of the name, which tells the context apart, as <c>split-domain</c>.</param>
+    /// <returns>
+    /// The prefix, a dot, a hash of the schema's version and <see cref="GetSourceSignature"/>, and <c>.db</c>.
+    /// </returns>
+    /// <remarks>
+    /// A build must not replace a file a filter holds open, so a database of another source, or of another release's
+    /// schema, takes another name, and the filter swaps to it.
+    /// </remarks>
+    public string GetFileName(string prefix) =>
+        $"{prefix}.{VhUtils.GetHexStringSha256($"{SchemaVersion}:{GetSourceSignature()}", 16)}.db";
+
     /// <summary>
     /// Gets the identity of the source of the sets, which a build stores in the database: it must change exactly when
     /// the sets would.
@@ -100,7 +115,7 @@ public abstract class SplitDbBuilder
         await BuildTempDbAsync(tempPath, cancellationToken).Vhc();
         SqliteConnection.ClearAllPools();
 
-        // Atomic replace (target is never open — connections are exclusive). Only the old db's side files go
+        // Atomic replace (target is never open — see GetFileName). Only the old db's side files go
         // first: the old db itself deleted before the move left none at all when the move then failed. Before
         // the move, not after it: for the moment between the two, and for good after a crash in it, the new db
         // would lie beside the old one's journal, which SQLite takes for its own and plays back into it.

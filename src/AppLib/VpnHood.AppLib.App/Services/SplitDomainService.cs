@@ -3,7 +3,6 @@ using VpnHood.AppLib.App.Settings;
 using VpnHood.AppLib.App.Utils;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Net.Toolkit.Extensions;
-using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services;
 
@@ -22,11 +21,11 @@ public class SplitDomainService(AppSettingsService settingsService, IPremiumFeat
 
     // Build or reuse the db for the current source files and return its path, or null when the feature
     // is inactive — this service owns its whole activity decision (SplitTunneling.UseDomain + premium plan). The
-    // file name carries the source signature, so a changed source builds a NEW file and a running
-    // VpnService can keep the superseded db open until it live-swaps to the returned path. Missing
-    // files count as empty, and empty sources leave their sets empty (a no-op gate). Failures propagate
-    // and fail to connect: a split the user configured is enforced or the connection does not proceed —
-    // never silently skipped.
+    // file name carries the source signature and the schema, so a changed source or a release's new schema
+    // builds a NEW file and a running VpnService can keep the superseded db open until it live-swaps to the
+    // returned path. Missing files count as empty, and empty sources leave their sets empty (a no-op gate).
+    // Failures propagate and fail to connect: a split the user configured is enforced or the connection does
+    // not proceed — never silently skipped.
     internal async Task<string?> EnsureSplitDomainDb(string dbFolder, CancellationToken cancellationToken)
     {
         // effective: the super toggle and the premium plan are both resolved here, so an inactive
@@ -50,7 +49,7 @@ public class SplitDomainService(AppSettingsService settingsService, IPremiumFeat
                 excludesFactory: () => DomainTextFileParser.Parse(splitDomainSettings.Excludes) ?? [],
                 blocksFactory: () => DomainTextFileParser.Parse(splitDomainSettings.Blocks) ?? []);
 
-            var dbPath = Path.Combine(dbFolder, $"split-domain.{VhUtils.GetHexStringSha256(signature, 16)}.db");
+            var dbPath = Path.Combine(dbFolder, dbBuilder.GetFileName("split-domain"));
             await dbBuilder.EnsureAsync(dbPath, cancellationToken).Vhc();
             return dbPath;
         }

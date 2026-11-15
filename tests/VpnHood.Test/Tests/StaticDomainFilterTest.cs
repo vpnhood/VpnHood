@@ -323,6 +323,43 @@ public class StaticDomainFilterTest : TestBase
         Assert.AreEqual(FilterAction.Block, resolver.Process("www.same.org"));
     }
 
+    // Each entry under another is an exception to it, however deep; under a blocked parent, a child on two lists still
+    // goes by the lists' order
+    [TestMethod]
+    public void Exceptions_nest_and_the_lists_order_holds_at_each_level()
+    {
+        var resolver = new StaticDomainFilter(null) {
+            Blocks = ["example.com", "d.c.b.example.com"],
+            Excludes = ["child.example.com", "c.b.example.com"],
+            Includes = ["child.example.com", "b.example.com"]
+        };
+
+        Assert.AreEqual(FilterAction.Exclude, resolver.Process("x.child.example.com"));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("a.example.com"));
+        Assert.AreEqual(FilterAction.Include, resolver.Process("x.b.example.com"));
+        Assert.AreEqual(FilterAction.Exclude, resolver.Process("x.c.b.example.com"));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("x.d.c.b.example.com"));
+    }
+
+    // A fully qualified name ends with a dot, as a resolver may hand it on, and is the same name. Before, the dot stayed:
+    // an entry with it matched no name asked without it, and a name with it missed every entry without it
+    [TestMethod]
+    public void A_final_dot_is_the_same_name()
+    {
+        var resolver = new StaticDomainFilter(null) {
+            Blocks = ["example.com", "."],
+            Includes = ["mail.example.com."]
+        };
+
+        Assert.AreEqual(FilterAction.Include, resolver.Process("mail.example.com"));
+        Assert.AreEqual(FilterAction.Include, resolver.Process("x.mail.example.com."));
+        Assert.AreEqual(FilterAction.Block, resolver.Process("www.example.com."));
+
+        // a dot alone is no name, as an entry or as a name asked
+        Assert.AreEqual(FilterAction.Default, resolver.Process("other.org"));
+        Assert.AreEqual(FilterAction.Default, resolver.Process("."));
+    }
+
     [TestMethod]
     public void A_list_is_copied_when_it_is_set()
     {

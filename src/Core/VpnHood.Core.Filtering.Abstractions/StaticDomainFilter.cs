@@ -5,12 +5,12 @@
 /// excluded and included.
 /// </summary>
 /// <remarks>
-/// An entry matches its domain and its subdomains, with or without a leading <c>*.</c>, and names and entries are
-/// compared as <see cref="DomainUtils.NormalizeDomain"/> gives them. The most specific entry that matches decides,
-/// so an entry under another is an exception to it: with <c>google.com</c> excluded and <c>mail.google.com</c>
-/// included, <c>mail.google.com</c> is included. Where the same domain is on more than one list, Block goes before
-/// Exclude, and Exclude before Include. Any other name gets the next stage's verdict. Setting a list copies it and
-/// raises <see cref="Changed"/>.
+/// An entry matches its domain and its subdomains, with or without a leading <c>*.</c> or a final dot, and names
+/// and entries are compared as <see cref="DomainUtils.NormalizeDomain"/> gives them. The most specific entry that
+/// matches decides, so an entry under another is an exception to it: with <c>google.com</c> excluded and
+/// <c>mail.google.com</c> included, <c>mail.google.com</c> is included. Where the same domain is on more than one
+/// list, Block goes before Exclude, and Exclude before Include. Any other name gets the next stage's verdict. Setting
+/// a list copies it and raises <see cref="Changed"/>.
 /// </remarks>
 public class StaticDomainFilter : IDomainFilter
 {

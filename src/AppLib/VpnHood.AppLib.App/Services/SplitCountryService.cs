@@ -14,7 +14,6 @@ using VpnHood.Net.Toolkit.Streams;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
-using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppLib.App.Services;
 
@@ -56,10 +55,10 @@ public class SplitCountryService(
     // inactive — this service owns its whole activity decision (SplitCountryMode + premium plan). The
     // selected countries' ranges are written into the db's include or exclude set — the db
     // self-describes what membership means, so only its path travels. The file name carries the source
-    // signature, so a changed selection builds a NEW file and a running VpnService can keep the
-    // superseded db open until it live-swaps to the returned path. Failures propagate and fail to
-    // connect: a split the user configured is enforced or the connection does not proceed — never
-    // silently skipped.
+    // signature and the schema, so a changed selection or a release's new schema builds a NEW file and a
+    // running VpnService can keep the superseded db open until it live-swaps to the returned path. Failures
+    // propagate and fail to connect: a split the user configured is enforced or the connection does not
+    // proceed — never silently skipped.
     // The (potentially huge) country ranges never enter memory — they stream from the zip into SQLite.
     internal async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
@@ -92,8 +91,7 @@ public class SplitCountryService(
                 ct => OpenIpLocationZip(ipLocationZipAsset, ct),
                 await GetIpLocationAssetHash(cancellationToken).Vhc(), countryCodes, action);
 
-            var dbPath = Path.Combine(dbFolder,
-                $"split-country.{VhUtils.GetHexStringSha256(dbBuilder.GetSourceSignature(), 16)}.db");
+            var dbPath = Path.Combine(dbFolder, dbBuilder.GetFileName("split-country"));
             await dbBuilder.EnsureAsync(dbPath, cancellationToken).Vhc();
 
             return dbPath;

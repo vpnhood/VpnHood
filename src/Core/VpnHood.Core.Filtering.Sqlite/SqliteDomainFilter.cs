@@ -112,7 +112,9 @@ public sealed class SqliteDomainFilter : IDomainFilter
     /// <value>
     /// <see langword="true"/> while the database's three sets are empty and the next stage, if any, is empty too.
     /// </value>
-    public bool IsEmpty => !(_hasIncludes || _hasExcludes || _hasBlocks) && (_next?.IsEmpty ?? true);
+    public bool IsEmpty => !HasEntries && (_next?.IsEmpty ?? true);
+
+    private bool HasEntries => _hasIncludes || _hasExcludes || _hasBlocks;
 
     /// <summary>Decides what happens to a flow for a domain name, by the database's sets, then by the next stage.</summary>
     /// <param name="domain">The name, or <see langword="null"/>.</param>
@@ -126,8 +128,9 @@ public sealed class SqliteDomainFilter : IDomainFilter
         if (normalizedDomain.Length == 0)
             return FilterAction.Default;
 
-        return FindMostSpecific(DomainUtils.InvertDomain(normalizedDomain)) ??
-               _next?.Process(domain) ?? FilterAction.Default;
+        // a db with no rows costs neither the lock nor a walk
+        var verdict = HasEntries ? FindMostSpecific(DomainUtils.InvertDomain(normalizedDomain)) : null;
+        return verdict ?? _next?.Process(domain) ?? FilterAction.Default;
     }
 
     // The domain itself, then each label ancestor, nearest first ("com.google.www" → "com.google" → "com"), so the

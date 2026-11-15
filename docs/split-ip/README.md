@@ -97,7 +97,8 @@ Split changes apply to a RUNNING session through the existing reconfigure flow �
 immutable; what changes is which files are current:
 
 1. The app rebuilds (or reuses) the dbs and rewrites each folder's manifest. File names carry the
-   source-signature hash, so a changed source builds a **new** file while the service still holds the
+   hash of the schema version and the source signature (`SplitDbBuilder.GetFileName`), so a changed
+   source, or a release's new schema, builds a **new** file while the service still holds the
    old one open; the manifest write is atomic (temp + rename) and also sweeps superseded files the
    service no longer holds. An always-on restart starts from the same manifests.
 2. `VpnServiceManager.Reconfigure` only signals the service — the request carries no filter payload.
@@ -129,22 +130,25 @@ reconnect — they configure the OS adapter — so a change while connected only
 
 ```text
 <IDevice.VpnServiceConfigFolder>/ip-filters/manifest.json          ← which dbs are active (the policy)
-<IDevice.VpnServiceConfigFolder>/ip-filters/split-country.<sig-hash>.db
-<IDevice.VpnServiceConfigFolder>/ip-filters/split-ip-via-app.<sig-hash>.db
+<IDevice.VpnServiceConfigFolder>/ip-filters/split-country.<hash>.db
+<IDevice.VpnServiceConfigFolder>/ip-filters/split-ip-via-app.<hash>.db
 <IDevice.VpnServiceConfigFolder>/domain-filters/manifest.json
-<IDevice.VpnServiceConfigFolder>/domain-filters/split-domain.<sig-hash>.db
+<IDevice.VpnServiceConfigFolder>/domain-filters/split-domain.<hash>.db
 ```
 
 `VpnServiceConfigFolder` is the folder the VpnService already reads its config from — the one location
 guaranteed readable by both processes. On iOS it lives inside the shared app-group container (the only
-path a Network Extension can read). Filenames are per context and **versioned by the source-signature
-hash**: an unchanged source keeps its file (reuse), a changed one builds a sibling the running service
-can swap to. Each folder's `manifest.json` (written by `SplitDbManifest`) is the only statement of
+path a Network Extension can read). Filenames are per context and **versioned by a hash of the schema
+version and the source signature**: an unchanged source keeps its file (reuse), a changed one, or a
+release's new schema, builds a sibling the running service can swap to. A build in place would replace
+a file the service holds open, which Windows refuses and unix hides from the service, as its path is
+unchanged. Each folder's `manifest.json` (written by `SplitDbManifest`) is the only statement of
 which dbs apply — a db file not listed there is inert garbage, never policy. Deletion is split by who
 held what: on a live swap the service's chain stage deletes the files it just closed (nobody else
 could — it had them open); the app's manifest write sweeps the rest (crash remnants, files superseded
-while disconnected). The builder only manages the file it is asked about. A schema change rebuilds
-each db in place (its `schema_version` meta no longer matches).
+while disconnected). The builder only manages the file it is asked about. A start without the app
+(always-on, the tile, the system's VPN settings) runs on the dbs the app last published, after an
+update those of the release before, until the app publishes again.
 
 ## Future work
 

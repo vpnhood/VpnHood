@@ -34,7 +34,9 @@ extraction entirely (`SqliteDomainFilter.IsEmpty`).
 
 `SplitDomainService.EnsureSplitDomainDb` stores each source file into its own set of the single
 `split-domain.db`, exactly as written — no merge algebra. Rows are canonicalized (`DomainUtils`:
-lower-case, `*.` stripped, parts inverted to `com.google`) so lookups are plain ordinal point queries.
+lower-case, `*.` stripped, a final dot dropped, parts inverted to `com.google`) so lookups are plain
+ordinal point queries; the names looked up are normalized the same way, so `mail.google.com.` is
+`mail.google.com`.
 
 Set semantics differ from the IP dbs in one deliberate way — the include set is NOT a veto:
 
@@ -54,7 +56,10 @@ positive override. The canonical composition:
 
 > **Tunnel nothing except `aaa.com`** = `includes.txt: aaa.com` + via-app IP excludes
 > `0.0.0.0/0, ::/0`. The domain include wins for `aaa.com`'s TLS/QUIC flows; everything else is
-> excluded by the IP gate — including domain-less traffic the domain gate cannot name.
+> excluded by the IP gate — including domain-less traffic the domain gate cannot name — except what
+> the client forces through the tunnel over an exclusion: DNS on ports 53 and 853 under the default
+> `SplitDnsMode.IncludeAll` (`DefaultRoute` lets it follow the IP gate), and pings (ICMP echo). A block
+> still drops either.
 
 A domain-include veto ("only these domains tunnel") would make that scenario inexpressible while adding
 nothing this composition doesn't already cover — and it could never bind domain-less traffic anyway.

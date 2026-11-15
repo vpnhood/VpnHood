@@ -8,6 +8,7 @@ using VpnHood.AppLib.App.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Net.Toolkit.Storages;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Test.Tests;
 
@@ -85,7 +86,8 @@ public class SplitDomainDbTest : TestBase
 
         Assert.AreEqual("1", ReadMeta(dbPath, "built_complete"));
         Assert.AreEqual("sig-1", ReadMeta(dbPath, "source_signature"));
-        Assert.AreEqual("1", ReadMeta(dbPath, "schema_version"));
+        // 2 since a final dot is dropped, so a db that kept one on its row is rebuilt
+        Assert.AreEqual("2", ReadMeta(dbPath, "schema_version"));
     }
 
     [TestMethod]
@@ -216,6 +218,47 @@ public class SplitDomainDbTest : TestBase
         Assert.AreEqual(FilterAction.Block, filter.Process("www.same.org"));
     }
 
+    // Each entry under another is an exception to it, however deep; under a blocked parent, a child in two sets still
+    // goes by the sets' order
+    [TestMethod]
+    public async Task Exceptions_nest_and_the_sets_order_holds_at_each_level()
+    {
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-domain-filter", "nested.db");
+        await new DomainListDbBuilder(() => "sig-1",
+            includesFactory: () => ["child.example.com", "b.example.com"],
+            excludesFactory: () => ["child.example.com", "c.b.example.com"],
+            blocksFactory: () => ["example.com", "d.c.b.example.com"]
+        ).BuildAsync(dbPath, TestCt);
+        using var filter = new SqliteDomainFilter(next: null, dbPath);
+
+        Assert.AreEqual(FilterAction.Exclude, filter.Process("x.child.example.com"));
+        Assert.AreEqual(FilterAction.Block, filter.Process("a.example.com"));
+        Assert.AreEqual(FilterAction.Include, filter.Process("x.b.example.com"));
+        Assert.AreEqual(FilterAction.Exclude, filter.Process("x.c.b.example.com"));
+        Assert.AreEqual(FilterAction.Block, filter.Process("x.d.c.b.example.com"));
+    }
+
+    // A fully qualified name ends with a dot, as a resolver may hand it on, and is the same name. Before, the dot stayed
+    // on the row: an entry with it matched no name asked without it, and a name with it missed every entry without it
+    [TestMethod]
+    public async Task A_final_dot_is_the_same_name()
+    {
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-domain-filter", "final-dot.db");
+        await new DomainListDbBuilder(() => "sig-1",
+            includesFactory: () => ["mail.example.com."],
+            blocksFactory: () => ["example.com", "."]
+        ).BuildAsync(dbPath, TestCt);
+        using var filter = new SqliteDomainFilter(next: null, dbPath);
+
+        CollectionAssert.AreEqual(new[] { "com.example.mail" }, ReadDomains(dbPath, "include_domains"));
+        CollectionAssert.AreEqual(new[] { "com.example" }, ReadDomains(dbPath, "block_domains"),
+            "a dot alone is no name");
+        Assert.AreEqual(FilterAction.Include, filter.Process("mail.example.com"));
+        Assert.AreEqual(FilterAction.Include, filter.Process("x.mail.example.com."));
+        Assert.AreEqual(FilterAction.Block, filter.Process("www.example.com."));
+        Assert.AreEqual(FilterAction.Default, filter.Process("."));
+    }
+
     [TestMethod]
     public async Task Filter_matches_subdomains_but_not_parents()
     {
@@ -272,6 +315,10 @@ public class SplitDomainDbTest : TestBase
         // all sets empty ⇒ no constraint: always Default (the db is never consulted on the hot path)
         Assert.IsTrue(filter.IsEmpty);
         Assert.AreEqual(FilterAction.Default, filter.Process("example.com"));
+
+        // and the next stage decides alone
+        using var chained = new SqliteDomainFilter(new StubFilter(FilterAction.Block), dbPath);
+        Assert.AreEqual(FilterAction.Block, chained.Process("example.com"));
     }
 
     [TestMethod]
@@ -373,6 +420,33 @@ public class SplitDomainDbTest : TestBase
         Assert.IsNotNull(dbPath3);
         using (var filter = new SqliteDomainFilter(next: null, dbPath3))
             Assert.AreEqual(FilterAction.Default, filter.Process("block.com"));
+    }
+
+    // The release before named a database by its source alone, so a database of the older schema lay at the name this
+    // release gave it, held open by the running VPN: the rebuild there was refused on Windows, and on unix left the VPN
+    // on the old file, as its path did not change. A new schema takes a new name, as a new source does.
+    [TestMethod]
+    public async Task A_database_of_an_older_schema_is_not_replaced_while_open()
+    {
+        var storagePath = CreateStoragePath();
+        var settingsService = CreateSettingsService(storagePath);
+        settingsService.UserSettings.SplitTunneling.UseDomain = true;
+        settingsService.SplitDomainSettings.Blocks = "block.com";
+        var service = new SplitDomainService(settingsService, new AllowAllPremiumFeatures());
+        var dbFolder = Path.Combine(storagePath, "domain-filters");
+
+        var signature = settingsService.SplitDomainSettings.GetSignature();
+        var oldDbPath = Path.Combine(dbFolder, $"split-domain.{VhUtils.GetHexStringSha256(signature, 16)}.db");
+        await new DomainListDbBuilder(() => signature, blocksFactory: () => ["block.com"]).BuildAsync(oldDbPath, TestCt);
+        WriteMeta(oldDbPath, "schema_version", "1");
+        using var runningFilter = new SqliteDomainFilter(next: null, oldDbPath);
+
+        var dbPath = await service.EnsureSplitDomainDb(dbFolder, TestCt);
+        Assert.IsNotNull(dbPath);
+        Assert.AreNotEqual(oldDbPath, dbPath);
+        Assert.AreEqual(FilterAction.Block, runningFilter.Process("block.com"));
+        using var filter = new SqliteDomainFilter(next: null, dbPath);
+        Assert.AreEqual(FilterAction.Block, filter.Process("block.com"));
     }
 
     // An entry matches its subdomains already, so a leading "*." changed nothing, and the filters take any other * as a

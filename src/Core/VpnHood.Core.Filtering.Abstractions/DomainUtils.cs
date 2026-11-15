@@ -7,8 +7,9 @@ namespace VpnHood.Core.Filtering.Abstractions;
 public static class DomainUtils
 {
     /// <summary>
-    /// Normalizes a domain name: trimmed, in lower case, and without a leading <c>*.</c>, as an entry matches its
-    /// subdomains anyway.
+    /// Normalizes a domain name: trimmed, in lower case, without a leading <c>*.</c>, as an entry matches its
+    /// subdomains anyway, and without the final dot of a fully qualified name, as <c>example.com.</c> is
+    /// <c>example.com</c>.
     /// </summary>
     /// <param name="domain">The name, or <see langword="null"/>.</param>
     /// <returns>
@@ -22,6 +23,9 @@ public static class DomainUtils
         var normalized = domain.Trim().ToLowerInvariant();
         if (normalized.StartsWith("*.", StringComparison.Ordinal))
             normalized = normalized[2..];
+
+        if (normalized.EndsWith('.'))
+            normalized = normalized[..^1];
 
         return normalized;
     }

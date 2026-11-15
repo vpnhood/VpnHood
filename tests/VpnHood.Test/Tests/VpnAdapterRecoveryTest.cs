@@ -163,6 +163,40 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_failure_of_the_adapters_own_stops_it_and_raises_Failed()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        // what the Linux adapter does when a new network's link keeps its DNS domain: the run ends, and the owner
+        // hears why, where a log line left the VPN up and leaking
+        var failure = new InvalidOperationException("Test: the adapter cannot go on.");
+        var ex = await WaitForFailed(adapter, () => {
+            adapter.FailRun(failure);
+            return Task.CompletedTask;
+        });
+        Assert.AreSame(failure, ex);
+        Assert.IsFalse(adapter.IsStarted);
+        Assert.IsFalse(adapter.IsAdded);
+
+        // not started: nothing to stop, and no second notice
+        adapter.FailRun(failure);
+        Assert.AreEqual(1, adapter.StartCount);
+    }
+
+    [TestMethod]
+    public async Task A_failure_of_the_adapters_own_restarts_an_adapter_that_keeps_itself_up()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: true);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        adapter.FailRun(new InvalidOperationException("Test: the adapter cannot go on."));
+        Assert.IsFalse(adapter.IsStarted);
+        await AssertEqualsWait(2, () => adapter.OpenCount, timeout: 10000);
+        Assert.IsTrue(adapter.IsStarted);
+    }
+
+    [TestMethod]
     public async Task Stop_waits_for_the_reader()
     {
         using var adapter = new TestFaultyVpnAdapter(autoRestart: false);

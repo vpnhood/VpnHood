@@ -23,6 +23,7 @@ using VpnHood.Test.Dom;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
 using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
+using SplitDnsMode = VpnHood.Core.Client.Abstractions.SplitDnsMode;
 // ReSharper disable ShortLivedHttpClient
 
 // ReSharper disable DisposeOnUsingVariable
@@ -1086,6 +1087,24 @@ public class ClientServerTest : TestBase
         // and no forwarding once no rule is left
         domainFilter.Blocks = [];
         Assert.IsFalse(client.RequiredSession.Status.IsTcpForwarding);
+    }
+
+    [TestMethod]
+    [DataRow(SplitDnsMode.IncludeAll, true)]
+    [DataRow(SplitDnsMode.DefaultRoute, false)]
+    public async Task The_client_asks_its_adapter_for_exclusive_DNS_while_DNS_must_stay_in_the_VPN(
+        SplitDnsMode splitDnsMode, bool expected)
+    {
+        await using var server = await TestHelper.CreateServer();
+        var clientOptions = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
+        clientOptions.SplitDnsMode = splitDnsMode;
+
+        // The option alone, which the Linux adapter acts on (LinuxLinkDomainsKeeperTest): on Linux the host's
+        // resolver still asks another interface's servers for the names under its domain
+        using var vpnAdapter = new TestNullVpnAdapter();
+        await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: vpnAdapter);
+        await client.WaitForState(ClientState.Connected, TestCt);
+        Assert.AreEqual(expected, vpnAdapter.IsDnsExclusive);
     }
 
     // a null adapter that tells when its start is under way

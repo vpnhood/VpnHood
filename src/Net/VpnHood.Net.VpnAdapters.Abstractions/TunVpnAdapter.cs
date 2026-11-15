@@ -98,6 +98,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected IPAddress? ServerIp => _startOptions?.ServerIp;
 
     /// <summary>
+    /// Gets a value indicating whether the current run's options ask for its DNS servers to be the only ones the
+    /// host asks (<see cref="VpnAdapterOptions.UseExclusiveDns"/>).
+    /// </summary>
+    protected bool UseExclusiveDns => _startOptions?.UseExclusiveDns ?? false;
+
+    /// <summary>
     /// Gets a value indicating whether the current run translates its virtual networks (NAT).
     /// </summary>
     // ReSharper disable once FieldCanBeMadeReadOnly.Local
@@ -1555,6 +1561,23 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             OnUnrequestedStop(ex);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Stops the adapter for a failure of its own that it cannot go on with, as its I/O errors do: it then starts
+    /// itself again with <see cref="VpnAdapterSettings.AutoRestart"/>, or raises <see cref="Failed"/>.
+    /// </summary>
+    /// <param name="ex">The failure, which <see cref="Failed"/> hands its subscribers.</param>
+    /// <remarks>
+    /// It does nothing when the adapter is not started, or when another call is stopping it. A teardown that fails is
+    /// logged. Never call it from the reader's or the sender's thread, whose stop must not wait for itself.
+    /// </remarks>
+    // For what goes wrong after the start, with no caller to throw to: a platform's adapter that finds, on a change of
+    // the host's network, that it can no longer keep what the run's options asked for
+    protected void StopOnFailure(Exception ex)
+    {
+        if (Stop(throwException: false))
+            OnUnrequestedStop(ex);
     }
 
     // The adapter stopped on its own: by I/O errors, or by a restart whose start failed. With AutoRestart

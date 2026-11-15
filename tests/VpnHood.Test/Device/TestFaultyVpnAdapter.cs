@@ -192,6 +192,12 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         return IsOpen && !RefuseWrite && base.WritePacket(ipPacket);
     }
 
+    // as a platform's adapter that finds, after its start, that it cannot keep what the run's options asked for
+    public void FailRun(Exception ex)
+    {
+        StopOnFailure(ex);
+    }
+
     public void ReleaseStart()
     {
         HoldBeforeAdd = false;

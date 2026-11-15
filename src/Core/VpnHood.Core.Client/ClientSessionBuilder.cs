@@ -326,6 +326,9 @@ internal class ClientSessionBuilder(
                 ServerIp = connectorService.VpnEndPoint.TcpEndPoint.Address,
                 Mtu = mtu,
                 DnsServers = dnsConfig.DnsServers,
+
+                // the DNS rule's promise, kept where the host's resolver would ask another interface's servers
+                UseExclusiveDns = config.SplitDnsMode is SplitDnsMode.IncludeAll,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
                 IncludeNetworks = sessionIncludeIpRangesByDevice.ToIpNetworks(),

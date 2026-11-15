@@ -376,7 +376,10 @@ Points that are easy to get wrong:
    routes and its `resolvectl` DNS with it, once the service ends, by a crash too, as WinTun does on
    Windows. Only the `resolvconf` fallback's DNS entry and the nftables tables that keep a container's
    DNS off the local network outlive a crash, and the service's start, after its single-instance lock
-   on the app id, takes them off. A tun's name says nothing about its
+   on the app id, takes them off. The other interfaces' DNS domains, which the adapter takes off while
+   DNS must stay in the VPN (Split DNS on Always use VPN, `VpnAdapterOptions.UseExclusiveDns`), stay
+   off after a crash too: the adapter records them under `/run/vpnhood` before it takes them, and the
+   same start gives them back. A tun's name says nothing about its
    owner, so the adapter writes the app id on each one as the interface's alias
    (`ip link set dev VpnHoodClient alias <app id>`; the server writes `com.vpnhood.server`), or its
    first 64 characters, a dash and a hash where an alias cannot hold it as it is. A version before
@@ -407,8 +410,9 @@ Points that are easy to get wrong:
    before its adapter comes up (`IVpnTunnelLock`): a lock file in `/run/vpnhood-tunnel/`, root's alone,
    and beside it a socket on which the holder hears another app ask it to let go. As on Android, the
    holder drops its tun at once and lets go, then ends its session with the error a revoked VPN shows
-   there; the new app waits for nothing else of it. A crash lets the lock go with the process, and the
-   tun with it (point 5). A connect with `/null-capture` makes no adapter and takes no tunnel. Windows
+   there; the new app waits for nothing else of it. The dropped tun's adapter has given the other
+   interfaces their DNS domains back by then (point 5), so the new app's adapter finds them to take. A
+   crash lets the lock go with the process, and the tun with it (point 5). A connect with `/null-capture` makes no adapter and takes no tunnel. Windows
    does the same with a mutex and an event in an administrators' namespace (`WindowsVpnTunnelLock`).
 
 The installer is [`pub/lib/vh-installer/linux/install-client.sh`](../../pub/lib/vh-installer/linux/install-client.sh),

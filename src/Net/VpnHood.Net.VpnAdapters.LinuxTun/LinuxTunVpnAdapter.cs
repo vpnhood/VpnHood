@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -27,8 +28,9 @@ namespace VpnHood.Net.VpnAdapters.LinuxTun;
 /// It needs root, and runs <c>ip</c>, <c>sysctl</c>, <c>resolvectl</c> or <c>resolvconf</c>, <c>iptables</c> and
 /// <c>ip6tables</c>, <c>nft</c> and <c>udevadm</c> through bash; a canceled step stops waiting for its command, which
 /// runs on. The kernel removes the TUN device, with its routes and systemd-resolved's DNS servers for it, when the
-/// process ends, a crash included. A resolvconf entry and the DNS redirect stay, which <see cref="RemoveLeftovers"/>
-/// clears, and so do the NAT chains, of both IP versions, until the next start that uses NAT.
+/// process ends, a crash included. A resolvconf entry and the DNS redirect stay, and the other interfaces stay
+/// without the DNS domains the adapter took off them, which <see cref="RemoveLeftovers"/> clears and gives back,
+/// and so do the NAT chains, of both IP versions, until the next start that uses NAT.
 /// </para>
 /// <para>
 /// The interface's alias carries a tag made from the app's ID, when there is one (<see cref="VpnAdapterSettings.AppId"/>),
@@ -85,6 +87,12 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private readonly Lock _dnsRedirectLock = new();
     private IPAddress[]? _dnsRedirectServers;
 
+    // While the adapter's servers are the only ones the host may ask (VpnAdapterOptions.UseExclusiveDns), the other
+    // links have no DNS domains (LinuxLinkDomainsKeeper). True from a run's first taking until its giving back. Both
+    // under the lock, so a start that a stop overtook takes none after the stop has given them back.
+    private readonly Lock _linkDomainsLock = new();
+    private bool _isLinkDomainsTaken;
+
     // Whether AddNat has made the adapter's chains of an IP version, which AdapterRemove removes, and the record
     // with them. A record kept after its removal would take another adapter's chains: one that has the name by
     // the time this one starts again, before the start finds the name taken.
@@ -139,8 +147,15 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         _adapterAlias = adapterSettings.AppId == null ? null : GetAdapterAlias(adapterSettings.AppId);
         _senderStopWaitTimeout = StopWaitTimeout + adapterSettings.MaxPacketSendDelay * 2;
 
-        // a client keeps its adapter on a new network, whose addresses the redirect names
-        PrimaryNetworkChanged += (_, _) => ApplyDnsRedirect();
+        PrimaryNetworkChanged += PrimaryNetwork_Changed;
+    }
+
+    // a client keeps its adapter on a new network, whose addresses the redirect names, and whose link may bring a
+    // DNS domain
+    private void PrimaryNetwork_Changed(object? sender, EventArgs e)
+    {
+        ApplyDnsRedirect();
+        KeepLinkDomainsOff();
     }
 
     // Before the base is made, which starts its send loop and its watch of the host's network: a constructor that
@@ -265,14 +280,16 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// <summary>
     /// Removes what an earlier run of the app left on the host: its resolvconf DNS entry and DNS redirect, when no
     /// interface has the adapter's name, and every TUN device with a valid name that carries the app's tag as its alias
-    /// and that no process is known to hold.
+    /// and that no process is known to hold. It gives the other interfaces back the DNS domains that run took off
+    /// them (<see cref="VpnAdapterOptions.UseExclusiveDns"/>).
     /// </summary>
     /// <param name="appId">The app's ID, as in <see cref="VpnAdapterSettings.AppId"/>.</param>
     /// <param name="adapterName">The adapter's name, as in <see cref="VpnAdapterSettings.AdapterName"/>.</param>
     /// <remarks>
     /// Call it when the app starts, once no other instance of it can run, rather than at the next connect: a crashed
     /// run's TUN device went with its process, but its resolvconf entry would keep <c>/etc/resolv.conf</c> on the VPN's
-    /// servers, and the kernel keeps the redirect's tables. The TUN devices go for versions that made them with
+    /// servers, the kernel keeps the redirect's tables, and the other interfaces would stay without their DNS domains
+    /// until their network sets them again. The TUN devices go for versions that made them with
     /// <c>ip tuntap</c>, which outlive their process. It needs root; a failure is logged, not thrown.
     /// </remarks>
     /// <exception cref="ArgumentException"><paramref name="adapterName"/> is not a valid interface name.</exception>
@@ -285,6 +302,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         if (!LinuxTunInfo.InterfaceExists(adapterName)) {
             TryRemoveResolvconfDns(adapterName);
             TryRemoveDnsRedirect(adapterName, LogLevel.Debug);
+            TryGiveBackLinkDomains(adapterName);
         }
 
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -314,6 +332,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
             VhLogger.Instance.LogInformation("Removing {AdapterName}, a tun a previous run left.", tun.Name);
             TryRemoveResolvconfDns(tun.Name);
+            TryGiveBackLinkDomains(tun.Name);
             VhInvoker.TryInvoke($"remove the leftover tun {tun.Name}", LogLevel.Warning, () =>
                 ExecuteCommand($"ip link delete {tun.Name}"));
         }
@@ -501,7 +520,10 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// <para>
     /// It removes only what this adapter added: its resolvconf entry and DNS redirect, the TUN device it made, and its
     /// NAT, which is in chains of the adapter's own: the jumps to them and the chains go, and no rule of another
-    /// tool's. A failure is logged, not thrown.
+    /// tool's. It gives the other interfaces back the DNS domains it took off them: each that is still there and still
+    /// has none. One that systemd-networkd managed goes back by <c>resolvectl revert</c>, which hands all its DNS
+    /// settings back to systemd-networkd, one that someone made at run time with them. An interface whose domains
+    /// cannot be given back stays recorded, for the next start to try. A failure is logged, not thrown.
     /// </para>
     /// <para>
     /// Before the device's descriptor is freed, it waits up to a second for the reader to leave, which the device's
@@ -528,6 +550,10 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             RemoveOwnResolvconfDns();
 
         RemoveDnsRedirect();
+
+        // as the DNS entry: with the tun, and without it for a start a stop overtook
+        if (tunAdapterFd != InvalidFd || _isLinkDomainsTaken)
+            GiveBackLinkDomains();
 
         // the tun goes with its last open file, which a reader's poll may still hold: the delete takes it
         // now, and wakes that poll
@@ -865,6 +891,11 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     // What systemd-resolved knows, every link's servers: not its stub, which a container cannot reach
     private const string ResolvedServersPath = "/run/systemd/resolve/resolv.conf";
 
+    // what the adapter took off the other links, kept for the giving back; gone at a boot, when each link gets its
+    // domains anew
+    private const string LinkDomainsRecordFolder = "/run/vpnhood";
+    private const string NetworkdLinksFolder = "/run/systemd/netif/links";
+
     private const string DnsServersError =
         "Could not set the VPN's DNS servers. Run the app's install command again, which turns on " +
         "systemd-resolved and links /etc/resolv.conf to it.";
@@ -931,6 +962,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         if (!LinuxTunInfo.InterfaceExists(AdapterName)) {
             TryRemoveResolvconfDns(AdapterName);
+            TryGiveBackLinkDomains(AdapterName);
             return;
         }
 
@@ -944,6 +976,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
         VhLogger.Instance.LogInformation("Removing {AdapterName}, a tun a previous run left.", AdapterName);
         TryRemoveResolvconfDns(AdapterName);
+        TryGiveBackLinkDomains(AdapterName);
         ExecuteCommand($"ip link delete {AdapterName}");
     }
 
@@ -958,6 +991,19 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// these and systemd-resolved's stub, <c>127.0.0.53</c> or <c>127.0.0.54</c>.
     /// </para>
     /// <para>
+    /// With <see cref="VpnAdapterOptions.UseExclusiveDns"/>, it fails with no servers, and where systemd-resolved
+    /// answers the host's lookups it then takes the DNS domains off every other interface, as systemd-resolved sends
+    /// a name under an interface's own domain to that interface's servers; another VPN's interface is one of them.
+    /// What it takes off it records under <c>/run/vpnhood</c>, for the giving back. Then it looks again, and fails
+    /// where an interface still has a domain: for one that systemd-networkd manages, systemd 245 and 249 leave it
+    /// there, and 255 and later take it off. After a change of the host's network it does the same again, and a
+    /// failure there stops the adapter, as its I/O errors do; a domain that a network sets later with no such change
+    /// stays until the next start. Two adapters with the option at once are not kept apart: the one that stops
+    /// first gives back what it took, under the other. The apps never have two up: their VPN service holds the
+    /// machine's one tunnel, and an app that loses it drops its adapter, which gives back, before the next app's
+    /// comes up.
+    /// </para>
+    /// <para>
     /// While the servers are set, an nftables rule sends DNS over TCP or UDP port 53 that the host forwards, a
     /// container's, to the VPN's first server of its IP version when it is for a network of the host's primary
     /// interfaces or a server systemd-resolved knows, or refuses it where the VPN has no server of that version. DNS
@@ -967,15 +1013,29 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// </remarks>
     /// <exception cref="InvalidOperationException">
     /// Neither <c>resolvectl</c> nor <c>resolvconf</c> took the servers, or <c>/etc/resolv.conf</c> does not use
-    /// them.
+    /// them; or, under <see cref="VpnAdapterOptions.UseExclusiveDns"/>, there are no servers, or another interface
+    /// keeps a DNS domain.
+    /// </exception>
+    /// <exception cref="ExternalException">
+    /// The interfaces' DNS domains could not be listed under <see cref="VpnAdapterOptions.UseExclusiveDns"/>.
+    /// </exception>
+    /// <exception cref="FormatException">
+    /// That list, or the adapter's record of an earlier run, is not written as systemd-resolved writes one.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
     protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
         CancellationToken cancellationToken)
     {
-        if (!dnsServers.Any())
+        // Fail-closed: with none of the VPN's servers to ask, the host goes on asking the other interfaces'
+        if (!dnsServers.Any()) {
+            if (UseExclusiveDns)
+                throw new InvalidOperationException(
+                    "Could not keep DNS inside the VPN: it has no DNS server that this connection can reach. " +
+                    "To connect anyway, choose Allow Bypass VPN in the app's Split DNS settings.");
+
             return;
+        }
 
         try {
             // --- Try systemd-resolved ---
@@ -1010,10 +1070,102 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             throw new InvalidOperationException(
                 $"{DnsServersError}\n{ResolvConfPath} does not use them, so DNS would go around the VPN.");
 
+        // resolvconf's exclusive entry leaves no other server to ask; systemd-resolved still has the other links'.
+        // By who answers the host's lookups, not by which command took the servers: a resolvconf may be
+        // systemd-resolved's own, and then the links have their domains all the same
+        if (UseExclusiveDns && IsResolvConfOnResolved(resolvConf))
+            TakeLinkDomains(cancellationToken);
+
         lock (_dnsRedirectLock)
             _dnsRedirectServers = dnsServers.ToArray();
 
         ApplyDnsRedirect();
+    }
+
+    // Not after a stop, whose giving back has run by then: its token is canceled before, and both are under the lock.
+    // Marked as taken first, so a taking that fails half-way is given back.
+    private void TakeLinkDomains(CancellationToken cancellationToken)
+    {
+        lock (_linkDomainsLock) {
+            cancellationToken.ThrowIfCancellationRequested();
+            _isLinkDomainsTaken = true;
+            CreateLinkDomainsKeeper(AdapterName).Take();
+        }
+    }
+
+    // A network the adapter moved to may give its link a domain. Never throws: a network change runs it on the OS's
+    // thread. The look may come before the network's own manager has set the domain, and a domain set with no
+    // change of the network is not seen at all, which the option's docs say.
+    private void KeepLinkDomainsOff()
+    {
+        Exception? failure = null;
+        lock (_linkDomainsLock) {
+            if (!_isLinkDomainsTaken)
+                return;
+
+            try {
+                CreateLinkDomainsKeeper(AdapterName).Take();
+            }
+            catch (Exception ex) {
+                failure = ex;
+            }
+        }
+
+        // Outside the lock, which the stop's giving back takes. The run ends by it, as a start ends that cannot take
+        // them: left up, the VPN showed connected while the new network's names were looked up outside it.
+        if (failure == null)
+            return;
+
+        VhLogger.Instance.LogError(failure,
+            "Could not take the DNS domains off the new network's interfaces. Stopping the VPN adapter.");
+        StopOnFailure(failure);
+    }
+
+    private void GiveBackLinkDomains()
+    {
+        lock (_linkDomainsLock) {
+            _isLinkDomainsTaken = false;
+            TryGiveBackLinkDomains(AdapterName);
+        }
+    }
+
+    // A failure is logged, as the stop goes on: where the links cannot even be listed, the record stays for the next
+    // start's try
+    private static void TryGiveBackLinkDomains(string adapterName)
+    {
+        VhInvoker.TryInvoke($"give back the DNS domains that {adapterName} took off the other interfaces",
+            LogLevel.Error, () => CreateLinkDomainsKeeper(adapterName).GiveBack());
+    }
+
+    // It holds nothing but its record's path, so each use makes its own
+    private static LinuxLinkDomainsKeeper CreateLinkDomainsKeeper(string adapterName)
+    {
+        var recordPath = Path.Combine(LinkDomainsRecordFolder, $"{adapterName}.link-domains");
+        return new LinuxLinkDomainsKeeper(adapterName, recordPath, ExecuteCommand, IsManagedByNetworkd);
+    }
+
+    private static bool IsManagedByNetworkd(int linkIndex)
+    {
+        var statePath = Path.Combine(NetworkdLinksFolder, linkIndex.ToString(CultureInfo.InvariantCulture));
+        return File.Exists(statePath) && IsManagedByNetworkd(File.ReadAllText(statePath));
+    }
+
+    // As systemd-resolved itself tells a managed link: by the setup state in the file systemd-networkd writes for
+    // each link, which is there for a link it leaves alone too
+    internal static bool IsManagedByNetworkd(string linkState)
+    {
+        const string key = "ADMIN_STATE=";
+        var setupState = linkState.Split('\n')
+            .FirstOrDefault(x => x.StartsWith(key, StringComparison.Ordinal))?[key.Length..].Trim();
+
+        return setupState is not (null or "pending" or "initialized" or "unmanaged");
+    }
+
+    // whether a program that reads resolv.conf asks systemd-resolved, by its stub
+    internal static bool IsResolvConfOnResolved(string resolvConf)
+    {
+        return GetNameservers(resolvConf)
+            .Any(x => IPAddress.TryParse(x, out var ipAddress) && ResolvedStubServers.Contains(ipAddress));
     }
 
     // Every server in resolv.conf is systemd-resolved's stub or one of the VPN's. A file with none counts as

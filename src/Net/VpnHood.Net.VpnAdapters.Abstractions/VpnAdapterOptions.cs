@@ -54,6 +54,21 @@ public class VpnAdapterOptions
     public IReadOnlyList<IPAddress> DnsServers { get; init; } = [];
 
     /// <summary>
+    /// Gets a value indicating whether <see cref="DnsServers"/> are to be the only DNS servers the host asks while the
+    /// adapter is up, where the host's resolver would still ask another interface's. The default is
+    /// <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Only <c>LinuxTunVpnAdapter</c> reads it. On Linux, systemd-resolved sends a name under an interface's own DNS
+    /// domain, as a network's DHCP gives one, to that interface's servers and by that interface, whatever the routes
+    /// say: the network sees those names, and answers them. With this option the adapter takes the DNS domains off
+    /// the other interfaces when it starts, gives them back when it stops, and fails the start where the system
+    /// does not let it. The names under them are then asked of <see cref="DnsServers"/>, which do not know a name
+    /// that only the local network's server knows.
+    /// </remarks>
+    public bool UseExclusiveDns { get; init; }
+
+    /// <summary>
     /// Gets the networks routed through the tunnel. The default is none.
     /// </summary>
     /// <remarks>

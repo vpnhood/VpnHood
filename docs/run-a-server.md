@@ -2,8 +2,11 @@
 
 The server engine in a .NET program of your own: it listens for clients, admits each by its access key, and carries
 its traffic. Who may connect is its access manager's call; this guide keeps the access keys in files, with the file
-access manager. To install a ready server instead of building one, use the VpnHood server app:
-[Install the VpnHood server](https://www.vpnhood.com/vpnhood-server/docs/install/).
+access manager.
+
+> [!TIP]
+> Most people don't need to build a server: the VpnHood server app is ready to install, and it is the recommended way
+> to run one. [Install the VpnHood server](https://www.vpnhood.com/vpnhood-server/docs/install/).
 
 ## The packages
 

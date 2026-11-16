@@ -24,14 +24,15 @@ the same machine. That is what keeps it small and fast.
 Any `IVpnAdapter` from `VpnHood.Net.VpnAdapters.*` (WinDivert, WinTun, Linux TUN, Android, iOS) is a
 packet source. Route a virtual endpoint through the adapter and the stack answers it:
 
-```csharp
+```csharp Snippet:TcpStackQuickStart
 using var tcpStack = new LocalTcpStack();
 
-// Packets the stack produces go out through your adapter, which owns each one from here: made with
-// AutoDisposePackets = true, it disposes each packet once written.
+// Packets the stack produces go out through your adapter, which owns each one from here:
+// it disposes each packet once written.
 tcpStack.OnPacketSend = packet => adapter.SendPacketQueued(packet);
 
-// Packets your adapter captures go into the stack, which copies what it keeps: the handler still owns each one.
+// Packets your adapter captures go into the stack, which copies what it keeps:
+// the handler still owns each one.
 adapter.PacketReceived += (_, packet) => {
     tcpStack.ProcessIncoming(packet);
     packet.Dispose();
@@ -47,21 +48,26 @@ await adapter.Start(new VpnAdapterOptions {
     IncludeNetworks = [new IpNetwork(IPAddress.Parse("11.0.0.1"), 32)]
 }, cancellationToken);
 
-// Accept connections to the virtual endpoint.
+// Accept connections to the virtual endpoint, each handled on its own.
 await foreach (var client in listener.AcceptAllAsync(cancellationToken))
-    _ = HandleAsync(client);
+    _ = HandleAsync(client, cancellationToken);
 ```
 
 ## Example: echo server
 
-```csharp
-static async Task HandleAsync(LocalTcpClient client)
+```csharp Snippet:TcpStackEchoServer
+// Echoes what the connection sends until it closes: the handler owns the client,
+// and disposing it closes the connection.
+private static async Task HandleAsync(LocalTcpClient client, CancellationToken cancellationToken)
 {
-    await using (client) {
-        var buffer = new byte[4096];
-        int read;
-        while ((read = await client.Stream.ReadAsync(buffer)) > 0)
-            await client.Stream.WriteAsync(buffer.AsMemory(0, read));
+    await using var connection = client;
+    var buffer = new byte[4096];
+    while (true) {
+        var read = await connection.Stream.ReadAsync(buffer, cancellationToken);
+        if (read == 0)
+            return;
+
+        await connection.Stream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
     }
 }
 ```

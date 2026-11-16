@@ -119,5 +119,6 @@ the service starts at each connect ([how the desktop fits together](linux/README
 ## See also
 
 - [Build your VPN app](build-your-app.md) — the template, and what you change in it
+- [What Happens on Connect](connect.md) — what the app does next, from a tap on Connect to Connected
 - [VpnHood Client Architecture](client-architecture.md) — the layers, their contracts, and where each half runs
 - [source-layout.md](source-layout.md#what-a-head-is-made-of) — what a head is made of

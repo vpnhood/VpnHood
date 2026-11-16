@@ -109,3 +109,4 @@ flowchart TB
 
 - [VpnHood Client Architecture](client-architecture.md) — the layers around the engine, and the VPN service it runs in
 - [How a VpnHood App Starts](app-startup.md) — what starts the app, and with it the VPN service
+- [What Happens on Connect](connect.md) — the engine's part in a connect: finding a server, the hello, the adapter

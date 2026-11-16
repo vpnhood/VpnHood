@@ -10,6 +10,7 @@ you are trying to do.
 | Use the VPN engine alone in my own app, in my process or through the VPN service | [use-the-engine.md](use-the-engine.md) |
 | Run a VPN server from my own code, with access keys kept in files | [run-a-server.md](run-a-server.md) |
 | Know what my app's head writes at start - who the app is, its options, its store's providers - and what VpnHood builds from them | [app-startup.md](app-startup.md) |
+| Know what happens from a tap on Connect to Connected, what the app shows meanwhile, and why a connect fails | [connect.md](connect.md) |
 | Publish my own branded VPN app to the stores | [publish-your-app/](publish-your-app/README.md) |
 | Know which component talks to which, and in which direction | [topology.md](topology.md) |
 | Know how a client is built - a head over three layers: UI, the app's logic, VPN engine - and the two contracts that let you replace any of them; how the app and its VPN service fit together, and which project is which half | [client-architecture.md](client-architecture.md) |
@@ -62,6 +63,7 @@ Store policy and legal checkpoints a publisher must clear:
 | Assets and zips | [assets.md](assets.md) — why data ships as a placed zip and never as an embedded resource, the provider chain that reads one, and why the paired-phone page is WebAssembly |
 | Component topology | [topology.md](topology.md) — who connects to whom, in which direction, and how many of each |
 | App startup | [app-startup.md](app-startup.md) — what a head writes (who the app is, its options with its store's providers) and what the host builds from them: the device, the app, the UI; each platform's entry points |
+| Connect | [connect.md](connect.md) — from a tap on Connect to Connected: the app gets ready, the VPN service starts, the engine finds a server and sends its hello, the server's session, redirect or refusal, the ad and the adapter; the states the app shows, the errors at each step, and the two checks the app makes before it shows one |
 | Client architecture | [client-architecture.md](client-architecture.md) — the head, the app you publish, over three layers (AppUi with AppHosting, AppLogic, Core) and their two contracts, the app API and the VPN service contract, with what each lets you build on your own; the app and its VPN service: where each runs on every platform, the channel between them, and the projects of each half |
 | VPN engine | [vpn-engine.md](vpn-engine.md) — how the engine takes the adapter the platform makes and starts, and how a packet travels: the packet handler, the local TCP stack, the bypass, the tunnel and its channels, and the connections to the server |
 | Protocol 15 | [protocol-15.md](protocol-15.md) — HTTP request proof, rollout order, compatibility and proxy limitations |

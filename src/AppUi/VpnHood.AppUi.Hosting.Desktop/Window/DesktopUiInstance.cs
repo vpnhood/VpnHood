@@ -10,10 +10,11 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.AppUi.Hosting.Desktop.Window;
 
-// One window per person and session: the open window serves a named pipe of its own person's and
-// session's - .NET's pipes are Unix sockets on Linux, so this one piece serves both desktops - and a
-// second launch there asks it to come forward and ends. Another person, or the same one in another
-// session (the console and Remote Desktop), finds no pipe of theirs and gets a window of its own.
+// One window per app, person and session: the open window serves a named pipe of its own app's, person's
+// and session's - .NET's pipes are Unix sockets on Linux, so this one piece serves both desktops - and a
+// second launch there asks it to come forward and ends. Another person, the same one in another session
+// (the console and Remote Desktop), or another app - a Debug build beside a release - finds no pipe of
+// theirs and gets a window of its own.
 //
 // A launch looks for the window and, finding none, serves the name, both under a lock of the
 // session, so of two launches at once - the sign-in entry's and a person's click - one opens the
@@ -63,7 +64,7 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
     public static DesktopUiInstance? TryClaim(IDesktopUiPaths paths, IDesktopSession desktopSession, IDesktopUi ui,
         string? accessKey, bool isQuickLaunch)
     {
-        var name = BuildName(paths.InstanceName, desktopSession.Name);
+        var name = BuildName(paths.AppId, desktopSession.Name);
         using var sessionLock = TakeSessionLock(paths.UiDataPath, name);
         var (pipeName, pipeOptions) = desktopSession.IsSandboxed
             ? (SandboxedPipePrefix + name, SandboxedOptions)
@@ -73,12 +74,13 @@ internal sealed class DesktopUiInstance : IAsyncDisposable
             : new DesktopUiInstance(pipeName, pipeOptions, ui);
     }
 
-    // one name per instance, person and session, in characters every platform's pipe and file names take
-    private static string BuildName(string instanceName, string sessionName)
+    // One name per app, person and session, in characters every platform's pipe and file names take: the app by its
+    // id, which no other app on the machine has, where two apps' executables may share a name.
+    private static string BuildName(string appId, string sessionName)
     {
         var name = sessionName.Length > 0
-            ? $"{instanceName}-ui-{Environment.UserName}-{sessionName}"
-            : $"{instanceName}-ui-{Environment.UserName}";
+            ? $"{appId}-ui-{Environment.UserName}-{sessionName}"
+            : $"{appId}-ui-{Environment.UserName}";
         return new string(name.Select(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' ? c : '_').ToArray());
     }
 

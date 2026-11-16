@@ -6,7 +6,13 @@ namespace VpnHood.AppUi.Hosting.Desktop.Platform;
 /// </summary>
 public interface IDesktopUiPaths
 {
-    /// <summary>Gets the install's own name, as the platform spells it, which names the service and the window's single instance.</summary>
+    /// <summary>
+    /// Gets the app's id, which no other app on the machine has and a Debug build does not share with a release: it names
+    /// the person's folders and the window's single instance.
+    /// </summary>
+    string AppId { get; }
+
+    /// <summary>Gets the install's own name, as the platform spells it, which names the service.</summary>
     string InstanceName { get; }
 
     /// <summary>

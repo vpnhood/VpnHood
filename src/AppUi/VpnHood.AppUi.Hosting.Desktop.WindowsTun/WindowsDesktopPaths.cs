@@ -10,12 +10,14 @@ namespace VpnHood.AppUi.Hosting.Desktop.WindowsTun;
 // commands run as whoever is signed in, unelevated, and may not open it, so what the UI extracts or
 // keeps for itself goes under that person's local app data.
 //
-// The folders are named by the app id: no other app on the machine has it, and a Debug build's is
-// not a release's. The instance - the service, the executable - is named after the entry assembly
-// rather than the process, because the same install runs as several processes: the service and the
-// window run the apphost, "dotnet VpnHoodClient.dll" runs dotnet.
+// The folders and the window's single instance are named by the app id: no other app on the machine has
+// it, and a Debug build's is not a release's. The instance - the service, the executable - is named after
+// the entry assembly rather than the process, because the same install runs as several processes: the
+// service and the window run the apphost, "dotnet VpnHoodClient.dll" runs dotnet.
 internal class WindowsDesktopPaths(string appId) : IAppDesktopPaths
 {
+    public string AppId => appId;
+
     public string InstanceName { get; } =
         Assembly.GetEntryAssembly()?.GetName().Name ??
         throw new InvalidOperationException("The entry assembly has no name, so this install has none.");

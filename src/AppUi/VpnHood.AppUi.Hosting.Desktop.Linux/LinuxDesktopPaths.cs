@@ -8,13 +8,15 @@ namespace VpnHood.AppUi.Hosting.Desktop.Linux;
 // The daemon runs as root and owns the storage folder: the settings a person edits by hand, the
 // profiles, the log. The window and the commands run as whoever is logged in and may not write a
 // byte of it, so the content the UI extracts for itself goes under that person's cache instead.
-// The install's own places follow where the binary sits; a person's follow the app id, which no
-// other app on the machine has and a Debug build does not share with a release.
+// The install's own places follow where the binary sits; a person's, and the window's single instance,
+// follow the app id, which no other app on the machine has and a Debug build does not share with a release.
 internal class LinuxDesktopPaths(string appId) : IAppDesktopPaths
 {
     // The launcher script says its own name in this variable, because the binary cannot know it:
     // "vhclient" is what is on the PATH, and "VpnHoodClient" - the binary's name - is not.
     public const string LauncherNameVariable = "VH_LAUNCHER_NAME";
+
+    public string AppId => appId;
 
     // The installed binary's own name, which is the name of what the installer builds around it: the
     // systemd unit and the folder under /opt. Taken from

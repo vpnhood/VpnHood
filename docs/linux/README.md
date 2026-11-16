@@ -390,11 +390,12 @@ Points that are easy to get wrong:
    would open nowhere, or as root. A plan sold on the web carries its checkout page
    (`SubscriptionPlan.CheckoutUrl`), and the window opens it as it opens any link, in the person's
    own browser.
-7. **One window per person and session.** The window serves a pipe named for its person and its
-   display (`DesktopUiInstance`; .NET's pipes are Unix sockets here,
-   `/tmp/CoreFxPipe_<instance>-ui-<user>-<display>`). A second launch asks that pipe first and, if a
-   window answers, brings it forward and ends; another person, or another display, finds no pipe of
-   theirs and gets a window of their own. The display, not logind's `XDG_SESSION_ID`, names the
+7. **One window per app, person and session.** The window serves a pipe named for its app, its person
+   and its display (`DesktopUiInstance`; .NET's pipes are Unix sockets here,
+   `/tmp/CoreFxPipe_<app id>-ui-<user>-<display>`). A second launch asks that pipe first and, if a
+   window answers, brings it forward and ends; another person, another display, or another app - even
+   one whose executable has the same name - finds no pipe of
+   theirs and gets a window of its own. The display, not logind's `XDG_SESSION_ID`, names the
    session: apps the user's systemd starts, as GNOME's terminal is, lack the id. Looking and serving
    run under a lock file in the person's UI folder, so a sign-in's start and a click at the same
    moment open one window.

@@ -89,6 +89,26 @@ public class DesktopUiInstanceTest
         Assert.IsNotNull(remoteWindow);
     }
 
+    // Two apps whose executables share a name, as a Debug build and the installed release do when the head names its
+    // executable by the package title alone: another app id, so each has a window and neither brings the other's forward.
+    [TestMethod]
+    public async Task Two_apps_with_one_executable_name_have_a_window_each()
+    {
+        var instanceName = "VpnHoodTest-" + Guid.CreateVersion7().ToString("N");
+        var release = new TestDesktopPaths(instanceName, appId: instanceName + ".release");
+        var debug = new TestDesktopPaths(instanceName, appId: instanceName + ".debug");
+        var desktopSession = new TestDesktopSession();
+        var releaseUi = new TestDesktopUi();
+
+        await using var releaseWindow = DesktopUiInstance.TryClaim(release, desktopSession, releaseUi, accessKey: null,
+            isQuickLaunch: false);
+        await using var debugWindow = DesktopUiInstance.TryClaim(debug, desktopSession, new TestDesktopUi(),
+            accessKey: null, isQuickLaunch: false);
+        Assert.IsNotNull(releaseWindow);
+        Assert.IsNotNull(debugWindow);
+        Assert.AreEqual(0, releaseUi.BringToFrontCount);
+    }
+
     [TestMethod]
     public async Task A_second_close_after_the_first_does_nothing()
     {

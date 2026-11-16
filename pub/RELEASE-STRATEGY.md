@@ -54,7 +54,7 @@ Rule of thumb: **same repo = ProjectReference, third-party = PackageReference, r
    single `PubVersion.json` version and bump together on a release — the standard, lowest-maintenance
    model. We accept that unchanged libraries get a new version number on a release; chasing
    per-library churn is not worth the machinery (see "Not done, and why"). The look's submodule
-   (`src/AppUi/VpnHood.AppUi.Assets.Classic`) is no exception: `publish_nugets.yml` checks it out and
+   (`src/libs/AppUi/VpnHood.AppUi.Assets.Classic`) is no exception: `publish_nugets.yml` checks it out and
    packs it with the libraries, at their version.
    - **A new Major or Minor is set by hand**, since the bump increments only Build: change it in
      `PubVersion.json` and `Directory.Build.props`, keep Build (`8.2.854` → `9.0.854`), commit, push,
@@ -90,7 +90,7 @@ Considered and not adopted. Revisit one only if its pain grows.
    apps as `PackageReference`, not `ProjectReference` — today `VpnHood.Net.Quic.MsQuic.AndroidNative`
    (the prebuilt `libmsquic.so`, published from the msquic fork on every push to its `main`) and the
    `Assets.*` data packages (`VpnHood.Net.IpLocations.Assets.Ip2LocationLite`, pinned once per product
-   in `src/Apps/<Product>/<Product>/`). They are **pinned to an exact version**, so a newly published
+   in `src/apps/<Product>/<Product>/`). They are **pinned to an exact version**, so a newly published
    one does not reach a build until someone edits the pin. Publishing without that edit ships the
    *previous* library with new app code, silently and successfully.
 
@@ -103,8 +103,8 @@ Considered and not adopted. Revisit one only if its pain grows.
    Verify the way CI sees it, with no `.user` overrides in play:
 
    ```bash
-   dotnet restore src/Apps/Client/Client/VpnHood.App.Client.csproj --force -p:VhUserDir=<an empty dir>
-   grep -o '"VpnHood.Net.IpLocations.Assets.Ip2LocationLite/[0-9.]*"' src/Apps/Client/Client/obj/project.assets.json
+   dotnet restore src/apps/Client/Client/VpnHood.App.Client.csproj --force -p:VhUserDir=<an empty dir>
+   grep -o '"VpnHood.Net.IpLocations.Assets.Ip2LocationLite/[0-9.]*"' src/apps/Client/Client/obj/project.assets.json
    ```
 
 2. Maintain the CHANGELOG **by hand**: put the next release's notes under a leading `# Latest`
@@ -116,7 +116,7 @@ Considered and not adopted. Revisit one only if its pain grows.
    CI never rewrites the changelog — at release time the first H1 (`#`) section becomes the GitHub
    release note (the other product's lines dropped, tags stripped), and the **store release notes**
    are generated from the same section by each store repo's `update-release-notes.yml` (extract →
-   vhtranslator → fastlane; see `src/Apps/Tools/StoreListing/README.md`) —
+   vhtranslator → fastlane; see `tools/StoreListing/README.md`) —
    run it after editing the section, before publishing. Update the `# Latest` section yourself each
    cycle. Commit + push as normal work.
 3. Run `pub/Client/PublishByGithub.ps1` (or `pub/Connect/PublishByGithub.ps1`). It prompts for the
@@ -216,13 +216,13 @@ override with `-revision <n>`). Implemented directly in
 [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1) **discovers** the packages to publish
 instead of carrying a hand-maintained list: it globs `src/**/*.csproj` and packs every project that
 does **not** opt out with `<IsPackable>false</IsPackable>` — the standard .NET convention. Apps under
-`src/Apps` declare `IsPackable=false`; every library under
-`src/Net`, `src/Core` and `src/AppLogic` is packable by default. To publish a new library, just add it — no script
+`src/apps` declare `IsPackable=false`; every library under
+`src/libs/Net`, `src/libs/Core` and `src/libs/AppLogic` is packable by default. To publish a new library, just add it — no script
 edit. To keep one out, set `IsPackable=false` on it.
 
 Don't go back to a hand-kept list: one drifted silently, with a path typo that failed on Linux CI
 only *after* real packages had been pushed, and two packable libraries that were never published.
-The per-app `src/Apps/*/*/_publish.ps1` scripts are unrelated: they are build logic the app CI
+The per-app `src/apps/*/*/_publish.ps1` scripts are unrelated: they are build logic the app CI
 workflows call.
 
 ### Build environment, speed, and the publishing gate

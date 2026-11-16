@@ -38,7 +38,7 @@ store set shows: `--hover` rests the mouse in the middle of the control so named
 its button down there too, and `--patch` lays files over the fixture in order, as a platform's
 `patchFile` is - for a picture that is no store set's, such as the App Review screenshot below.
 
-`--assets` is the UI's asset store: its folder, `src/AppUi/VpnHood.AppUi.Assets.Classic/assets`,
+`--assets` is the UI's asset store: its folder, `src/libs/AppUi/VpnHood.AppUi.Assets.Classic/assets`,
 or the `ui.zip` a shipped head carries. The UI has no pictures, faces or words of its own.
 
 ## The files an app owns
@@ -78,8 +78,8 @@ screens are listed in that script, never here.
 1. **The fixture says which product it is.** `descriptor.uiTheme`, `logoAssetPath`,
    `privacyConsentAssetName`, `links.privacyPolicy` and `links.termsOfUse` are refused rather than
    filled: a picture wearing the other product's theme or logo looks right and is wrong. Copy them
-   from the product's own options builder (`src/Apps/<product>/<product>/<Product>AppOptions.cs`; the
-   two documents from its private appsettings' `Links`), or from `src/Apps/Tools/AvaloniaUI.Dev` for
+   from the product's own options builder (`src/apps/<product>/<product>/<Product>AppOptions.cs`; the
+   two documents from its private appsettings' `Links`), or from `tools/AvaloniaUI.Dev` for
    a whole product at once.
 2. **A capability patch is never invented.** Each value mirrors a device class in this repo and is
    cited beside it in the configuration. When a capability changes there, it changes there too.

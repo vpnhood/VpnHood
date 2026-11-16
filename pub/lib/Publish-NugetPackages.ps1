@@ -26,11 +26,12 @@ if ([string]::IsNullOrWhiteSpace($nugetApiKey)) {
 	throw "Publish-NugetPackages: NuGet API key is missing. Publish from CI: its NuGet/login step (nuget.org Trusted Publishing) provides NUGET_API_KEY.";
 }
 
-# Discover packable projects: a project IS a package unless it opts out with <IsPackable>false</IsPackable>.
-$projectFiles = Get-ChildItem -Path "$solutionDir/src" -Recurse -File -Filter "*.csproj" |
+# Discover packable projects among the libraries (src/libs; the apps in src/apps never are packages): a project IS a
+# package unless it opts out with <IsPackable>false</IsPackable>.
+$projectFiles = Get-ChildItem -Path "$solutionDir/src/libs" -Recurse -File -Filter "*.csproj" |
 	Where-Object { [System.IO.File]::ReadAllText($_.FullName) -notmatch "(?i)<IsPackable>\s*false\s*</IsPackable>" } |
 	Sort-Object FullName;
-Write-Host "Discovered $($projectFiles.Count) packable project(s) under src." -ForegroundColor Cyan;
+Write-Host "Discovered $($projectFiles.Count) packable project(s) under src/libs." -ForegroundColor Cyan;
 
 # Write a throwaway solution of ONLY those projects at the repo root (so its relative paths resolve),
 # then pack it in ONE MSBuild pass: shared dependencies build once and projects pack in parallel,

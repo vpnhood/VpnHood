@@ -1,6 +1,6 @@
 <Project>
 	<!-- The WebAssembly settings every Avalonia page project shares. A page project (one per UI:
-	     src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser is ours) is a Microsoft.NET.Sdk.WebAssembly
+	     src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser is ours) is a Microsoft.NET.Sdk.WebAssembly
 	     executable that imports this file, references the host and its UI, and keeps its own
 	     wwwroot/ (index.html, main.js) - the page's title and splash are the page's. -->
 	<PropertyGroup>

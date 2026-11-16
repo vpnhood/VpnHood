@@ -52,7 +52,7 @@ jobs:
       # The look's package (VpnHood.AppUi.Assets.Classic) is a submodule whose targets every head
       # imports; fastlane/, the other submodule, stays out.
       - name: Check out the asset submodule
-        run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
+        run: git -C code submodule update --init --depth 1 src/libs/AppUi/VpnHood.AppUi.Assets.Classic
       # The SDK global.json names, by its version: setup-dotnet reads that file's rollForward
       # latestMajor as the LTS channel and installs .NET 10 instead.
       - name: Read the SDK version global.json names
@@ -125,13 +125,13 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: browser-page
-          path: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
+          path: code/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
       # setup-xcode exports MD_APPLE_SDK_ROOT beside its xcode-select; the Apple SDKs ignore it and warn.
       - name: Build iOS (.ipa)
         shell: pwsh
         run: |
           Remove-Item Env:MD_APPLE_SDK_ROOT -ErrorAction Ignore
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Ios.Apple/_publish.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/apps/$env:PREFIX/$env:PREFIX.Ios.Apple/_publish.ps1"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-ios

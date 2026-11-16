@@ -77,7 +77,7 @@ rather than requiring — a language falling back to another, a picture that may
 
 ```mermaid
 graph LR
-    W["the look, a submodule:<br/>src/AppUi/VpnHood.AppUi.Assets.Classic"] --> UZ["ui.zip"]
+    W["the look, a submodule:<br/>src/libs/AppUi/VpnHood.AppUi.Assets.Classic"] --> UZ["ui.zip"]
     CA["Classic.Avalonia<br/>compiled to WebAssembly"] --> BZ["web-root.zip"]
     IP["Ip2Location package"] --> IZ["IpLocations.zip"]
 
@@ -149,7 +149,7 @@ The bundle is 7.5 MB zipped and 7.5 MB on the wire: 72 files, 20.8 MB unpacked.
 ## Adding a set of files
 
 1. Put them in a package of the shape described in
-   [`src/AppUi/VpnHood.AppUi.Assets.Classic/README.md`](../src/AppUi/VpnHood.AppUi.Assets.Classic/README.md), which has the id
+   [`src/libs/AppUi/VpnHood.AppUi.Assets.Classic/README.md`](../src/libs/AppUi/VpnHood.AppUi.Assets.Classic/README.md), which has the id
    convention.
 2. Give it a folder of its own in the consuming app. Never `assets/`, which is taken.
 3. Place it with targets in `buildTransitive/`, the zip beside them, and nothing in `build/`.
@@ -212,5 +212,5 @@ store's file and edit it: the fork's file replaces it whole.
 ## See also
 
 - [source-layout.md](source-layout.md) — where these projects live and what a head is made of
-- [`src/AppUi/VpnHood.AppUi.Assets.Classic/README.md`](../src/AppUi/VpnHood.AppUi.Assets.Classic/README.md) — the asset package
+- [`src/libs/AppUi/VpnHood.AppUi.Assets.Classic/README.md`](../src/libs/AppUi/VpnHood.AppUi.Assets.Classic/README.md) — the asset package
   itself: what is in it, and how to make another

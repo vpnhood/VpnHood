@@ -269,7 +269,7 @@ window is, so it lives beside the Avalonia hosts and is split the same way: shar
 window, and the service with its commands - and one small adapter per platform.
 
 ```
-src/AppUi/
+src/libs/AppUi/
 ├── VpnHood.AppHosting.Desktop/    the window, which every desktop host runs
 │   ├── InProcessDesktopHost.cs       the app and its window in one process, the whole job where the OS
 │   │                                 holds the tunnel (the Windows VPN plug-in's); "dev" runs its window
@@ -320,7 +320,7 @@ src/AppUi/
 A head is then its options — the product's, and its channel's lines — and one line naming its UI,
 an `IDesktopUi` (`VpnHood.AppHosting.Desktop.Abstractions`), which the window runs on the host's main
 thread: `static int Main` returns `LinuxDesktopHost.Run(args, …)` — see
-[`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
+[`Client.Linux.Web/App.cs`](../../src/apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
 projects read a static or name a platform: every command is handed an `IDesktopPlatform`, which
 each platform implements (`LinuxDesktopPlatform`, `WindowsDesktopPlatform`). Only Windows has
 `service install`, and a daemon run the service control manager stops by a call. The tray is the

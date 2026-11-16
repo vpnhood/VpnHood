@@ -20,9 +20,9 @@
 
 	<ItemGroup>
 		<!-- Mounting the UI and the app's state as its pages read it (VhApp). -->
-		<ProjectReference Include="..\..\..\AppHosting\VpnHood.AppHosting.Avalonia\VpnHood.AppHosting.Avalonia.csproj" />
+		<ProjectReference Include="..\..\src\libs\AppHosting\VpnHood.AppHosting.Avalonia\VpnHood.AppHosting.Avalonia.csproj" />
 		<!-- The UI itself: the pages this renders, the controls, the themes. -->
-		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
+		<ProjectReference Include="..\..\src\libs\AppUi\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
 	</ItemGroup>
 
 	<!-- Deliberately without VpnHood.AppLogic.App and without a device: nothing here runs the app. The

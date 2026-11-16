@@ -14,11 +14,11 @@
 	<ItemGroup>
 		<!-- Built so a walk always has something to run, and referenced for nothing else: the test
 		     drives the head the way a person does, through its window, not through its types. -->
-		<ProjectReference Include="..\..\src\Apps\Tools\AvaloniaUI.Dev\VpnHood.App.AvaloniaUI.Dev.csproj"
+		<ProjectReference Include="..\..\tools\AvaloniaUI.Dev\VpnHood.App.AvaloniaUI.Dev.csproj"
 						  ReferenceOutputAssembly="false" />
 		<!-- The desktop's Windows half - the service's pipe and the loopback check - which the
 		     platform-free test project cannot reference; the pipe's tests need an elevated run. -->
-		<ProjectReference Include="..\..\src\AppHosting\VpnHood.AppHosting.Desktop.WindowsTun\VpnHood.AppHosting.Desktop.WindowsTun.csproj" />
+		<ProjectReference Include="..\..\src\libs\AppHosting\VpnHood.AppHosting.Desktop.WindowsTun\VpnHood.AppHosting.Desktop.WindowsTun.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -26,7 +26,7 @@
 		     and a walk in Release never drives a Debug window by accident. -->
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>DevHeadDirectory</_Parameter1>
-			<_Parameter2>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\src\Apps\Tools\AvaloniaUI.Dev\bin\$(Configuration)\net11.0'))</_Parameter2>
+			<_Parameter2>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\tools\AvaloniaUI.Dev\bin\$(Configuration)\net11.0'))</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 

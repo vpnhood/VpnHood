@@ -125,7 +125,7 @@ half-filled config can never silently ship to the wrong repo (`pub/lib/AppPublis
 
 It says how a release ships, not who the app is. Every id comes from the app's identity, the
 product's id base with the platform, and `.web` for the website's builds
-(`src/Apps/<Product>/Directory.Build.props`, see
+(`src/apps/<Product>/Directory.Build.props`, see
 [source-layout](../source-layout.md#the-apps-identity)); a fork sets its own base there. The published
 files are named after the app's folder here (`VpnHoodClient`), its package title.
 
@@ -211,7 +211,7 @@ stub, which calls this repo's reusable workflow. It runs in the caller's context
 needs the credentials (`GOOGLE_PLAY_API_KEY`, `APPSTORE_CONNECT_*`) and gets the published-state
 commit — no PAT anywhere. The full maintainer's map for the listing pipeline (tools, invariants,
 verification commands, Apple failure lore) lives in
-[`src/Apps/Tools/StoreListing/README.md`](../../src/Apps/Tools/StoreListing/README.md) — read it before changing any of these workflows.
+[`tools/StoreListing/README.md`](../../tools/StoreListing/README.md) — read it before changing any of these workflows.
 
 ### Windows client — `publish_app.yml` (via `publish_client.yml` (in `Vpnhood.App.Client`))
 The setup is built with **NSIS** (`pub/lib/vh-installer/win/install-client.nsi`) on a `windows-latest`

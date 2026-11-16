@@ -348,8 +348,8 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
-/src/Apps/Client/Client.Windows.Web.Setup/VpnHood.App.Client.Windows.Web.Setup-cache
-/src/Apps/Connect/Connect.Windows.Web.Setup/VpnHood.App.Connect.Windows.Web.Setup-cache
+/src/apps/Client/Client.Windows.Web.Setup/VpnHood.App.Client.Windows.Web.Setup-cache
+/src/apps/Connect/Connect.Windows.Web.Setup/VpnHood.App.Connect.Windows.Web.Setup-cache
 
 #
 *.tmp.csproj.working/
@@ -366,4 +366,4 @@ MigrationBackup/
 .build/
 
 # The Classic Avalonia UI's browser page, which its _publish.ps1 writes into the UI's package
-/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip
+/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip

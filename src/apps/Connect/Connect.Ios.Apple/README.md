@@ -4,8 +4,8 @@ The Connect app is a branding variant of the Client app — identical bootstrap,
 (bundle ids `com.vpnhood.connect.ios`, App Group `group.com.vpnhood.connect.ios`, built from
 `../Directory.Build.props`; see `docs/source-layout.md`) and the product's settings
 (`ConnectAppConfigs`) and premium features (`ConnectAppResources`).
-Shared iOS app code is in `src/AppLogic/VpnHood.AppLogic.App.Ios`. Building this project also builds and bundles
-the extension appex (`src/Apps/Connect/Connect.Ios.Extension`).
+Shared iOS app code is in `src/libs/AppLogic/VpnHood.AppLogic.App.Ios`. Building this project also builds and bundles
+the extension appex (`src/apps/Connect/Connect.Ios.Extension`).
 
 > Connect is provisioned (since 2026-07): bundle ids + App Group are registered in the Apple portal, and the
 > "VpnHood Connect AppStore" / "VpnHood Connect Extension AppStore" profiles sign the CI/TestFlight builds.
@@ -28,10 +28,10 @@ The Apple libraries target tvOS beside iOS, so a build of the Apple projects nee
 ### Build for the Apple TV simulator (on the Mac)
 
 ```bash
-~/.dotnet/dotnet build src/Apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj \
+~/.dotnet/dotnet build src/apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj \
   -f net11.0-tvos -c Debug -r tvossimulator-arm64 \
   -p:AutomaticProvisioning=false -p:CodesignKey=-
-xcrun simctl install <udid> src/Apps/Connect/Connect.Ios.Apple/bin/Debug/net11.0-tvos/tvossimulator-arm64/VpnHoodConnect.app
+xcrun simctl install <udid> src/apps/Connect/Connect.Ios.Apple/bin/Debug/net11.0-tvos/tvossimulator-arm64/VpnHoodConnect.app
 xcrun simctl launch <udid> com.vpnhood.connect.ios
 ```
 

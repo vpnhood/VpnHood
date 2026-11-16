@@ -65,7 +65,7 @@
     <!-- The Network Extension implementation (abstract IosVpnService, on iOS and tvOS) lives in
          VpnServices.Host.Ios, which references the VpnServiceHost and the iOS TUN adapter. This project
          only adds the thin [Register("PacketTunnelProvider")] subclass that roots that assembly. -->
-    <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.Ios\VpnHood.Core.Client.VpnServices.Host.Ios.csproj" />
+    <ProjectReference Include="..\..\..\libs\Core\VpnHood.Core.Client.VpnServices.Host.Ios\VpnHood.Core.Client.VpnServices.Host.Ios.csproj" />
   </ItemGroup>
 
 </Project>

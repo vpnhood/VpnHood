@@ -12,7 +12,7 @@ dotnet add package VpnHood.Net.VpnAdapters.AndroidTun
 
 - `AndroidVpnAdapter` is an `IVpnAdapter`: make it inside your `VpnService` with the service and an
   `AndroidVpnAdapterSettings`, and use it as the
-  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
+  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/libs/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
   uses `NullVpnAdapter`.
 - A start describes the interface to a `VpnService.Builder` (addresses, routes, DNS servers, MTU, session name and
   the apps to include or exclude), establishes it, and reads and writes packets through libc on its file descriptor.

@@ -32,13 +32,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\AppLogic\VpnHood.AppLogic.App.Android\VpnHood.AppLogic.App.Android.csproj" />
+		<ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.App.Android\VpnHood.AppLogic.App.Android.csproj" />
 		<!-- the VPN service, which the APK carries beside the app -->
-		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.Android\VpnHood.Core.Client.VpnServices.Host.Android.csproj" />
+		<ProjectReference Include="..\..\..\libs\Core\VpnHood.Core.Client.VpnServices.Host.Android\VpnHood.Core.Client.VpnServices.Host.Android.csproj" />
 		<!-- The UI this head runs, which MainActivity is the activity of. -->
-		<ProjectReference Include="..\..\..\AppHosting\VpnHood.AppHosting.Avalonia.Android\VpnHood.AppHosting.Avalonia.Android.csproj" />
+		<ProjectReference Include="..\..\..\libs\AppHosting\VpnHood.AppHosting.Avalonia.Android\VpnHood.AppHosting.Avalonia.Android.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
-		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
+		<ProjectReference Include="..\..\..\libs\AppUi\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 
@@ -46,9 +46,9 @@
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
+	<Import Project="..\..\..\libs\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
 	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way: the same
 	     targets a package reference of VpnHood.AppUi.Avalonia.Classic imports; the head
 	     reads it at "assets/web-root.zip". -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Avalonia.Classic\buildTransitive\VpnHood.AppUi.Avalonia.Classic.targets" />
+	<Import Project="..\..\..\libs\AppUi\VpnHood.AppUi.Avalonia.Classic\buildTransitive\VpnHood.AppUi.Avalonia.Classic.targets" />
 </Project>

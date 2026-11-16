@@ -15,21 +15,21 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\AppLogic\VpnHood.AppLogic.Api.WebHost\VpnHood.AppLogic.Api.WebHost.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
-		<ProjectReference Include="..\..\src\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Client.VpnServices.Host.WindowsTun\VpnHood.Core.Client.VpnServices.Host.WindowsTun.csproj" />
-		<ProjectReference Include="..\..\src\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
+		<ProjectReference Include="..\..\src\libs\AppLogic\VpnHood.AppLogic.Api.WebHost\VpnHood.AppLogic.Api.WebHost.csproj" />
+		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
+		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
+		<ProjectReference Include="..\..\src\libs\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
+		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
+		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
+		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Client.VpnServices.Host.WindowsTun\VpnHood.Core.Client.VpnServices.Host.WindowsTun.csproj" />
+		<ProjectReference Include="..\..\src\libs\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<!-- the iOS QUIC client's counters are plain .NET in a project only iOS builds: compiled here too, so their
 		     pairing is tested off the device -->
-		<Compile Include="..\..\src\Net\VpnHood.Net.Quic.Ios\IosQuicDiagnostics.cs" Link="Quic\IosQuicDiagnostics.cs" />
-		<Compile Include="..\..\src\Net\VpnHood.Net.Quic.Ios\IosQuicEventIds.cs" Link="Quic\IosQuicEventIds.cs" />
+		<Compile Include="..\..\src\libs\Net\VpnHood.Net.Quic.Ios\IosQuicDiagnostics.cs" Link="Quic\IosQuicDiagnostics.cs" />
+		<Compile Include="..\..\src\libs\Net\VpnHood.Net.Quic.Ios\IosQuicEventIds.cs" Link="Quic\IosQuicEventIds.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

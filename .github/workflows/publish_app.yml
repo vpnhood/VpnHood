@@ -118,7 +118,7 @@ jobs:
     needs: [verify-release-type]
     runs-on: ubuntu-latest
     env:
-      PAGE_DIR: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser
+      PAGE_DIR: code/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v7
@@ -126,9 +126,9 @@ jobs:
       # The UI declares the look's package (VpnHood.AppUi.Assets.Classic), a submodule; fastlane/, the
       # other submodule, stays out.
       - name: Check out the asset submodule
-        run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
+        run: git -C code submodule update --init --depth 1 src/libs/AppUi/VpnHood.AppUi.Assets.Classic
       - uses: actions/setup-dotnet@v6
-        with: { global-json-file: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/global.json }
+        with: { global-json-file: code/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/global.json }
       - name: Install .NET WebAssembly workload (for the SDK the page's global.json names)
         shell: pwsh
         run: |
@@ -143,7 +143,7 @@ jobs:
           name: browser-page
           if-no-files-found: error
           retention-days: 1
-          path: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip
+          path: code/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip
 
   # The page reads and writes the app's API only through AppApiJsonContext, and a type missing from
   # that list gives no trim warning: it throws when the page makes that call. The platform builds

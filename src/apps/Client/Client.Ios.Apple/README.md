@@ -5,9 +5,9 @@ which states the storage folder every shipped build has used and loads the produ
 (`ClientAppConfigs`). Its bundle id, name, App Group and extension bundle id come from the product's
 identity (`../Directory.Build.props`), which the build turns into the bundle, the entitlements and
 `AppConstants` (see `docs/source-layout.md`). The shared Apple app code (`VpnHoodIosApp`) lives in
-`src/AppLogic/VpnHood.AppLogic.App.Ios`, the Avalonia UI's host in `src/AppHosting/VpnHood.AppHosting.Avalonia.Ios`,
-shared client resources in `src/Apps/Client`. Building this project also builds and bundles the extension
-appex (`src/Apps/Client/Client.Ios.Extension`), for the same platform.
+`src/libs/AppLogic/VpnHood.AppLogic.App.Ios`, the Avalonia UI's host in `src/libs/AppHosting/VpnHood.AppHosting.Avalonia.Ios`,
+shared client resources in `src/apps/Client`. Building this project also builds and bundles the extension
+appex (`src/apps/Client/Client.Ios.Extension`), for the same platform.
 
 **iOS engineering notes → [`/docs/ios/`](../../../../docs/ios/)** — build/deploy & provisioning, architecture &
 App↔Extension IPC, the 52 MB jetsam memory/throughput model, extension runtime rules.
@@ -25,10 +25,10 @@ The Apple libraries target tvOS beside iOS, so a build of the Apple projects nee
 ### Build for the Apple TV simulator (on the Mac)
 
 ```bash
-~/.dotnet/dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
+~/.dotnet/dotnet build src/apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
   -f net11.0-tvos -c Debug -r tvossimulator-arm64 \
   -p:AutomaticProvisioning=false -p:CodesignKey=-
-xcrun simctl install <udid> src/Apps/Client/Client.Ios.Apple/bin/Debug/net11.0-tvos/tvossimulator-arm64/VpnHoodClient.app
+xcrun simctl install <udid> src/apps/Client/Client.Ios.Apple/bin/Debug/net11.0-tvos/tvossimulator-arm64/VpnHoodClient.app
 xcrun simctl launch <udid> com.vpnhood.client.ios
 ```
 
@@ -48,10 +48,10 @@ simulator runs no Network Extension, so Connect ends with `NEVPNErrorDomain Code
    whose keychain is unlocked, then install with `devicectl`:
 
 ```bash
-~/.dotnet/dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
+~/.dotnet/dotnet build src/apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
   -f net11.0-tvos -r tvos-arm64 -c Release -p:ArchiveOnBuild=false -p:_DeviceName=:v2:udid=<udid> \
   -p:SolutionDir="$(pwd)/"
-xcrun devicectl device install app --device <udid> src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-tvos/tvos-arm64/VpnHoodClient.app
+xcrun devicectl device install app --device <udid> src/apps/Client/Client.Ios.Apple/bin/Release/net11.0-tvos/tvos-arm64/VpnHoodClient.app
 xcrun devicectl device capture screenshot --device <udid> --destination tv.png
 ```
 

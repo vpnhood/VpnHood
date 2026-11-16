@@ -31,12 +31,12 @@
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="11.0.0" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
-		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
-		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.WinTun\VpnHood.Net.VpnAdapters.WinTun.csproj" />
+		<ProjectReference Include="..\..\libs\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
+		<ProjectReference Include="..\..\libs\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
+		<ProjectReference Include="..\..\libs\Core\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
+		<ProjectReference Include="..\..\libs\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
+		<ProjectReference Include="..\..\libs\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
+		<ProjectReference Include="..\..\libs\Net\VpnHood.Net.VpnAdapters.WinTun\VpnHood.Net.VpnAdapters.WinTun.csproj" />
 	</ItemGroup>
 
 </Project>

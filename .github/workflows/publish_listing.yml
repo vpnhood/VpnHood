@@ -75,7 +75,7 @@ jobs:
           repository: vpnhood/VpnHood
           ref: ${{ inputs.tools_ref }}
           path: .vh
-          sparse-checkout: src/Apps/Tools/StoreListing
+          sparse-checkout: tools/StoreListing
           sparse-checkout-cone-mode: false
 
       - name: Set up Node.js
@@ -85,7 +85,7 @@ jobs:
 
       - name: Compare against the last published listing
         id: state
-        run: node .vh/src/Apps/Tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE"
+        run: node .vh/tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE"
 
       # Apple never carries "What's New" over to a newly created version — the field starts empty
       # and is required per localization — while the fingerprint above compares only repo content.
@@ -98,7 +98,7 @@ jobs:
         if: steps.state.outputs.ios_changed != 'true' && inputs.force != true && inputs.skip_metadata != true && inputs.skip_screenshots != true && env.APPSTORE_CONNECT_API_KEY != ''
         run: |
           set +e
-          node .vh/src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --whatsnew-check
+          node .vh/tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --whatsnew-check
           rc=$?
           set -e
           if [ "$rc" = "4" ]; then
@@ -166,7 +166,7 @@ jobs:
           repository: vpnhood/VpnHood
           ref: ${{ inputs.tools_ref }}
           path: .vh
-          sparse-checkout: src/Apps/Tools/StoreListing
+          sparse-checkout: tools/StoreListing
           sparse-checkout-cone-mode: false
 
       - name: Set up Node.js
@@ -178,11 +178,11 @@ jobs:
       # other half as "already published". Only a complete push may be recorded.
       - name: Record the App Store listing
         if: needs.appstore.outputs.published == 'true' && !inputs.skip_metadata && !inputs.skip_screenshots
-        run: node .vh/src/Apps/Tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update ios
+        run: node .vh/tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update ios
 
       - name: Record the Google Play listing
         if: needs.play.outputs.published == 'true'
-        run: node .vh/src/Apps/Tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update android
+        run: node .vh/tools/StoreListing/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update android
 
       - name: Commit the published fingerprints
         run: |

@@ -1,24 +1,27 @@
 ﻿# Source layout — where an app's code lives
 
-How `src/` is organised, what a platform app is made of, and what a fork copies. Written for
+How the repo's code is organised, what a platform app is made of, and what a fork copies. Written for
 someone opening this repo for the first time.
 
-## The six layers
+## The layers
 
-Everything under `src/` is one of six things, and each layer only knows about the ones above it in
-this table.
+`src/` holds what ships: the five library layers in `src/libs/`, every project of them a NuGet package, and
+the apps in `src/apps/`. What we run ourselves sits beside it at the root: `tools/`, `tests/` and the publish
+scripts in `pub/`. Each folder only knows about the ones above it in this table.
 
 | Folder | What it is | Ships as |
 | --- | --- | --- |
-| `src/Net/` | networking with no VPN in it: packets, a user-space TCP stack, QUIC, the TUN and WinDivert adapters, IP locations, and the toolkit they share | NuGet |
-| `src/Core/` | the VPN engine: the tunnel, the client, the server, split tunneling and proxies | NuGet |
-| `src/AppLogic/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.WindowsTun`, `App.WindowsVpnPlugin`), and the store and ad providers | NuGet |
-| `src/AppHosting/` | the hosts that mount a UI on a platform: a window, a web view, a page in a browser, the desktop's daemon and its command line | NuGet |
-| `src/AppUi/` | the user interface: the app's state as a UI sees it, its words, the look and the look's assets | NuGet |
-| `src/Apps/` | the apps we ship, and the tools we run ourselves | the stores, our site |
+| `src/libs/Net/` | networking with no VPN in it: packets, a user-space TCP stack, QUIC, the TUN and WinDivert adapters, IP locations, and the toolkit they share | NuGet |
+| `src/libs/Core/` | the VPN engine: the tunnel, the client, the server, split tunneling and proxies | NuGet |
+| `src/libs/AppLogic/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.WindowsTun`, `App.WindowsVpnPlugin`), and the store and ad providers | NuGet |
+| `src/libs/AppHosting/` | the hosts that mount a UI on a platform: a window, a web view, a page in a browser, the desktop's daemon and its command line | NuGet |
+| `src/libs/AppUi/` | the user interface: the app's state as a UI sees it, its words, the look and the look's assets | NuGet |
+| `src/apps/` | the apps we ship | the stores, our site |
+| `tools/` | the tools we run ourselves: the UI on a PC, the store listing and its screenshots | nothing |
+| `tests/` | the tests, of the libraries, the apps and the dev head | nothing |
 
 Nothing in `Net`, `Core`, `AppLogic`, `AppHosting` or `AppUi` knows that VpnHood Client or VpnHood Connect
-exist. That is the rule that makes a fork possible: a fork replaces `src/Apps/` and nothing else. `Net` goes
+exist. That is the rule that makes a fork possible: a fork replaces `src/apps/` and nothing else. `Net` goes
 one step further and knows nothing of a VPN, so any .NET app can use it.
 
 A person who changes the look works in `AppUi` alone: no host references a look, so a new look changes no
@@ -34,10 +37,10 @@ look and a look's assets are the looks' alone.
 
 **In `Net`, `Core`, `AppLogic`, `AppHosting` and `AppUi`, every project sits directly under its layer, in a folder
 named with its full project id**: `VpnHood.Core.Client.Devices.Android.csproj` lives in
-`src/Core/VpnHood.Core.Client.Devices.Android/`. There are no grouping folders, as in dotnet/runtime's
-`src/libraries/`: the ids sort a family together on their own (`VpnHood.Net.Quic.*`,
-`VpnHood.AppLogic.Stores.*`), and the id alone says where a project is. A layer's folder is the second
-word of its ids: `src/Net/` holds `VpnHood.Net.*`, `src/Core/` holds `VpnHood.Core.*`.
+`src/libs/Core/VpnHood.Core.Client.Devices.Android/`. A layer has no grouping folders: the ids sort a family
+together on their own (`VpnHood.Net.Quic.*`, `VpnHood.AppLogic.Stores.*`), and the id alone says where a
+project is. A layer's folder is the second word of its ids: `src/libs/Net/` holds `VpnHood.Net.*`,
+`src/libs/Core/` holds `VpnHood.Core.*`.
 
 The solution file keeps the grouping on screen: `VpnHood.slnx` has a solution folder per family
 (`Devices`, `Quic`, `Stores`, `Hosting`, …), so the IDE shows a tree while the disk stays flat.
@@ -46,10 +49,10 @@ A project's namespace is its name. Inside a namespace that ends in `.Android`, C
 to that namespace before the platform's, so the platform's own types are written
 `global::Android.Net.Uri` where they are not imported with a `using`.
 
-## `src/Net/` — networking, no VPN
+## `src/libs/Net/` — networking, no VPN
 
 ```text
-src/Net/
+src/libs/Net/
 ├── VpnHood.Net.IpLocations/                    the country of an IP address
 ├── VpnHood.Net.IpLocations.Providers.SqliteProvider/
 ├── VpnHood.Net.PacketTransports/
@@ -70,10 +73,10 @@ src/Net/
 └── VpnHood.Net.VpnAdapters.WinTun/
 ```
 
-## `src/Core/` — the engine
+## `src/libs/Core/` — the engine
 
 ```text
-src/Core/
+src/libs/Core/
 ├── VpnHood.Core.Client/
 ├── VpnHood.Core.Client.Abstractions/
 ├── VpnHood.Core.Client.Devices.Abstractions/       one IDevice per OS: the app's side of the OS
@@ -103,10 +106,10 @@ src/Core/
 └── VpnHood.Core.Tunneling/
 ```
 
-## `src/AppLogic/` — the app
+## `src/libs/AppLogic/` — the app
 
 ```text
-src/AppLogic/
+src/libs/AppLogic/
 ├── VpnHood.AppLogic.Abstractions/                the contracts the providers implement
 ├── VpnHood.AppLogic.Ads.AdMob.Android/
 ├── VpnHood.AppLogic.Api/                         the app's API: its interfaces and DTOs
@@ -129,10 +132,10 @@ The store packages take their names from `StoreIds`, so a Microsoft Store packag
 `VpnHood.AppLogic.Stores.Microsoft`. A project's namespace is its id: `VpnHood.AppLogic.App.Android`,
 `VpnHood.AppLogic.Stores.GooglePlay`, `VpnHood.AppLogic.Ads.AdMob.Android`.
 
-## `src/Apps/` — one folder per product
+## `src/apps/` — one folder per product
 
 ```text
-src/Apps/
+src/apps/
 ├── Client/
 │   ├── Client/                     VpnHood.App.Client.csproj          the product
 │   ├── Client.Android.Google/      the Play distribution
@@ -147,15 +150,10 @@ src/Apps/
 │   ├── Client.Windows.VpnPlugin/   the VPN host that package carries
 │   └── Client.Windows.Web/
 ├── Connect/                        the same set, with Connect's own product project
-├── Server/                         VpnHood.App.Server.Net.csproj + its Docker and Linux packaging
-└── Tools/
-    ├── AvaloniaUI.Dev/             the Avalonia UI on a PC, for a developer
-    ├── MacShim/                    an Xcode stub that installs iOS dev profiles on a Mac
-    ├── StoreListing/               the store listing's tools: texts, release notes, the publish gate
-    └── StoreScreenshots/           renders the store screenshots
+└── Server/                         VpnHood.App.Server.Net.csproj + its Docker and Linux packaging
 ```
 
-`src/Apps/` is not a library layer, so the full-id rule above does not apply to it: a product is a
+`src/apps/` is not a library layer, so the full-id rule above does not apply to it: a product is a
 folder, and a head's folder is `<Product>.<Platform>.<Channel>` without the `VpnHood.App.` prefix.
 
 **A head is `<Product>.<Platform>.<Channel>`.** The channel is who hands the app to the user:
@@ -180,7 +178,18 @@ would reuse the same one. The Windows setup is not a folder of the product's: on
 script for every app, `pub/lib/vh-installer/win/install-client.nsi`, takes the app's names from its
 identity.
 
-`Tools/` is what we run ourselves. Nothing in it ships, and nothing in it is built by CI.
+## `tools/` — what we run ourselves
+
+```text
+tools/
+├── AvaloniaUI.Dev/             the Avalonia UI on a PC, for a developer
+├── MacShim/                    an Xcode stub that installs iOS dev profiles on a Mac
+├── StoreListing/               the store listing's tools: texts, release notes, the publish gate
+└── StoreScreenshots/           renders the store screenshots
+```
+
+Nothing in `tools/` ships. The store repos' CI runs `StoreListing` and `StoreScreenshots` from a checkout of
+this repo, and the UI smoke test (`tests/`) starts `AvaloniaUI.Dev`.
 
 ## What a head is made of
 
@@ -213,7 +222,7 @@ which serve every product's Store head.
 An Android head needs no manifest and no resource file of its own: `VpnHood.AppLogic.App.Android` gives
 every Android app the same ones, placed by its build targets
 (`buildTransitive/VpnHood.AppLogic.App.Android.targets`, which a package reference imports and
-`src/Apps/Directory.Build.targets` imports for our heads). A head, ours or a fork's, overrides any of
+`src/apps/Directory.Build.targets` imports for our heads). A head, ours or a fork's, overrides any of
 them in its own folder:
 
 | What | Where it comes from | How a head overrides it |
@@ -374,7 +383,7 @@ Don't fork this repository to build your own app: start from
 everything VpnHood from NuGet - see [build-your-app.md](build-your-app.md). `Client/` and `Connect/` are VpnHood's own
 two products.
 
-Nothing beneath `src/Apps/` may be edited for your app, and nothing beneath it may depend on anything inside it. If
+Nothing beneath `src/apps/` may be edited for your app, and nothing beneath it may depend on anything inside it. If
 you find yourself wanting to change a library to brand your app, that is a bug in the library's shape.
 
 ## See also

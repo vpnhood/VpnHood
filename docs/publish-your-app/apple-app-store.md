@@ -139,7 +139,7 @@ Miss any one and the product sits in *missing metadata* and cannot be sold, with
 which piece is absent. Our audit tool lists exactly what is missing for every product — see
 [the in-app purchase checklist](../ios/build-deploy-and-provisioning.md#enable-in-app-purchase-connect-style-apps-white-labelfork-checklist) —
 and the screenshot can be drawn for you rather than photographed by hand: see
-[the App Review screenshot](../../src/Apps/Tools/StoreScreenshots/README.md#the-app-review-screenshot).
+[the App Review screenshot](../../tools/StoreScreenshots/README.md#the-app-review-screenshot).
 Keep the purchase page out of your public screenshots: its prices change, and the screenshot tool
 refuses it there.
 
@@ -156,7 +156,7 @@ review round for the products. Write the English strings once in
 store text, and push them with:
 
 ```bash
-node src/Apps/Tools/StoreListing/store-subscriptions.mjs --bundle-id <your.bundle.id> --root <your store repo> --keys-dir <your keys>
+node tools/StoreListing/store-subscriptions.mjs --bundle-id <your.bundle.id> --root <your store repo> --keys-dir <your keys>
 ```
 
 It refuses over-length text rather than truncating it (Apple allows 30 characters for a display name
@@ -376,7 +376,7 @@ same network.
 
 The pipeline uploads the Apple TV build and nothing of its version's listing: the Apple TV's description,
 promotional text, "What's New" and screenshots are yours to set in App Store Connect. Write them for a
-remote (press or click, not tap). `src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --platform TV_OS`
+remote (press or click, not tap). `tools/StoreListing/store-asc-screenshots.mjs --platform TV_OS`
 uploads the screenshots from your store repo's `fastlane/screenshots/appletv`.
 
 **Each platform's first review asks a VPN app the same three questions.** An automated check finds the VPN

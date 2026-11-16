@@ -43,7 +43,7 @@ outside the app and is not data the iOS binary collects.
 
 ## The privacy manifest is the contract
 
-[`Client.Ios.Apple/PrivacyInfo.xcprivacy`](../../../src/Apps/Client/Client.Ios.Apple/PrivacyInfo.xcprivacy) declares no
+[`Client.Ios.Apple/PrivacyInfo.xcprivacy`](../../../src/apps/Client/Client.Ios.Apple/PrivacyInfo.xcprivacy) declares no
 collected data types and sets `NSPrivacyTracking = false`. The Network Extension's manifest also
 declares no collection (packet data never leaves the tunnel process).
 
@@ -187,7 +187,7 @@ six types below and nothing else.
 > **pricing**: a free app still needs Free explicitly set on Pricing and Availability.
 
 **One row per *Set Up* screen**, in the order App Store Connect presents them. Every value matches
-[`Connect.Ios.Apple/PrivacyInfo.xcprivacy`](../../../src/Apps/Connect/Connect.Ios.Apple/PrivacyInfo.xcprivacy), which
+[`Connect.Ios.Apple/PrivacyInfo.xcprivacy`](../../../src/apps/Connect/Connect.Ios.Apple/PrivacyInfo.xcprivacy), which
 Apple cross-checks against these answers — if the two ever disagree, the manifest wins and the panel
 alone cannot fix it (that takes a new build).
 

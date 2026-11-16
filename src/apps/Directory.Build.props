@@ -11,9 +11,9 @@
   <!--
     NO APP IS EVER A NUGET PACKAGE.
 
-    pub/lib/Publish-NugetPackages.ps1 discovers what to publish by packing every project under src/
-    that has not opted out, so a head that forgets the opt-out ships to nuget.org as a library. That
-    is not hypothetical: the iOS app and its network extension were missing it and were published as
+    pub/lib/Publish-NugetPackages.ps1 packs only the libraries, the projects under src/libs/, so it
+    never meets a head; this opt-out is the second guard. When it packed every project under src/ that
+    had not opted out, the iOS app and its network extension, missing the opt-out, were published as
     vpnhood.app.client.ios, vpnhood.app.client.ios.extension and vpnhood.app.connect.ios, up to
     8.1.845.8, each with a dependency on projects that are not packages at all.
 

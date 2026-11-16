@@ -3,28 +3,28 @@
 ## Two app targets + core
 | Target | Bundle ID | Purpose |
 |--|--|--|
-| `src/Apps/Client/Client.Ios.Apple/` | `com.vpnhood.client.ios` | Host UI app |
-| `src/Apps/Client/Client.Ios.Extension/` | `com.vpnhood.client.ios.networkextension` | Network Extension (Packet Tunnel Provider) |
+| `src/apps/Client/Client.Ios.Apple/` | `com.vpnhood.client.ios` | Host UI app |
+| `src/apps/Client/Client.Ios.Extension/` | `com.vpnhood.client.ios.networkextension` | Network Extension (Packet Tunnel Provider) |
 
-(The **Connect** app mirrors this exactly: `src/Apps/Connect/Connect.Ios.Apple/` + `Connect.Ios.Extension/`, bundle ids
+(The **Connect** app mirrors this exactly: `src/apps/Connect/Connect.Ios.Apple/` + `Connect.Ios.Extension/`, bundle ids
 `com.vpnhood.connect.ios` / `.networkextension`. Everything below applies to both — they share the same core.)
 
-The device/extension/adapter implementations live in **`src/Core`** (referenced via `ProjectReference`):
+The device/extension/adapter implementations live in **`src/libs/Core`** (referenced via `ProjectReference`):
 
 | Type | Location | Role |
 |--|--|--|
-| `IosDevice` | `src/Core/VpnHood.Core.Client.Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
-| `IosVpnService` | `src/Core/VpnHood.Core.Client.VpnServices.Host.Ios/IosVpnService.cs` | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
+| `IosDevice` | `src/libs/Core/VpnHood.Core.Client.Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
+| `IosVpnService` | `src/libs/Core/VpnHood.Core.Client.VpnServices.Host.Ios/IosVpnService.cs` | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
 | `IosMessageClient` / `IosMessageListener` | the device's project / the VPN service's | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
-| `IosVpnAdapter` | `src/Net/VpnHood.Net.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
-| `LocalTcpStack` (TCP forwarding) | `src/Net/VpnHood.Net.TcpStack/` | user-space TCP stack used when `UseTcpForwarding=true` |
+| `IosVpnAdapter` | `src/libs/Net/VpnHood.Net.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
+| `LocalTcpStack` (TCP forwarding) | `src/libs/Net/VpnHood.Net.TcpStack/` | user-space TCP stack used when `UseTcpForwarding=true` |
 
 **The app projects contain only thin glue:**
-- `src/Apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs` — `[Register("PacketTunnelProvider")]` subclass of core `IosVpnService`,
+- `src/apps/Client/Client.Ios.Extension/PacketTunnelProvider.cs` — `[Register("PacketTunnelProvider")]` subclass of core `IosVpnService`,
   with the `(NativeHandle)` ctor. The `[Register]` name **must** match `NSExtensionPrincipalClass` in
-  `src/Apps/Client/Client.Ios.Extension/Info.plist` (the Connect extension is identical). **This subclass is required** — pointing the principal class straight at core
+  `src/apps/Client/Client.Ios.Extension/Info.plist` (the Connect extension is identical). **This subclass is required** — pointing the principal class straight at core
   `IosVpnService` crashes on launch under .NET 11/CoreCLR's registrar (see the memory/throughput doc).
-- `src/Apps/Client/Client.Ios.Apple/AppDelegate.cs` — derives from `IosAvaloniaAppDelegate<ClassicAvaloniaApp>`, which
+- `src/apps/Client/Client.Ios.Apple/AppDelegate.cs` — derives from `IosAvaloniaAppDelegate<ClassicAvaloniaApp>`, which
   starts the app and the UI, and returns its `IosInitParams`: `VpnHoodIosApp.Init` builds the `IosDevice` from the App
   Group and the extension's bundle id named there.
 

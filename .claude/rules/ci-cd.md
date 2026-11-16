@@ -3,7 +3,7 @@ paths:
   - ".github/workflows/**"
   - ".github/scripts/**"
   - "pub/**"
-  - "src/Apps/*/*/_publish.ps1"
+  - "src/apps/*/*/_publish.ps1"
 ---
 
 ## CI/CD & publishing

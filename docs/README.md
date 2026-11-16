@@ -14,7 +14,7 @@ you are trying to do.
 | Know which component talks to which, and in which direction | [topology.md](topology.md) |
 | Know how a client is built - a head over three layers: UI, the app's logic, VPN engine - and the two contracts that let you replace any of them; how the app and its VPN service fit together, and which project is which half | [client-architecture.md](client-architecture.md) |
 | Know how the VPN engine takes its adapter, and how a packet travels between the adapter and the tunnel | [vpn-engine.md](vpn-engine.md) |
-| Find where something lives in `src/`, or what a platform app is made of | [source-layout.md](source-layout.md) |
+| Find where some code lives, or what a platform app is made of | [source-layout.md](source-layout.md) |
 | Ship a set of files with the app — images, fonts, words, a database | [assets.md](assets.md) |
 | Know exactly which credential goes where in CI | [cicd/deployment.md](cicd/deployment.md) |
 | Understand what free / trial / ad / premium mean in the app | [connection-options.md](connection-options.md) |
@@ -58,7 +58,7 @@ Store policy and legal checkpoints a publisher must clear:
 
 | Area | Document |
 | --- | --- |
-| Source layout | [source-layout.md](source-layout.md) — the six layers under `src/`, what a head is made of, what every Android app shares and how a head overrides it, how the browser page is built and placed |
+| Source layout | [source-layout.md](source-layout.md) — the library layers and the apps in `src/`, the tools and tests beside it, what a head is made of, what every Android app shares and how a head overrides it, how the browser page is built and placed |
 | Assets and zips | [assets.md](assets.md) — why data ships as a placed zip and never as an embedded resource, the provider chain that reads one, and why the paired-phone page is WebAssembly |
 | Component topology | [topology.md](topology.md) — who connects to whom, in which direction, and how many of each |
 | App startup | [app-startup.md](app-startup.md) — what a head writes (who the app is, its options with its store's providers) and what the host builds from them: the device, the app, the UI; each platform's entry points |

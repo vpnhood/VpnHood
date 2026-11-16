@@ -11,8 +11,8 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Net\VpnHood.Net.TcpStack\VpnHood.Net.TcpStack.csproj" />
-    <ProjectReference Include="..\..\src\Net\VpnHood.Net.VpnAdapters.WinDivert\VpnHood.Net.VpnAdapters.WinDivert.csproj" />
+    <ProjectReference Include="..\..\src\libs\Net\VpnHood.Net.TcpStack\VpnHood.Net.TcpStack.csproj" />
+    <ProjectReference Include="..\..\src\libs\Net\VpnHood.Net.VpnAdapters.WinDivert\VpnHood.Net.VpnAdapters.WinDivert.csproj" />
   </ItemGroup>
 
   <ItemGroup>

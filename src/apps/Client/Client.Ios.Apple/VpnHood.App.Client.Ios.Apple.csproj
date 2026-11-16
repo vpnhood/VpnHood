@@ -51,18 +51,18 @@
 
   <ItemGroup>
     <!-- App framework + iOS device abstraction. -->
-    <ProjectReference Include="..\..\..\AppLogic\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
-    <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
+    <ProjectReference Include="..\..\..\libs\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
     <!-- Concrete iOS IDevice (IosDevice) + IPC message client live in the core Device.iOS project. -->
-    <ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+    <ProjectReference Include="..\..\..\libs\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
     <!-- iOS shared app code: the VpnHoodIosApp bootstrap and the UI context. -->
-    <ProjectReference Include="..\..\..\AppLogic\VpnHood.AppLogic.App.Ios\VpnHood.AppLogic.App.Ios.csproj" />
+    <ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.App.Ios\VpnHood.AppLogic.App.Ios.csproj" />
     <!-- App Store updates and, on iOS, reviews (AppStoreAppUpdaterProvider / AppStoreInAppUserReviewProvider). -->
-    <ProjectReference Include="..\..\..\AppLogic\VpnHood.AppLogic.Stores.AppStore.Core\VpnHood.AppLogic.Stores.AppStore.Core.csproj" />
+    <ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.Stores.AppStore.Core\VpnHood.AppLogic.Stores.AppStore.Core.csproj" />
     <!-- The UI this head runs, which AppDelegate is the application delegate of. -->
-    <ProjectReference Include="..\..\..\AppHosting\VpnHood.AppHosting.Avalonia.Ios\VpnHood.AppHosting.Avalonia.Ios.csproj" />
+    <ProjectReference Include="..\..\..\libs\AppHosting\VpnHood.AppHosting.Avalonia.Ios\VpnHood.AppHosting.Avalonia.Ios.csproj" />
     <!-- The UI itself: the pages, the controls, the themes. -->
-    <ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
+    <ProjectReference Include="..\..\..\libs\AppUi\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
     <!-- Shared client resources: the IP-location db and ClientAppResources. -->
     <ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
   </ItemGroup>
@@ -83,9 +83,9 @@
 
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
+	<Import Project="..\..\..\libs\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
 	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way: the same
 	     targets a package reference of VpnHood.AppUi.Avalonia.Classic imports; the head
 	     reads it at "assets/web-root.zip". -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Avalonia.Classic\buildTransitive\VpnHood.AppUi.Avalonia.Classic.targets" />
+	<Import Project="..\..\..\libs\AppUi\VpnHood.AppUi.Avalonia.Classic\buildTransitive\VpnHood.AppUi.Avalonia.Classic.targets" />
 </Project>

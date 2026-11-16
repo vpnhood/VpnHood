@@ -5,29 +5,29 @@
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
 
   <!-- The app's identity - ids, names, version numbers, constants - for every head of a product
-       that states one (src/Apps/<Product>/Directory.Build.props): the same file a package reference
+       that states one (src/apps/<Product>/Directory.Build.props): the same file a package reference
        of VpnHood.AppLogic.App imports, since a project reference carries no targets. A project that
        states no identity, as the tools and the server do, is left as it is. -->
-  <Import Project="$(MSBuildThisFileDirectory)..\AppLogic\VpnHood.AppLogic.App\buildTransitive\VpnHood.AppLogic.App.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)..\libs\AppLogic\VpnHood.AppLogic.App\buildTransitive\VpnHood.AppLogic.App.targets" />
 
   <!-- Every Android head's manifest and the place of its languages, likewise: the Android app library's
        targets, which its project reference does not carry. -->
-  <Import Project="$(MSBuildThisFileDirectory)..\AppLogic\VpnHood.AppLogic.App.Android\buildTransitive\VpnHood.AppLogic.App.Android.targets"
+  <Import Project="$(MSBuildThisFileDirectory)..\libs\AppLogic\VpnHood.AppLogic.App.Android\buildTransitive\VpnHood.AppLogic.App.Android.targets"
           Condition="$(TargetFramework.Contains('-android'))" />
 
   <!-- Windows' console launcher beside the window's executable, for the same reason: the Windows
        hosting package's targets, which its project reference does not carry. They act only on a
        WinExe that names a command. -->
-  <Import Project="$(MSBuildThisFileDirectory)..\AppHosting\VpnHood.AppHosting.Desktop.WindowsTun\buildTransitive\VpnHood.AppHosting.Desktop.WindowsTun.targets"
+  <Import Project="$(MSBuildThisFileDirectory)..\libs\AppHosting\VpnHood.AppHosting.Desktop.WindowsTun\buildTransitive\VpnHood.AppHosting.Desktop.WindowsTun.targets"
           Condition="$(TargetFramework.Contains('-windows'))" />
 
   <!-- The app's icon beside a Linux head's binary, AppIcon.png, likewise: the Linux hosting package's
        targets. They act only on an app that names an icon (ApplicationIcon). -->
-  <Import Project="$(MSBuildThisFileDirectory)..\AppHosting\VpnHood.AppHosting.Desktop.Linux\buildTransitive\VpnHood.AppHosting.Desktop.Linux.targets"
+  <Import Project="$(MSBuildThisFileDirectory)..\libs\AppHosting\VpnHood.AppHosting.Desktop.Linux\buildTransitive\VpnHood.AppHosting.Desktop.Linux.targets"
           Condition="'$(VhAppPlatform)' == 'linux'" />
 
   <!-- The VPN host beside a desktop head's executable, likewise: the daemon's package's targets. They act only on a
        head that references its VPN host marked VhAppVpnHost. -->
-  <Import Project="$(MSBuildThisFileDirectory)..\AppHosting\VpnHood.AppHosting.Desktop.Daemon\buildTransitive\VpnHood.AppHosting.Desktop.Daemon.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)..\libs\AppHosting\VpnHood.AppHosting.Desktop.Daemon\buildTransitive\VpnHood.AppHosting.Desktop.Daemon.targets" />
 
 </Project>

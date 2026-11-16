@@ -7,16 +7,18 @@ The design and code rules agreed while building are in
 [`docs/implementation-rules.md`](docs/implementation-rules.md): read them before implementing.
 
 ## Repo layout
-- Top-level directories are lowercase: `src/`, `tests/`, `samples/`, `docs/`, `pub/`. Shared
-  script folders are lowercase too (`pub/lib`, `pub/lib/utils`, `pub/lib/vh-installer`); project
-  folders keep their own casing (`src/Apps`, …). Module repos (e.g. VpnHood.Net.Proxies) follow
-  the same convention (`pub/PubVersion.json`).
-- `src/Apps/` holds only what ships, one folder per product (`Client/`, `Connect/`, `Server/`) plus
-  `Tools/` for what we run ourselves (the Avalonia dev head, MacShim). A head is
+- Top-level directories are lowercase: `src/`, `tests/`, `tools/`, `samples/`, `docs/`, `pub/`. Shared
+  script folders are lowercase too (`pub/lib`, `pub/lib/utils`, `pub/lib/vh-installer`), and so are
+  `src/`'s two, `src/libs` and `src/apps`; layer, product and project folders keep their own casing
+  (`src/libs/AppLogic`, `src/apps/Client`). Module repos (e.g. VpnHood.Net.Proxies) follow the same
+  convention (`pub/PubVersion.json`).
+- `src/` holds only what ships: the library layers in `src/libs/` and the apps in `src/apps/`, one
+  folder per product (`Client/`, `Connect/`, `Server/`). What we run ourselves sits beside it: `tools/`
+  (the Avalonia dev head, MacShim, the store listing and its screenshots) and `tests/`. A head is
   `<Product>/<Product>.<Platform>.<Channel>` (`Client/Client.Android.Google`, `Connect/Connect.Ios.Apple`);
   the product's own project, what every distribution of it shares, is `<Product>/<Product>`. A fork
   copies one product folder as its template. The browser page every head serves lives with the UI it
-  compiles (`src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser`), whose `_publish.ps1` writes it
+  compiles (`src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser`), whose `_publish.ps1` writes it
   into the UI's own package (`VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip`),
   placed beside each head as `assets/web-root.zip` by that package's targets; `publish_nugets.yml` builds
   it before the pack, and CI builds it once (`build-browser` in `publish_app.yml`) and hands it to every
@@ -24,7 +26,7 @@ The design and code rules agreed while building are in
 - Shared PowerShell scripts under `pub/` are PascalCase Verb-Noun with approved verbs
   (`Invoke-VersionBump.ps1`, `pub/lib/Publish-NugetPackages.ps1`). Dot-sourced libraries/config
   keep noun names (`Common.ps1`, `AppPublishConfig.ps1`); per-app entry scripts keep their
-  folder-scoped names (`pub/Client/Publish.ps1`, `src/Apps/*/*/_publish.ps1`).
+  folder-scoped names (`pub/Client/Publish.ps1`, `src/apps/*/*/_publish.ps1`).
 
 ## Documentation
 

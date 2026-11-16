@@ -5,7 +5,7 @@ page happens in a browser, by hand, in **your** Samsung account. The pipeline bu
 APK and keeps it with the publish run, not on your GitHub release; uploading it to the store is yours.
 
 The Galaxy Store build is its own head, `<Product>.Android.Samsung` (today CLIENT's,
-`src/Apps/Client/Client.Android.Samsung`). A Connect-shaped app copies it. Galaxy Store reaches
+`src/apps/Client/Client.Android.Samsung`). A Connect-shaped app copies it. Galaxy Store reaches
 Samsung's Android devices only: Samsung TVs run Tizen, not Android.
 
 Work through it in order. Come back to [start here](README.md) when you are done.

@@ -83,14 +83,14 @@ them checks out this one folder. Every one takes the store repo as `--root`; a w
    surface is the CHANGELOG's `# Latest` section). Hand-edits are silently overwritten by the next
    generation run.
 2. **No repo writes to another repo.** If a change seems to need that, the design is wrong or a
-   deliberate credential decision is being made (see [`docs/cicd/deployment.md`](../../../../docs/cicd/deployment.md)).
+   deliberate credential decision is being made (see [`docs/cicd/deployment.md`](../../docs/cicd/deployment.md)).
 3. **`publish-state.json` records only verified publishes.** A cancelled or failed store leg must
    not be recorded — otherwise the gate skips a store that never got the content. The workflow's
    `record` job enforces this via each module's `published` output.
 4. **Fail loud.** Every tool throws on missing files, unknown locales, limit overflows. Never add
    a silent fallback; VpnHood is fail-closed by policy.
 5. **Missing credential = warn + skip + green; present-but-failing = red.** The fork-friendliness
-   convention, documented per-secret in [`docs/cicd/deployment.md`](../../../../docs/cicd/deployment.md).
+   convention, documented per-secret in [`docs/cicd/deployment.md`](../../docs/cicd/deployment.md).
 6. **iOS copy never names other platforms** (Android/Google Play/Windows/Linux) — App Store
    Guideline 2.3.10. The compiler lints texts; screenshots must respect it too (the Servers page
    promo was removed on iOS for this — don't reintroduce it).
@@ -159,13 +159,13 @@ From the main repo's root, with the store repos beside it:
 
 ```bash
 # texts compile clean and within store limits
-node src/Apps/Tools/StoreListing/store-metadata.mjs --check --root ../Vpnhood.App.Client
+node tools/StoreListing/store-metadata.mjs --check --root ../Vpnhood.App.Client
 
 # what would a publish send vs. what was last published?
-node src/Apps/Tools/StoreListing/store-publish-state.mjs --root ../Vpnhood.App.Client
+node tools/StoreListing/store-publish-state.mjs --root ../Vpnhood.App.Client
 
 # is the LIVE App Store listing exactly the repo content? (counts, checksums, order)
-node src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --bundle-id com.vpnhood.client.ios \
+node tools/StoreListing/store-asc-screenshots.mjs --bundle-id com.vpnhood.client.ios \
   --root ../Vpnhood.App.Client --keys-dir <your keys> --check
 
 # the same for the Apple TV's version: add --platform TV_OS (reads fastlane/screenshots/appletv);

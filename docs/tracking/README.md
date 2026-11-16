@@ -15,9 +15,9 @@ switch](#the-switch)).
 
 | Reporter | Runs in | Reports to | Who names the id |
 | --- | --- | --- | --- |
-| **The app's tracker** | the app ([`VpnHoodApp`](../../src/AppLogic/VpnHood.AppLogic.App/VpnHoodApp.cs)) and, per connection, the VPN service ([`VpnHoodClient`](../../src/Core/VpnHood.Core.Client/VpnHoodClient.cs)) | the head's id | the head |
+| **The app's tracker** | the app ([`VpnHoodApp`](../../src/libs/AppLogic/VpnHood.AppLogic.App/VpnHoodApp.cs)) and, per connection, the VPN service ([`VpnHoodClient`](../../src/libs/Core/VpnHood.Core.Client/VpnHoodClient.cs)) | the head's id | the head |
 | **The access manager's tracker** | the VPN service, once per session | the id the server hands over at connect | whoever runs the access manager |
-| **The server's tracker** | the VPN server ([`ServerApp`](../../src/Apps/Server/ServerApp.cs)) | its own id | fixed in its code |
+| **The server's tracker** | the VPN server ([`ServerApp`](../../src/apps/Server/ServerApp.cs)) | its own id | fixed in its code |
 | **The UI** | the device | nothing of its own: it reports through the app | — |
 
 ## The shape
@@ -80,8 +80,8 @@ sequenceDiagram
 ## The app's tracker
 
 **The id** is the `MeasurementId` of the
-[`Ga4TrackerFactory`](../../src/Core/VpnHood.Core.Client.VpnServices.Abstractions/Tracking/Ga4TrackerFactory.cs)
-a head lists in `AppOptions.TrackerFactories` ([`AppOptions`](../../src/AppLogic/VpnHood.AppLogic.App/AppOptions.cs)).
+[`Ga4TrackerFactory`](../../src/libs/Core/VpnHood.Core.Client.VpnServices.Abstractions/Tracking/Ga4TrackerFactory.cs)
+a head lists in `AppOptions.TrackerFactories` ([`AppOptions`](../../src/libs/AppLogic/VpnHood.AppLogic.App/AppOptions.cs)).
 The list is empty by default, so a head that means to report names its own; VpnHood's products list
 GA4 with the id from their private appsettings, and Connect's Google Play head lists Firebase's
 Android SDK in its place. Each factory makes one tracker, and several report as one, each getting the
@@ -89,8 +89,8 @@ switch and every event (`CompositeTracker`). A Debug build makes none, whatever 
 GA4 factory without an id makes a `NullTracker`. Nothing is sent then, and the UI hides the switch
 (`AppDescriptor.IsAnonymousTrackerSupported`).
 
-**The app sends** ([`AppTrackerBuilder`](../../src/AppLogic/VpnHood.AppLogic.App/AppTrackerBuilder.cs),
-[`TrackerExtensions`](../../src/Net/VpnHood.Net.Toolkit/Extensions/TrackerExtensions.cs)):
+**The app sends** ([`AppTrackerBuilder`](../../src/libs/AppLogic/VpnHood.AppLogic.App/AppTrackerBuilder.cs),
+[`TrackerExtensions`](../../src/libs/Net/VpnHood.Net.Toolkit/Extensions/TrackerExtensions.cs)):
 
 | Event | When | Carries |
 | --- | --- | --- |
@@ -102,51 +102,51 @@ GA4 factory without an id makes a `NullTracker`. Nothing is sent then, and the U
 
 **The VPN service sends** to the same id. It makes its own trackers for each connection, from the
 factories the app hands it in `ClientOptions`, each made again from its type and its settings
-([`VpnHoodClientFactory`](../../src/Core/VpnHood.Core.Client.VpnServices.Host/VpnHoodClientFactory.cs),
-[`ClientTrackerBuilder`](../../src/Core/VpnHood.Core.Client/ClientTrackerBuilder.cs)):
+([`VpnHoodClientFactory`](../../src/libs/Core/VpnHood.Core.Client.VpnServices.Host/VpnHoodClientFactory.cs),
+[`ClientTrackerBuilder`](../../src/libs/Core/VpnHood.Core.Client/ClientTrackerBuilder.cs)):
 
 | Event | When | Carries |
 | --- | --- | --- |
 | `session_start` | the tracker is made, with the switch on: each connect | — |
 | `vh_endpoint_status` | a server endpoint is found reachable or not, with endpoint tracking on | the endpoint, its host name, IPv6 or not, reachable or not |
 | `vh_connect_attempt` | the connect succeeds, or fails with endpoint tracking on | the server location, connected or not, IPv6 support, redirected or not, the endpoint |
-| `vh_usage` | every 25 minutes while connected ([`ClientUsageTracker`](../../src/Core/VpnHood.Core.Client/ClientUsageTracker.cs)) | traffic total, sent and received in MB; request and connection counts |
+| `vh_usage` | every 25 minutes while connected ([`ClientUsageTracker`](../../src/libs/Core/VpnHood.Core.Client/ClientUsageTracker.cs)) | traffic total, sent and received in MB; request and connection counts |
 
 Endpoint tracking is `AppOptions.AllowEndPointTracker`. It is off by default, and runs only while
 the switch is on.
 
 **Every hit** also carries the client id, a random session id, the app version, the language, and
 the OS version and architecture
-([`Ga4TagTracker`](../../src/Net/VpnHood.Net.Toolkit/Trackers/Ga4Tags/Ga4TagTracker.cs)). The client
+([`Ga4TagTracker`](../../src/libs/Net/VpnHood.Net.Toolkit/Trackers/Ga4Tags/Ga4TagTracker.cs)). The client
 id is a hash of the app id and the install's own id, the same one the VPN server sees.
 
 ## The access manager's tracker
 
 A server's access manager may return a GA4 id with each session
-([`SessionResponseEx`](../../src/Core/VpnHood.Core.Server.Access/Messaging/SessionResponseEx.cs)).
+([`SessionResponseEx`](../../src/libs/Core/VpnHood.Core.Server.Access/Messaging/SessionResponseEx.cs)).
 The server passes it on in the hello reply
-([`HelloResponse`](../../src/Core/VpnHood.Core.Tunneling/Messaging/HelloResponse.cs)). While the
+([`HelloResponse`](../../src/libs/Core/VpnHood.Core.Tunneling/Messaging/HelloResponse.cs)). While the
 switch is on, the client sends that id one `session_start` for the session, with its client id and
-app version ([`ClientSessionBuilder`](../../src/Core/VpnHood.Core.Client/ClientSessionBuilder.cs)).
+app version ([`ClientSessionBuilder`](../../src/libs/Core/VpnHood.Core.Client/ClientSessionBuilder.cs)).
 A build without a tracker of its own (iOS, a Debug build) tells the VPN service the switch is off,
 so it sends none.
 
 The id belongs to whoever runs the access manager, not to whoever made the app. `FileAccessManager`
 never returns one; an HTTP access manager may. Anything an access manager reports by itself is
 outside this repo, but the switch reaches it: the hello carries it
-([`HelloRequest`](../../src/Core/VpnHood.Core.Tunneling/Messaging/HelloRequest.cs)) and the server
+([`HelloRequest`](../../src/libs/Core/VpnHood.Core.Tunneling/Messaging/HelloRequest.cs)) and the server
 passes it on with the new session
-([`SessionRequestEx`](../../src/Core/VpnHood.Core.Server.Access/Messaging/SessionRequestEx.cs)), both
+([`SessionRequestEx`](../../src/libs/Core/VpnHood.Core.Server.Access/Messaging/SessionRequestEx.cs)), both
 as `AllowAnonymousTracker`, so an access manager reports only a session whose hello said yes. A
 client before it sends none, which reads as no. It is the switch at connect: a change reaches the
 access manager with the next session.
 
 ## The server's tracker
 
-[`ServerApp`](../../src/Apps/Server/ServerApp.cs) reports to an id fixed in its code, under a random
+[`ServerApp`](../../src/apps/Server/ServerApp.cs) reports to an id fixed in its code, under a random
 id it keeps in its storage (`server-id`), with its version and its access manager's type
-([`VpnHoodServer`](../../src/Core/VpnHood.Core.Server/VpnHoodServer.cs),
-[`SessionManager`](../../src/Core/VpnHood.Core.Server/SessionManager.cs)):
+([`VpnHoodServer`](../../src/libs/Core/VpnHood.Core.Server/VpnHoodServer.cs),
+[`SessionManager`](../../src/libs/Core/VpnHood.Core.Server/SessionManager.cs)):
 
 | Event | When | Carries |
 | --- | --- | --- |
@@ -166,7 +166,7 @@ as its browser build, or a UI of a fork's own.
 1. It has no id of its own. What it reports goes through the app API into the app's tracker: a
    rating becomes `vh_user_review`.
 2. It shows the switch on its Privacy page
-   ([`PrivacyView`](../../src/AppUi/VpnHood.AppUi.Avalonia.Classic/Views/PrivacyView.axaml.cs)),
+   ([`PrivacyView`](../../src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic/Views/PrivacyView.axaml.cs)),
    and hides it where the build collects nothing.
 3. It adds no analytics of its own. A UI of one's own
    may, set up from `AppDescriptor.CustomData`, and only while the switch is on.
@@ -189,9 +189,9 @@ UI of one's own shows its first-run page while that state is set and saves the b
 | Report | Stopped by |
 | --- | --- |
 | Each tracker's `session_start` | `TrackerCreateParams.IsEnabled`: the app and the VPN service make every tracker with the switch, and one made switched off sends nothing |
-| The app's events | [`AppTrackerService`](../../src/AppLogic/VpnHood.AppLogic.App/Services/Trackers/AppTrackerService.cs), which sets the tracker's `IsEnabled` at each settings save |
+| The app's events | [`AppTrackerService`](../../src/libs/AppLogic/VpnHood.AppLogic.App/Services/Trackers/AppTrackerService.cs), which sets the tracker's `IsEnabled` at each settings save |
 | The VPN service's `vh_usage` | its tracker, made with the switch, and set in a running session by the reconfigure the app sends on every change |
-| A VPN service started without the app, from its saved options (always-on, the quick-settings tile, the system restarting it) | the switch in those options ([`VpnServiceOptionsFile`](../../src/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnServiceOptionsFile.cs)), saved at each connect and at each settings change, connected or not |
+| A VPN service started without the app, from its saved options (always-on, the quick-settings tile, the system restarting it) | the switch in those options ([`VpnServiceOptionsFile`](../../src/libs/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnServiceOptionsFile.cs)), saved at each connect and at each settings change, connected or not |
 | A successful `vh_connect_attempt`, and the access manager's `session_start` | `VpnHoodClientConfig.AllowAnonymousTracker` |
 | What the access manager reports by itself | the same, in the hello, from the next connect |
 | `vh_endpoint_status`, and a failed `vh_connect_attempt` | endpoint tracking, which runs only with the switch on |
@@ -202,8 +202,8 @@ UI of one's own shows its first-run page while that state is set and saves the b
 | Head | The app's tracker |
 | --- | --- |
 | Client, Google Play, website Android, Windows, Linux; Connect, website Android, Windows, Linux | the id in its private `appsettings.json`, embedded at build (CI writes it from the publishing repo's `APPSETTINGS` variable); endpoint tracking as that file sets it |
-| Connect, Google Play | Firebase's Android SDK ([`FirebaseAnalyticsTracker`](../../src/Apps/Connect/Connect.Android.Google/FirebaseUtils/FirebaseAnalyticsTracker.cs)), in the app's process and in the VPN service's own, each set to the switch; Crashlytics follows the same switch and, turned off, deletes the reports it has not sent. Both are off in the manifest, so a fresh install sends nothing before the switch is read. The native crashes Android recorded since the last start, which Crashlytics cannot catch, go to it as non-fatals with their abort message, from the app's process and with the switch on ([`NativeCrashReporter`](../../src/Apps/Connect/Connect.Android.Google/FirebaseUtils/NativeCrashReporter.cs)); with it off they go to the log only |
-| Client and Connect, iOS | none: no tracker factory and no endpoint tracking ([`AppDelegate`](../../src/Apps/Client/Client.Ios.Apple/AppDelegate.cs)), until Apple's rules for a VPN app are checked |
+| Connect, Google Play | Firebase's Android SDK ([`FirebaseAnalyticsTracker`](../../src/apps/Connect/Connect.Android.Google/FirebaseUtils/FirebaseAnalyticsTracker.cs)), in the app's process and in the VPN service's own, each set to the switch; Crashlytics follows the same switch and, turned off, deletes the reports it has not sent. Both are off in the manifest, so a fresh install sends nothing before the switch is read. The native crashes Android recorded since the last start, which Crashlytics cannot catch, go to it as non-fatals with their abort message, from the app's process and with the switch on ([`NativeCrashReporter`](../../src/apps/Connect/Connect.Android.Google/FirebaseUtils/NativeCrashReporter.cs)); with it off they go to the log only |
+| Client and Connect, iOS | none: no tracker factory and no endpoint tracking ([`AppDelegate`](../../src/apps/Client/Client.Ios.Apple/AppDelegate.cs)), until Apple's rules for a VPN app are checked |
 | Any head, Debug build | none |
 
 ## Seeing it on a device
@@ -231,8 +231,8 @@ processes logged it. `adb shell setprop debug.firebase.analytics.app .none.` end
    the GA4 one or in its place. The VPN service makes each factory again in its own process, from its
    type and its public properties, so a factory keeps its settings in public properties and has a
    public constructor without arguments
-   ([`ITrackerFactory`](../../src/Core/VpnHood.Core.Client.VpnServices.Abstractions/Tracking/ITrackerFactory.cs)).
-3. The server's id is in [`ServerApp`](../../src/Apps/Server/ServerApp.cs): change it, or turn
+   ([`ITrackerFactory`](../../src/libs/Core/VpnHood.Core.Client.VpnServices.Abstractions/Tracking/ITrackerFactory.cs)).
+3. The server's id is in [`ServerApp`](../../src/apps/Server/ServerApp.cs): change it, or turn
    `AllowAnonymousTracker` off.
 4. Keep your store privacy answers and your privacy policy in line with what you send; see
    [APP_STORE_PRIVACY.md](../legal/developer/APP_STORE_PRIVACY.md).

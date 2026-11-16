@@ -16,7 +16,7 @@
 #                             the build refuses to run half-configured.
 #
 # publish.json shape - how a release ships, not who the app is: the ids and the title come from the
-# app's identity (src/Apps/<Product>/Directory.Build.props), the published files are named after the
+# app's identity (src/apps/<Product>/Directory.Build.props), the published files are named after the
 # app's folder (.user/<appFolder>), and a PackageTitle or AndroidPackageId left over from before the
 # identity is ignored:
 #   {
@@ -119,7 +119,7 @@ function Assert-DefaultAccessKey {
 }
 
 # The app asks for its update feeds by its build's package title (VhAppPackageTitle, from the app's
-# identity, src/Apps/<Product>/Directory.Build.props), while the publish names every file after the
+# identity, src/apps/<Product>/Directory.Build.props), while the publish names every file after the
 # app's folder. Two names for one thing: should they part, nothing fails, and the app hears of no
 # update. A head with no package title (the server) has only the folder.
 function Assert-PackageTitle {

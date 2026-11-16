@@ -8,12 +8,12 @@ How to build the App + Network Extension, install/run on device, stream logs, an
 > [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md) for the runtime/memory rationale.
 
 ## Project layout (in this monorepo)
-The iOS apps live under `src/Apps/` — one host project + one Network-Extension (`.appex`) project each:
+The iOS apps live under `src/apps/` — one host project + one Network-Extension (`.appex`) project each:
 
 | App | Host csproj | Extension csproj | App bundle id |
 |-----|-------------|------------------|---------------|
-| Client  | `src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj`   | `src/Apps/Client/Client.Ios.Extension/…`   | `com.vpnhood.client.ios` |
-| Connect | `src/Apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj` | `src/Apps/Connect/Connect.Ios.Extension/…`  | `com.vpnhood.connect.ios` |
+| Client  | `src/apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj`   | `src/apps/Client/Client.Ios.Extension/…`   | `com.vpnhood.client.ios` |
+| Connect | `src/apps/Connect/Connect.Ios.Apple/VpnHood.App.Connect.Ios.Apple.csproj` | `src/apps/Connect/Connect.Ios.Extension/…`  | `com.vpnhood.connect.ios` |
 
 Each app's Apple TV app is the same two projects' second target, `net11.0-tvos`, which needs the `tvos`
 workload beside `ios`; the host's README (`Client.Ios.Apple/README.md`, `Connect.Ios.Apple/README.md`) has
@@ -38,9 +38,9 @@ and bundles the appex**. All iOS build settings are inlined per-csproj (no share
 Debug AOT emits ~51 MB and hits the 52 MB jetsam limit — **always build Release** for the device.
 ```bash
 # Client (swap Client.Ios.Apple -> Connect.Ios.Apple for the Connect app)
-rm -rf src/Apps/Client/Client.Ios.Apple/bin src/Apps/Client/Client.Ios.Apple/obj \
-       src/Apps/Client/Client.Ios.Extension/bin src/Apps/Client/Client.Ios.Extension/obj   # clean: avoid stale AOT
-dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
+rm -rf src/apps/Client/Client.Ios.Apple/bin src/apps/Client/Client.Ios.Apple/obj \
+       src/apps/Client/Client.Ios.Extension/bin src/apps/Client/Client.Ios.Extension/obj   # clean: avoid stale AOT
+dotnet build src/apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.csproj \
   -f net11.0-ios -r ios-arm64 -c Release \
   -p:ArchiveOnBuild=false \
   -p:_DeviceName=:v2:udid=$DEVICE \
@@ -49,12 +49,12 @@ dotnet build src/Apps/Client/Client.Ios.Apple/VpnHood.App.Client.Ios.Apple.cspro
 - `-p:SolutionDir="$(pwd)/"` (trailing slash **required**) is mandatory in Release — without it the core `.csproj`
   files emit `CS8101: pathmap incorrectly formatted` (the `PathMap` in the root `Directory.Build.props` needs it).
 - Repo uses `.slnx`; build the host csproj directly. The host build also builds the Extension appex.
-- Output: `src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app`
+- Output: `src/apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app`
   (contains `PlugIns/VpnHoodClientExtension.appex`).
 
 ## Deploy & run (devicectl)
 ```bash
-APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
+APP=src/apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 xcrun devicectl device install app     --device $DEVICE "$APP"
 xcrun devicectl device process launch  --device $DEVICE com.vpnhood.client.ios
 ```
@@ -73,7 +73,7 @@ Mac app would need a system extension). Verified working 2026-08-24 (M2 Pro, Cli
 Then build exactly as above (no `_DeviceName` needed). macOS refuses to launch a raw iOS `.app`
 (“incorrect executable format”) — it must sit in the wrapper bundle Xcode/the App Store normally create:
 ```bash
-APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
+APP=src/apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 WRAP=".working/mac-run/VpnHood Client.app"
 rm -rf .working/mac-run && mkdir -p "$WRAP/Wrapper"
 cp -R "$APP" "$WRAP/Wrapper/"
@@ -99,7 +99,7 @@ open "$WRAP"
   (`/var/db/MobileIdentityService/Profiles`); the ONLY user-space writer is **Xcode's
   run-on-"My Mac (Designed for iPad)" action** (`profiles install -type=provisioning` rejects iOS
   profiles with -214; `devicectl` can't target the local Mac). Fix: open
-  [`src/Apps/Tools/MacShim/Shim.xcodeproj`](../../src/Apps/Tools/MacShim/) — a stub app+appex using the real
+  [`tools/MacShim/Shim.xcodeproj`](../../tools/MacShim/) — a stub app+appex using the real
   bundle ids, team and dev profiles (see its README, incl. the Client retarget) — select
   **My Mac (Designed for iPad)**, **⌘R once, then Stop**. Redo after every profile regeneration.
   After the shim run, clean up or the real app won't launch (`open` fails with -1712):
@@ -142,7 +142,7 @@ provisioning; create named dev profiles per the steps below only if that isn't a
 
 ### Diagnose a stale profile
 ```bash
-APP=src/Apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
+APP=src/apps/Client/Client.Ios.Apple/bin/Release/net11.0-ios/ios-arm64/VpnHoodClient.app
 # what the embedded profile allows
 security cms -D -i "$APP/embedded.mobileprovision" \
   | plutil -convert xml1 - -o - | grep -A3 -E "ProvisionedDevices|application-groups|TeamIdentifier"

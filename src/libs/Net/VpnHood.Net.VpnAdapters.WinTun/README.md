@@ -39,7 +39,7 @@ await adapter.Start(new VpnAdapterOptions {
 
 - `WinTunVpnAdapter` is an `IVpnAdapter`: make it with a `WinTunVpnAdapterSettings`, whose `AdapterName` names the
   interface. The
-  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
+  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/libs/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
   goes on from here: sending packets to the host, and stopping.
 - A start makes the interface and sets its addresses, routes, MTU and metric through Windows' IP Helper API. Its DNS
   servers come with a Name Resolution Policy Table (NRPT) rule that makes them the only ones Windows asks, as

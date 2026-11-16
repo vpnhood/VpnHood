@@ -14,8 +14,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
-		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
-		<ProjectReference Include="..\..\src\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
+		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
+		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Server.Access.Managers.FileAccessManagers\VpnHood.Core.Server.Access.Managers.FileAccessManagers.csproj" />
+		<ProjectReference Include="..\..\src\libs\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
 	</ItemGroup>
 </Project>

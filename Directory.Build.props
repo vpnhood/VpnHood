@@ -99,7 +99,7 @@
        code), run by every project; .editorconfig says where each warns. Only an analyzer: nothing of
        it is referenced or packed. -->
   <ItemGroup Condition="'$(MSBuildProjectName)' != 'VpnHood.Net.Toolkit.Analyzers'">
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Net\VpnHood.Net.Toolkit.Analyzers\VpnHood.Net.Toolkit.Analyzers.csproj"
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\libs\Net\VpnHood.Net.Toolkit.Analyzers\VpnHood.Net.Toolkit.Analyzers.csproj"
                       OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 

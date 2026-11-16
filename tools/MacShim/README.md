@@ -33,5 +33,5 @@ sed -i '' 's/group\.com\.vpnhood\.connect\.ios/group.com.vpnhood.client.ios/' \
 plutil -remove "com\.apple\.developer\.applesignin" ShimApp/ShimApp.entitlements  # Client has no SIWA
 ```
 
-Full run-on-Mac procedure: [`docs/ios/build-deploy-and-provisioning.md`](../../../../docs/ios/build-deploy-and-provisioning.md)
+Full run-on-Mac procedure: [`docs/ios/build-deploy-and-provisioning.md`](../../docs/ios/build-deploy-and-provisioning.md)
 § "Run on a Mac (Apple silicon)".

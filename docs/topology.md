@@ -14,7 +14,7 @@ dials into a client, and nothing dials into a server except clients.
 | Piece | What it is | Where it runs |
 | --- | --- | --- |
 | **VpnHood! MANAGER** | The control panel and its tower, the API the servers call. Holds servers, farms, access tokens, usage. | A web service (hosted for you, or your own Access Manager implementation) |
-| **VpnHood! SERVER** | The node that carries traffic. | A VPS or dedicated box you rent — not the user's device — [`src/Apps/Server`](../src/Apps/Server) |
+| **VpnHood! SERVER** | The node that carries traffic. | A VPS or dedicated box you rent — not the user's device — [`src/apps/Server`](../src/apps/Server) |
 | **VpnHood! CLIENT / CONNECT** | The end-user app. | The user's phone, desktop, or TV |
 | **Access key** | A base64 blob the user pastes. Not a component, but it is how a client learns anything at all. | Issued by the manager, delivered by you |
 
@@ -65,13 +65,13 @@ base URL and has nowhere else to report.
 
 Not at install, not at connect, not ever. The app has no manager address and no code
 that could use one: `IAccessManager` lives in
-[`VpnHood.Core.Server.Access`](../src/Core/VpnHood.Core.Server.Access/Managers/IAccessManager.cs),
+[`VpnHood.Core.Server.Access`](../src/libs/Core/VpnHood.Core.Server.Access/Managers/IAccessManager.cs),
 a **server** assembly, and neither `VpnHood.Core.Client` nor
 `VpnHood.Core.Client.Abstractions` references it.
 
 What the client actually knows comes from the access key it was given. Decode one
-([`Token`](../src/Core/VpnHood.Core.Common/Tokens/Token.cs) →
-[`ServerToken`](../src/Core/VpnHood.Core.Common/Tokens/ServerToken.cs)) and you find
+([`Token`](../src/libs/Core/VpnHood.Core.Common/Tokens/Token.cs) →
+[`ServerToken`](../src/libs/Core/VpnHood.Core.Common/Tokens/ServerToken.cs)) and you find
 `HostName`, `HostPort`, `HostEndPoints`, `Urls`, `ServerLocations` — **server**
 endpoints. There is no manager URL in a token, because the client has no reason for one.
 
@@ -83,7 +83,7 @@ endpoints. There is no manager URL in a token, because the client has no reason 
 ### 2. The server connects to the manager, never the reverse
 
 The server is the *client* of the manager's API. Every call in
-[`IAccessManager`](../src/Core/VpnHood.Core.Server.Access/Managers/IAccessManager.cs) is
+[`IAccessManager`](../src/libs/Core/VpnHood.Core.Server.Access/Managers/IAccessManager.cs) is
 made by the server, outbound:
 
 | Call | When | Why |
@@ -103,9 +103,9 @@ heartbeat: the server then gives it up as failed and sends the next one at its i
 
 Transport is plain HTTPS to `api/tower/` under the configured base URL, with a static
 `Authorization` header — see
-[`HttpAccessManager`](../src/Core/VpnHood.Core.Server.Access/Managers/HttpAccessManagers/HttpAccessManager.cs)
+[`HttpAccessManager`](../src/libs/Core/VpnHood.Core.Server.Access/Managers/HttpAccessManagers/HttpAccessManager.cs)
 and its
-[options](../src/Core/VpnHood.Core.Server.Access/Managers/HttpAccessManagers/HttpAccessManagerOptions.cs).
+[options](../src/libs/Core/VpnHood.Core.Server.Access/Managers/HttpAccessManagers/HttpAccessManagerOptions.cs).
 Configured in `appsettings.json`:
 
 ```json
@@ -120,9 +120,9 @@ Configured in `appsettings.json`:
 ### 3. No manager at all is a supported mode
 
 If `HttpAccessManager` is absent from settings, the server falls back to
-[`FileAccessManager`](../src/Core/VpnHood.Core.Server.Access.Managers.FileAccessManagers/FileAccessManager.cs)
+[`FileAccessManager`](../src/libs/Core/VpnHood.Core.Server.Access.Managers.FileAccessManagers/FileAccessManager.cs)
 and keeps its tokens in a local folder — the selection is a single branch in
-[`ServerApp.cs`](../src/Apps/Server/ServerApp.cs). Same `IAccessManager` interface,
+[`ServerApp.cs`](../src/apps/Server/ServerApp.cs). Same `IAccessManager` interface,
 no network, no panel. The server does not know the difference.
 
 This is why "does the server need the manager to run?" is answered *no*: the manager is

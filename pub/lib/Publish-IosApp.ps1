@@ -38,7 +38,7 @@ $tvTarget = (Get-ProjectProperty $projectFile "TargetFrameworks") -split ';' -co
 
 # Per-app identity from .user/<appFolder>/publish.json (see AppPublishConfig.ps1). The iOS BUNDLE ID is
 # NOT part of publish.json's schema (it is Android-only), so it is always the head's ApplicationId, as
-# the app's identity makes it (src/Apps/<Product>/Directory.Build.props) — never a throw when the
+# the app's identity makes it (src/apps/<Product>/Directory.Build.props) — never a throw when the
 # (optional) iOS block is absent from a strict publish.json.
 $appUserDir = Join-Path "$solutionDir/../.user/" $appFolder;
 $appConfig = Get-AppPublishConfig $appFolder;

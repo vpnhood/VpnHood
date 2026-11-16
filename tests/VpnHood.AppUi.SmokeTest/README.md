@@ -32,7 +32,7 @@ A minimized window draws nothing, so the walk takes no pictures while it is mini
 
 ## What it drives, and why that head
 
-It runs `VpnHoodAvaloniaDev`, the developer tool under `src/Apps/Tools/AvaloniaUI.Dev`, with
+It runs `VpnHoodAvaloniaDev`, the developer tool under `tools/AvaloniaUI.Dev`, with
 `--connect` for the Connect product's look and `--storage VpnHood.UiSmokeTest` for a folder of its
 own. Your installed client is never read, changed or deleted. The folder is removed before and
 after each run, so every run is a first run and the terms page is part of what gets checked.

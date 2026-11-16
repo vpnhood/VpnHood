@@ -102,7 +102,7 @@ internal sealed class StoreFixture
     // What the product IS - the theme it wears, its logo, the consent text it shows, the documents
     // it links to - is never invented here. A fixture without them would render the other product's
     // brand, and that screenshot looks right while showing the wrong app. Every product sets these in
-    // its options builder (src/Apps/<product>/<product>/<Product>AppOptions.cs), the two documents from
+    // its options builder (src/apps/<product>/<product>/<Product>AppOptions.cs), the two documents from
     // its private appsettings (Links); AvaloniaUI.Dev's Program.cs lists one product's values side by
     // side, which is the easiest place to copy them from.
     private static readonly string[] ProductIdentity =
@@ -116,8 +116,8 @@ internal sealed class StoreFixture
         if (missing.Length > 0)
             throw new InvalidOperationException(
                 $"The fixture does not say which product it is: descriptor has no {string.Join(", ", missing)}. " +
-                "Add them from the product's options builder (src/Apps/<product>/<product>/<Product>AppOptions.cs, or " +
-                "src/Apps/Tools/AvaloniaUI.Dev/Program.cs for a whole product at once). They are never " +
+                "Add them from the product's options builder (src/apps/<product>/<product>/<Product>AppOptions.cs, or " +
+                "tools/AvaloniaUI.Dev/Program.cs for a whole product at once). They are never " +
                 "filled in here: a screenshot wearing the other product's theme or logo looks right and is wrong.");
 
         Fill(descriptor, "companyName", "VpnHood", filled, "descriptor");

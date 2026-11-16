@@ -20,6 +20,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.WindowsTun\VpnHood.Core.Client.VpnServices.Host.WindowsTun.csproj" />
+		<ProjectReference Include="..\..\..\libs\Core\VpnHood.Core.Client.VpnServices.Host.WindowsTun\VpnHood.Core.Client.VpnServices.Host.WindowsTun.csproj" />
 	</ItemGroup>
 </Project>

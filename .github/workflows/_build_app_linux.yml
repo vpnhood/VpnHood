@@ -1,7 +1,7 @@
 name: _build_app_linux (reusable)
 
 # Builds the Linux client/connect package from the vpnhood/VpnHood monorepo (checked out into code/).
-# Called by publish_app.yml. Self-contained: derives the package dir + src/Apps/<Product> folder from `app`.
+# Called by publish_app.yml. Self-contained: derives the package dir + src/apps/<Product> folder from `app`.
 # Uploads the `<app>-linux` artifact.
 
 on:
@@ -44,7 +44,7 @@ jobs:
       # The look's package (VpnHood.AppUi.Assets.Classic) is a submodule whose targets every head
       # imports; fastlane/, the other submodule, stays out.
       - name: Check out the asset submodule
-        run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
+        run: git -C code submodule update --init --depth 1 src/libs/AppUi/VpnHood.AppUi.Assets.Classic
       # The SDK global.json names, by its version: setup-dotnet reads that file's rollForward
       # latestMajor as the LTS channel and installs .NET 10 instead.
       - name: Read the SDK version global.json names
@@ -103,11 +103,11 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: browser-page
-          path: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
+          path: code/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
       - name: Build Linux
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Linux.Web/_publish.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/apps/$env:PREFIX/$env:PREFIX.Linux.Web/_publish.ps1"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-linux

@@ -77,7 +77,7 @@ jobs:
       # The look's package (VpnHood.AppUi.Assets.Classic) is a submodule whose targets every head
       # imports; fastlane/, the other submodule, stays out.
       - name: Check out the asset submodule
-        run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
+        run: git -C code submodule update --init --depth 1 src/libs/AppUi/VpnHood.AppUi.Assets.Classic
       # Connect's Google head packs its internal ad's film from the brand repo (the caller), beside
       # code/ as $(VhDir)/Vpnhood.App.Connect/promotions; without it the head shows the still page.
       - name: Check out the promotions (connect)
@@ -108,7 +108,7 @@ jobs:
       - name: Provision Android SDK
         shell: pwsh
         run: |
-          dotnet build "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Web/VpnHood.App.$env:PREFIX.Android.Web.csproj" `
+          dotnet build "$env:GITHUB_WORKSPACE/code/src/apps/$env:PREFIX/$env:PREFIX.Android.Web/VpnHood.App.$env:PREFIX.Android.Web.csproj" `
             -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME" `
             -p:AndroidCommandLineToolsVersion=19.0
       - name: Credentials + Android signing config
@@ -161,11 +161,11 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: browser-page
-          path: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
+          path: code/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
       - name: Build Android (${{ matrix.label }})
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.${{ matrix.subdir }}/${{ matrix.script }}"
+          & "$env:GITHUB_WORKSPACE/code/src/apps/$env:PREFIX/$env:PREFIX.${{ matrix.subdir }}/${{ matrix.script }}"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-android-${{ matrix.id }}
@@ -179,7 +179,7 @@ jobs:
         if: matrix.id == 'google-aab' && inputs.app == 'client'
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Samsung/_publish.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/apps/$env:PREFIX/$env:PREFIX.Android.Samsung/_publish.ps1"
       # It goes up to Galaxy Store by hand, from this artifact, and on no release: it keeps the repository's
       # own retention, publish_app's clean-up leaves it, and so a re-run finds it and replaces it.
       - uses: actions/upload-artifact@v7
@@ -196,7 +196,7 @@ jobs:
         if: matrix.id == 'web-arm64' && inputs.app == 'client'
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX/$env:PREFIX.Android.Web/_publish-fdroid-arm64.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/apps/$env:PREFIX/$env:PREFIX.Android.Web/_publish-fdroid-arm64.ps1"
       - uses: actions/upload-artifact@v7
         if: matrix.id == 'web-arm64' && inputs.app == 'client'
         with:

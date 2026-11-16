@@ -12,7 +12,7 @@ dotnet add package VpnHood.Net.VpnAdapters.IosTun
 
 - `IosVpnAdapter` is an `IVpnAdapter`: make it in your `NEPacketTunnelProvider`'s start of the tunnel, with the
   provider, an `IosVpnAdapterSettings` and the completion handler iOS gave the start, and use it as the
-  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
+  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/libs/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
   uses `NullVpnAdapter`. Each open calls the handler, once the tunnel is live or with the error of applying its
   settings; a failure before that, while the settings are built, does not reach it. Wrap the handler so only its
   first call counts, and report such an earlier failure through the same wrapper.

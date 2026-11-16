@@ -32,7 +32,7 @@ $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullNa
 # Who the app is comes from the head, how it ships from .user/<appFolder>/publish.json (see
 # AppPublishConfig.ps1; present -> strict, absent -> the resolved repo):
 #   packageId        <- the head's ApplicationId, as the app's identity makes it in Release
-#                       (src/Apps/<Product>/Directory.Build.props)
+#                       (src/apps/<Product>/Directory.Build.props)
 #   packageFileTitle <- $appFolder, the app's package title, which names every published file
 #   repoUrl          <- RepoUrl (strict) else the resolved publish repo
 $appUserDir = Join-Path "$solutionDir/../.user/" $appFolder;

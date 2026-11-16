@@ -46,6 +46,6 @@
 	     still builds; CI never sees it, because the publish_app workflow places the zip first. -->
 	<Target Name="VhWarnMissingWebRoot" BeforeTargets="BeforeBuild"
 	        Condition="'$(VhWebRootIsApp)' == 'true' And '$(TargetFramework)' != '' And '$(VhWebRootIsBrowserApp)' != 'true' And !Exists('$(VhWebRootZip)')">
-		<Warning Text="No browser page to place beside $(MSBuildProjectName): $(VhWebRootZip) is missing, so the app's web host has no page to serve. Run src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/_publish.ps1 (the .NET 10 SDK with the wasm-tools workload), or download the build-browser artifact of a publish_app run." />
+		<Warning Text="No browser page to place beside $(MSBuildProjectName): $(VhWebRootZip) is missing, so the app's web host has no page to serve. Run src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/_publish.ps1 (the .NET 10 SDK with the wasm-tools workload), or download the build-browser artifact of a publish_app run." />
 	</Target>
 </Project>

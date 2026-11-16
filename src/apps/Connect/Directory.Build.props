@@ -1,6 +1,6 @@
 <Project>
 
-  <!-- MSBuild imports only the NEAREST Directory.Build.props, so this file shadows src/Apps' one (and
+  <!-- MSBuild imports only the NEAREST Directory.Build.props, so this file shadows src/apps' one (and
        through it the repo's): import it first, as that one does the repo's. -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
@@ -38,6 +38,6 @@
 
   <!-- After the values, as NuGet imports a package's props after Directory.Build.props: the same file
        a package reference of VpnHood.AppLogic.App imports. -->
-  <Import Project="$(MSBuildThisFileDirectory)..\..\AppLogic\VpnHood.AppLogic.App\buildTransitive\VpnHood.AppLogic.App.props" />
+  <Import Project="$(MSBuildThisFileDirectory)..\..\libs\AppLogic\VpnHood.AppLogic.App\buildTransitive\VpnHood.AppLogic.App.props" />
 
 </Project>

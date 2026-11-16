@@ -75,7 +75,7 @@ $installAnyContent | Out-File -FilePath $module_installScriptFile -Encoding ASCI
 # script downloads <app>-linux-msquic.sh from the app's own release. The copy to latest below takes
 # it along.
 Write-Host "Copying msquic installer..." -ForegroundColor Green
-$msquicSrc = "$solutionDir/src/Apps/Server/pub/Linux/install-msquic.sh";
+$msquicSrc = "$solutionDir/src/apps/Server/pub/Linux/install-msquic.sh";
 $msquicDst = "$moduleDir/$assemblyName-$os-msquic.sh";
 New-Item -ItemType Directory -Path (Split-Path $msquicDst -Parent) -Force | Out-Null
 (Get-Content $msquicSrc -Raw) -replace "`r", "" | Out-File -FilePath $msquicDst -Encoding ASCII -Force -NoNewline
@@ -84,7 +84,7 @@ New-Item -ItemType Directory -Path (Split-Path $msquicDst -Parent) -Force | Out-
 # <app>-linux-os-updates.sh from its own release. The clients have no such option.
 if ($installTemplate -eq "install") {
     Write-Host "Copying OS updates script..." -ForegroundColor Green
-    $osUpdatesSrc = "$solutionDir/src/Apps/Server/pub/Linux/install-os-updates.sh";
+    $osUpdatesSrc = "$solutionDir/src/apps/Server/pub/Linux/install-os-updates.sh";
     $osUpdatesDst = "$moduleDir/$assemblyName-$os-os-updates.sh";
     (Get-Content $osUpdatesSrc -Raw) -replace "`r", "" | Out-File -FilePath $osUpdatesDst -Encoding ASCII -Force -NoNewline
 }

@@ -45,7 +45,7 @@ Docker is built with `docker/build-push-action`, both architectures in one run (
 image's install step), and gated on both the `DOCKERHUB_*` secrets and the `push_docker` input;
 absent secrets **skip with a warning** and the release still ships the Linux/Windows assets, the
 same fork-friendly rule as every store leg. The image is a native install of the build job's Linux
-packages: `src/Apps/Server/pub/publish_docker.ps1 -generateOnly 1` writes the compose files and
+packages: `src/apps/Server/pub/publish_docker.ps1 -generateOnly 1` writes the compose files and
 stages the image's build context (the packages and the scripts the `Dockerfile` runs) without
 building an image.
 

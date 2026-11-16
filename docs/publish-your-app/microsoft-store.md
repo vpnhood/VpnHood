@@ -31,7 +31,7 @@ reserved names.
 ## 3. Put the product's identity into your project
 
 **Product management → Product identity** lists three values Microsoft assigned when you reserved the
-name. Copy them into your app's `Directory.Build.props` (`src/Apps/<your app>/`):
+name. Copy them into your app's `Directory.Build.props` (`src/apps/<your app>/`):
 
 | Partner Center | Property |
 | --- | --- |
@@ -48,7 +48,7 @@ your app's own identifier (`VhAppIdBase`), which stays what it is on every platf
 
 The pipeline does not build the Store package yet. On Windows, with the .NET SDK and the Windows SDK,
 run the Store head's script from your committed code (for the Client app,
-`src/Apps/Client/Client.Windows.Microsoft`):
+`src/apps/Client/Client.Windows.Microsoft`):
 
     ./_publish.ps1 -store
 

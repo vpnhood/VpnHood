@@ -15,21 +15,21 @@
 
 	<ItemGroup>
 		<!-- The window a desktop head shows the UI in, which is also the app's UI context. -->
-		<ProjectReference Include="..\..\..\AppHosting\VpnHood.AppHosting.Avalonia.Desktop\VpnHood.AppHosting.Avalonia.Desktop.csproj" />
+		<ProjectReference Include="..\..\src\libs\AppHosting\VpnHood.AppHosting.Avalonia.Desktop\VpnHood.AppHosting.Avalonia.Desktop.csproj" />
 		<!-- The UI itself: the pages, the controls, the themes. -->
-		<ProjectReference Include="..\..\..\AppUi\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
-		<ProjectReference Include="..\..\..\Core\VpnHood.Core.Client.VpnServices.Host.WindowsTun\VpnHood.Core.Client.VpnServices.Host.WindowsTun.csproj" />
+		<ProjectReference Include="..\..\src\libs\AppUi\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
+		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Client.VpnServices.Host.WindowsTun\VpnHood.Core.Client.VpnServices.Host.WindowsTun.csproj" />
 		<!-- The app itself and its web host: a real VpnHoodApp runs here, and a phone pairs with it. -->
-		<ProjectReference Include="..\..\..\AppLogic\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
-		<ProjectReference Include="..\..\..\AppLogic\VpnHood.AppLogic.Api.WebHost\VpnHood.AppLogic.Api.WebHost.csproj" />
+		<ProjectReference Include="..\..\src\libs\AppLogic\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
+		<ProjectReference Include="..\..\src\libs\AppLogic\VpnHood.AppLogic.Api.WebHost\VpnHood.AppLogic.Api.WebHost.csproj" />
 		<!-- Connect's premium tier, for a run that sells as Connect's store builds do (- -store). -->
-		<ProjectReference Include="..\..\Connect\Connect\VpnHood.App.Connect.csproj" />
+		<ProjectReference Include="..\..\src\apps\Connect\Connect\VpnHood.App.Connect.csproj" />
 	</ItemGroup>
 	<!-- The assets folder - the images, flags, fonts, documents and words every UI draws from - placed the way
 	     this platform reads files: the same targets a package reference of VpnHood.AppUi.Assets.Classic imports. -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
+	<Import Project="..\..\src\libs\AppUi\VpnHood.AppUi.Assets.Classic\buildTransitive\VpnHood.AppUi.Assets.Classic.targets" />
 	<!-- The page the web host serves - the Avalonia UI's browser build - placed the same way: the same
 	     targets a package reference of VpnHood.AppUi.Avalonia.Classic imports; the head
 	     reads it at "assets/web-root.zip". -->
-	<Import Project="..\..\..\AppUi\VpnHood.AppUi.Avalonia.Classic\buildTransitive\VpnHood.AppUi.Avalonia.Classic.targets" />
+	<Import Project="..\..\src\libs\AppUi\VpnHood.AppUi.Avalonia.Classic\buildTransitive\VpnHood.AppUi.Avalonia.Classic.targets" />
 </Project>

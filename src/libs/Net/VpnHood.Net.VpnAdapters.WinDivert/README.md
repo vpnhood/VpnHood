@@ -12,7 +12,7 @@ dotnet add package VpnHood.Net.VpnAdapters.WinDivert
 ## How it works
 
 - `WinDivertVpnAdapter` is an `IVpnAdapter`: make it with a `WinDivertVpnAdapterSettings` and use it as the
-  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
+  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/libs/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
   uses `NullVpnAdapter`, except that it writes no packet before it has captured one.
 - A captured packet's source becomes the adapter's virtual address of its IP version, if it has one; a packet the
   VPN sends back goes in addressed to the host's primary address.

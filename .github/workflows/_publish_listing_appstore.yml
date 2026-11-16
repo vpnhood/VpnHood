@@ -79,7 +79,7 @@ jobs:
           repository: vpnhood/VpnHood
           ref: ${{ inputs.tools_ref }}
           path: .vh
-          sparse-checkout: src/Apps/Tools/StoreListing
+          sparse-checkout: tools/StoreListing
           sparse-checkout-cone-mode: false
 
       - name: Set up Node.js
@@ -96,7 +96,7 @@ jobs:
         if: env.APPSTORE_CONNECT_API_KEY != ''
         run: |
           set +e
-          node .vh/src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --editable-check
+          node .vh/tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --editable-check
           rc=$?
           set -e
           if [ "$rc" = "0" ]; then
@@ -149,7 +149,7 @@ jobs:
 
       - name: Sync the listing screenshots (checksum diff)
         if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true' && inputs.skip_screenshots != true
-        run: node .vh/src/Apps/Tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE"
+        run: node .vh/tools/StoreListing/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE"
 
       # published=true only when the listing was actually writable: a locked listing must NOT be
       # recorded, so the gate publishes the pending content once a new version opens.

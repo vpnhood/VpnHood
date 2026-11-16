@@ -99,24 +99,24 @@ dotnet_style_collection_initializer = true:suggestion
 # VH0001 (above) is for library and background code. VH0002 is for code that runs on a UI thread:
 # no .Vhc() there, which the CaptureContext debug switch flips, but a fixed ConfigureAwait. The looks and their
 # hosts, which run on the UI thread.
-[src/{AppUi,AppHosting}/**.cs]
+[src/libs/{AppUi,AppHosting}/**.cs]
 dotnet_diagnostic.VH0001.severity = none
 dotnet_diagnostic.VH0002.severity = warning
 
 # the desktop service, its command line and its setup: background code
-[src/AppHosting/VpnHood.AppHosting.Desktop*/**.cs]
+[src/libs/AppHosting/VpnHood.AppHosting.Desktop*/**.cs]
 dotnet_diagnostic.VH0001.severity = warning
 dotnet_diagnostic.VH0002.severity = none
 
-[src/Apps/{Client,Connect}/**.cs]
+[src/apps/{Client,Connect}/**.cs]
 dotnet_diagnostic.VH0001.severity = none
 dotnet_diagnostic.VH0002.severity = warning
 
 # the Android and iOS app layers, on the main thread
-[src/AppLogic/{VpnHood.AppLogic.App.Android,VpnHood.AppLogic.App.Ios}/**.cs]
+[src/libs/AppLogic/{VpnHood.AppLogic.App.Android,VpnHood.AppLogic.App.Ios}/**.cs]
 dotnet_diagnostic.VH0002.severity = warning
 
-[src/Apps/Tools/**.cs]
+[tools/**.cs]
 dotnet_diagnostic.VH0001.severity = none
 
 # a test's closures run within the test, while what they capture is alive, and a sync call is often

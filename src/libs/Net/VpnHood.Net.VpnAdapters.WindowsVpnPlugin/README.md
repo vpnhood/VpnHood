@@ -12,7 +12,7 @@ dotnet add package VpnHood.Net.VpnAdapters.WindowsVpnPlugin
 
 - `WindowsVpnPluginAdapter` is an `IVpnAdapter`: make it in the plug-in's `Connect` with the `VpnChannel` Windows
   gave it, and use it as the
-  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
+  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/libs/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
   uses `NullVpnAdapter`, with the VPN server's address in the options' `ServerIp`, which the channel's transport
   needs. Windows wants the channel started before `Connect` returns, so wait there for `StartedTask`, which completes
   once it has.

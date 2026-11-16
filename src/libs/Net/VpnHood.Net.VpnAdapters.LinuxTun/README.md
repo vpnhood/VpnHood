@@ -12,7 +12,7 @@ dotnet add package VpnHood.Net.VpnAdapters.LinuxTun
 
 - `LinuxTunVpnAdapter` is an `IVpnAdapter`: make it with a `LinuxVpnAdapterSettings`, whose `AdapterName` names the
   interface (`LinuxTunVpnAdapter.GetValidAdapterName` derives a valid one from any name), and use it as the
-  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
+  [Abstractions quick start](https://github.com/vpnhood/VpnHood/blob/develop/src/libs/Net/VpnHood.Net.VpnAdapters.Abstractions/README.md)
   uses `NullVpnAdapter`.
 - The TUN device is the process's own: the kernel removes it, with its routes, when the process ends, a crash
   included. Its alias carries a tag made from the settings' `AppId`, so a start can tell a device the app left, which

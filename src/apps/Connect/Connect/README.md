@@ -6,7 +6,7 @@ own (`../../Client/VpnHood.App.Client`), and a fork writes its own of this shape
 
 ## What it is for
 
-Every head under `src/Apps/Connect/` is a thin platform shell: an activity, a view controller, a desktop
+Every head under `src/apps/Connect/` is a thin platform shell: an activity, a view controller, a desktop
 `Main`. What is the same for all of them is decided here, once:
 
 | Part | What it decides |
@@ -31,12 +31,12 @@ ad-supported build takes the ad key.
 This is where *our* answers live. The shape that makes a fork possible is one layer down -
 `AppOptions`, the provider interfaces in `VpnHood.AppLogic.Abstractions` - all of which ship on NuGet and
 know nothing about this project. A fork copies one product folder (`Client/` or `Connect/`) as its
-template: its own of this project, and its heads. Nothing beneath `src/Apps/` may depend on anything here.
+template: its own of this project, and its heads. Nothing beneath `src/apps/` may depend on anything here.
 
 ## Where the look and the page come from
 
 The look lives in the UI's store (`VpnHood.AppUi.Assets.Classic`, `ui.zip`), placed beside each head by
 that package's targets. The page the web host serves to a paired device is the Classic Avalonia UI's
-browser build (`src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser`), placed the same way as
+browser build (`src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser`), placed the same way as
 `assets/web-root.zip` by the UI's own package (`VpnHood.AppUi.Avalonia.Classic`).
 Neither passes through this project.

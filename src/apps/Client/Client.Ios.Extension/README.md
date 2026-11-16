@@ -3,11 +3,11 @@
 **This project is a one-file shim,** for iOS and the Apple TV alike. `PacketTunnelProvider.cs` is just a
 `[Register("PacketTunnelProvider")]` subclass that roots the core assembly (required under .NET 11/CoreCLR's
 registrar). The real Network-Extension implementation — `IosVpnService`, the iOS TUN adapter, the memory
-guard, the user-space TCP stack — lives in `src/Core` and `src/Net`, mainly:
+guard, the user-space TCP stack — lives in `src/libs/Core` and `src/libs/Net`, mainly:
 
-- `src/Core/VpnHood.Core.Client.VpnServices.Host.Ios` (IosVpnService, the memory guard, the app's channel)
-- `src/Net/VpnHood.Net.VpnAdapters.IosTun` (IosVpnAdapter)
-- `src/Net/VpnHood.Net.TcpStack` (the TCP stack of TCP forwarding)
+- `src/libs/Core/VpnHood.Core.Client.VpnServices.Host.Ios` (IosVpnService, the memory guard, the app's channel)
+- `src/libs/Net/VpnHood.Net.VpnAdapters.IosTun` (IosVpnAdapter)
+- `src/libs/Net/VpnHood.Net.TcpStack` (the TCP stack of TCP forwarding)
 
 The Apple TV target (`net11.0-tvos`) differs only in its csproj: tvOS has Network
 Extension from 17, its floor; the split filters' SQLite package ships no tvOS build of the library, so the

@@ -34,4 +34,6 @@ Currently here:
 - [vpnhood-connect-terms-of-use.md](vpnhood-connect-terms-of-use.md) — VpnHood! CONNECT licence, service, billing, and acceptable-use terms
 - [vpnhood-manager-privacy-policy.md](vpnhood-manager-privacy-policy.md) — VpnHood! MANAGER
 - [vpnhood-manager-terms-of-use.md](vpnhood-manager-terms-of-use.md) — VpnHood! MANAGER terms of use
+- [vpnhood-id-privacy-policy.md](vpnhood-id-privacy-policy.md) — the VpnHood ID, the account people sign in to VpnHood's services with (id.vpnhood.com); its sign-in pages link to it
+- [vpnhood-id-terms-of-use.md](vpnhood-id-terms-of-use.md) — VpnHood ID account and acceptable-use terms
 - [website-privacy-policy.md](website-privacy-policy.md) — the VpnHood website, www.vpnhood.com (analytics, delivery, email)

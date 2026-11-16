@@ -18,7 +18,7 @@
 	<ItemGroup>
 		<!-- The app's API, and the whole of what this package knows about the app: the six
 		     interfaces and the shapes they carry, in process or over HTTP. No engine, no listener. -->
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
+		<ProjectReference Include="..\..\AppLogic\VpnHood.AppLogic.Api\VpnHood.AppLogic.Api.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
 		<!-- IAssetProvider: the store's files, wherever this platform reads them from. -->
 		<ProjectReference Include="..\..\Net\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
@@ -26,6 +26,6 @@
 
 	<ItemGroup>
 		<!-- VhApp.AccountRetryDelay: the account tests need no ten-second wait -->
-		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
 	</ItemGroup>
 </Project>

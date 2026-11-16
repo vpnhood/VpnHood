@@ -1,10 +1,10 @@
-﻿using VpnHood.AppLib.App;
-using VpnHood.AppLib.App.Services.Updaters;
-using VpnHood.AppLib.App.WindowsTun;
-using VpnHood.AppUi.Hosting.Avalonia.Desktop;
-using VpnHood.AppUi.Hosting.Desktop;
-using VpnHood.AppUi.Hosting.Desktop.WindowsTun;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
+﻿using VpnHood.AppLogic.App;
+using VpnHood.AppLogic.App.Services.Updaters;
+using VpnHood.AppLogic.App.WindowsTun;
+using VpnHood.AppHosting.Avalonia.Desktop;
+using VpnHood.AppHosting.Desktop;
+using VpnHood.AppHosting.Desktop.WindowsTun;
+using VpnHood.AppUi.Avalonia.Classic;
 
 namespace VpnHood.App.Client.Windows.Web;
 

@@ -31,7 +31,7 @@ var initParams = new AppInitParams {
 ```
 
 1. **The host starts it.** In MAUI, `VpnHoodAppMaui.Init(initParams)` in `MauiProgram`, from the
-   `VpnHood.AppUi.Hosting.Maui` package; the app then runs in your app's process, and the VPN service where the
+   `VpnHood.AppHosting.Maui` package; the app then runs in your app's process, and the VPN service where the
    platform runs it.
 2. **The access keys are the servers it connects to.** `ClientOptions.TestAccessKey` is VpnHood's test server,
    which ends each session after a few minutes; your app comes with an access key of your own server.

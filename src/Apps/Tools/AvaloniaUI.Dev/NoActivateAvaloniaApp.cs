@@ -7,7 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.AppUi.Avalonia.Classic;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
 

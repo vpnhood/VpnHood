@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- published and zipped by _publish.ps1 into the UI's own package, whose targets place it beside each head -->
+		<Description>The Classic Avalonia UI as a browser page: what the app's web server hands a paired device. The host does the work (VpnHood.AppHosting.Avalonia.Browser); this names the UI.</Description>
+		<TargetFramework>net10.0-browser</TargetFramework>
+		<OutputType>Exe</OutputType>
+		<!-- The bundle's main assembly, which main.js starts by this name. -->
+		<AssemblyName>VpnHoodAvaloniaBrowser</AssemblyName>
+	</PropertyGroup>
+
+	<!-- The WebAssembly settings: the runtime, the trimming, the main.js convention. -->
+	<Import Project="..\..\AppHosting\VpnHood.AppHosting.Avalonia.Browser\build\VpnHood.AppHosting.Avalonia.Browser.props" />
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\AppHosting\VpnHood.AppHosting.Avalonia.Browser\VpnHood.AppHosting.Avalonia.Browser.csproj" />
+		<!-- The UI itself: the pages, the controls, the themes. -->
+		<ProjectReference Include="..\VpnHood.AppUi.Avalonia.Classic\VpnHood.AppUi.Avalonia.Classic.csproj" />
+	</ItemGroup>
+</Project>

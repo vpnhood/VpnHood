@@ -1,0 +1,14 @@
+﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppUi.Common"
+                    xmlns:dialogs="using:VpnHood.AppUi.Avalonia.Classic.Views.Dialogs"
+                    x:Class="VpnHood.AppUi.Avalonia.Classic.Views.Dialogs.PendingDialog">
+  <!-- The order is with the store; nothing to press until it answers. -->
+  <Border Classes="dialog" MaxWidth="360">
+    <StackPanel Spacing="12">
+      <TextBlock x:Name="TitleText" Classes="dialog-title" IsVisible="False" />
+      <TextBlock x:Name="MessageText" Classes="dialog-text" Text="{Binding WaitingToCompleteOrderProcess, Source={x:Static res:Strings.Current}}" />
+      <ProgressBar IsIndeterminate="True" />
+    </StackPanel>
+  </Border>
+</dialogs:DialogBase>

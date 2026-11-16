@@ -1,0 +1,67 @@
+﻿using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Avalonia.Classic.Helpers;
+using VpnHood.AppUi.Avalonia.Classic.ViewModels;
+
+namespace VpnHood.AppUi.Avalonia.Classic.Views;
+
+public partial class AddServerView : UserControl, IPage
+{
+    private readonly MainViewModel _viewModel;
+    private readonly MainView _host;
+
+    public AddServerView(MainViewModel viewModel, MainView host)
+    {
+        _viewModel = viewModel;
+        _host = host;
+        InitializeComponent();
+    }
+
+    // the field
+    public void FocusDefault()
+    {
+        KeyBox.LandFocus();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        // Enter in the field adds, as it would submit that dialog's form
+        if (e.Key == Key.Enter && KeyBox.IsFocused) {
+            e.Handled = true;
+            _ = Add(CancellationToken.None);
+            return;
+        }
+
+        base.OnKeyDown(e);
+    }
+
+    private async void OnAddClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await Add(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    // The key is the app's to judge: whatever it refuses is an unreadable key, and the page says so
+    // in its own words rather than the exception's.
+    private async Task Add(CancellationToken cancellationToken)
+    {
+        var accessKey = KeyBox.Text?.Trim();
+        if (string.IsNullOrEmpty(accessKey))
+            return;
+
+        try {
+            var vpnProfileId = await _viewModel.AddAccessKey(accessKey, cancellationToken);
+            _host.GoBack();
+            _ = _viewModel.ConnectToProfile(vpnProfileId, CancellationToken.None);
+        }
+        catch {
+            LiveText.Say(ErrorText, Strings.Current.InvalidAccessKeyFormat);
+        }
+    }
+}

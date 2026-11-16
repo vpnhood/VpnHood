@@ -1,5 +1,5 @@
 using Avalonia.Controls;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
+using VpnHood.AppUi.Avalonia.Classic.Views;
 
 namespace VpnHood.App.StoreScreenshots;
 

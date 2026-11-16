@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLogic.Abstractions.Billing;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 
 namespace VpnHood.App.AvaloniaUI.Dev;

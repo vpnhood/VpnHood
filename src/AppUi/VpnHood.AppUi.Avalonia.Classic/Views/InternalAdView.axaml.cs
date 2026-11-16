@@ -1,0 +1,96 @@
+﻿using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using VpnHood.AppUi.Common;
+using VpnHood.AppHosting.Avalonia;
+using VpnHood.AppUi.Avalonia.Classic.Helpers;
+using VpnHood.AppLogic.Api.Ads;
+
+namespace VpnHood.AppUi.Avalonia.Classic.Views;
+
+public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposable
+{
+    private const int AdSeconds = 10;
+
+    private readonly MainView _host;
+    private readonly DispatcherTimer _timer;
+    private int _remaining = AdSeconds;
+    private bool _isDismissed;
+
+    public InternalAdView(MainView host)
+    {
+        _host = host;
+        InitializeComponent();
+        _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => Tick());
+        _timer.Start();
+        ShowRemaining();
+    }
+
+    public void FocusDefault()
+    {
+        CountButton.LandFocus();
+    }
+
+    // the page holds the leave until the ad has run - a debug
+    // build is let out
+    public Task<bool> CanLeave(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(_isDismissed || _remaining <= 0 || VhApp.Descriptor.IsDebugMode);
+    }
+
+    private void Tick()
+    {
+        if (_remaining > 0)
+            _remaining--;
+        ShowRemaining();
+    }
+
+    private void ShowRemaining()
+    {
+        var done = _remaining <= 0;
+        CountButton.Content = done ? Strings.Current.Close : _remaining.ToString();
+        CloseButton.IsEnabled = done;
+        LearnMoreButton.IsEnabled = done;
+        if (done)
+            _timer.Stop();
+    }
+
+    private async void OnCloseClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await Dismiss(learnMore: false, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnLearnMoreClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await Dismiss(learnMore: true, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async Task Dismiss(bool learnMore, CancellationToken cancellationToken)
+    {
+        if (_remaining > 0 && !VhApp.Descriptor.IsDebugMode)
+            return;
+
+        _isDismissed = true;
+        await VhApp.Api.App.InternalAdDismiss(learnMore ? ShowAdResult.Clicked : ShowAdResult.Closed,
+            cancellationToken);
+        if (learnMore)
+            _host.Replace(new PurchaseSubscriptionView(_host, null));
+        else
+            _host.GoHome();
+    }
+
+    public void Dispose()
+    {
+        _timer.Stop();
+    }
+}

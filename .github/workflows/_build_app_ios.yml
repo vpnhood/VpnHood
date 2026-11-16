@@ -125,7 +125,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: browser-page
-          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive
+          path: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
       # setup-xcode exports MD_APPLE_SDK_ROOT beside its xcode-select; the Apple SDKs ignore it and warn.
       - name: Build iOS (.ipa)
         shell: pwsh

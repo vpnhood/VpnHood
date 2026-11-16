@@ -1,0 +1,915 @@
+﻿using System.Runtime.CompilerServices;
+using Avalonia;
+using Avalonia.Animation.Easings;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Microsoft.Extensions.Logging;
+using VpnHood.AppUi.Common;
+using VpnHood.AppHosting.Avalonia;
+using VpnHood.AppUi.Avalonia.Classic.Animation;
+using VpnHood.AppUi.Avalonia.Classic.Controls;
+using VpnHood.AppUi.Avalonia.Classic.Helpers;
+using VpnHood.AppUi.Avalonia.Classic.ViewModels;
+using VpnHood.AppUi.Avalonia.Classic.Views.Dialogs;
+using VpnHood.AppLogic.Api.Updaters;
+using VpnHood.Net.Toolkit.Logging;
+
+namespace VpnHood.AppUi.Avalonia.Classic.Views;
+
+// The one page host, and the whole of the navigation: a stack of views, the home view at its
+// bottom. Back - a remote's or a phone's key, which reaches Avalonia as the top level's
+// BackRequested, or Escape and Backspace on a keyboard - closes what is on top: a dialog, the
+// drawer, then the page; on the home view, or a page that holds the app until it is answered
+// (IRootPage), it is left to the host, so Android leaves the app as it should. Every view on the
+// stack takes the input on arrival (FocusDefault), and back on a view where it last was: a remote
+// has no pointer to put focus anywhere, and a keyboard should not need a Tab first. The dialogs,
+// the drawer and the snackbar live here too,
+// and a page reaches them through its host.
+public partial class MainView : UserControl
+{
+    // how long a browser driving a TV says "Continue on your TV" after its Install: Android's question
+    // there is quick to answer, and one the person turned down there is not waited on for good
+    private static readonly TimeSpan RemoteInstallHintLife = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan DrawerTime = TimeSpan.FromMilliseconds(200);
+    private static readonly Easing DrawerEase = new SplineEasing(0.4, 0, 0.2);
+
+    private readonly Stack<IPage> _pages = new();
+    // what each page on the stack last gave the focus to; an entry leaves with its page
+    private readonly ConditionalWeakTable<IPage, Control> _lastFocus = new();
+    private readonly Stack<DialogBase> _dialogs = new();
+    private readonly DispatcherTimer _snackbarTimer;
+    private readonly TranslateTransform _drawerOffset = new();
+    private CancellationTokenSource _drawerSlideCancel = new();
+    private bool _isDrawerOpen;
+    private DateTime _snackbarUntil;
+    private TimeSpan? _snackbarHeldLeft;
+    private bool _isSnackbarPassing;
+    private TopLevel? _topLevel;
+    private IInputElement? _focusBeforeOverlay;
+    private IPage? _pageAwaitingFocus;
+    private Thickness _systemBars;
+    private double _updateBarRoom;
+    private Version? _updateNoticeVersion;
+    private VersionStatus _updateNoticeVersionStatus;
+    private AppUpdateStage? _updateStage;
+    private DateTime _remoteInstallUntil;
+
+    public MainViewModel ViewModel { get; } = new();
+
+    public MainView()
+    {
+        InitializeComponent();
+        Host.AddHandler(GotFocusEvent, OnPageGotFocus);
+        // what a television gets and nothing else does - today the overscan inset of every page's
+        // root (AppTheme). The answer holds for this view's life (Recreate), so it is a class, not a
+        // binding.
+        Classes.Set("tv", ViewModel.IsTv);
+        _snackbarTimer = new DispatcherTimer(DispatcherPriority.Background);
+        _snackbarTimer.Tick += (_, _) => HideSnackbar();
+        ViewModel.PropertyChanged += (_, e) => {
+            if (e.PropertyName is nameof(MainViewModel.IsReconnectRequired) or "")
+                ReconnectBar.IsVisible = ViewModel.IsReconnectRequired;
+            if (e.PropertyName is nameof(MainViewModel.IsKillSwitchBlocking) or nameof(MainViewModel.IsKillSwitchLockdown) or "")
+                ShowKillSwitchBar();
+            if (e.PropertyName is nameof(MainViewModel.SystemBarsTopHeight) or nameof(MainViewModel.SystemBarsBottomHeight) or "")
+                ApplySystemBars();
+        };
+        UpdateNotice.PropertyChanged += (_, e) => {
+            if (e.Property == BoundsProperty || e.Property == IsVisibleProperty)
+                ApplyUpdateBarRoom();
+        };
+        Navigate(new HomeView(ViewModel, this));
+        ViewModel.Host = this;
+
+        DrawerContent.RenderTransform = _drawerOffset;
+
+        // the consent a first run asks for, over everything until it is given,
+        // and the usage-data question where the law wants a yes first,
+        // on a build that skips the terms too and for a person who accepted them before
+        var features = VhApp.Descriptor;
+        if (MainViewModel.IsConsentPending(VhApp.State))
+            Navigate(new PrivacyPolicyView(this));
+        // the account, once, for a build that has one; the pages that change
+        // it read it again themselves
+        if (features.IsAccountSupported)
+            _ = LoadAccount(CancellationToken.None);
+    }
+
+    private async Task LoadAccount(CancellationToken cancellationToken)
+    {
+        try {
+            await VhApp.LoadAccount(false, cancellationToken);
+            ViewModel.Refresh();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not load the account.");
+        }
+    }
+
+    public IPage CurrentPage => _pages.Peek();
+
+    public void Navigate(IPage page)
+    {
+        _pages.Push(page);
+        Show(page, back: false);
+    }
+
+    // The views read the layout as they are made, so a new layout takes a new view, on its home page.
+    // The clock stops here and not in the app's CreateMainView: Android makes a view per activity, and
+    // the activity behind the new one is still alive. Left running, it would read the app beside the
+    // new view's.
+    public void Recreate()
+    {
+        var app = Application.Current as VpnHoodAvaloniaAppBase ??
+                  throw new InvalidOperationException($"The UI is no {nameof(VpnHoodAvaloniaAppBase)}, so it cannot make its view again.");
+        ViewModel.Dispose();
+        app.ReloadMainView();
+    }
+
+    // The page takes the current one's place, so Back skips it - the
+    // drawer's rows, and the pages a dialog opens in place of the one beneath it. The home view is
+    // the one page it never takes: replacing it would leave the arriving page at the bottom of the
+    // stack with nothing to go back to, and its Back key dead.
+    public void Replace(IPage page)
+    {
+        if (_pages.Count > 1)
+            (_pages.Pop() as IDisposable)?.Dispose();
+        _pages.Push(page);
+        Show(page, back: false);
+    }
+
+    // back to the home view, popping everything above it
+    public void GoHome()
+    {
+        while (_pages.Count > 1)
+            (_pages.Pop() as IDisposable)?.Dispose();
+        Show(_pages.Peek(), back: true);
+    }
+
+    // False when there is nothing above the home view, or the page on top holds the app
+    // (IRootPage), so the caller can let the host have it. A page may hold the leave
+    // (ILeaveGuard): an edit that could not be saved says so instead.
+    public bool GoBack()
+    {
+        if (_dialogs.Count > 0) {
+            var top = _dialogs.Peek();
+            if (top.CanDismiss)
+                top.Close();
+            return true;
+        }
+
+        if (_isDrawerOpen) {
+            CloseDrawer();
+            return true;
+        }
+
+        if (_pages.Count <= 1 || _pages.Peek() is IRootPage)
+            return false;
+
+        if (_pages.Peek() is ILeaveGuard guard) {
+            _ = LeaveGuarded(guard, CancellationToken.None);
+            return true;
+        }
+
+        PopPage();
+        return true;
+    }
+
+    private async Task LeaveGuarded(ILeaveGuard guard, CancellationToken cancellationToken)
+    {
+        if (await guard.CanLeave(cancellationToken))
+            PopPage();
+    }
+
+    private void PopPage()
+    {
+        var leaving = _pages.Pop();
+        (leaving as IDisposable)?.Dispose();
+        Show(_pages.Peek(), back: true);
+    }
+
+    // The focus is asked for once the page is laid out: a control that is not yet measured cannot
+    // take it, and a remote must find the ring on arrival. The direction picks the transition's
+    // way and where the focus lands.
+    private void Show(IPage page, bool back)
+    {
+        // The page on its way out takes no more input. The swap is not instant - the transition
+        // keeps the leaving page in the tree while it fades - so the second click of a double-click
+        // still lands on the row that was just pressed and opens its page a second time; the stack
+        // then holds two of them and Back looks dead, because it comes back to the same page.
+        if (Host.Content is Control leaving)
+            leaving.IsHitTestVisible = false;
+        if (page is Control arriving)
+            arriving.IsHitTestVisible = true;
+
+        Host.IsTransitionReversed = back;
+        Host.Content = page;
+        // the update notice shows over the home only: another page is for a task, and the bar would
+        // cover its top - its Back, a TV's pairing code; Back to the home brings the notice again
+        UpdateNoticeLayer.IsVisible = page is HomeView;
+        ApplyUpdateBarRoom(); // the page's padding too
+        ShowKillSwitchBar(); // over the home only, as the update notice
+        Dispatcher.UIThread.Post(() => TakeFocus(page, back), DispatcherPriority.Loaded);
+    }
+
+    // A page back on screen takes the focus where it last had it - the row that opened the page
+    // just left - and otherwise where it starts; so does one whose control is gone since.
+    private void TakeFocus(IPage page, bool back)
+    {
+        if (back && _lastFocus.TryGetValue(page, out var control) && page is Visual root && root.IsVisualAncestorOf(control) &&
+            control is { IsEffectivelyVisible: true, IsEffectivelyEnabled: true, Focusable: true }) {
+            control.LandFocus();
+            return;
+        }
+
+        page.FocusDefault();
+        AwaitFocus(page);
+    }
+
+    // On a TV nothing shows where the input is until a control has the focus, and a page whose
+    // controls come after it opens - the account, the apps, a store's plans - has none to give at
+    // first: it is asked again as its layout changes, until a control of its own has the focus or
+    // another page is shown.
+    private void AwaitFocus(IPage page)
+    {
+        StopAwaitingFocus();
+        if (!VhApp.IsTvUi || page is not Control root || root.IsKeyboardFocusWithin)
+            return;
+
+        _pageAwaitingFocus = page;
+        root.LayoutUpdated += OnAwaitingPageLayoutUpdated;
+    }
+
+    private void OnAwaitingPageLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (_pageAwaitingFocus is not Control root || Host.Content != _pageAwaitingFocus) {
+            StopAwaitingFocus();
+            return;
+        }
+
+        if (!root.IsKeyboardFocusWithin)
+            _pageAwaitingFocus.FocusDefault();
+        if (root.IsKeyboardFocusWithin)
+            StopAwaitingFocus();
+    }
+
+    private void StopAwaitingFocus()
+    {
+        if (_pageAwaitingFocus is Control root)
+            root.LayoutUpdated -= OnAwaitingPageLayoutUpdated;
+        _pageAwaitingFocus = null;
+    }
+
+    // the page's own controls only: the dialogs and the drawer live outside the host, and a leaving
+    // page is still in it while it fades
+    private void OnPageGotFocus(object? sender, FocusChangedEventArgs e)
+    {
+        if (Host.Content is IPage page and Visual root && e.NewFocusedElement is Control control && root.IsVisualAncestorOf(control))
+            _lastFocus.AddOrUpdate(page, control);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _topLevel = TopLevel.GetTopLevel(this);
+        if (_topLevel != null) {
+            _topLevel.BackRequested += OnBackRequested;
+            _topLevel.AddHandler(KeyDownEvent, OnTopLevelKeyDown);
+            _topLevel.ScalingChanged += OnTopLevelScalingChanged;
+        }
+        ApplySystemBars();
+        Dispatcher.UIThread.Post(_pages.Peek().FocusDefault, DispatcherPriority.Loaded);
+    }
+
+    // The window goes under the system bars - Android's status and navigation bars, the iPhone's notch and
+    // home indicator - and the platform no longer pads for them, so everything here keeps clear of them
+    // but the page, the drawer and the scrims, which reach beneath: the page is padded inside instead
+    // (also in Show), so a background it sets on itself - the home's gradient - runs to the screen's
+    // edges, and beneath a page with none this view's own shows; the drawer does the same for itself
+    // (also in OpenDrawer). The heights come in device pixels, and the scale may come after them:
+    // Android's view says 1 until its surface exists, which a start sent to the background before
+    // its first frame reaches only on its return, so a change of scale applies them again.
+    private void ApplySystemBars()
+    {
+        var scaling = _topLevel?.RenderScaling ?? 1;
+        _systemBars = new Thickness(0, ViewModel.SystemBarsTopHeight / scaling, 0, ViewModel.SystemBarsBottomHeight / scaling);
+        var beneath = new Thickness(0, -_systemBars.Top, 0, -_systemBars.Bottom);
+        Padding = _systemBars;
+        Host.Margin = beneath;
+        DrawerContent.Margin = beneath;
+        DrawerScrim.Margin = beneath;
+        DialogScrim.Margin = beneath;
+        // the update bar's colour reaches under the status bar too, its words below it
+        UpdateNoticeLayer.Margin = new Thickness(0, -_systemBars.Top, 0, 0);
+        UpdateNoticeContent.Margin = new Thickness(0, _systemBars.Top, 0, 0);
+        if (Host.Content is TemplatedControl page)
+            page.Padding = PagePadding;
+        if (DrawerContent.Content is DrawerView drawer)
+            drawer.ApplySystemBars(_systemBars);
+    }
+
+    // the page's inside edge: the system bars, and on a TV's home the room its update bar takes
+    private Thickness PagePadding => new(_systemBars.Left, _systemBars.Top + _updateBarRoom, _systemBars.Right, _systemBars.Bottom);
+
+    // A TV's update bar lies over the top of its home, which moves down by what the bar covers below its
+    // header (HomeView.RoomUnder), as a remote must reach every row; elsewhere a finger takes Later to
+    // reach what it covers. Read again as the bar comes, goes or changes height, and as a page arrives.
+    // The bar's layer starts at the screen's top, the page's words under the system bars.
+    private void ApplyUpdateBarRoom()
+    {
+        _updateBarRoom = VhApp.IsTvUi && UpdateNoticeLayer.IsVisible && UpdateNotice.IsVisible && Host.Content is HomeView home
+            ? home.RoomUnder(UpdateNotice.Bounds.Bottom - _systemBars.Top)
+            : 0;
+        if (Host.Content is TemplatedControl page)
+            page.Padding = PagePadding;
+    }
+
+    private void OnTopLevelScalingChanged(object? sender, EventArgs e)
+    {
+        ApplySystemBars();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        if (_topLevel != null) {
+            _topLevel.BackRequested -= OnBackRequested;
+            _topLevel.RemoveHandler(KeyDownEvent, OnTopLevelKeyDown);
+            _topLevel.ScalingChanged -= OnTopLevelScalingChanged;
+        }
+        _topLevel = null;
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnBackRequested(object? sender, RoutedEventArgs e)
+    {
+        if (GoBack())
+            e.Handled = true;
+    }
+
+    // A keyboard's stand-ins for the Back key - not Backspace in a
+    // field, where it deletes - and the Apple TV remote's Menu (‹ on the newer remotes), which
+    // Avalonia hands over as the context-menu key: tvOS's rule is that it goes back, and leaves
+    // the app from its first page, where GoBack leaves it to the system. Heard on the top level
+    // rather than here: a key with nothing focused (a dialog just closed over a control that is
+    // gone) is delivered to the window, above this view, and Back must work then too. Not on
+    // Android, whose Back key reaches Avalonia as Escape besides BackRequested: from Android 16
+    // (target 36) the key's release raises BackRequested even after its press was handled here,
+    // so one press would close a page and then the app.
+    private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (OperatingSystem.IsAndroid())
+            return;
+
+        var isTyping = _topLevel?.FocusManager.GetFocusedElement() is TextBox;
+        var isBack = e.Key == Key.Escape || (e.Key == Key.Back && !isTyping) ||
+                     (e.Key == Key.Apps && OperatingSystem.IsTvOS());
+        if (isBack && GoBack())
+            e.Handled = true;
+    }
+
+    // ---- dialogs ----
+
+    // Shows a dialog over the page and answers when it closes. The page beneath is disabled
+    // meanwhile: a disabled control cannot take the focus, which is what keeps a remote's walk
+    // inside the dialog. The focus goes back where it was when the last dialog is gone.
+    public Task<bool> ShowDialog(DialogBase dialog)
+    {
+        if (_dialogs.Count == 0)
+            _focusBeforeOverlay = _topLevel?.FocusManager.GetFocusedElement();
+
+        _dialogs.Push(dialog);
+        dialog.Closed += OnDialogClosed;
+        ShowTopDialog();
+        return dialog.Result;
+    }
+
+    private void OnDialogClosed(object? sender, EventArgs e)
+    {
+        if (sender is not DialogBase dialog)
+            return;
+        dialog.Closed -= OnDialogClosed;
+
+        // closed out of order (a wait ended under a question): take it out wherever it is
+        var remaining = _dialogs.Where(x => x != dialog).Reverse().ToArray();
+        _dialogs.Clear();
+        foreach (var item in remaining)
+            _dialogs.Push(item);
+        ShowTopDialog();
+    }
+
+    private void ShowTopDialog()
+    {
+        if (_dialogs.Count == 0) {
+            DialogLayer.IsVisible = false;
+            DialogContent.Content = null;
+            Host.IsEnabled = !DrawerLayer.IsVisible;
+            RestoreFocus();
+            return;
+        }
+
+        var top = _dialogs.Peek();
+        Host.IsEnabled = false;
+        DrawerLayer.IsEnabled = false;
+        DialogLayer.IsVisible = true;
+        DialogContent.Content = top;
+        Dispatcher.UIThread.Post(top.FocusDefault, DispatcherPriority.Loaded);
+    }
+
+    private void RestoreFocus()
+    {
+        DrawerLayer.IsEnabled = true;
+        var target = _focusBeforeOverlay;
+        _focusBeforeOverlay = null;
+        Dispatcher.UIThread.Post(() => LandRestoredFocus(target), DispatcherPriority.Loaded);
+    }
+
+    // Judged when it lands, not when the dialog closed: the dialog's answer may have closed the page
+    // beneath it (a sign-out leaves the account page), and a control of a page on its way out keeps
+    // the focus only until the page is gone - then nothing has it, and a remote has nothing to move.
+    // The page shown then lands its own instead, unless it has the focus already.
+    private void LandRestoredFocus(IInputElement? target)
+    {
+        var isOnLeavingPage = target is Visual visual && Host.IsVisualAncestorOf(visual) &&
+                              !(Host.Content is Visual shown && shown.IsVisualAncestorOf(visual));
+        if (target is Control { IsEffectivelyVisible: true, IsEffectivelyEnabled: true } control && !isOnLeavingPage) {
+            control.LandFocus();
+            return;
+        }
+
+        if (Host.Content is IPage page and Control { IsKeyboardFocusWithin: false }) {
+            page.FocusDefault();
+            AwaitFocus(page);
+        }
+    }
+
+    public Task<bool> Confirm(string title, string message)
+    {
+        return ShowDialog(new ConfirmDialog(title, message));
+    }
+
+    // a sentence of the UI's own, shown the way a failure is
+    public Task ShowError(string message)
+    {
+        return ShowErrorMessage(ErrorMessages.ForText(message, AppErrors.Context));
+    }
+
+    // The sentence for the failure, with its buttons; a private DNS
+    // error opens its page instead, and a silenced one shows nothing.
+    public async Task ProcessError(Exception exception)
+    {
+        VhLogger.Instance.LogError(exception, "The UI caught an error.");
+        var message = ErrorMessages.For(exception, AppErrors.Context);
+        await ShowErrorMessage(message);
+    }
+
+    public async Task ShowErrorMessage(ErrorMessage message)
+    {
+        switch (message) {
+            case ErrorMessage.Ignored:
+                return;
+
+            case ErrorMessage.Page { Target: ErrorPage.PrivateDns }:
+                Navigate(FeaturePages.PrivateDnsError(this));
+                return;
+
+            case ErrorMessage.Dialog dialog:
+                await ShowDialog(new ErrorDialog(this, dialog));
+                return;
+
+            default:
+                // a page this UI cannot draw is a gap in this UI, said out loud rather than swallowed
+                throw new NotSupportedException($"This UI cannot show '{message}'.");
+        }
+    }
+
+    // a wait the app is in: shown until the scope is disposed
+    public IDisposable Loading(string? message = null)
+    {
+        return ShowLoading(new LoadingDialog(message));
+    }
+
+    // a wait for what the device's own screen shows - a store's sign-in, an ad - which a browser
+    // driving a TV says to finish there
+    public IDisposable LoadingOnDevice(string? message = null)
+    {
+        return ShowLoading(VhApp.IsTvRemote
+            ? new LoadingDialog(Strings.Current.ContinueOnTvDesc, Strings.Current.ContinueOnTvTitle, new TvLinkPicture())
+            : new LoadingDialog(message));
+    }
+
+    // a browser driving a TV that no longer answers it, over everything until it does (MainViewModel)
+    public IDisposable TvUnreachable()
+    {
+        return ShowLoading(new LoadingDialog(Strings.Current.TvUnreachableDesc, Strings.Current.TvUnreachableTitle,
+            new TvLinkPicture { IsBroken = true }));
+    }
+
+    private IDisposable ShowLoading(LoadingDialog dialog)
+    {
+        _ = ShowDialog(dialog);
+        return new LoadingScope(dialog);
+    }
+
+    private sealed class LoadingScope(LoadingDialog dialog) : IDisposable
+    {
+        public void Dispose() => dialog.Close();
+    }
+
+    // ---- the snackbar ----
+
+    public void ShowSnackbar(string message, SnackbarKind kind = SnackbarKind.Highlight, bool hasTimer = true, bool? hasClose = null)
+    {
+        Snackbar.Classes.Set("active", kind == SnackbarKind.Active);
+        Snackbar.Classes.Set("warning", kind == SnackbarKind.Warning);
+        Snackbar.Classes.Set("suppress", kind == SnackbarKind.Suppress);
+        SnackbarIcon.Text = kind switch {
+            SnackbarKind.Active => Mdi.CheckCircle,
+            SnackbarKind.Warning => Mdi.AlertCircle,
+            _ => Mdi.Information
+        };
+        SnackbarClose.IsVisible = hasClose ?? !hasTimer;
+        Snackbar.IsVisible = true;
+        LiveText.Say(SnackbarText, message);
+        _snackbarTimer.Stop();
+        _snackbarHeldLeft = null;
+        _isSnackbarPassing = hasTimer;
+        if (hasTimer)
+            StartSnackbarTimer(SnackbarLife(message));
+    }
+
+    // A passing message stays as long as it takes to read - 4 s for a short one, a second more for each 15
+    // characters past 30, at most 10 s, Material's range - and shows no time left: a bar running out only
+    // hurries the reading. One that must be read stays until Close (hasTimer false).
+    private static TimeSpan SnackbarLife(string message)
+    {
+        return TimeSpan.FromSeconds(Math.Clamp(2 + message.Length / 15.0, 4, 10));
+    }
+
+    private void StartSnackbarTimer(TimeSpan life)
+    {
+        _snackbarUntil = DateTime.UtcNow + life;
+        _snackbarTimer.Interval = life;
+        _snackbarTimer.Start();
+    }
+
+    // A pointer on a passing message holds it, and its time goes on when the pointer lets go: a mouse resting
+    // on it, a finger or a pen pressing it - a touch is never "over" a control until it presses, so it holds
+    // by its press. A tap closes it. One with Close is closed only by Close, which also keeps the 'suppressed
+    // to' notice away.
+    private void OnSnackbarPointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (e.Pointer.Type == PointerType.Mouse)
+            HoldSnackbar();
+    }
+
+    private void OnSnackbarPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (e.Pointer.Type == PointerType.Mouse)
+            ReleaseSnackbar();
+    }
+
+    private void OnSnackbarPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Pointer.Type != PointerType.Mouse)
+            HoldSnackbar();
+    }
+
+    private void OnSnackbarPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (e.Pointer.Type != PointerType.Mouse)
+            ReleaseSnackbar();
+    }
+
+    private void HoldSnackbar()
+    {
+        if (!_snackbarTimer.IsEnabled)
+            return;
+        _snackbarTimer.Stop();
+        _snackbarHeldLeft = _snackbarUntil - DateTime.UtcNow;
+    }
+
+    private void ReleaseSnackbar()
+    {
+        if (_snackbarHeldLeft is not { } left || !Snackbar.IsVisible)
+            return;
+        _snackbarHeldLeft = null;
+        StartSnackbarTimer(left > TimeSpan.Zero ? left : TimeSpan.FromMilliseconds(1));
+    }
+
+    private void OnSnackbarTapped(object? sender, TappedEventArgs e)
+    {
+        if (_isSnackbarPassing)
+            HideSnackbar();
+    }
+
+    // the snackbar alone: its time running out, a tap or Close leaves the update notice where it is, which
+    // has Later and HideUpdateNotice of its own
+    public void HideSnackbar()
+    {
+        _snackbarTimer.Stop();
+        _snackbarHeldLeft = null;
+        Snackbar.IsVisible = false;
+    }
+
+    public bool IsSnackbarShown => Snackbar.IsVisible;
+    public bool IsUpdateNoticeShown => UpdateNotice.IsVisible;
+
+    public void HideUpdateNotice()
+    {
+        UpdateNotice.IsVisible = false;
+    }
+
+    // A newer version, with the way to it - the store, else the direct link -
+    // and Later, which postpones the notice
+    public void ShowUpdateNotice(AppUpdaterStatus status)
+    {
+        var publish = status.PublishInfo;
+        if (publish == null)
+            return;
+        var isArriving = !UpdateNotice.IsVisible;
+        _updateNoticeVersion = publish.Version;
+        _updateNoticeVersionStatus = status.VersionStatus;
+        var isDeprecated = status.VersionStatus == VersionStatus.Deprecated;
+        UpdateNotice.Classes.Set("update-warning", isDeprecated);
+        UpdateNoticeIcon.Text = isDeprecated ? Mdi.AlertCircle : Mdi.Update;
+        UpdateNoticeText.Text = isDeprecated
+            ? Strings.Current.VersionIsDeprecated(VhApp.Descriptor.AppName)
+            : Strings.Current.VersionIsOld;
+        // an app that updates itself offers its own Update instead of the links
+        var hasUpdateState = status.UpdateState != null;
+        UpdateStoreButton.IsVisible = !hasUpdateState && publish.GooglePlayUrl != null;
+        UpdateDirectButton.IsVisible = !hasUpdateState && publish.GooglePlayUrl == null;
+        UpdateNoStoreButton.IsVisible = !hasUpdateState && publish.GooglePlayUrl != null;
+        UpdateAlternative.IsVisible = false;
+        UpdateCurrentText.Text = $"{Strings.Current.CurrentVersion} {VhApp.Descriptor.Version.ToString(3)}";
+        UpdateNewText.Text = $"{Strings.Current.NewVersion} {publish.Version}";
+        RefreshUpdateState(status.UpdateState);
+        UpdateNotice.IsVisible = true;
+
+        // a TV's remote finds it at once: from Connect, where the home starts, Up goes to the list beside
+        // it, and the notice was six presses away. Not over a dialog, where the person is busy
+        if (isArriving && VhApp.IsTvUi && UpdateNoticeLayer.IsVisible && _dialogs.Count == 0)
+            Dispatcher.UIThread.Post(FocusUpdateNotice, DispatcherPriority.Loaded);
+    }
+
+    // the notice's way forward - Update, Install, a store's link - or Later while its update runs
+    private void FocusUpdateNotice()
+    {
+        if (!UpdateNotice.IsEffectivelyVisible)
+            return;
+
+        Control[] buttons = [UpdateDownloadButton, UpdateInstallButton, UpdateStoreButton, UpdateDirectButton, UpdateLaterButton];
+        buttons.FirstOrDefault(x => x is { IsVisible: true, IsEffectivelyEnabled: true })?.LandFocus();
+    }
+
+    // Read every second while the notice shows. A release other than the one it names - found by a check
+    // the person asked for while the notice still named the last, or the daily one - shows it anew, as
+    // its Update now fetches that release; else only the update's own state moves, and the person's
+    // "no access to Google Play" choice stays.
+    public void RefreshUpdateNotice(AppUpdaterStatus status)
+    {
+        if (status.PublishInfo is { } publish &&
+            (publish.Version != _updateNoticeVersion || status.VersionStatus != _updateNoticeVersionStatus))
+            ShowUpdateNotice(status);
+        else
+            RefreshUpdateState(status.UpdateState);
+    }
+
+    // The update the app downloads and installs itself: Update, its progress, then Install - which
+    // closes the app, and the VPN with it.
+    private void RefreshUpdateState(AppUpdateState? updateState)
+    {
+        var stage = updateState?.Stage;
+        // the stage's button takes the place of the one pressed, which goes - Update for the progress -
+        // and took a TV's focus with it: the focus goes on to Install once it comes, else Later
+        var isFocusPassing = VhApp.IsTvUi && stage != _updateStage && UpdateNotice.IsKeyboardFocusWithin;
+        _updateStage = stage;
+        UpdateDownloadButton.IsVisible = stage is AppUpdateStage.Available or AppUpdateStage.Failed;
+        UpdateProgress.IsVisible = stage == AppUpdateStage.Downloading;
+        UpdateInstallButton.IsVisible = stage is AppUpdateStage.Downloaded or AppUpdateStage.Installing;
+        UpdateInstallButton.IsEnabled = stage == AppUpdateStage.Downloaded;
+
+        var percent = updateState?.TotalBytes > 0 ? (int)(updateState.DownloadedBytes * 100 / updateState.TotalBytes.Value) : 0;
+        UpdateProgressBar.IsIndeterminate = updateState?.TotalBytes is null;
+        UpdateProgressBar.Value = percent;
+        UpdateProgressText.Text = updateState?.TotalBytes is null ? null : Strings.Current.UpdateDownloading(percent);
+
+        UpdatePackageText.Text = stage switch {
+            AppUpdateStage.Failed => Strings.Current.UpdateFailed(updateState?.ErrorMessage ?? string.Empty),
+            // a browser driving a TV: Android asks on the TV's screen, which nothing here would tell
+            AppUpdateStage.Downloaded or AppUpdateStage.Installing when DateTime.UtcNow < _remoteInstallUntil =>
+                Strings.Current.ContinueOnTvTitle,
+            AppUpdateStage.Installing => Strings.Current.UpdateInstalling,
+            // before Install opens Android's page for it, where a TV lists every app that asked
+            AppUpdateStage.Downloaded when updateState?.IsInstallPermissionNeeded == true =>
+                Strings.Current.UpdateAllowInstalls(VhApp.Descriptor.AppName),
+            AppUpdateStage.Downloaded when VhApp.IsConnected() => Strings.Current.UpdateVpnDisconnects,
+            _ => null
+        };
+        UpdatePackageText.IsVisible = UpdatePackageText.Text != null;
+
+        if (isFocusPassing)
+            FocusUpdateNotice();
+    }
+
+    private async void OnUpdateDownloadClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await VhApp.Api.App.StartUpdate(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnUpdateInstallClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await VhApp.Api.App.CompleteUpdate(CancellationToken.None);
+            if (VhApp.IsTvRemote)
+                _remoteInstallUntil = DateTime.UtcNow + RemoteInstallHintLife;
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnUpdateStoreClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            if (VhApp.State.UpdaterStatus?.PublishInfo?.GooglePlayUrl is { } url)
+                await OpenLink(url, Strings.Current.UpdateFromGooglePlay, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnUpdateDirectClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            if (VhApp.State.UpdaterStatus?.PublishInfo?.InstallationPageUrl is { } url)
+                await OpenLink(url, Strings.Current.UpdateFromDirectLink, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private void OnUpdateNoStoreClick(object? sender, RoutedEventArgs e)
+    {
+        UpdateNoStoreButton.IsVisible = false;
+        UpdateAlternative.IsVisible = true;
+    }
+
+    private void OnUpdateLaterClick(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.PostponeUpdate();
+        UpdateNotice.IsVisible = false;
+    }
+
+    private void OnSnackbarCloseClick(object? sender, RoutedEventArgs e)
+    {
+        // the 'suppressed to' notice stays away until a new connection is made
+        ViewModel.IgnoreSuppressNotice();
+        HideSnackbar();
+    }
+
+    // ---- the reconnect bar ----
+
+    private async void OnReconnectClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await ViewModel.Reconnect(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnReconnectDismissClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await ViewModel.ClearReconnectRequired(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    // ---- the kill switch bar ----
+
+    // Over the home only: on another page it covers the title, the Kill Switch page's too, which its own Turn off
+    // opens (seen on Windows 11).
+    private void ShowKillSwitchBar()
+    {
+        KillSwitchBar.IsVisible = ViewModel.IsKillSwitchBlocking && Host.Content is HomeView;
+        KillSwitchBarLink.Text = ViewModel.IsKillSwitchLockdown ? Strings.Current.TurnOff : Strings.Current.Disconnect;
+    }
+
+    private async void OnKillSwitchBarClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            if (ViewModel.IsKillSwitchLockdown)
+                Navigate(FeaturePages.KillSwitch(this));
+            else
+                await ViewModel.Disconnect(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    // ---- the drawer ----
+
+    public void OpenDrawer()
+    {
+        if (_isDrawerOpen)
+            return;
+
+        _isDrawerOpen = true;
+        _focusBeforeOverlay = _topLevel?.FocusManager.GetFocusedElement();
+        var drawer = new DrawerView(this);
+        drawer.ApplySystemBars(_systemBars);
+        DrawerContent.Content = drawer;
+        DrawerLayer.IsVisible = true;
+        Host.IsEnabled = false;
+        Dispatcher.UIThread.Post(drawer.FocusDefault, DispatcherPriority.Loaded);
+        _ = SlideDrawer(open: true);
+    }
+
+    // The page behind, the focus and the input are handed back at once; only the picture waits for
+    // the slide, so a Back key never feels held by an animation.
+    public void CloseDrawer()
+    {
+        if (!_isDrawerOpen)
+            return;
+
+        _isDrawerOpen = false;
+        if (_dialogs.Count == 0) {
+            Host.IsEnabled = true;
+            RestoreFocus();
+        }
+
+        _ = SlideDrawer(open: false);
+    }
+
+    // The temporary navigation drawer: the panel slides in from the start
+    // edge and the scrim comes up with it, over 200ms on the standard curve. The offset is the
+    // drawer's own measured width rather than the 300 of its style, and it is taken before the
+    // first frame is drawn, so the panel is never seen in place. A slide that is still running when
+    // the other one starts is cancelled where it is, and the one taking over carries on from there.
+    private async Task SlideDrawer(bool open)
+    {
+        await _drawerSlideCancel.CancelAsync();
+        _drawerSlideCancel.Dispose();
+        _drawerSlideCancel = new CancellationTokenSource();
+        var cancellationToken = _drawerSlideCancel.Token;
+
+        DrawerContent.Measure(Size.Infinity);
+        var hidden = -DrawerContent.DesiredSize.Width;
+        await FrameClock.Tween(DrawerTime, DrawerEase, progress => {
+            var shown = open ? progress : 1 - progress;
+            _drawerOffset.X = hidden * (1 - shown);
+            DrawerScrim.Opacity = shown;
+        }, cancellationToken);
+
+        // the layer holds the drawer while it leaves, and goes once it has
+        if (!open && !cancellationToken.IsCancellationRequested) {
+            DrawerLayer.IsVisible = false;
+            DrawerContent.Content = null;
+        }
+    }
+
+    private void OnScrimPressed(object? sender, PointerPressedEventArgs e)
+    {
+        CloseDrawer();
+    }
+
+    // ---- outbound links ----
+
+    // A TV is not guaranteed a browser, so there the link
+    // becomes a code to scan; anywhere else the device's browser opens it, through the host's shell
+    // where it names one (a sandboxed app's, AvaloniaUiHosting.Shell), else through Avalonia's launcher.
+    public async Task OpenLink(Uri url, string title, CancellationToken cancellationToken)
+    {
+        if (VhApp.IsTvUi) {
+            await ShowDialog(new OpenOnPhoneDialog(url, title));
+            return;
+        }
+
+        var isOpened = AvaloniaUiHosting.Shell is { } shell
+            ? await shell.OpenLink(url, cancellationToken)
+            : _topLevel?.Launcher is { } launcher && await launcher.LaunchUriAsync(url);
+        if (!isOpened)
+            await ShowDialog(new OpenOnPhoneDialog(url, title));
+    }
+
+    // whether a link can get anywhere from this device (VpnHoodApp.isExternalLinkUsable)
+    public static bool IsExternalLinkUsable => VhApp.Intents.IsWebBrowserSupported || VhApp.IsTvUi;
+}

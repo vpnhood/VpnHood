@@ -8,7 +8,7 @@ zip placed beside it by MSBuild, read through one interface.
 | Placed at | Built by | Named in `AppOptions` as | Holds |
 | --- | --- | --- | --- |
 | `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `UiZipAssets` | images, country flags, fonts, content documents, the words of every language, country names, each theme's colours for the OS chrome and the launch screen |
-| `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia.Browser`, into the UI's own package `VpnHood.AppUi.Presentation.Classic.Avalonia` | `WebRootZipAsset` | the page the app's web host serves to a paired device |
+| `assets/web-root.zip` | `VpnHood.AppUi.Avalonia.Classic.Browser`, into the UI's own package `VpnHood.AppUi.Avalonia.Classic` | `WebRootZipAsset` | the page the app's web host serves to a paired device |
 | `iplocations/IpLocations.zip` | `VpnHood.Net.IpLocations.Assets.Ip2LocationLite` | `IpLocationZipAsset` | the IP-to-country ranges |
 
 One zip rather than loose files, because packaging is one item per platform: one `AndroidAsset`,

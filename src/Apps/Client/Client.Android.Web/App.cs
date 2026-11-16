@@ -1,11 +1,11 @@
 ﻿using Android.Runtime;
-using VpnHood.AppLib.App;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.AppUi.Hosting.Avalonia.Android;
-using VpnHood.AppLib.App.Android.Constants;
-using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.AppLogic.App;
+using VpnHood.AppUi.Avalonia.Classic;
+using VpnHood.AppHosting.Avalonia.Android;
+using VpnHood.AppLogic.App.Android.Constants;
+using VpnHood.AppLogic.App.Services.Updaters;
 #if !VH_APP_NO_UPDATE
-using VpnHood.AppLib.Stores.AndroidWeb;
+using VpnHood.AppLogic.Stores.AndroidWeb;
 #endif
 
 namespace VpnHood.App.Client.Android.Web;

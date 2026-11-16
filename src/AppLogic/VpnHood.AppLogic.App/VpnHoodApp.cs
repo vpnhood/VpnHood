@@ -1,0 +1,2028 @@
+﻿using System.Diagnostics;
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using TaskExtensions = VpnHood.Net.Toolkit.Extensions.TaskExtensions;
+using VpnHood.AppLogic.Abstractions.Ads;
+using VpnHood.AppLogic.Abstractions.Ads.AdExceptions;
+using VpnHood.AppLogic.Abstractions.Device;
+using VpnHood.AppLogic.App.VpnProfiles;
+using VpnHood.AppLogic.Api;
+using VpnHood.AppLogic.App.ApiImpl;
+using VpnHood.AppLogic.Api.App;
+using VpnHood.AppLogic.Api.VpnProfiles;
+using VpnHood.AppLogic.Api.Premium;
+using VpnHood.AppLogic.Api.Settings;
+using VpnHood.AppLogic.App.Diagnosing;
+using VpnHood.AppLogic.App.DtoConverters;
+using VpnHood.AppLogic.Api.Exceptions;
+using VpnHood.AppLogic.App.Premium;
+using VpnHood.AppLogic.App.Providers;
+using VpnHood.AppLogic.App.Services;
+using VpnHood.AppLogic.App.Services.Accounts;
+using VpnHood.AppLogic.App.Services.Ads;
+using VpnHood.AppLogic.App.Services.AlwaysOn;
+using VpnHood.AppLogic.App.Services.KillSwitch;
+using VpnHood.AppLogic.App.Services.Proxies;
+using VpnHood.AppLogic.App.Services.Trackers;
+using VpnHood.AppLogic.App.Services.Updaters;
+using VpnHood.AppLogic.App.Settings;
+using VpnHood.AppLogic.App.Utils;
+using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
+using VpnHood.Core.Client.VpnServices.Manager;
+using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
+using VpnHood.Net.IpLocations;
+using VpnHood.Net.IpLocations.Providers.Offlines;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Exceptions;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Storages;
+using VpnHood.Net.Toolkit.Utils;
+using VpnHood.AppLogic.App.WebHosting;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.AppLogic.Abstractions.UiContexts;
+
+namespace VpnHood.AppLogic.App;
+
+/// <summary>
+/// Represents the VPN app: its settings and VPN profiles, its connection through the device's VPN service, its account,
+/// ads and updates, and the API a UI reads it through (<see cref="Api"/>).
+/// </summary>
+/// <remarks>
+/// A head makes it once, through its platform's <c>Init</c>, which calls <see cref="Init"/>, and reaches it as
+/// <see cref="Singleton{T}.Instance"/>.
+/// </remarks>
+public class VpnHoodApp : Singleton<VpnHoodApp>,
+    IPremiumFeatureChecker, IDisposable, IAsyncDisposable
+{
+    /// <summary>
+    /// The name of the app's log file in its device-only storage folder
+    /// (<see cref="AppOptions.NoBackupStorageFolderPath"/>), for a reader that holds no app.
+    /// </summary>
+    public const string FileNameLog = "app.log";
+
+    /// <summary>The header above the app's own log in the log the API sends, before the VPN service's.</summary>
+    public const string LogAppHeader = "VPN App Log";
+
+    /// <summary>The header above the VPN service's log in the log the API sends.</summary>
+    public const string LogVpnServiceHeader = "VPN Service Log";
+    internal const string FolderNameProfiles = "profiles";
+    internal const string FolderNameAccount = "account";
+    internal const string FolderNameTemp = "Temp";
+    private const string FileNameInstallId = "install_id";
+    private readonly LogService _logService;
+    private readonly AppPersistState _appPersistState;
+    private readonly VpnServiceManager _vpnServiceManager;
+    private readonly IDevice _device;
+    private readonly VpnEngineInfo _vpnEngineInfo;
+    private readonly string _userAgent; // the server's: the trackers' without the device's model
+    private readonly IIpRangeLocationProvider? _ipRangeLocationProvider;
+    private bool _isDisconnecting;
+    private bool _disposed;
+    private AppConnectionState? _lastConnectionState;
+    private readonly Lock _connectionStateLock = new();
+    private CancellationTokenSource _connectCts = new();
+    private CancellationTokenSource _showAdCts = new();
+    private CancellationTokenSource _connectTimeoutCts = new();
+    private CultureInfo? _systemUiCulture;
+    private string? _osCultureCode; // as last read from the OS: a setting that differs was changed in the app
+    private Task<IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>>? _installedApps;
+    private readonly Lock _installedAppsLock = new();
+    private bool _isConnecting;
+    private int _connectNumber; // the latest connect's: an older one, which it cancelled, leaves the app to it
+    private bool _isReconfiguredWhileConnecting; // after the connect read the settings: its start writes those over it
+    private readonly AsyncLock _reconfigureLock = new();
+    private int _userReviewRecommended;
+    private bool _quickLaunchRecommended;
+    private readonly AppWebHostManager _webHostManager;
+    private readonly AppErrorReporter _errorReporter;
+    private readonly AppAlwaysOnService _alwaysOnService;
+    private readonly AppKillSwitchService? _killSwitchService;
+    private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
+    internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
+    internal string TempFolderPath => Path.Combine(NoBackupStorageFolderPath, FolderNameTemp);
+
+    /// <summary>
+    /// Occurs when <see cref="ConnectionState"/> has changed, on a thread pool thread.
+    /// </summary>
+    public event EventHandler? ConnectionStateChanged;
+    internal event EventHandler? UiHasChanged;
+
+    /// <summary>
+    /// Gets a value indicating whether <see cref="ConnectionState"/> is <see cref="AppConnectionState.None"/>, as it is
+    /// while a disconnect finishes in the background too.
+    /// </summary>
+    public bool IsIdle => ConnectionState.IsIdle();
+
+    /// <summary>
+    /// Gets the folder that holds the settings and the VPN profiles (<see cref="AppOptions.StorageFolderPath"/>).
+    /// </summary>
+    public string StorageFolderPath { get; }
+
+    /// <summary>
+    /// Gets the folder for what must not travel with a backup (<see cref="AppOptions.NoBackupStorageFolderPath"/>).
+    /// </summary>
+    internal string NoBackupStorageFolderPath { get; }
+
+    /// <summary>Gets the app's settings, which <see cref="AppSettings.Save"/> saves.</summary>
+    public AppSettings Settings => SettingsService.Settings;
+
+    /// <summary>Gets the person's settings (<see cref="AppSettings.UserSettings"/>).</summary>
+    public UserSettings UserSettings => SettingsService.UserSettings;
+
+    /// <summary>Gets what this build is and offers, as the UI reads it.</summary>
+    public AppDescriptor Descriptor { get; }
+    internal VpnHoodAppConfig Config { get; }
+
+    /// <summary>Gets the VPN profiles.</summary>
+    public VpnProfileService VpnProfileService { get; }
+    internal Diagnoser Diagnoser { get; } = new();
+
+    /// <summary>Gets the app's own words.</summary>
+    public AppResources Resources { get; }
+
+    /// <summary>
+    /// Gets the files the app's UI draws from, unpacked from <see cref="AppOptions.UiZipAssets"/>, which the web host
+    /// serves too, or <see langword="null"/> for a head that named none.
+    /// </summary>
+    public IAssetProvider? UiAssetProvider { get; }
+
+    /// <summary>Gets the app's services and the providers it works through.</summary>
+    public AppServices Services { get; }
+
+    /// <summary>Gets the service that keeps the settings.</summary>
+    public AppSettingsService SettingsService { get; }
+    // Every caller shares one build, the app's page and a paired browser's alike, until the app returns
+    // to the foreground, the only moment the user could have installed or removed an app; a build that
+    // failed is tried again. A caller's cancel ends only its own wait.
+    internal Task<IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>> GetInstalledApps(
+        CancellationToken cancellationToken)
+    {
+        return GetInstalledAppsBuild().WaitAsync(cancellationToken);
+    }
+
+    private Task<IReadOnlyList<Core.Client.Devices.Abstractions.DeviceAppInfo>> GetInstalledAppsBuild()
+    {
+        lock (_installedAppsLock) {
+            // the build outlives its first caller: it serves every caller after it
+            if (_installedApps is not { IsFaulted: false, IsCanceled: false })
+                _installedApps = _device.GetInstalledApps(CancellationToken.None);
+            return _installedApps;
+        }
+    }
+
+    internal AppAdManager AdManager { get; }
+
+    /// <summary>
+    /// Gets the API a UI reads the app through: the six interfaces a browser reaches over HTTP, answered in process.
+    /// </summary>
+    public VpnHoodApi Api { get; }
+
+    /// <summary>
+    /// Gets the web host this device loads its UI from, made at the first read and not started, or
+    /// <see langword="null"/> for a head with no web host (<see cref="AppOptions.WebHostFactory"/>).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The head set <see cref="AppOptions.WebHostFactory"/> but no <see cref="AppOptions.WebRootZipAsset"/>.
+    /// </exception>
+    public IAppWebHost? LocalWebHost => _webHostManager.Local;
+
+    /// <summary>
+    /// Gets the web host a phone pairs with, made at the first read, or <see langword="null"/> for a head with no web
+    /// host (<see cref="AppOptions.WebHostFactory"/>).
+    /// </summary>
+    /// <remarks>
+    /// In a Debug build, or with the <see cref="DebugCommands.RemoteAccess"/> command, it stays up for the life of the
+    /// process and asks for no pairing; when that changes, as the command is turned on or off outside a Debug build,
+    /// the app replaces the host.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The head set <see cref="AppOptions.WebHostFactory"/> but no <see cref="AppOptions.WebRootZipAsset"/>.
+    /// </exception>
+    public IAppWebHost? RemoteWebHost => _webHostManager.Remote;
+
+    private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options,
+        string installId)
+        : base(register: options.IsSingleton)
+    {
+        var appVersion = options.AppVersion;
+        Resources = new AppResources();
+        StorageFolderPath = options.StorageFolderPath ??
+                            throw new ArgumentNullException(nameof(options.StorageFolderPath));
+        NoBackupStorageFolderPath = options.NoBackupStorageFolderPath;
+        SettingsService = settingsService;
+        SettingsService.BeforeSave += SettingsBeforeSave;
+
+        // The head names the zips; where they are unpacked is the app's own business - one fixed
+        // folder each under its device-only storage, so no two of them can be handed the same one and no
+        // backup carries them. The UI's are one provider over all the head named, in the order it named
+        // them.
+        UiAssetProvider = AppUtils.CreateZipAssetProvider(options.UiZipAssets, NoBackupStorageFolderPath, "ui");
+        _webHostManager = new AppWebHostManager(this, options.WebHostFactory,
+            AppUtils.CreateZipAssetProvider(options.WebRootZipAsset, NoBackupStorageFolderPath, "web-root"),
+            options.WebHostPort);
+
+        _device = device;
+        _vpnEngineInfo = options.VpnEngineInfo;
+        _appPersistState = AppPersistState.Load(options.Storage);
+        _logService = logService;
+
+        Config = new VpnHoodAppConfig {
+            DisconnectOnDispose = options.DisconnectOnDispose,
+            AutoDiagnose = options.AutoDiagnose,
+            AllowEndPointTracker = options.AllowEndPointTracker,
+            AllowRecommendUserReviewByServer = options.AllowRecommendUserReviewByServer,
+            ConnectTimeout = options.ConnectTimeout,
+            LogServiceOptions = options.LogServiceOptions,
+            Transport = options.Transport,
+            AdapterName = AppUtils.GetAdapterName(options)
+        };
+
+        _ipRangeLocationProvider = options.IpLocationZipAsset is { } ipLocationZipAsset
+            ? new LocalIpRangeLocationProvider(
+                ipLocationZipAsset,
+                () => AppRegionInfo.CurrentRegion.Name,
+                userAgent: options.PackageTitle)
+            : null;
+
+        // each split service owns its whole activity decision: its settings gate + the premium plan
+        // (this app implements IPremiumFeatureChecker)
+        var splitCountryService = new SplitCountryService(settingsService, this, _ipRangeLocationProvider,
+            ipLocationZipAsset: options.IpLocationZipAsset);
+        splitCountryService.StateChanged += LocationService_StateChanged;
+
+        var splitIpViaAppService = new SplitIpViaAppService(settingsService, this);
+        splitIpViaAppService.StateChanged += LocationService_StateChanged;
+
+        var splitDomainService = new SplitDomainService(settingsService, this);
+        splitDomainService.StateChanged += LocationService_StateChanged;
+
+        // The split text-file settings live outside UserSettings, so their session business wires
+        // here — the counterpart of ApplySettings for a UserSettings save. The via-app/domain lists
+        // feed the split dbs and live-apply through a reconfigure; the via-device lists shape the vpn
+        // adapter (applied at connect only), so a change flags the running session for a reconnect, and
+        // the reconfigure takes it into the saved options.
+        settingsService.SplitIpViaDeviceSettings.Changed += (_, _) => {
+            SetReconnectRequired();
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a device split-IP change",
+                LogLevel.Warning, () => ReconfigureVpnService(CancellationToken.None));
+        };
+        settingsService.SplitIpViaAppSettings.Changed += (_, _) =>
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a split-IP change", LogLevel.Warning,
+                () => ReconfigureVpnService(CancellationToken.None));
+        settingsService.SplitDomainSettings.Changed += (_, _) =>
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a split-domain change", LogLevel.Warning,
+                () => ReconfigureVpnService(CancellationToken.None));
+
+        // What the engine lacks the app neither offers nor asks of it (VpnEngineFeatures): the device says what
+        // the system can do, the engine what it does of it.
+        var isQuicSupported = device.IsQuicSupported && _vpnEngineInfo.Features.Quic;
+        var killSwitch = _vpnEngineInfo.Features.KillSwitch ? device.KillSwitch : null;
+        var adProviderItems = _vpnEngineInfo.Features.Ads ? options.AdProviderItems : [];
+        var isSplitAppsSupported = _vpnEngineInfo.Features.SplitApps;
+
+        var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
+        if (isQuicSupported)
+            protocols.Add(ChannelProtocol.Quic);
+
+        // Created before the features because only the trackers know whether this build collects anything.
+        var clientId = AppUtils.CreateClientId(options.AppId, options.DeviceId ?? installId);
+        _userAgent = AppUtils.BuildUserAgent(device.UserAgentInfo, options.PackageTitle, appVersion, includeModel: false);
+        var trackerService = new AppTrackerService(settingsService, new AppTrackerServiceParams {
+            TrackerFactories = options.TrackerFactories,
+            IsDebugMode = options.IsDebugMode,
+            IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
+            IsAnonymousTrackerOptInRequired = options.IsAnonymousTrackerOptInRequired,
+            ClientId = clientId,
+            AppVersion = appVersion,
+            UserAgent = AppUtils.BuildUserAgent(device.UserAgentInfo, options.PackageTitle, appVersion, includeModel: true)
+        });
+
+        var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
+
+        // initialize features
+        Descriptor = new AppDescriptor {
+            Version = appVersion,
+            IsExcludeAppsSupported = _device.IsExcludeAppsSupported && isSplitAppsSupported,
+            IsIncludeAppsSupported = _device.IsIncludeAppsSupported && isSplitAppsSupported,
+            IsAddAccessKeySupported = options.IsAddAccessKeySupported,
+            Premium = options.Premium,
+            AllowEndPointStrategy = options.AllowEndPointStrategy && _vpnEngineInfo.Features.EndPointStrategy,
+            IsTv = device.IsTv || HasDebugCommand(DebugCommands.TvMode),
+            OsType = AppUtils.GetOsType(),
+            UiTheme = options.UiTheme,
+            IsAccountSupported = options.AccountProvider != null,
+            IsBillingSupported = options.AccountProvider?.Billing != null,
+            AuthProviderIds = options.AccountProvider?.AuthenticationProvider.ProviderIds ?? [],
+            IsQuicSupported = isQuicSupported,
+            AlwaysOnSupport = _vpnEngineInfo.Features.AlwaysOn
+                ? GetAlwaysOnSupport(device, deviceUiProvider)
+                : AlwaysOnSupport.None,
+            IsKillSwitchSupported = killSwitch != null,
+            KillSwitchOffScriptPath = killSwitch != null ? options.KillSwitchOffScriptPath : null,
+            IsAutomaticUpdateSupported = options.UpdaterOptions?.UpdaterProvider?.IsAutomaticUpdateSupported == true,
+            IsSplitCountrySupported = options.IpLocationZipAsset != null,
+            IsUserReviewSupported = options.UserReviewProvider != null,
+            IsAnonymousTrackerSupported = trackerService.IsSupported,
+            ClientId = clientId,
+            AppId = options.AppId,
+            AppName = options.AppName,
+            PackageTitle = options.PackageTitle,
+            CompanyName = options.CompanyName,
+            IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
+            Links = options.Links,
+            ShowPoweredBy = options.ShowPoweredBy,
+            LogoAssetPath = options.LogoAssetPath,
+            PrivacyConsentAssetName = options.PrivacyConsentAssetName,
+            DebugCommands = DebugCommands.All,
+            IsDebugMode = options.IsDebugMode,
+            CustomData = options.CustomData,
+            IsAdSupported = adProviderItems.Any(),
+            IsRewardedAdSupported = adProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
+            IsProxySupported = _vpnEngineInfo.Features.Proxies,
+            IsRemoteAccessSupported = options.WebHostFactory != null,
+            ChannelProtocols = protocols.Select(x => x.ToAppDto()).ToArray()
+        };
+
+        VpnProfileService = new VpnProfileService(options.Storage.OpenStorage(FolderNameProfiles), Descriptor);
+        _alwaysOnService = new AppAlwaysOnService(this, options.AlwaysOnOptions, _appPersistState);
+        _killSwitchService = killSwitch != null ? new AppKillSwitchService(this, killSwitch) : null;
+        Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
+
+        // add a default test public server if not added yet
+        var builtInProfileIds = VpnProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
+
+        // remove default VPN profile if not exists
+        if (UserSettings.VpnProfileId != null &&
+            VpnProfileService.FindById(UserSettings.VpnProfileId.Value) == null)
+            UserSettings.VpnProfileId = null;
+
+        // set first built in profile as default if default is not set
+        UserSettings.VpnProfileId ??= builtInProfileIds.FirstOrDefault()?.VpnProfileId;
+
+        // initialize client manager
+        _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
+        _vpnServiceManager.StateChanged += VpnService_StateChanged;
+
+        _errorReporter = new AppErrorReporter(trackerService.Tracker);
+
+        // initialize services
+        Services = new AppServices {
+            CultureProvider = options.CultureProvider ?? new DefaultAppCultureProvider(this),
+            UserReviewProvider = options.UserReviewProvider,
+            DeviceUiProvider = deviceUiProvider,
+            TrackerService = trackerService,
+            SplitCountryService = splitCountryService,
+            SplitIpViaAppService = splitIpViaAppService,
+            SplitDomainService = splitDomainService,
+            SplitDbPublisherService = new SplitDbPublisherService(device.VpnServiceConfigFolder,
+                splitCountryService, splitIpViaAppService, splitDomainService),
+            AccountService = options.AccountProvider is null
+                ? null
+                : new AccountService(
+                    settingsService: settingsService,
+                    accountProvider: options.AccountProvider,
+                    vpnProfileService: VpnProfileService,
+                    storageFolderPath: Path.Combine(NoBackupStorageFolderPath, FolderNameAccount)),
+            UpdaterService = options.UpdaterOptions is null
+                ? null
+                : new AppUpdaterService(
+                    storageFolderPath: options.StorageFolderPath,
+                    appVersion: Descriptor.Version,
+                    updateOptions: options.UpdaterOptions,
+                    isConnected: () => ConnectionState is AppConnectionState.Connected),
+            ProxyEndPointService = new AppProxyEndPointService(
+                dbPath: VpnServiceFolders.GetProxyStoreFilePath(_device.VpnServiceDataFolder),
+                ipLocationProvider: _ipRangeLocationProvider,
+                vpnServiceManager: _vpnServiceManager,
+                deviceUiProvider: deviceUiProvider,
+                settingsService: settingsService,
+                endPointCopy: options.IsVpnServiceDataPurgeable
+                    ? new ProxyEndPointCopy(options.Storage)
+                    : null)
+        };
+
+        // create ad service
+        var adService = new AppAdService(
+            adProviderItems: adProviderItems,
+            loadAdTimeout: options.AdOptions.LoadAdTimeout,
+            loadAdPostDelay: options.AdOptions.LoadAdPostDelay,
+            tracker: trackerService.Tracker);
+
+        AdManager = new AppAdManager(
+            adService,
+            _vpnServiceManager,
+            extendByRewardedAdThreshold: options.AdOptions.ExtendByRewardedAdThreshold,
+            showAdPostDelay: options.AdOptions.ShowAdPostDelay,
+            isPreloadAdEnabled: options.AdOptions.PreloadAd,
+            rejectAdBlocker: options.AdOptions.RejectAdBlocker,
+            allowedPrivateDnsProviders: options.AdOptions.AllowedPrivateDnsProviders,
+            consentProvider: options.AdOptions.ConsentProvider,
+            uiProvider: deviceUiProvider);
+
+        // temporary, enable internal ad provider if exists and setting is enabled
+        if (adProviderItems.Any(x => x.Name == "InternalAd"))
+            AdManager.AdService.EnableAdProvider("InternalAd", SettingsService.RemoteSettings?.ShowInternalAd == true);
+
+        // The API over this app, built last: every service it reaches through must already exist.
+        Api = new VpnHoodApi(
+            app: new AppApi(this),
+            vpnProfiles: new VpnProfilesApi(this),
+            account: new AccountApi(this),
+            billing: new BillingApi(this),
+            intents: new IntentsApi(this),
+            proxyEndPoints: new ProxyEndPointsApi(this));
+
+        // a location chosen, a server added or removed, its key or code renewed: the saved options follow
+        VpnProfileService.Changed += (_, _) =>
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a VPN profile change", LogLevel.Warning,
+                () => ReconfigureVpnService(CancellationToken.None));
+
+        // Apply settings but no error on startup; the OS's language first, as the person may have changed
+        // it in the OS's settings since the saved one
+        ReadOsCulture();
+        ApplySettings();
+
+        // schedule job
+        AppUiContext.OnChanged += ActiveUiContext_OnChanged;
+        AppUiContext.OnResumed += ActiveUiContext_OnResumed;
+
+        // launch startup task
+        Task.Run(OnStartup);
+    }
+
+    private async Task OnStartup()
+    {
+        // before the rest, none of which it needs, so a failure there cannot keep the VPN down
+        _alwaysOnService.Start();
+
+        if (_killSwitchService != null)
+            await _killSwitchService.Start().Vhc();
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        MigrateLegacyTempFolder();
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        await Services.TrackerService.TrackFirstLaunch(CancellationToken.None).Vhc();
+
+        await _webHostManager.StartAlwaysOn(CancellationToken.None).Vhc();
+
+        // Deliberately NO account refresh here. Launching the app is not a reason to call the portal:
+        // a credential that still works needs no permission to go on working, and the people with no
+        // premium at all are the many — every one of their launches would be pure load for an answer
+        // nobody was waiting for. The account is asked when something actually depends on it: an
+        // expiry that has passed, a code typed in, a refusal from the access server, a purchase, or
+        // the person pressing refresh.
+    }
+
+    // Where every build up to 8.1 extracted the page's files, under the folder name of that era;
+    // 8.2 moved them under Temp/WebRoot/<hash>, and WebRoot cleans only that root, so on a machine
+    // that upgraded the old folder would sit there for good. Temp itself stays: a head may keep data
+    // of its own in it.
+    [Obsolete("Migration (2026-09): delete once DeprecatedVersion (pub/PubVersion.json) passes 8.2 - no " +
+              "install that old can still be upgrading - with its call in OnStartup.")]
+    private void MigrateLegacyTempFolder()
+    {
+        var folderPath = Path.Combine(TempFolderPath, "SPA");
+        if (Directory.Exists(folderPath))
+            VhInvoker.TryInvoke("delete the legacy page temp folder", LogLevel.Debug,
+                () => Directory.Delete(folderPath, true));
+    }
+
+    private void ApplySettings()
+    {
+        try {
+            var oldUserSettings = SettingsService.OldUserSettings;
+
+            // set dns to default if no dns server is set
+            if (UserSettings.DnsMode is DnsMode.AdapterDns && UserSettings.DnsServers.Length is 0) {
+                UserSettings.DnsMode = DnsMode.Default;
+            }
+
+            // Reconfigure, not awaited: a running session at once, and either way the saved options a start
+            // without the app runs with (always-on, the quick-settings tile).
+            _ = VhInvoker.TryInvokeAsync("reconfigure the VPN service after a settings change", LogLevel.Warning,
+                () => ReconfigureVpnService(CancellationToken.None));
+
+            _killSwitchService?.ApplySettings(oldUserSettings);
+
+            if (ConnectionInfo.IsStarted()) {
+                // Settings that only apply at connect, judged on EFFECTIVE split values so flipping the
+                // split-tunneling toggle asks for a reconnect only when it changes something the adapter
+                // enforces. The app-level splits (country, via-app ip, domain) are NOT here: they
+                // live-apply through the reconfigure above (the split dbs are rebuilt and the service
+                // swaps its filter gates mid-session). The unsupported-ip modes live-apply to the filter
+                // too, but the adapter's CAPTURE shape is connect-time — a mode flip matters only when
+                // the session says the server actually leaves something out for the mode to decide.
+                // Nothing is forced: the flag just lets the UI offer a reconnect for the running session.
+                var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
+                var oldSplitTunneling = oldUserSettings.SplitTunneling.ToEffective(this);
+                var sessionInfo = ConnectionInfo.SessionInfo;
+                var reconnectRequired =
+                    splitTunneling.UseLocalNetwork != oldSplitTunneling.UseLocalNetwork ||
+                    splitTunneling.UseIpViaDevice != oldSplitTunneling.UseIpViaDevice ||
+                    splitTunneling.AppMode != oldSplitTunneling.AppMode ||
+                    !splitTunneling.Apps.SequenceEqual(oldSplitTunneling.Apps) ||
+                    UserSettings.VpnProfileId != oldUserSettings.VpnProfileId ||
+                    UserSettings.DnsMode != oldUserSettings.DnsMode ||
+                    splitTunneling.DnsMode != oldSplitTunneling.DnsMode ||
+                    (splitTunneling.UnroutedIpMode != oldSplitTunneling.UnroutedIpMode &&
+                     sessionInfo?.IsTrafficSplitByServer == true) ||
+                    (splitTunneling.UnsupportedIpV6Mode != oldSplitTunneling.UnsupportedIpV6Mode &&
+                     sessionInfo?.IsIpV6SupportedByServer == false) ||
+                    !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
+                if (reconnectRequired)
+                    SetReconnectRequired();
+            }
+
+            // set default ContinueOnCapturedContext
+            TaskExtensions.DefaultContinueOnCapturedContext =
+                HasDebugCommand(DebugCommands.CaptureContext);
+
+            // Only where the window makes its views again for it (MainView.Recreate): a phone's stay as they
+            // were made, and would be half in the TV layout until the next launch.
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+                Descriptor.IsTv = _device.IsTv || HasDebugCommand(DebugCommands.TvMode);
+
+            // the developer's open door, opened or shut from the running app
+            _webHostManager.ApplySettings();
+
+            // the always-on switch, and the profile, which may be another plan
+            _alwaysOnService.ApplySettings();
+
+            // apply the last known client country (reported by the server); fall back to the device region
+            if (UserSettings.CountryCode != null)
+                VhInvoker.TryInvoke("apply the client's country", LogLevel.Warning,
+                    () => AppRegionInfo.CurrentRegion = new RegionInfo(UserSettings.CountryCode));
+
+            // the trackers follow the first-run terms and the usage-data switch
+            Services.TrackerService.ApplySettings();
+
+            // sync culture to app settings: only a change made here, as settings also apply with nothing
+            // changed, for one each time Android makes a new activity, and that must not undo the OS's
+            if (UserSettings.CultureCode != _osCultureCode)
+                Services.CultureProvider.SelectedCultures =
+                    UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
+
+            InitCulture();
+        }
+        catch (Exception ex) {
+            _errorReporter.ReportError(ex, "Could not apply settings.");
+        }
+    }
+
+    // A change happened that only applies at connect while a session is running (e.g. device-level
+    // split ranges, split apps, DNS, profile). The session is NOT interrupted: the flag tells the UI
+    // to show its "reconnect to apply" bar. It survives an app restart (the VpnService session may
+    // outlive the app process) and clears on the next connect or disconnect. No-op while idle — a
+    // change made while disconnected simply applies at the next connect.
+    internal void SetReconnectRequired()
+    {
+        if (ConnectionInfo.IsStarted())
+            _appPersistState.IsReconnectRequired = true;
+    }
+
+    // The user acknowledged the pending change (dismissed the UI's reconnect bar) — same pattern as
+    // ClearLastError. A later connect-only change simply raises the flag again.
+    internal void ClearReconnectRequired() => _appPersistState.IsReconnectRequired = false;
+
+    // Live-apply reconfigurable settings to the running session, including the split filters: the dbs
+    // are rebuilt (or reused) under signature-versioned names, published through the folder manifests,
+    // and the service swaps its gates to them without disconnecting. Connected or not, the saved options
+    // are made again from the current settings and server, for a start without the app; with no server
+    // chosen they go, so no such start reaches a server the app no longer has. Triggered by a UserSettings
+    // save (ApplySettings), by the split text-file settings' and the VPN profiles' change events (wired
+    // in the ctor), and by a connect, again, for one that came while it connected. One at a time, each
+    // made from the settings as its turn finds them, so the last one written has the latest.
+    internal async Task ReconfigureVpnService(CancellationToken cancellationToken)
+    {
+        _isReconfiguredWhileConnecting = true;
+        using var scopeLock = await _reconfigureLock.LockAsync(cancellationToken).Vhc();
+        if (_disposed)
+            return; // the app closed while this one waited: nothing of it is left to reconfigure
+
+        // publish the current db set BEFORE signaling a running session: it reads the manifests, not the
+        // request; a start without the app reads them too
+        await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
+
+        var vpnProfileId = UserSettings.VpnProfileId ?? Guid.Empty;
+        var vpnProfile = VpnProfileService.FindById(vpnProfileId);
+        var profileInfo = VpnProfileService.FindInfo(vpnProfileId);
+        if (vpnProfile is null || profileInfo is null) {
+            await _vpnServiceManager.ClearConfiguration(cancellationToken).Vhc();
+            return;
+        }
+
+        // the split db manifests are already on disk, so the request only signals; the service's filter
+        // chains re-read the manifests
+        var serviceOptions = await CreateServiceOptions(profileInfo, vpnProfile.Token,
+            profileInfo.SelectedLocationInfo?.ServerLocation, vpnProfile.AccessCode, cancellationToken).Vhc();
+        await _vpnServiceManager.Reconfigure(serviceOptions, cancellationToken).Vhc();
+    }
+
+    private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
+    {
+        var uiContext = AppUiContext.Context;
+        if (IsIdle && uiContext != null)
+            _ = VhInvoker.TryInvokeAsync("preload an ad", LogLevel.Debug,
+                () => AdManager.PreloadAd(uiContext, CancellationToken.None));
+
+        // a session that waits for an ad nobody could show yet - the tile's, always-on's, or one from before
+        // this process restarted, the person opening the app to watch it - gets it now that a window can
+        if (uiContext != null && ConnectionState is AppConnectionState.WaitingForAd)
+            _ = TryShowAd();
+
+        // try update the app
+        if (uiContext != null)
+            _ = Services.UpdaterService?.TryCheckForUpdate(uiContext, false, CancellationToken.None);
+    }
+
+    private void ActiveUiContext_OnResumed(object? sender, EventArgs e)
+    {
+        // the user may have installed or removed an app while we were in the background. this runs
+        // on the platform resume hook, so it must stay cheap and never block
+        lock (_installedAppsLock)
+            _installedApps = null;
+
+        // the app's language may have been changed in the OS's settings, which Android does with the
+        // process running: the words follow on the UI's next beat
+        ReadOsCulture();
+
+        // an ad that came while the window was in the background could not show and still waits; the
+        // window was there all along, so its return to the front is what shows it
+        if (ConnectionState is AppConnectionState.WaitingForAd)
+            _ = TryShowAd();
+
+        // the window's return checks for an update too: a window kept for days with the VPN on all
+        // along would get no check otherwise, and a store's screen left for a window in front shows now
+        if (AppUiContext.Context is { } uiContext)
+            _ = Services.UpdaterService?.TryCheckForUpdate(uiContext, false, CancellationToken.None);
+    }
+
+    internal VpnProfileInfo? CurrentVpnProfileInfo =>
+        VpnProfileService.FindInfo(UserSettings.VpnProfileId ?? Guid.Empty);
+
+    /// <summary>
+    /// Gets the error the app shows, or <see langword="null"/>: none while the app is not idle; after a diagnose that
+    /// ended with no error, or with <see cref="UserCanceledException"/>, <see cref="NoErrorFoundException"/>'s; else
+    /// the last connect's failure; else the VPN service's last error, unless it was cleared.
+    /// </summary>
+    internal ApiError? LastError {
+        get {
+            // don't show an error if it is not idle
+            if (!IsIdle)
+                return null;
+
+            // Show error if a diagnosis has been requested and there is no error
+            if (_appPersistState is { HasDiagnoseRequested: true } &&
+                _appPersistState.LastError?.TypeName is null or nameof(UserCanceledException))
+                return new NoErrorFoundException().ToApiError();
+
+            // show last error
+            if (_appPersistState.LastError != null)
+                return _appPersistState.LastError;
+
+            return ConnectionInfo.Error?.Equals(_appPersistState.LastClearedError) == true
+                ? null
+                : ConnectionInfo.Error;
+        }
+    }
+
+    /// <summary>
+    /// Gets the app's state, made at each read, for a caller with no window to measure, whose system bars are then the
+    /// defaults.
+    /// </summary>
+    public AppState State => GetState(uiContext: null);
+
+    /// <param name="uiContext">The caller's window, whose system bars the state reports; null when it has
+    /// none.</param>
+    internal AppState GetState(IUiContext? uiContext)
+    {
+        var vpnProfileInfo = CurrentVpnProfileInfo;
+        var connectionState = ConnectionState;
+        var lastConnectionInfo = ConnectionInfo;
+        var connectionInfo = connectionState.IsIdle() ? null : lastConnectionInfo;
+
+        var appState = new AppState {
+            ConfigTime = Settings.ConfigTime,
+            AccountTime = Services.AccountService?.AccountTime,
+            SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
+            SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
+            ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, vpnProfileInfo),
+            ProxyConnectorStatus = lastConnectionInfo.ProxyConnectorStatus?.ToAppDto(),
+            ConnectionState = connectionState,
+            CanConnect = connectionState.CanConnect(),
+            CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
+            CanDisconnect = connectionState.CanDisconnect(),
+            UserReviewRecommended = _userReviewRecommended,
+            IsWaitingForInternalAd = AdManager.AdService.IsWaitingForInternalAd,
+            IsAdPrivacyOptionsRequired = AdManager.IsAdPrivacyOptionsRequired,
+            IsQuickLaunchRecommended = _quickLaunchRecommended && !Settings.UserSettings.IsQuickLaunchPrompted,
+            IsAnonymousTrackerPromptRequired = Services.TrackerService.IsPromptRequired,
+            IsIdle = IsIdle,
+            PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
+            LogExists = _logService.Exists,
+            IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
+            HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
+            IsReconnectRequired = _appPersistState.IsReconnectRequired,
+            ClientCountryCode = AppRegionInfo.CurrentCountryCode,
+            ConnectRequestTime = _appPersistState.ConnectRequestTime,
+            CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
+            SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
+            PurchaseState = Services.AccountService?.BillingService?.PurchaseState.ToAppDto(),
+            UpdaterStatus = Services.UpdaterService?.Status,
+            LastError = LastError?.ToAppDto(),
+            VpnProfile = vpnProfileInfo?.ToBaseInfo(),
+            ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol.ToAppDto() ??
+                              UserSettings.ChannelProtocol,
+            IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
+            SystemPrivateDns = VhInvoker.TryInvoke("read the system's private DNS", LogLevel.Debug,
+                () => Services.DeviceUiProvider.GetPrivateDns()?.ToAppDto()),
+            StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
+            IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
+            PromotionExists = PromotionExists(),
+            TcpForwardingLockReason = StateHelper.GetTcpForwardingLockReason(UserSettings, connectionInfo?.SessionInfo, this),
+            SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
+            AlwaysOnState = _alwaysOnService.State,
+            IsKillSwitchBlocking = _killSwitchService?.IsBlocking ?? false,
+            SystemBarsInfo = uiContext != null
+                ? Services.DeviceUiProvider.GetBarsInfo(uiContext).ToAppDto()
+                : VpnHood.AppLogic.Api.Device.SystemBarsInfo.Default
+        };
+
+        return appState;
+    }
+
+    private bool PromotionExists()
+    {
+        // not applied on china
+        if (AppRegionInfo.CurrentRegion.Name.Equals("CN", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // check remote settings
+        var remoteSettings = SettingsService.RemoteSettings;
+        if (CurrentVpnProfileInfo?.IsPremium == true ||
+            remoteSettings?.PromotionImageUrl is null ||
+            remoteSettings.PromotionStartDate < FastDateTime.UtcNow ||
+            remoteSettings.PromotionEndDate is null ||
+            remoteSettings.PromotionEndDate < FastDateTime.UtcNow)
+            return false;
+
+        return SettingsService.PromotionImageFilePath != null;
+    }
+
+    internal Task ForceUpdateState(CancellationToken cancellationToken)
+    {
+        return _vpnServiceManager.RefreshState(cancellationToken);
+    }
+
+    /// <summary>Gets the connection's state as the app shows it.</summary>
+    /// <remarks>
+    /// It reads <see cref="AppConnectionState.Updating"/> while the app installs its update,
+    /// <see cref="AppConnectionState.Diagnosing"/> while a check of the network runs, and
+    /// <see cref="AppConnectionState.None"/> while a disconnect finishes in the background;
+    /// <see cref="AppConnectionState.Initializing"/> while the split by country or by IP address builds its list, and
+    /// <see cref="AppConnectionState.Connected"/> for the last seconds after an ad closed.
+    /// </remarks>
+    public AppConnectionState ConnectionState {
+        get {
+            var connectionInfo = ConnectionInfo;
+            var clientState = connectionInfo.ClientState;
+            
+            // an update this app installs stops it in a moment, whatever the session does meanwhile
+            if (Services.UpdaterService?.IsInstalling == true)
+                return AppConnectionState.Updating;
+
+            // in diagnose mode, we need to either cancel it or wait for it
+            if (Diagnoser.IsWorking)
+                return AppConnectionState.Diagnosing;
+
+            // let's service disconnect in the background and let the user connect again if it is disconnecting
+            if (_isDisconnecting)
+                return AppConnectionState.None;
+
+            // the start waits on the person, at the OS's prompt on the device's own screen
+            if (clientState == ClientState.Initializing && _device.IsWaitingForVpnPermission)
+                return AppConnectionState.WaitingForVpnPermission;
+
+            if (clientState == ClientState.Initializing ||
+                Services.SplitCountryService.IsBusy ||
+                Services.SplitIpViaAppService.IsBusy)
+                return AppConnectionState.Initializing;
+
+            if (clientState == ClientState.Waiting)
+                return AppConnectionState.Waiting;
+
+            if (clientState is ClientState.WaitingForAd)
+                return AdManager.IsWaitingForPostDelay ? AppConnectionState.Connected : AppConnectionState.WaitingForAd;
+
+            if (clientState == ClientState.ValidatingProxies)
+                return AppConnectionState.ValidatingProxies;
+
+            if (clientState == ClientState.FindingReachableServer)
+                return StateHelper.IsLongRunningState(connectionInfo)
+                    ? AppConnectionState.FindingReachableServer
+                    : AppConnectionState.Connecting;
+
+            if (clientState == ClientState.FindingBestServer)
+                return StateHelper.IsLongRunningState(connectionInfo)
+                    ? AppConnectionState.FindingBestServer
+                    : AppConnectionState.Connecting;
+
+            if (clientState == ClientState.Connected)
+                return AppConnectionState.Connected;
+
+            if (clientState == ClientState.Unstable)
+                return AppConnectionState.Unstable;
+
+            if (clientState == ClientState.Connecting || _isConnecting)
+                return AppConnectionState.Connecting;
+
+            if (clientState == ClientState.Disconnecting)
+                return AppConnectionState.None; // treat as none. let's service disconnect in the background
+
+            return AppConnectionState.None;
+        }
+    }
+
+    private void LocationService_StateChanged(object? sender, EventArgs e)
+    {
+        FireConnectionStateChanged();
+    }
+
+    private void FireConnectionStateChanged()
+    {
+        // One caller at a time: a state read before a connect must not land after the connect's. A connect calls
+        // this before its session is up, so it waits for a reader that stalled, which then finds no session to end
+        lock (_connectionStateLock) {
+            // check changed state
+            var connectionState = ConnectionState;
+            var lastConnectionState = _lastConnectionState;
+            if (connectionState == lastConnectionState) return;
+            _lastConnectionState = connectionState;
+
+            // a session ended: always on sorts why, where nobody has - a connect's failure is its connect's, and a
+            // person's disconnect stops it already. The reason is the app's own or the service's, not LastError's,
+            // which a diagnose turns into "no error found"
+            if (connectionState == AppConnectionState.None && lastConnectionState is not null)
+                _alwaysOnService.SessionEnded(_appPersistState.LastError ?? ConnectionInfo.Error);
+
+            // the kill switch's block: handed over where another app took the tunnel, else as the OS has it
+            if (_killSwitchService != null && connectionState == AppConnectionState.None) {
+                if (lastConnectionState is not null &&
+                    (_appPersistState.LastError ?? ConnectionInfo.Error)?.Is<VpnServiceRevokedException>() == true)
+                    _killSwitchService.TunnelTaken();
+                else
+                    _killSwitchService.SessionEnded();
+            }
+        }
+
+        Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
+    }
+
+    /// <summary>
+    /// Creates the app: it makes the storage folders, opens the log, reads the settings and the VPN profiles, adds the
+    /// built-in access keys, and registers the app as <see cref="Singleton{T}.Instance"/>.
+    /// </summary>
+    /// <param name="device">The device, whose VPN service the app runs.</param>
+    /// <param name="options">The head's options.</param>
+    /// <returns>The app.</returns>
+    /// <exception cref="InvalidOperationException">An app is registered already.</exception>
+    /// <exception cref="FormatException">
+    /// A built-in access key (<see cref="AppOptions.AccessKeys"/>) is not valid.
+    /// </exception>
+    /// <exception cref="NotSupportedException">A built-in access key's version is not supported.</exception>
+    /// <exception cref="System.Text.Json.JsonException">A built-in access key's JSON is not valid.</exception>
+    /// <exception cref="InvalidDataException">A built-in access key's JSON is <c>null</c>.</exception>
+    /// <exception cref="OverflowException">A duration in a built-in access key is out of range.</exception>
+    /// <exception cref="Exception">
+    /// An ad network item has both country lists (<see cref="AppAdProviderItem.IncludeCountryCodes"/>).
+    /// </exception>
+    /// <exception cref="IOException">A storage folder could not be made, or a file of the app's written.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not write the storage folders.</exception>
+    public static VpnHoodApp Init(IDevice device, AppOptions options)
+    {
+        Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
+        Directory.CreateDirectory(options.NoBackupStorageFolderPath);
+
+        var settingsService = new AppSettingsService(options.Storage, options.RemoteSettingsUrl);
+        var installId = LoadInstallId(options.NoBackupStorage, settingsService);
+        var logService = new LogService(Path.Combine(options.NoBackupStorageFolderPath, FileNameLog));
+        logService.Start(
+            GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
+            deleteOldReport: false);
+
+        // registers as the singleton instance unless options opt out (tests run many concurrent apps)
+        return new VpnHoodApp(device, settingsService, logService, options, installId);
+    }
+
+    // The install's own random id, which the client id comes from where the device has none of its own
+    // (iOS, Windows, an Android without its id): in the device-only folder, so a device restored from a
+    // backup makes its own rather than sharing the old one's.
+    private static string LoadInstallId(Storage noBackupStorage, AppSettingsService settingsService)
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        MigrateInstallId(noBackupStorage, settingsService);
+#pragma warning restore CS0618 // Type or member is obsolete
+        var savedId = TryReadInstallId(noBackupStorage);
+        if (savedId != null)
+            return savedId;
+
+        var installId = Guid.NewGuid().ToString();
+        noBackupStorage.Write(FileNameInstallId, installId);
+        return installId;
+    }
+
+    private static string? TryReadInstallId(Storage noBackupStorage)
+    {
+        return Guid.TryParse(noBackupStorage.Read(FileNameInstallId)?.Trim(), out var installId)
+            ? installId.ToString()
+            : null;
+    }
+
+    // the app's own where the device says it keeps always on itself (a desktop's service), else the
+    // device's setting where the app can open it (Android's)
+    private static AlwaysOnSupport GetAlwaysOnSupport(IDevice device, IDeviceUiProvider deviceUiProvider)
+    {
+        if (device.IsAlwaysOnSupported)
+            return AlwaysOnSupport.App;
+
+        return deviceUiProvider.IsAlwaysOnSettingsSupported ? AlwaysOnSupport.Device : AlwaysOnSupport.None;
+    }
+
+    // The id was ClientId in settings.json, which a backup carries; an update keeps it. The file is
+    // written before the settings let it go, so an end between the two loses nothing.
+    [Obsolete("Migration (2026-10): drop a few months after it ships, with its call in LoadInstallId, " +
+              "AppSettings.ClientId and the An_update_moves_the_install_id_out_of_the_settings test.")]
+    private static void MigrateInstallId(Storage noBackupStorage, AppSettingsService settingsService)
+    {
+        var settings = settingsService.Settings;
+        if (settings.ClientId is null)
+            return;
+
+        if (TryReadInstallId(noBackupStorage) is null)
+            noBackupStorage.Write(FileNameInstallId, settings.ClientId);
+        settings.ClientId = null;
+        settingsService.Save();
+    }
+
+    internal void ClearLastError()
+    {
+        _appPersistState.LastError = null;
+        _appPersistState.LastClearedError = ConnectionInfo.Error;
+        _appPersistState.HasDiagnoseRequested = false;
+    }
+
+    private LogServiceOptions GetLogOptions()
+    {
+        return GetLogOptions(UserSettings, Config.LogServiceOptions, Descriptor.IsDebugMode);
+    }
+
+    private static LogServiceOptions GetLogOptions(UserSettings userSettings, LogServiceOptions appLogOptions,
+        bool isDebug)
+    {
+        var logLevel = appLogOptions.MinLogLevel;
+        if (HasDebugCommand(userSettings, DebugCommands.LogDebug) || isDebug) logLevel = LogLevel.Debug;
+        if (HasDebugCommand(userSettings, DebugCommands.LogTrace)) logLevel = LogLevel.Trace;
+        var logOptions = new LogServiceOptions {
+            Enabled = appLogOptions.Enabled,
+            MinLogLevel = logLevel,
+            LogAnonymous = !isDebug && (appLogOptions.LogAnonymous == true || userSettings.LogAnonymous),
+            LogEventNames =
+                LogService.GetLogEventNames(appLogOptions.LogEventNames, userSettings.DebugData1 ?? "").ToArray(),
+            LogToFile = appLogOptions.LogToFile,
+            AutoFlush = appLogOptions.AutoFlush
+        };
+        return logOptions;
+    }
+
+    /// <summary>Connects the VPN as <see cref="Connect"/> does, but returns a value rather than throw.</summary>
+    /// <param name="uiContext">
+    /// The caller's window, which asks the person for the VPN permission and for notifications, or
+    /// <see langword="null"/> when it has none.
+    /// </param>
+    /// <param name="connectOptions">The connect's options, or <see langword="null"/> for the defaults.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is <see langword="true"/> if the VPN connected; otherwise, <see langword="false"/>, a cancel
+    /// included.
+    /// </returns>
+    internal async Task<bool> TryConnect(IUiContext? uiContext, ConnectOptions? connectOptions,
+        CancellationToken cancellationToken)
+    {
+        try {
+            await Connect(uiContext, connectOptions, cancellationToken).Vhc();
+            return true;
+        }
+        catch {
+            return false; // don't throw exception, just return false
+        }
+    }
+
+    /// <summary>Connects the VPN, ending a connection under way first.</summary>
+    /// <remarks>
+    /// Unless the app is installing an update, it clears the last error first, and a connect applies every pending
+    /// change of the settings. A failed connect throws the app's error: the server's refusal
+    /// (<see cref="SessionException"/>), the VPN service's failure, an ad the session required that failed, or the
+    /// system's own VPN failure, as where there is no window to ask for the VPN permission. The state keeps it as its
+    /// last error (<see cref="AppState.LastError"/>), but for a refusal while the app installs an update, a connect a
+    /// newer one replaced, and one its caller tries again (<see cref="ConnectOptions.IsRetried"/>). A token canceled
+    /// while the connect runs may come as <see cref="NoInternetException"/>, as the check after the failure finds no
+    /// internet.
+    /// </remarks>
+    /// <param name="uiContext">
+    /// The caller's window, which asks the person for the VPN permission and for notifications, or
+    /// <see langword="null"/> when it has none, and then a missing permission fails and nothing is asked.
+    /// </param>
+    /// <param name="connectOptions">The connect's options, or <see langword="null"/> for the defaults.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the VPN is connected.</returns>
+    /// <exception cref="EndPointDiscoveryException">A diagnosing connect found no endpoint of the server.</exception>
+    /// <exception cref="VpnServiceContractException">
+    /// The app and the VPN engine it bundles share no version of the VPN service's contract.
+    /// </exception>
+    /// <exception cref="ConnectionTimeoutException">
+    /// The connection did not come up in the app's connect time (<see cref="AppOptions.ConnectTimeout"/>).
+    /// </exception>
+    /// <exception cref="TimeoutException">
+    /// The VPN service did not start in time, or the system's VPN permission prompt was not answered.
+    /// </exception>
+    /// <exception cref="PremiumOnlyException">
+    /// Always on is for premium only, and the connect was always on's.
+    /// </exception>
+    /// <exception cref="NoInternetException">
+    /// A check after a failed connect found the device without internet.
+    /// </exception>
+    /// <exception cref="NoStableVpnException">A diagnosing connect found the tunnel not working.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The split by country has no IP location data, or no known country; the client connected with no session; or, on
+    /// a diagnosing connect, the access key has neither endpoints nor a real host name.
+    /// </exception>
+    /// <exception cref="NotExistsException">
+    /// No VPN profile is given and none is selected, or the profile does not exist.
+    /// </exception>
+    /// <exception cref="AppUpdatingException">The app is installing an update.</exception>
+    /// <exception cref="UserCanceledException">
+    /// A disconnect, or a newer connect, ended the connect, or the person refused the system's VPN permission.
+    /// </exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, while the connect waited for a disconnect or while it
+    /// connected.
+    /// </exception>
+    public async Task Connect(IUiContext? uiContext, ConnectOptions? connectOptions,
+        CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew(); // a failed connect's report tells how long it ran
+        connectOptions ??= new ConnectOptions();
+
+        // always on's own connect gives way to what came after it chose to connect
+        if (_alwaysOnService.BeginConnect(connectOptions.IsAlwaysOn, connectOptions.VpnProfileId) is not
+            { } alwaysOnConnectNumber)
+            return;
+
+        var connectNumber = Interlocked.Increment(ref _connectNumber);
+        Exception? failure = null;
+        try {
+            // The update this app installs stops it in a moment, so a connect would only be dropped. Refused with
+            // no last error, as nothing failed; always on waits its pause, and the new version's start connects it.
+            if (ConnectionState == AppConnectionState.Updating)
+                throw new AppUpdatingException();
+
+            // protect double call
+            if (!IsIdle) {
+                VhLogger.Instance.LogInformation("Disconnecting due to user request to connect...");
+                await TryDisconnect(connectNumber).Vhc();
+            }
+
+            // Create a connect cancellation token. A disconnect still running, which the app shows as idle, ends
+            // first, or it would cancel this connect or stop its VPN service
+            using (await _disconnectLock.LockAsync(cancellationToken).Vhc()) {
+                _connectCts = new CancellationTokenSource();
+                _isConnecting = true; //must be after checking IsIdle
+            }
+
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
+            _userReviewRecommended = 0; // UI may call ClearLastError, so it my close immediately
+            ClearLastError();
+            _appPersistState.IsReconnectRequired = false; // this connect applies every pending change
+            await ConnectInternal1(uiContext, connectOptions, linkedCts.Token).Vhc();
+            _alwaysOnService.EndConnect(alwaysOnConnectNumber, exception: null);
+        }
+        catch (AppUpdatingException ex) {
+            VhLogger.Instance.LogInformation("The connect is refused: an update is being installed.");
+            failure = ex;
+            throw;
+        }
+        catch (Exception ex) {
+            _errorReporter.ReportConnectError(ex, stopwatch.Elapsed);
+
+            // a newer connect cancelled this one: its error, its disconnect and its end are the newer one's
+            if (connectNumber != _connectNumber)
+                throw;
+
+            // A failure its caller tries again is not shown, nor the VPN service's word on it once it has stopped.
+            // The app turns idle, where an error shows, only as this connect ends.
+            if (connectOptions.IsRetried) {
+                await TryDisconnect(connectNumber).Vhc();
+                ClearLastError();
+            }
+            else {
+                _appPersistState.LastError = ex.ToApiError();
+                await TryDisconnect(connectNumber).Vhc(); // await, to prevent VpnService_StateChanged clear the LastError
+            }
+
+            failure = ex;
+            throw;
+        }
+        finally {
+            // the latest connect's failure is sorted once the app is idle again, so that a connect it sets off,
+            // or one a plan change sets off meanwhile, finds the app free
+            if (connectNumber == _connectNumber) {
+                _isConnecting = false;
+                if (failure != null)
+                    _alwaysOnService.EndConnect(alwaysOnConnectNumber, failure);
+            }
+
+            FireConnectionStateChanged();
+        }
+    }
+
+    private async Task ConnectInternal1(IUiContext? uiContext, ConnectOptions connectOptions,
+        CancellationToken cancellationToken)
+    {
+        // set use default vpnProfile and serverLocation
+        var vpnProfileId = connectOptions.VpnProfileId ??
+                              UserSettings.VpnProfileId ?? throw new NotExistsException("VpnProfile is not set.");
+        var vpnProfile = VpnProfileService.Get(vpnProfileId);
+
+        try {
+            var vpnProfileInfo = VpnProfileService.GetInfo(vpnProfileId);
+            var serverLocation =
+                connectOptions.ServerLocation ?? vpnProfileInfo.SelectedLocationInfo?.ServerLocation;
+
+            // set timeout
+            _connectTimeoutCts = new CancellationTokenSource(
+                connectOptions.Diagnose ? Config.ConnectTimeout * 3 : Config.ConnectTimeout);
+
+            // create cancellationToken after disconnecting previous connection
+            using var linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectTimeoutCts.Token);
+
+            // reset connection state
+            _appPersistState.LastClearedError = null; // it is a new connection
+            _appPersistState.HasDiagnoseRequested = connectOptions.Diagnose;
+            _appPersistState.ConnectRequestTime = DateTime.UtcNow;
+            FireConnectionStateChanged();
+
+            //logOptions.
+            VhLogger.Instance.LogDebug("Starting the log service...");
+            _logService.Start(GetLogOptions());
+
+            // after the start, as the log opens empty at each connect: so the log says who asked for the connect -
+            // a person, always on, or the reconnect after a wake (Retried)
+            VhLogger.Instance.LogInformation(
+                "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}, AlwaysOn: {AlwaysOn}, Retried: {Retried}",
+                connectOptions.VpnProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
+                connectOptions.Diagnose, connectOptions.IsAlwaysOn, connectOptions.IsRetried);
+
+            // set the current profile only if it has been updated to avoid unnecessary new config time
+            if (vpnProfile.VpnProfileId != UserSettings.VpnProfileId ||
+                serverLocation != vpnProfileInfo.SelectedLocationInfo?.ServerLocation) {
+                vpnProfile = VpnProfileService.Update(vpnProfileId,
+                    new VpnProfileUpdateParams { SelectedLocation = serverLocation });
+                UserSettings.VpnProfileId = vpnProfile.VpnProfileId;
+                Settings.Save();
+            }
+
+            // log general info
+            VhLogger.Instance.LogInformation("AppVersion: {AppVersion}, AppId: {Descriptor.AppId}",
+                Descriptor.Version, Descriptor.AppId);
+            VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
+            VhLogger.Instance.LogInformation("OS: {OsInfo}", _device.OsInfo);
+            VhLogger.Instance.LogInformation("UserAgent: {UserAgent}", Services.TrackerService.UserAgent);
+            VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
+                JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
+            if (connectOptions.Diagnose)
+                VhLogger.Instance.LogInformation("CountryCode: {CountryCode}", AppRegionInfo.CurrentRegion.Name);
+
+            // request features for the first time
+            VhLogger.Instance.LogDebug("Requesting Features ...");
+            await RequestFeatures(uiContext, linkedCts.Token).Vhc();
+
+            // connect
+            VhLogger.Instance.LogInformation("Client is Connecting ...");
+            await ConnectInternal2(uiContext, vpnProfile.Token,
+                    serverLocation: serverLocation,
+                    planId: connectOptions.PlanId,
+                    accessCode: vpnProfile.AccessCode,
+                    allowUpdateToken: true,
+                    allowAccessCodeRepair: true,
+                    isAlwaysOn: connectOptions.IsAlwaysOn,
+                    cancellationToken: linkedCts.Token)
+                .Vhc();
+        }
+        catch (Exception) when (_appPersistState.LastError != null) {
+            throw AppExceptionConverter.ApiErrorToException(_appPersistState.LastError) ??
+                  _appPersistState.LastError.ToException();
+        }
+        catch (Exception) when (_connectCts.IsCancellationRequested) {
+            throw new UserCanceledException("User has cancelled the connection.");
+        }
+        catch (Exception ex) {
+            // check no internet connection, use the original cancellation token to avoid timeout exception; not for
+            // a try its caller makes again, whose error nobody sees: the check only words that error, and holds
+            // the next try
+            if (Config.AutoDiagnose && !_appPersistState.HasDiagnoseRequested && !connectOptions.IsRetried &&
+                ex is not UserCanceledException && ex is not SessionException) {
+                VhLogger.Instance.LogDebug("Start checking client network...");
+
+                // use the original cancellation token to avoid the timeout exception consumed by Connect
+                await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
+            }
+
+            throw;
+        }
+    }
+
+    // The options a VPN service runs with, made from the current settings for a server: the app's own
+    // connect starts the service with them, and each reconfigure makes them again for the saved ones a
+    // start without the app runs with. What only a connect knows - its plan, and whether always-on made
+    // it - the connect sets itself.
+    private async Task<VpnServiceOptions> CreateServiceOptions(VpnProfileInfo profileInfo, Token token,
+        string? serverLocation, string? accessCode, CancellationToken cancellationToken)
+    {
+        // all split decisions act on the effective copy: the super toggle and the premium plan
+        // are both resolved here, once, for everything below
+        var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
+        var vpnAdapterIpRanges = GetIncludeIpRangesByDevice(splitTunneling);
+
+        // use default DNS servers if not premium account
+        var dnsServers =
+            UserSettings.DnsMode is DnsMode.AdapterDns &&
+            !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) &&
+            IsPremiumFeatureAllowed(AppFeature.CustomDns)
+                ? UserSettings.DnsServers
+                : null;
+
+        // create clientOptions
+        var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions(cancellationToken).Vhc();
+        var isTrackerAllowed = Services.TrackerService.IsVpnServiceTrackerAllowed;
+        var clientOptions = new ClientOptions {
+            AdapterName = Config.AdapterName,
+            AppId = Descriptor.AppId,
+            ClientId = Descriptor.ClientId,
+            AccessKey = token.ToAccessKey(),
+            Transport = Config.Transport,
+            SplitLocalNetwork = splitTunneling.UseLocalNetwork,
+            SplitDnsMode = splitTunneling.DnsMode,
+            UnroutedIpMode = splitTunneling.UnroutedIpMode,
+            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
+            IncludeIpRangesByDevice = [.. vpnAdapterIpRanges],
+            UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
+            UseTcpForwarding = UserSettings.UseTcpForwarding,
+            DropQuic = UserSettings.DropQuic,
+            DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
+            ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
+            ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
+            AccessCode = accessCode,
+            AllowAnonymousTracker = isTrackerAllowed,
+            AllowEndPointTracker = isTrackerAllowed && Config.AllowEndPointTracker,
+            AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
+            ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude && Descriptor.IsExcludeAppsSupported
+                ? [.. splitTunneling.Apps]
+                : null,
+            IncludeApps = splitTunneling.AppMode == SplitAppMode.Include && Descriptor.IsIncludeAppsSupported
+                ? [.. splitTunneling.Apps]
+                : null,
+            DnsServers = dnsServers,
+            LogServiceOptions = GetLogOptions(),
+            TrackerFactoryInfos = Services.TrackerService.TrackerFactoryInfos
+                .Where(x => _vpnEngineInfo.Features.TrackerKinds.Contains(x.Kind))
+                .ToArray(),
+            TrackerUserAgent = Services.TrackerService.UserAgent,
+            TrackerClientVersion = Descriptor.Version,
+            UserAgent = _userAgent,
+            EndPointStrategy = Descriptor.AllowEndPointStrategy
+                ? UserSettings.EndPointStrategy.ToEngine()
+                : Core.Common.Tokens.EndPointStrategy.Auto,
+            DebugData1 = UserSettings.DebugData1,
+            DebugData2 = UserSettings.DebugData2,
+            // A profile is the person's own only where keys are added. A single-profile app's may
+            // come from another provider, so it names none: the system's VPN dialog, the tile and the
+            // notification show the app's name instead.
+            SessionName = Descriptor.IsAddAccessKeySupported ? profileInfo.VpnProfileName : null,
+            CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
+            AllowAlwaysOn = _vpnEngineInfo.Features.AlwaysOn && IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
+            UseKillSwitch = _killSwitchService?.IsOn ?? false,
+            UserReview = Settings.UserReview
+        };
+
+        // what the VpnService must resolve into services itself; the client only gets ClientOptions
+        // (the split filter dbs travel through the folder manifests, not here)
+        return new VpnServiceOptions {
+            ContractVersion = VpnServiceContract.Negotiate(_vpnEngineInfo),
+            ClientOptions = clientOptions,
+            ProxyOptions = Descriptor.IsProxySupported ? proxyOptions : null,
+            Localization = new VpnServiceLocalization {
+                Manage = Resources.Strings.Manage,
+                Disconnect = Resources.Strings.Disconnect,
+                ClientStates = Resources.GetClientStateTexts()
+            }
+        };
+    }
+
+    // What the adapter's routes take, by the person's IP-via-device list; the kill switch's block lets out the rest.
+    internal IpRangeOrderedList GetIncludeIpRangesByDevice(EffectiveSplitTunnelingSettings splitTunneling)
+    {
+        var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
+        if (splitTunneling.UseIpViaDevice) {
+            vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
+                IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpViaDeviceSettings.Includes));
+            vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
+                IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpViaDeviceSettings.Excludes));
+        }
+
+        return vpnAdapterIpRanges;
+    }
+
+    private async Task ConnectInternal2(IUiContext? uiContext, Token token, string? serverLocation,
+        Api.App.ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
+        bool isAlwaysOn, CancellationToken cancellationToken)
+    {
+        var profileInfo = CurrentVpnProfileInfo ?? throw new NotExistsException("VpnProfile is not set.");
+
+        try {
+            // show token info
+            VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
+                VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
+
+            // the settings are read from here on: a reconfigure meanwhile is sent again once connected
+            _isReconfiguredWhileConnecting = false;
+            StateHelper.LogPlanDroppedFeatures(UserSettings, this);
+
+            // split filters: build or reuse the on-disk dbs and publish them through the folder
+            // manifests the VpnService reads; the manifest write also sweeps superseded files (free
+            // here — the previous session fully released them at TryStop)
+            await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
+
+            var serviceOptions = await CreateServiceOptions(profileInfo, token, serverLocation, accessCode,
+                cancellationToken).Vhc();
+            serviceOptions.ClientOptions.PlanId = planId.ToEngine();
+            serviceOptions.ClientOptions.IsAlwaysOn = isAlwaysOn;
+
+            VhLogger.Instance.LogDebug(
+                "Launching VpnService ... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",
+                _appPersistState.HasDiagnoseRequested, Config.AutoDiagnose);
+
+            // start to diagnose if requested
+            if (_appPersistState.HasDiagnoseRequested) {
+                var hostEndPoints = await EndPointResolver
+                    .ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy.ToEngine(), cancellationToken).Vhc();
+                await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
+                await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
+                await _vpnServiceManager.Start(uiContext, serviceOptions, cancellationToken).Vhc();
+                await Diagnoser.CheckVpnNetwork(cancellationToken).Vhc();
+            }
+            // start client
+            else {
+                await _vpnServiceManager.Start(uiContext, serviceOptions, cancellationToken).Vhc();
+            }
+
+            // the start may have written the settings read above over a reconfigure that came meanwhile
+            if (_isReconfiguredWhileConnecting)
+                await VhInvoker.TryInvokeAsync("reconfigure the VPN service after a settings change while connecting",
+                    LogLevel.Warning, () => ReconfigureVpnService(cancellationToken)).Vhc();
+
+            var connectionInfo = ConnectionInfo;
+            if (connectionInfo.SessionInfo == null)
+                throw new InvalidOperationException("Client is connected but there is no session.");
+
+            // update the access token if AccessKey is set
+            if (!string.IsNullOrWhiteSpace(connectionInfo.SessionInfo.AccessKey))
+                VpnProfileService.TryUpdateTokenByAccessKey(token.TokenId, connectionInfo.SessionInfo.AccessKey);
+
+            // update the client country reported by the server
+            if (connectionInfo.SessionInfo.ClientCountry != null)
+                UpdateClientCountryByServer(connectionInfo.SessionInfo.ClientCountry);
+        }
+        catch (OperationCanceledException ex) when (_connectTimeoutCts.IsCancellationRequested) {
+            throw new ConnectionTimeoutException(
+                $"Could not establish the connection in {Config.ConnectTimeout.TotalSeconds} seconds.", ex);
+        }
+        catch (AlwaysOnNotAllowedException) {
+            throw PremiumOnlyException.Create(AppFeature.AlwaysOn);
+        }
+        catch (Exception ex) {
+            if (ex is SessionException sessionException &&
+                await ProcessSessionException(sessionException, profileInfo, allowAccessCodeRepair,
+                    cancellationToken).Vhc()) {
+                // Account refresh supplied a different, non-refused credential. Repair is complete
+                // before the refusal reaches the UI, so retry once with the working alternative.
+                // ONE swap per connect (allowAccessCodeRepair: false below): when every code the
+                // account holds has been refused it hands them out in turns, so chaining repairs
+                // would walk the whole keyring in a single press — and then walk it for ever. The
+                // next press takes the next turn.
+                var repairedProfile = VpnProfileService.FindById(profileInfo.VpnProfileId) ??
+                                      throw new NotExistsException("The repaired profile has disappeared.");
+                await ConnectInternal2(uiContext, token,
+                        serverLocation: serverLocation,
+                        planId: planId,
+                        accessCode: repairedProfile.AccessCode,
+                        allowUpdateToken: false,
+                        allowAccessCodeRepair: false,
+                        isAlwaysOn: isAlwaysOn,
+                        cancellationToken: cancellationToken)
+                    .Vhc();
+                return;
+            }
+
+            // try to update the token from url after connection or error if ResponseAccessKey is not set
+            if (ex is not NoInternetException && // diagnoser
+                ex is not UserCanceledException && // the person's no at the VPN prompt; a retry asks again
+                allowUpdateToken &&
+                !VhUtils.IsNullOrEmpty(token.ServerToken.Urls) &&
+                await VpnProfileService.UpdateServerTokenByUrls(token, cancellationToken).Vhc()) {
+                // reconnect using the new token
+                _errorReporter.ReportError(ex,
+                    "Could not establish the connection. Reconnecting using the new token...");
+                token = VpnProfileService.GetToken(token.TokenId);
+                await ConnectInternal2(uiContext, token,
+                        serverLocation: serverLocation,
+                        planId: planId,
+                        accessCode: accessCode,
+                        allowUpdateToken: false,
+                        allowAccessCodeRepair: allowAccessCodeRepair,
+                        isAlwaysOn: isAlwaysOn,
+                        cancellationToken: cancellationToken)
+                    .Vhc();
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    private async Task<bool> ProcessSessionException(SessionException sessionException,
+        VpnProfileInfo profileInfo, bool allowAccessCodeRepair, CancellationToken cancellationToken)
+    {
+        // update the access token if AccessKey is set
+        if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
+            VpnProfileService.TryUpdateTokenByAccessKey(profileInfo.TokenId,
+                sessionException.SessionResponse.AccessKey);
+            sessionException.SessionResponse.AccessKey = null;
+        }
+
+        // update the client country reported by the server
+        if (sessionException.SessionResponse.ClientCountry != null)
+            UpdateClientCountryByServer(sessionException.SessionResponse.ClientCountry);
+
+        // process session error codes
+        switch (sessionException.SessionResponse.ErrorCode) {
+            // reset the selected location if no server available or premium location required
+            case SessionErrorCode.NoServerAvailable or SessionErrorCode.PremiumLocation:
+                VhLogger.Instance.LogWarning(
+                    "No server available or premium location required. Resetting selected location.");
+                VpnProfileService.Update(profileInfo.VpnProfileId,
+                    new VpnProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
+                break;
+
+            // An authoritative refusal of the profile's access code (keyring plan §6): KEEP the
+            // code — its issuer may extend it and a later retry revives it by itself — but mark it
+            // refused, so the profile stops claiming premium and precedence lets a working account
+            // code take over. Then try the repair: refresh the account, whose code application
+            // yields past a refused typed code. Nothing is ever auto-removed.
+            case SessionErrorCode.AccessCodeRejected or SessionErrorCode.AccessExpired
+                when profileInfo.AccessCode != null:
+                VhLogger.Instance.LogWarning(
+                    "The access server refused the profile's access code. Keeping the code and marking it refused. ErrorCode: {ErrorCode}",
+                    sessionException.SessionResponse.ErrorCode);
+                VpnProfileService.MarkAccessCodeRefused(profileInfo.VpnProfileId,
+                    sessionException.SessionResponse.ErrorCode);
+                // The refusal is REPORTED either way — that report is what moves the account on to
+                // the next code — but only the first refusal of a connect reconnects. Otherwise a
+                // keyring whose codes have all been refused would be walked end to end, and then
+                // round again, without the person ever seeing the error.
+                var repaired = await TryRepairRefusedAccessCode(profileInfo, cancellationToken).Vhc();
+                return allowAccessCodeRepair && repaired;
+        }
+
+        return false;
+    }
+
+    // Resolve the account before surfacing a refusal. A different account credential repairs and
+    // reconnects immediately; refresh failures and unchanged/refused codes preserve the original
+    // authoritative access-server error for the UI.
+    private async Task<bool> TryRepairRefusedAccessCode(VpnProfileInfo refusedProfile,
+        CancellationToken cancellationToken)
+    {
+        var accountService = Services.AccountService;
+        if (accountService == null)
+            return false;
+
+        // Tell the account BEFORE asking it again (keyring plan §4). Without this the refresh below
+        // ranks the same dead code straight back, and every device the person owns keeps meeting it:
+        // the account is the only place that can rule a code out for all of them. The refused code
+        // is read from the store rather than from refusedProfile, whose AccessCode is redacted.
+        var refusedCode = VpnProfileService.FindById(refusedProfile.VpnProfileId)?.AccessCode;
+        if (refusedCode != null)
+            await accountService.TryReportAccessCodeRejected(refusedCode, cancellationToken).Vhc();
+
+        try {
+            await accountService.Refresh(cancellationToken).Vhc();
+            var repaired = VpnProfileService.FindById(refusedProfile.VpnProfileId);
+            // compared against the RAW refused code: VpnProfileInfo.AccessCode is redacted, so
+            // comparing with it made every refresh look like a repair and reconnected with the same
+            // dead credential
+            return repaired is { AccessCode: not null, AccessCodeRefusal: null } &&
+                   repaired.AccessCode != refusedCode;
+        }
+        catch (Exception ex) {
+            // No response is not a removal or an entitlement verdict; the refused mark stands.
+            VhLogger.Instance.LogWarning(ex, "Could not refresh the account after a refused access code.");
+            return false;
+        }
+    }
+
+    // The server reports the client country as it sees it; persist it for the next launch.
+    // Only the country code is used; the client never resolves country from an IP address.
+    private void UpdateClientCountryByServer(string countryCode)
+    {
+        if (UserSettings.CountryCode == countryCode)
+            return;
+
+        VhLogger.Instance.LogInformation("Client country has been updated by the server. CountryCode: {CountryCode}",
+            countryCode);
+
+        UserSettings.CountryCode = countryCode;
+        SettingsService.Save(); // ApplySettings applies it to AppRegionInfo; VpnProfileService rebuilds its cache on region change
+    }
+
+    internal bool HasDebugCommand(string command)
+    {
+        return HasDebugCommand(UserSettings, command);
+    }
+
+    private static bool HasDebugCommand(UserSettings userSettings, string command)
+    {
+        if (string.IsNullOrEmpty(userSettings.DebugData1))
+            return false;
+
+        // check if the debug command is enabled
+        return userSettings.DebugData1?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Contains(command, StringComparer.OrdinalIgnoreCase) == true;
+    }
+
+    private async Task RequestFeatures(IUiContext? uiContext, CancellationToken cancellationToken)
+    {
+        if (uiContext == null || !await uiContext.IsActive().Vhc())
+            return;
+
+        // QuickLaunch
+        if (Services.DeviceUiProvider.IsRequestQuickLaunchSupported &&
+            IsPremiumFeatureAllowed(AppFeature.QuickLaunch) &&
+            !_quickLaunchRecommended &&
+            !Settings.UserSettings.IsQuickLaunchPrompted &&
+            _appPersistState.SuccessfulConnectionsCount > 3) {
+            _quickLaunchRecommended = true;
+            VhLogger.Instance.LogInformation("Recommending for quick launch...");
+        }
+
+        // Notification
+        if (Services.DeviceUiProvider.IsRequestNotificationSupported &&
+            !Settings.IsNotificationRequested) {
+            try {
+                VhLogger.Instance.LogInformation("Prompting for notifications...");
+                await Services.DeviceUiProvider.RequestNotification(uiContext, cancellationToken).Vhc();
+            }
+            catch (Exception ex) {
+                _errorReporter.ReportError(ex, "Could not enable Notification.");
+            }
+
+            Settings.IsNotificationRequested = true;
+            Settings.Save();
+        }
+    }
+
+    internal CultureInfo SystemUiCulture =>
+        _systemUiCulture ??
+        new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ??
+                        CultureInfo.InstalledUICulture.Name);
+
+    private void ReadOsCulture()
+    {
+        VhInvoker.TryInvoke("read the language the OS has for the app", LogLevel.Warning, InitCulture);
+    }
+
+    private void InitCulture()
+    {
+        // find the first available culture that matches with the system culture
+        _systemUiCulture = Services.CultureProvider.GetBestCultureInfo();
+
+        // set default culture
+        var firstSelected = Services.CultureProvider.SelectedCultures.FirstOrDefault();
+        var selectedCulture = firstSelected != null
+            ? Services.CultureProvider.ToAvailableCulture(new CultureInfo(firstSelected))
+            : null;
+        CultureInfo.CurrentUICulture = selectedCulture ?? _systemUiCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
+
+        // sync UserSettings from the System App Settings
+        _osCultureCode = selectedCulture?.Name;
+        UserSettings.CultureCode = _osCultureCode;
+    }
+
+    private void SettingsBeforeSave(object? sender, EventArgs e)
+    {
+        ApplySettings();
+    }
+
+    internal void SetUserReview(int rating, string reviewText)
+    {
+        _userReviewRecommended = 0;
+        Settings.UserReview = new UserReview {
+            AppVersion = Descriptor.Version,
+            Rating = rating,
+            Time = FastDateTime.UtcNow
+        };
+
+        _ = Services.TrackerService.Tracker.TryTrack(
+            AppTrackerBuilder.BuildUserReview(rating, reviewText), CancellationToken.None);
+    }
+
+    private void VpnService_StateChanged(object? sender, EventArgs e)
+    {
+        // clear the last error when get out of idle state, because it indicates a new connection has started
+        // do not call ClearLastError, it will clear diagnose request state. it must be called by the user
+        if (!IsIdle && !_isConnecting) // don't clear if it is initiated by connect
+            _appPersistState.LastError = null;
+
+        // Show ad if it is waiting for ad
+        if (ConnectionState is AppConnectionState.WaitingForAd)
+            _ = TryShowAd();
+
+        // check the version after the first connection
+        if (ConnectionState is AppConnectionState.Connected)
+            _ = Services.UpdaterService?.TryCheckForUpdate(AppUiContext.Context, false, CancellationToken.None);
+
+        // Revival proves itself (keyring plan §6 step 4): a PREMIUM session on a profile whose
+        // code stood refused clears the mark — the issuer extended it, and it is premium again
+        // with no re-entering. A free session proves nothing about the code and clears nothing.
+        if (ConnectionState is AppConnectionState.Connected &&
+            ConnectionInfo.SessionInfo?.IsPremiumSession == true &&
+            CurrentVpnProfileInfo is { AccessCodeRefusal: not null } refusedProfile) {
+            VpnProfileService.ClearAccessCodeRefused(refusedProfile.VpnProfileId);
+        }
+
+        // A code typed while the portal was blocked has been waiting for exactly this moment: we are
+        // connected, so the portal is reachable again (keyring plan §6). Best-effort and detached —
+        // the person's connection succeeded and must not be soured by a background upload.
+        if (ConnectionState is AppConnectionState.Connected)
+            _ = Services.AccountService?.TryUploadPendingAccessCode(CancellationToken.None);
+
+        // fire connection state changed
+        FireConnectionStateChanged();
+    }
+
+    private readonly AsyncLock _showAdLock = new();
+
+    private async Task TryShowAd()
+    {
+        // lock session: only tried, never waited for, so no token
+        using var scopeLock = await _showAdLock.LockAsync(timeout: TimeSpan.Zero, CancellationToken.None).Vhc();
+        if (!scopeLock.Succeeded || AdManager.IsShowing)
+            return; // already showing ad
+
+        ArgumentNullException.ThrowIfNull(ConnectionInfo.SessionInfo);
+
+        try {
+            await _showAdCts.TryCancelAsync().Vhc();
+            _showAdCts.Dispose();
+            _showAdCts = new CancellationTokenSource();
+
+            _connectTimeoutCts.CancelAfter(TimeSpan.FromMinutes(15));
+            var connectionInfo = ConnectionInfo;
+            var useFallback = connectionInfo.SessionStatus?.IsAdapterStarted is true;
+            await AdManager.ShowAd(AppUiContext.Context,
+                connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement,
+                useFallback: useFallback, _showAdCts.Token).Vhc();
+        }
+        catch (ShowAdNoUiException) when (!_isConnecting) {
+            // No connect of this process is waiting for the ad: the session is the quick-settings tile's,
+            // always-on's, or this app's from before its process restarted, and the person opens the app to
+            // watch it. It keeps waiting, and the window's arrival, or its return to the front, shows the
+            // ad. A connect running here fails instead, as it always did
+            VhLogger.Instance.LogInformation("The ad waits for a window to show it in.");
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not show ad.");
+            if (!_showAdCts.IsCancellationRequested) {
+                _appPersistState.LastError = ex.ToApiError();
+                _ = TryDisconnect();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Disconnects the VPN as the app does by itself, after a failed ad or on its dispose: unlike
+    /// <see cref="Disconnect"/>, it does not stop always on or lift the kill switch's block. A failure is logged, never
+    /// thrown.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    internal Task TryDisconnect() => TryDisconnect(connectNumber: null);
+
+    // connectNumber: a connect's own - a new one's before it starts, a failed one's after - which leaves a newer
+    // connect alone
+    private async Task TryDisconnect(int? connectNumber)
+    {
+        try {
+            await DisconnectCore(connectNumber).Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not disconnect gracefully.");
+        }
+    }
+
+    /// <summary>
+    /// Disconnects the VPN as a person does: it also stops always on, until a person connects or the service starts
+    /// again, and lifts this app's kill switch block, even when the stop failed; in lockdown the block stays, by the
+    /// split's settings.
+    /// </summary>
+    /// <remarks>It takes no token: a person's disconnect is finished whoever stops waiting for it.</remarks>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="FormatException">In lockdown, the device's split list of IP ranges is not valid.</exception>
+    /// <exception cref="NotSupportedException">
+    /// In lockdown, Linux has no nftables, or the service is in no cgroup v2 group of its own.
+    /// </exception>
+    /// <exception cref="System.Runtime.InteropServices.ExternalException">
+    /// The system refused the kill switch's change: Linux's <c>nft</c>, or Windows' filtering engine.
+    /// </exception>
+    public async Task Disconnect()
+    {
+        _alwaysOnService.PersonDisconnecting();
+        try {
+            await DisconnectCore(connectNumber: null).Vhc();
+        }
+        finally {
+            if (_killSwitchService != null)
+                await _killSwitchService.PersonDisconnected(CancellationToken.None).Vhc();
+        }
+    }
+
+    // No session runs or starts, so a kill switch's block up is no connect's. Not ConnectionState's None: it says
+    // Initializing while a settings change rebuilds a split's list, as the save that turns lockdown on does.
+    internal bool IsSessionless => !_isConnecting && !ConnectionInfo.IsStarted();
+
+    private readonly AsyncLock _disconnectLock = new();
+    private async Task DisconnectCore(int? connectNumber)
+    {
+        using var scopeLock = await _disconnectLock.LockAsync(CancellationToken.None).Vhc();
+        if (_isDisconnecting)
+            return; // already disconnecting
+
+        // a newer connect began while this connect's waited here: it disconnects what is left itself
+        if (connectNumber != null && connectNumber != _connectNumber)
+            return;
+
+        try {
+            // set _isDisconnecting
+            VhLogger.Instance.LogInformation("Disconnect has been requested.");
+            _appPersistState.IsReconnectRequired = false; // the flag only describes a running session
+
+            // store states before setting _isDisconnecting
+            var state = State;
+
+            // save SuccessfulConnectionsCount
+            if (FastDateTime.UtcNow > state.SessionInfo?.CreatedTime.AddMinutes(15) && // 15 minutes
+                state.SessionStatus?.SessionTraffic is { } traffic && traffic.Sent + traffic.Received > 5_000_000) // 5MB
+                _appPersistState.SuccessfulConnectionsCount++;
+
+            // set review needed after disconnecting. It must be in connected state
+            var sessionUserReviewRecommended = ConnectionInfo.SessionStatus?.UserReviewRecommended ?? 0;
+            if (state.ConnectionState is AppConnectionState.Connected &&
+                _appPersistState.LastError is null && Config.AllowRecommendUserReviewByServer &&
+                Descriptor.IsUserReviewSupported && sessionUserReviewRecommended > 0)
+                _userReviewRecommended = sessionUserReviewRecommended;
+
+            // set user review recommended if debug command is enabled
+            if (HasDebugCommand(DebugCommands.UserReview))
+                _userReviewRecommended = 2;
+
+            // set after performing on disconnect task, because it will change the state
+            _isDisconnecting = true;
+
+            await _connectCts.TryCancelAsync().Vhc();
+            _connectCts.Dispose();
+
+            await _showAdCts.TryCancelAsync().Vhc();
+            _showAdCts.Dispose();
+
+            // stop VpnService if it is running
+            await _vpnServiceManager.TryStop().Vhc();
+
+            // the service's last word, which a revoke just before may be, though the app had not seen it yet; a
+            // connect's own disconnect is left out, as a person's connect ends the revoke
+            if (connectNumber is null)
+                _alwaysOnService.DisconnectEnded(ConnectionInfo);
+        }
+        finally {
+            _isDisconnecting = false;
+            FireConnectionStateChanged();
+        }
+    }
+
+    internal async Task CopyLogToStream(Stream destination)
+    {
+        await using var write = new StreamWriter(destination, Encoding.UTF8, bufferSize: -1, leaveOpen: true);
+
+        // write app log
+        try {
+            if (File.Exists(_logService.LogFilePath)) {
+                await write.WriteLineAsync("-----------------------").Vhc();
+                await write.WriteLineAsync(LogAppHeader).Vhc();
+                await write.WriteLineAsync("-----------------------").Vhc();
+                await write.FlushAsync().Vhc();
+
+                await using var appLogStream = new FileStream(_logService.LogFilePath,
+                    FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                await appLogStream.CopyToAsync(destination).Vhc();
+                await destination.FlushAsync().Vhc();
+            }
+        }
+        catch (Exception ex) {
+            await write.WriteLineAsync($"Error: Could not read application log. {ex.Message}").Vhc();
+            await write.FlushAsync().Vhc();
+        }
+
+        // write vpn service log
+        try {
+            if (File.Exists(_vpnServiceManager.LogFilePath)) {
+                await write.WriteLineAsync("").Vhc();
+                await write.WriteLineAsync("-----------------------").Vhc();
+                await write.WriteLineAsync(LogVpnServiceHeader).Vhc();
+                await write.WriteLineAsync("-----------------------").Vhc();
+                await write.FlushAsync().Vhc();
+
+                await using var serviceLogStream = new FileStream(_vpnServiceManager.LogFilePath,
+                    FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                await serviceLogStream.CopyToAsync(destination).Vhc();
+                await destination.FlushAsync().Vhc();
+            }
+        }
+        catch (Exception ex) {
+            await write.WriteLineAsync($"Error: Could not read vpn service log. {ex.Message}").Vhc();
+            await write.FlushAsync().Vhc();
+        }
+    }
+
+    internal async Task<AppPurchaseOptions> GetPurchaseOptions(Guid vpnProfileId, CancellationToken cancellationToken)
+    {
+        var profileInfo = VpnProfileService.GetInfo(vpnProfileId);
+        var clientPolicy = profileInfo.ClientPolicy;
+        var premium = Descriptor.Premium;
+
+        // The operator's own shop, read only by a build that MAY open one. The URL arrives from the
+        // SERVER — every access token carries its operator's own — and that operator cannot know
+        // which store shipped this binary, so a store head drops it unread: Apple 3.1.1/3.1.3 and
+        // Play's Payments policy forbid steering a buyer out, and no token may talk a build into it.
+        var purchaseUrl = premium?.IsPurchaseUrlSupported == true ? clientPolicy?.PurchaseUrl : null;
+
+        // ONE purchase surface, never two side by side. An operator that names its own shop sells
+        // its own way, so the in-app store is not merely hidden — it is never asked: its plans are
+        // OUR catalogue at OUR prices, which that operator does not sell, and a card the buyer
+        // cannot be billed for is worse than no card. Where no shop is named the store is the only
+        // way in, exactly as before; and a build with no premium tier sells nothing at all, so no
+        // store error may surface from one.
+        var storeInfo = premium != null && purchaseUrl == null &&
+                        Services.AccountService?.BillingService != null
+            ? await Services.AccountService.BillingService.GetStoreInfo(cancellationToken).Vhc()
+            : StoreInfo.Empty;
+
+        var purchaseOptions = new AppPurchaseOptions {
+            IsStoreAvailable = storeInfo.IsAvailable,
+            SubscriptionPlans = storeInfo.SubscriptionPlans.Select(x => x.ToAppDto()).ToArray(),
+            StoreError = storeInfo.StoreError,
+            PurchaseUrl = purchaseUrl,
+            // the remote policy offers it; the BUILD must also be allowed to take a typed code at
+            // all (lifecycle §9 — a per-build capability, false on the App Store build)
+            CanGoPremiumByCode = clientPolicy?.PremiumByCode == true && premium?.AllowImportAccessCode == true
+        };
+
+        return purchaseOptions;
+    }
+
+    /// <summary>
+    /// Update a profile, and — when the change carries an access code and somebody is signed in —
+    /// hand that code to the account. The order is the design's (keyring plan §6, §7): a code is
+    /// typed into a PROFILE, which is what makes it work on this device, and the account hears about
+    /// it afterwards. The refresh offers the pending code and then applies whatever the account
+    /// ranks, which need not be the code just typed — hence the re-read before returning.
+    /// <para>
+    /// Best-effort: VpnHood is used where the portal itself is blocked, so an upload that cannot land
+    /// is the ordinary case rather than an error. It stays pending for the next refresh or the next
+    /// successful connection. This lives here because <see cref="VpnProfileService" /> cannot
+    /// reach the account service — that dependency runs the other way.
+    /// </para>
+    /// </summary>
+    internal async Task<VpnProfileInfo> UpdateVpnProfile(Guid vpnProfileId,
+        VpnProfileUpdateParams updateParams, CancellationToken cancellationToken)
+    {
+        VpnProfileService.Update(vpnProfileId, updateParams);
+
+        var accountService = Services.AccountService;
+        if (updateParams.AccessCode != null && accountService?.AuthenticationService.UserId != null)
+            await VhInvoker.TryInvokeAsync("hand the typed access code to the account", LogLevel.Warning,
+                () => accountService.Refresh(cancellationToken)).Vhc();
+
+        return VpnProfileService.GetInfo(vpnProfileId);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Every feature is allowed on a build with no premium tier (<see cref="AppOptions.Premium"/>), and every one its
+    /// tier does not sell; one it sells, only on a premium VPN profile.
+    /// </remarks>
+    public bool IsPremiumFeatureAllowed(AppFeature feature)
+    {
+        // a build with no premium tier IS the full app: every feature is everyone's
+        if (Descriptor.Premium == null)
+            return true;
+
+        // not a feature this tier sells
+        if (!Descriptor.Premium.Features.Contains(feature))
+            return true;
+
+        // check if the current profile is premium
+        return CurrentVpnProfileInfo?.IsPremium == true;
+    }
+
+    /// <summary>Sets off applying the settings as they stand, as a save does, without saving them.</summary>
+    public void UpdateUi()
+    {
+        ApplySettings();
+        UiHasChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private readonly AsyncLock _disposeLock = new();
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// It stops always on, disconnects the VPN where <see cref="AppOptions.DisconnectOnDispose"/> says so and the VPN
+    /// can be disconnected, as it cannot while an update installs, lets a reconfigure under way end, then disposes the
+    /// app. A second call waits for the first one's end.
+    /// </remarks>
+    public async ValueTask DisposeAsync()
+    {
+        // a second close waits for the first one's end. One after a quick close returns: that close leaves
+        // nothing running
+        using var scopeLock = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
+        if (_disposed)
+            return;
+
+        // first, so the disconnect is not a session end it tries again after
+        _alwaysOnService.Dispose();
+
+        if (Config.DisconnectOnDispose && ConnectionState.CanDisconnect())
+            await TryDisconnect().Vhc();
+
+        // a reconfigure under way ends first: it writes the split dbs in the storage, which the next app there - a
+        // restart's, a test's - builds too, over the same temporary files
+        using (await _reconfigureLock.LockAsync(CancellationToken.None).Vhc())
+            Dispose();
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>A second call does nothing.</remarks>
+    protected override void Dispose(bool disposing)
+    {
+        // the daemon's stop deadline may run it while the graceful close ends with it
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
+        _alwaysOnService.Dispose();
+        SettingsService.BeforeSave -= SettingsBeforeSave;
+        _vpnServiceManager.StateChanged -= VpnService_StateChanged;
+        Services.SplitCountryService.StateChanged -= LocationService_StateChanged;
+        Services.SplitIpViaAppService.StateChanged -= LocationService_StateChanged;
+        _webHostManager.Dispose();
+        _vpnServiceManager.Dispose();
+        Services.UpdaterService?.Dispose();
+        Services.Dispose();
+        _ipRangeLocationProvider?.Dispose();
+        _device.Dispose();
+        _logService.Dispose();
+        AppUiContext.OnChanged -= ActiveUiContext_OnChanged;
+        AppUiContext.OnResumed -= ActiveUiContext_OnResumed;
+
+        base.Dispose(disposing);
+    }
+}

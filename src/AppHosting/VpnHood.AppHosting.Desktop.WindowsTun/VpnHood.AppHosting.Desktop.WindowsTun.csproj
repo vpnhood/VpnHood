@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net11.0-windows</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<Description>The VpnHood desktop host on Windows: a LocalSystem service is the app, ProgramData is its storage, and the window, the tray and the commands run as whoever is signed in. Everything the commands themselves do is VpnHood.AppHosting.Desktop.Daemon</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- ServiceBase, for the service control manager's start and stop, and ServiceController. -->
+		<PackageReference Include="System.ServiceProcess.ServiceController" Version="11.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The install folder's rules, tried against real folders by the elevated smoke test. -->
+		<InternalsVisibleTo Include="VpnHood.AppUi.SmokeTest" />
+	</ItemGroup>
+
+	<!-- The console launcher's build step (buildTransitive/), for every Windows head that takes this
+	     package. Its whole path in the package: a folder alone as PackagePath would nest it twice. -->
+	<ItemGroup>
+		<None Update="buildTransitive\VpnHood.AppHosting.Desktop.WindowsTun.targets" Pack="true"
+		      PackagePath="buildTransitive\VpnHood.AppHosting.Desktop.WindowsTun.targets" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppHosting.Desktop.Daemon\VpnHood.AppHosting.Desktop.Daemon.csproj" />
+		<!-- The app as the service runs it. -->
+		<ProjectReference Include="..\..\AppLogic\VpnHood.AppLogic.App.WindowsTun\VpnHood.AppLogic.App.WindowsTun.csproj" />
+	</ItemGroup>
+</Project>

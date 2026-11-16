@@ -18,7 +18,7 @@
 						  ReferenceOutputAssembly="false" />
 		<!-- The desktop's Windows half - the service's pipe and the loopback check - which the
 		     platform-free test project cannot reference; the pipe's tests need an elevated run. -->
-		<ProjectReference Include="..\..\src\AppUi\VpnHood.AppUi.Hosting.Desktop.WindowsTun\VpnHood.AppUi.Hosting.Desktop.WindowsTun.csproj" />
+		<ProjectReference Include="..\..\src\AppHosting\VpnHood.AppHosting.Desktop.WindowsTun\VpnHood.AppHosting.Desktop.WindowsTun.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

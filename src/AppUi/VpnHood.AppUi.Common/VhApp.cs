@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Api;
-using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.Accounts;
-using VpnHood.AppLib.Api.VpnProfiles;
-using VpnHood.AppLib.Api.Sessions;
-using VpnHood.AppLib.Api.Settings;
+using VpnHood.AppLogic.Api;
+using VpnHood.AppLogic.Api.App;
+using VpnHood.AppLogic.Api.Accounts;
+using VpnHood.AppLogic.Api.VpnProfiles;
+using VpnHood.AppLogic.Api.Sessions;
+using VpnHood.AppLogic.Api.Settings;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppUi.Common;

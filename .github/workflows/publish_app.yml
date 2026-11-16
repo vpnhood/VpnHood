@@ -118,7 +118,7 @@ jobs:
     needs: [verify-release-type]
     runs-on: ubuntu-latest
     env:
-      PAGE_DIR: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser
+      PAGE_DIR: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v7
@@ -128,7 +128,7 @@ jobs:
       - name: Check out the asset submodule
         run: git -C code submodule update --init --depth 1 src/AppUi/VpnHood.AppUi.Assets.Classic
       - uses: actions/setup-dotnet@v6
-        with: { global-json-file: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/global.json }
+        with: { global-json-file: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/global.json }
       - name: Install .NET WebAssembly workload (for the SDK the page's global.json names)
         shell: pwsh
         run: |
@@ -143,7 +143,7 @@ jobs:
           name: browser-page
           if-no-files-found: error
           retention-days: 1
-          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip
+          path: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip
 
   # The page reads and writes the app's API only through AppApiJsonContext, and a type missing from
   # that list gives no trim warning: it throws when the page makes that call. The platform builds
@@ -170,7 +170,7 @@ jobs:
       # TreatNoTestsAsError: a renamed test would otherwise match nothing and pass.
       - name: Test that every API call finds its JSON types
         working-directory: code
-        run: dotnet test tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj -c Release --filter "FullyQualifiedName~AppApiJsonTypesTest" -- RunConfiguration.TreatNoTestsAsError=true
+        run: dotnet test tests/VpnHood.AppLogic.Test/VpnHood.AppLogic.Test.csproj -c Release --filter "FullyQualifiedName~AppApiJsonTypesTest" -- RunConfiguration.TreatNoTestsAsError=true
 
   # --- Per-platform builds: each is a small standalone reusable module (single source of truth). ---
   build-linux:

@@ -1,0 +1,109 @@
+﻿using VpnHood.AppLogic.Api.Proxies;
+using VpnHood.AppLogic.App.DtoConverters;
+using VpnHood.AppLogic.App.Services.Proxies;
+using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Net.Toolkit.Generics;
+using ProxyEndPoint = VpnHood.AppLogic.Api.Proxies.ProxyEndPoint;
+using ProxyEndPointDefaults = VpnHood.AppLogic.Api.Proxies.ProxyEndPointDefaults;
+using VpnHood.AppLogic.Api;
+
+namespace VpnHood.AppLogic.App.ApiImpl;
+
+internal sealed class ProxyEndPointsApi(VpnHoodApp app) : IProxyEndPointsApi
+{
+    private AppProxyEndPointService ProxyEndPointService => app.Services.ProxyEndPointService;
+
+    public Task ResetStates(CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.ResetStates(cancellationToken);
+    }
+
+    public Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken)
+    {
+        var result = ProxyEndPointService.GetDeviceProxy();
+        return Task.FromResult(result);
+    }
+
+    public Task<ListResult<AppProxyEndPointInfo>> List(
+        string? search,
+        bool includeSucceeded,
+        bool includeFailed,
+        bool includeUnknown,
+        bool includeDisabled,
+        int? recordIndex,
+        int? recordCount,
+        CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.ListProxies(
+            search: search,
+            includeSucceeded: includeSucceeded,
+            includeFailed: includeFailed,
+            includeUnknown: includeUnknown,
+            includeDisabled: includeDisabled,
+            recordIndex: recordIndex,
+            recordCount: recordCount,
+            cancellationToken: cancellationToken);
+    }
+
+    public Task<AppProxyEndPointInfo> Get(string proxyEndPointId, CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.Get(proxyEndPointId, cancellationToken);
+    }
+
+    public Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults, CancellationToken cancellationToken)
+    {
+        var parsed = ProxyEndPointParser.ParseHostToUrl(text, defaults.ToEngine());
+        var endpoint = ProxyEndPointParser.FromUrl(parsed);
+        var info = new AppProxyEndPointInfo {
+            EndPoint = endpoint.ToAppDto(),
+            CountryCode = null
+        };
+
+        return Task.FromResult(info);
+    }
+
+    public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.Update(proxyEndPointId, proxyEndPoint, cancellationToken);
+    }
+
+    public Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.Add(proxyEndPoint, cancellationToken);
+    }
+
+    public Task Delete(string proxyEndPointId, CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.Delete(proxyEndPointId, cancellationToken);
+    }
+
+    public Task DeleteAll(
+        bool deleteSucceeded,
+        bool deleteFailed,
+        bool deleteUnknown,
+        bool deleteDisabled,
+        CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.DeleteAll(new DeleteAllOptions {
+            DeleteSucceeded = deleteSucceeded,
+            DeleteFailed = deleteFailed,
+            DeleteUnknown = deleteUnknown,
+            DeleteDisabled = deleteDisabled
+        }, cancellationToken);
+    }
+
+    public Task Import(string content, CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.Import(content, cancellationToken);
+    }
+
+    public Task DisableAllFailed(CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.DisableAllFailed(cancellationToken);
+    }
+
+    public Task ReloadUrl(CancellationToken cancellationToken)
+    {
+        return ProxyEndPointService.ReloadUrl(cancellationToken);
+    }
+}

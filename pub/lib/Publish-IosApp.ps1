@@ -99,7 +99,7 @@ try {
 		# (a hosted CI runner isn't signed into an Apple account, so Xcode auto-signing can't run).
 		# The Network Extension (.appex) signs with its own profile: the app's reference to it drops
 		# CodesignProvision, and the extension's csproj takes VhExtensionCodesignProvision instead.
-		# The bundle's two versions follow from Version (VpnHood.AppLib.App.targets): the whole, and its
+		# The bundle's two versions follow from Version (VpnHood.AppLogic.App.targets): the whole, and its
 		# third number as the build number App Store Connect takes only rising.
 		dotnet publish $projectFile -c Release -f $tfm -r $rid `
 			/verbosity:$msverbosity `

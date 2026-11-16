@@ -1,0 +1,147 @@
+﻿using Avalonia.Controls;
+using Avalonia.Media.Imaging;
+using VpnHood.AppUi.Common;
+using VpnHood.AppHosting.Avalonia;
+using VpnHood.AppUi.Avalonia.Classic.Helpers;
+using VpnHood.AppUi.Avalonia.Classic.Resources;
+using VpnHood.AppUi.Avalonia.Classic.ViewModels;
+using VpnHood.AppLogic.Api.Settings;
+
+namespace VpnHood.AppUi.Avalonia.Classic.Views;
+
+public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
+{
+    // the row standing for apps installed later
+    private const string FutureAppsId = "$";
+
+    private readonly MainView _host;
+    private IReadOnlyList<FilterItem> _items = [];
+
+    public SplitAppsView(MainView host)
+    {
+        _host = host;
+        InitializeComponent();
+        List.IsLoading = true;
+        _ = Load(CancellationToken.None);
+    }
+
+    private static SplitTunnelingSettings Split => VhApp.UserSettings.SplitTunneling;
+
+    // the icons come as PNG bytes; decoding a few hundred of them is off the UI thread
+    private async Task Load(CancellationToken cancellationToken)
+    {
+        try {
+            var mode = Split.AppMode;
+            var selected = Split.Apps;
+            var installed = await VhApp.Api.App.GetInstalledApps(cancellationToken);
+
+            var items = await Task.Run(() => installed.Select(app => new FilterItem {
+                Id = app.AppId,
+                Name = app.AppName,
+                Icon = DecodePng(app.IconPng),
+                IsSelected = mode == SplitAppMode.All
+                             || (mode == SplitAppMode.Include && selected.Contains(app.AppId))
+                             || (mode == SplitAppMode.Exclude && !selected.Contains(app.AppId))
+            }).ToList(), cancellationToken);
+
+            items.Add(new FilterItem {
+                Id = FutureAppsId,
+                Name = Strings.Current.AllFutureApps,
+                Icon = await FutureAppsIcon(),
+                IsSelected = mode is SplitAppMode.All or SplitAppMode.Exclude
+            });
+
+            _items = Sort(items);
+            List.Items = _items;
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
+        finally {
+            List.IsLoading = false;
+        }
+    }
+
+    // The enabled first when future apps are in, the disabled first when
+    // they are not; "All future apps" ahead of its group; then by name
+    private static IReadOnlyList<FilterItem> Sort(IReadOnlyList<FilterItem> items)
+    {
+        var isFutureSelected = items.Any(x => x is { Id: FutureAppsId, IsSelected: true });
+        return items.OrderBy(x => isFutureSelected ? x.IsSelected ? 1 : 0 : x.IsSelected ? 0 : 1)
+            .ThenBy(x => x.Id == FutureAppsId ? 0 : 1)
+            .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
+
+    private static Bitmap? DecodePng(string base64)
+    {
+        try {
+            using var stream = new MemoryStream(Convert.FromBase64String(base64));
+            return new Bitmap(stream);
+        }
+        catch (Exception) {
+            return null;
+        }
+    }
+
+    // one per theme
+    private static Task<Bitmap?> FutureAppsIcon()
+    {
+        return AppAssets.LoadBitmapAsync(AppAssets.ImagePath($"future-apps-{VhApp.Descriptor.UiTheme}.png"));
+    }
+
+    // Include with nothing in it is the one state that cannot be saved: the app would tunnel
+    // nothing. It is held until the person leaves, and refused then (ALL_APPS_EXCLUDED_ERROR_MSG).
+    private static bool IsSaveRejected => Split is { AppMode: SplitAppMode.Include, Apps.Count: 0 };
+
+    private async void OnSelectionChanged(object? sender, EventArgs e)
+    {
+        try {
+            var items = _items;
+            if (items.All(x => x.IsSelected)) {
+                Split.AppMode = SplitAppMode.All;
+                Split.Apps = [];
+                await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
+                return;
+            }
+
+            if (items.Any(x => x is { Id: FutureAppsId, IsSelected: true })) {
+                Split.AppMode = SplitAppMode.Exclude;
+                Split.Apps = items.Where(x => !x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id).ToArray();
+                await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
+                return;
+            }
+
+            Split.AppMode = SplitAppMode.Include;
+            Split.Apps = items.Where(x => x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id).ToArray();
+            if (!IsSaveRejected)
+                await VhApp.SaveUserSettings(VhApp.UserSettings, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
+    }
+
+    public async Task<bool> CanLeave(CancellationToken cancellationToken)
+    {
+        if (IsSaveRejected) {
+            await _host.ShowError(Strings.Current.AllAppsExcludedErrorMsg);
+            return false;
+        }
+
+        try {
+            await VhApp.SaveUserSettings(VhApp.UserSettings, cancellationToken);
+            return true;
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+            return false;
+        }
+    }
+
+    public void FocusDefault()
+    {
+        if (List.FirstRow is { } row) row.LandFocus();
+        else Header.FocusBack();
+    }
+}

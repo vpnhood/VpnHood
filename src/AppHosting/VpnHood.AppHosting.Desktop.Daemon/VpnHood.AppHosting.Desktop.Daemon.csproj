@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<Description>The VpnHood desktop service: the daemon that is the app on a machine with no window, the commands that drive it over its own API, the channel that hands that API to an administrator, and its updater. Platform-free - what a service is and where an install keeps things is the platform package's to say (Desktop.Linux, Desktop.WindowsTun)</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- the channel's line protocol and the connection over it, tested with stand-ins; the
+		     Windows pipe itself in the smoke test, which targets Windows -->
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppUi.SmokeTest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The window the ui command opens, and the connection every command reaches the app by. -->
+		<ProjectReference Include="..\VpnHood.AppHosting.Desktop\VpnHood.AppHosting.Desktop.csproj" />
+	</ItemGroup>
+
+	<!-- The VPN host's place beside the app (buildTransitive/), for every desktop head that takes this package. Its
+	     whole path in the package: a folder alone as PackagePath would nest it twice. -->
+	<ItemGroup>
+		<None Update="buildTransitive\VpnHood.AppHosting.Desktop.Daemon.targets" Pack="true"
+		      PackagePath="buildTransitive\VpnHood.AppHosting.Desktop.Daemon.targets" />
+	</ItemGroup>
+</Project>

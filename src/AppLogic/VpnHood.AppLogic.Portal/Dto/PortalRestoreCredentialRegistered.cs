@@ -1,0 +1,8 @@
+namespace VpnHood.AppLogic.Portal.Dto;
+
+/// <summary>The portal's answer to a restore-key registration.</summary>
+internal class PortalRestoreCredentialRegistered
+{
+    /// <summary>The credential's handle (base64url); sign-out retires it server-side.</summary>
+    public required string CredentialId { get; init; }
+}

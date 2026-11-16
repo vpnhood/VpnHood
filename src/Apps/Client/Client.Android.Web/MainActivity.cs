@@ -1,9 +1,9 @@
 ﻿using Android.Content;
 using Android.Service.QuickSettings;
-using VpnHood.AppLib.App.Android.Activities;
-using VpnHood.AppLib.App.Android.Constants;
-using VpnHood.AppUi.Hosting.Avalonia.Android;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.AppLogic.App.Android.Activities;
+using VpnHood.AppLogic.App.Android.Constants;
+using VpnHood.AppHosting.Avalonia.Android;
+using VpnHood.AppUi.Avalonia.Classic;
 
 namespace VpnHood.App.Client.Android.Web;
 

@@ -29,7 +29,7 @@ jobs:
     # for a NuGet key) — packages here share the vpnhood package IDs, so a fork must never push them.
     if: github.repository_owner == 'vpnhood'
     # Windows host is the superset build environment for the packable suite: net*-windows and the WPF
-    # library (VpnHood.AppUi.Hosting.WebView.Windows) need Windows, while the net*-android / net*-ios
+    # library (VpnHood.AppHosting.WebView.Windows) need Windows, while the net*-android / net*-ios
     # libraries build via workloads (below). Linux cannot build the Windows/WPF projects.
     runs-on: windows-latest
     permissions:
@@ -60,22 +60,22 @@ jobs:
         with: { dotnet-version: "${{ steps.sdk.outputs.version }}" }
       # ...and the .NET 10 SDK the browser page's own global.json names, for the page alone (below).
       - uses: actions/setup-dotnet@v6
-        with: { global-json-file: src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/global.json }
+        with: { global-json-file: src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/global.json }
       # The packable set spans net*-android, net*-ios and net*-tvos TFMs; install those workloads (for
       # the SDK resolved here, i.e. 11) so `dotnet pack` can build them, and MAUI's for Android and
-      # Windows, the TFMs of the MAUI host (VpnHood.AppUi.Hosting.Maui). net*-windows / WPF build
+      # Windows, the TFMs of the MAUI host (VpnHood.AppHosting.Maui). net*-windows / WPF build
       # natively on Windows.
       - name: Install .NET workloads (android, ios, tvos, maui)
         shell: pwsh
         run: dotnet workload install android ios tvos maui-android maui-windows
-      # The page the classic UI's package carries (VpnHood.AppUi.Presentation.Classic.Avalonia's
+      # The page the classic UI's package carries (VpnHood.AppUi.Avalonia.Classic's
       # buildTransitive/web-root.zip), published first: that pack fails without it. Under the .NET 10
       # SDK the page's own global.json names, with its wasm-tools workload - .NET 11's Emscripten
       # cannot link SkiaSharp's WebAssembly libraries.
       - name: Publish the browser page
         shell: pwsh
         run: |
-          Set-Location src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser
+          Set-Location src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser
           dotnet workload install wasm-tools
           ./_publish.ps1
       # The test publish_app.yml's test-app-api-types job runs: a type missing from the page's list would
@@ -83,7 +83,7 @@ jobs:
       # match nothing and pass.
       - name: Test that every API call finds its JSON types
         shell: pwsh
-        run: dotnet test tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj -c Release --filter "FullyQualifiedName~AppApiJsonTypesTest" -- RunConfiguration.TreatNoTestsAsError=true
+        run: dotnet test tests/VpnHood.AppLogic.Test/VpnHood.AppLogic.Test.csproj -c Release --filter "FullyQualifiedName~AppApiJsonTypesTest" -- RunConfiguration.TreatNoTestsAsError=true
       # A README's or a doc comment's example must match the test region it is copied from, or a package
       # would ship an example that no longer compiles.
       - name: Check that every example matches its test

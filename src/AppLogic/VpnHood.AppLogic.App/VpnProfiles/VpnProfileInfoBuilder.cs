@@ -1,0 +1,101 @@
+﻿using VpnHood.AppLogic.Abstractions;
+using VpnHood.AppLogic.Api.App;
+using VpnHood.AppLogic.Api.VpnProfiles;
+using VpnHood.Core.Common.Tokens;
+using VpnHood.Net.Toolkit.Utils;
+
+using VpnHood.AppLogic.App.DtoConverters;
+
+namespace VpnHood.AppLogic.App.VpnProfiles;
+
+// A profile as the UIs read it: plain values taken off the stored profile once, so the same object
+// is read back by a UI on the other side of the API. The client country is baked in - the policy
+// and the locations depend on it - which is why VpnProfileService keeps one per profile and
+// region. The token stays here: the contract carries what the token yields, never the token.
+internal static class VpnProfileInfoBuilder
+{
+    // What the engine's ServerLocationInfo.Equals did, now that the contract's shape is flat: the
+    // stored selection is normalized through the engine's parser before it is compared, so "us/ca",
+    // "US/CA" and "US/CA [#premium]" all still name the same location, and a null selection means
+    // the automatic one.
+    private static bool LocationEquals(ServerLocationItem locationInfo, string? serverLocation)
+    {
+        return serverLocation is null
+            ? locationInfo.IsAuto
+            : locationInfo.ServerLocation == ServerLocationInfo.TryParse(serverLocation)?.ServerLocation;
+    }
+
+    public static VpnProfileInfo Build(VpnProfile vpnProfile, AppDescriptor appDescriptor)
+    {
+        var token = vpnProfile.Token;
+        var clientPolicy = FindClientPolicy(token);
+        var locationInfos = ServerLocationItemBuilder.Build(vpnProfile, appDescriptor);
+
+        // the selected location, else the automatic one, else the first
+        var selectedLocationInfo =
+            locationInfos.FirstOrDefault(x => LocationEquals(x, vpnProfile.SelectedLocation)) ??
+            locationInfos.FirstOrDefault(x => x.IsAuto) ??
+            locationInfos.FirstOrDefault();
+
+        return new VpnProfileInfo {
+            VpnProfileId = vpnProfile.VpnProfileId,
+            VpnProfileName = GetTitle(vpnProfile),
+            SupportId = token.SupportId,
+            CustomData = vpnProfile.CustomData,
+            IsPremiumLocationSelected = vpnProfile.IsPremiumLocationSelected,
+            IsPremium = vpnProfile.IsPremium,
+            TokenId = token.TokenId,
+            HostNames = GetEndPoints(token.ServerToken),
+            IsValidHostName = token.ServerToken.IsValidHostName,
+            IsBuiltIn = vpnProfile.IsBuiltIn,
+            AccessCode = AccessCodeUtils.Redact(vpnProfile.AccessCode),
+            AccessCodeRefusal = vpnProfile.AccessCodeRefusal,
+            LocationInfos = locationInfos,
+            CanGoPremium = clientPolicy?.PremiumByCode == true || clientPolicy?.PremiumByPurchase == true,
+            CanTryPremium = clientPolicy?.PremiumByTrial != null,
+            CanImportAccessCode = clientPolicy?.PremiumByCode == true && appDescriptor.Premium?.AllowImportAccessCode == true,
+            CanViewAccessCode = clientPolicy?.PremiumByCode == true,
+            CustomServerEndpoints = vpnProfile.CustomServerEndpoints,
+            IsCustomServerEndpointsEnabled = vpnProfile.IsCustomServerEndpointsEnabled,
+            SelectedLocationInfo = selectedLocationInfo,
+            ClientPolicy = clientPolicy?.ToAppDto()
+        };
+    }
+
+    // the policy for the client's country, else the one for any country
+    private static Core.Common.Tokens.ClientPolicy? FindClientPolicy(Token token)
+    {
+        var countryCode = AppRegionInfo.CurrentRegion.Name;
+        return token.ClientPolicies?.FirstOrDefault(x =>
+                   x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
+               token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
+    }
+
+    private static string GetTitle(VpnProfile vpnProfile)
+    {
+        var token = vpnProfile.Token;
+
+        if (!string.IsNullOrWhiteSpace(vpnProfile.VpnProfileName))
+            return vpnProfile.VpnProfileName;
+
+        if (!string.IsNullOrWhiteSpace(token.Name))
+            return token.Name;
+
+        if (token.ServerToken is { IsValidHostName: false, HostEndPoints.Length: > 0 })
+            return Redactor.Always.RedactEndPoint(token.ServerToken.HostEndPoints.First());
+
+        return Redactor.Always.RedactHostName(token.ServerToken.HostName);
+    }
+
+    private static string[] GetEndPoints(ServerToken serverToken)
+    {
+        var hostNames = new List<string>();
+        if (serverToken.IsValidHostName)
+            hostNames.Add(Redactor.Always.RedactHostName(serverToken.HostName));
+
+        if (serverToken.HostEndPoints != null)
+            hostNames.AddRange(serverToken.HostEndPoints.Select(x => Redactor.Always.RedactIpAddress(x.Address)));
+
+        return [.. hostNames];
+    }
+}

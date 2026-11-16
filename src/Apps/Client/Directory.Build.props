@@ -5,7 +5,7 @@
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
   <!-- The Client app's identity, once for every head below: each builds its ids and the name it shows
-       from these (VpnHood.AppLib.App.targets). The package title is stated, not derived from the name:
+       from these (VpnHood.AppLogic.App.targets). The package title is stated, not derived from the name:
        it is the Windows service, the Linux unit and the folders every install already has. -->
   <PropertyGroup>
     <VhAppIdBase>com.vpnhood.client</VhAppIdBase>
@@ -19,21 +19,21 @@
     <VhAppMsixIdentityName>OmegaHoodLLC.VpnHoodCLIENT</VhAppMsixIdentityName>
     <VhAppMsixPublisher>CN=ABC26C70-B589-479C-8660-9346D4C735B0</VhAppMsixPublisher>
     <VhAppMsixPublisherDisplayName>OmegaHood LLC</VhAppMsixPublisherDisplayName>
-    <!-- the Android and iOS icons, as SVGs (VpnHood.AppLib.App.targets) -->
+    <!-- the Android and iOS icons, as SVGs (VpnHood.AppLogic.App.targets) -->
     <VhAppIconsDir>$(MSBuildThisFileDirectory)icons</VhAppIconsDir>
     <!-- the languages the words come in, as Android's per-app language list takes them
-         (VpnHood.AppLib.App.Android.targets) -->
+         (VpnHood.AppLogic.App.Android.targets) -->
     <VhAppLocaleConfig>$(MSBuildThisFileDirectory)Client/android/locales_config.xml</VhAppLocaleConfig>
     <!-- the Windows setup's Welcome and Finish picture, a BMP it shows as it is (Publish-WinApp.ps1) -->
     <VhAppSetupImage>$(MSBuildThisFileDirectory)setup.bmp</VhAppSetupImage>
     <!-- the private settings, from the external ".user" folder: the product's project embeds them, and
-         the build reads the launch screen's theme from them (VpnHood.AppLib.App.targets). Forward
+         the build reads the launch screen's theme from them (VpnHood.AppLogic.App.targets). Forward
          slashes: the iOS head builds on macOS. -->
     <VhAppSettingsFile>$(VhUserDir)/$(VhAppPackageTitle)/appsettings.json</VhAppSettingsFile>
   </PropertyGroup>
 
   <!-- After the values, as NuGet imports a package's props after Directory.Build.props: the same file
-       a package reference of VpnHood.AppLib.App imports. -->
-  <Import Project="$(MSBuildThisFileDirectory)..\..\AppLib\VpnHood.AppLib.App\buildTransitive\VpnHood.AppLib.App.props" />
+       a package reference of VpnHood.AppLogic.App imports. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\AppLogic\VpnHood.AppLogic.App\buildTransitive\VpnHood.AppLogic.App.props" />
 
 </Project>

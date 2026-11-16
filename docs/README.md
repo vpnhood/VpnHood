@@ -58,11 +58,11 @@ Store policy and legal checkpoints a publisher must clear:
 
 | Area | Document |
 | --- | --- |
-| Source layout | [source-layout.md](source-layout.md) — the five layers under `src/`, what a head is made of, what every Android app shares and how a head overrides it, how the browser page is built and placed |
+| Source layout | [source-layout.md](source-layout.md) — the six layers under `src/`, what a head is made of, what every Android app shares and how a head overrides it, how the browser page is built and placed |
 | Assets and zips | [assets.md](assets.md) — why data ships as a placed zip and never as an embedded resource, the provider chain that reads one, and why the paired-phone page is WebAssembly |
 | Component topology | [topology.md](topology.md) — who connects to whom, in which direction, and how many of each |
 | App startup | [app-startup.md](app-startup.md) — what a head writes (who the app is, its options with its store's providers) and what the host builds from them: the device, the app, the UI; each platform's entry points |
-| Client architecture | [client-architecture.md](client-architecture.md) — the head, the app you publish, over three layers (AppUi, AppLib, Core) and their two contracts, the app API and the VPN service contract, with what each lets you build on your own; the app and its VPN service: where each runs on every platform, the channel between them, and the projects of each half |
+| Client architecture | [client-architecture.md](client-architecture.md) — the head, the app you publish, over three layers (AppUi with AppHosting, AppLogic, Core) and their two contracts, the app API and the VPN service contract, with what each lets you build on your own; the app and its VPN service: where each runs on every platform, the channel between them, and the projects of each half |
 | VPN engine | [vpn-engine.md](vpn-engine.md) — how the engine takes the adapter the platform makes and starts, and how a packet travels: the packet handler, the local TCP stack, the bypass, the tunnel and its channels, and the connections to the server |
 | Protocol 15 | [protocol-15.md](protocol-15.md) — HTTP request proof, rollout order, compatibility and proxy limitations |
 | iOS app + Network Extension | [ios/](ios/README.md) — architecture, build & provisioning, memory limits, runtime rules |

@@ -1,15 +1,15 @@
-﻿using VpnHood.AppLib.App.Utils;
+﻿using VpnHood.AppLogic.App.Utils;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Api.Accounts;
-using VpnHood.AppLib.App;
-using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.AppUi.Hosting.Avalonia.Android;
-using VpnHood.AppLib.App.Android.Constants;
-using VpnHood.AppLib.Portal;
-using VpnHood.AppLib.App.Services.Updaters;
-using VpnHood.AppLib.Stores.AndroidWeb;
+using VpnHood.AppLogic.Api.Accounts;
+using VpnHood.AppLogic.App;
+using VpnHood.AppLogic.Abstractions.Accounts;
+using VpnHood.AppUi.Avalonia.Classic;
+using VpnHood.AppHosting.Avalonia.Android;
+using VpnHood.AppLogic.App.Android.Constants;
+using VpnHood.AppLogic.Portal;
+using VpnHood.AppLogic.App.Services.Updaters;
+using VpnHood.AppLogic.Stores.AndroidWeb;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Android.Web;

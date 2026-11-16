@@ -1,0 +1,122 @@
+using System.Reflection;
+using VpnHood.AppHosting.Desktop.Daemon.Platform;
+
+namespace VpnHood.AppHosting.Desktop.Linux;
+
+// Where a Linux install keeps things, and why they are not all one folder.
+//
+// The daemon runs as root and owns the storage folder: the settings a person edits by hand, the
+// profiles, the log. The window and the commands run as whoever is logged in and may not write a
+// byte of it, so the content the UI extracts for itself goes under that person's cache instead.
+// The install's own places follow where the binary sits; a person's, and the window's single instance,
+// follow the app id, which no other app on the machine has and a Debug build does not share with a release.
+internal class LinuxDesktopPaths(string appId) : IAppDesktopPaths
+{
+    // The launcher script says its own name in this variable, because the binary cannot know it:
+    // "vhclient" is what is on the PATH, and "VpnHoodClient" - the binary's name - is not.
+    public const string LauncherNameVariable = "VH_LAUNCHER_NAME";
+
+    public string AppId => appId;
+
+    // The installed binary's own name, which is the name of what the installer builds around it: the
+    // systemd unit and the folder under /opt. Taken from
+    // the entry assembly rather than from a constant so the two heads - VpnHoodClient and
+    // VpnHoodConnect - need no constant of their own, and a fork that renames its assembly renames
+    // all of it; not from the process, which "dotnet VpnHoodClient.dll" - a debugger's run - names dotnet.
+    public string InstanceName { get; } =
+        Assembly.GetEntryAssembly()?.GetName().Name ??
+        throw new InvalidOperationException("The entry assembly has no name, so this install has none.");
+
+    public string CommandName =>
+        Environment.GetEnvironmentVariable(LauncherNameVariable) is { Length: > 0 } launcher
+            ? launcher
+            : InstanceName;
+
+    // The desktop entry runs the launcher too, but always with "ui"; only the binary run on its own - a
+    // debugger's run - is not the command.
+    public bool IsStartedAsCommand =>
+        Environment.GetEnvironmentVariable(LauncherNameVariable) is { Length: > 0 };
+
+    // The VPN host, which the service starts at each connect, beside the binary in the version's folder: the name
+    // the app's identity writes into its assembly (VhAppVpnHostName).
+    public string VpnHostPath => Path.Combine(AppContext.BaseDirectory,
+        string.IsNullOrEmpty(_vpnHostName)
+            ? throw new InvalidOperationException("This app is built without a VPN host (VhAppVpnHostName).")
+            : _vpnHostName);
+
+    // the host's name, not the path the property answers, so no backing field of it
+    // ReSharper disable once ReplaceWithFieldKeyword
+    private readonly string? _vpnHostName = Assembly.GetEntryAssembly()?
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(x => x.Key == "VhAppVpnHostName")?.Value;
+
+    // /opt/VpnHoodClient/bin/<version>/VpnHoodClient -> /opt/VpnHoodClient/storage, which is what every
+    // release of this package has used and where an advanced user's settings.json already is.
+    public string StoragePath {
+        get {
+            var exePath = Environment.ProcessPath ??
+                          throw new InvalidOperationException("The process path is unknown, so the storage folder cannot be found.");
+            var versionDir = Path.GetDirectoryName(exePath) ??
+                             throw new InvalidOperationException($"The executable has no folder: {exePath}");
+            var binDir = Path.GetDirectoryName(versionDir) ??
+                         throw new InvalidOperationException($"The version folder has no parent: {versionDir}");
+            var installDir = Path.GetDirectoryName(binDir) ??
+                             throw new InvalidOperationException($"The bin folder has no parent: {binDir}");
+            return Path.Combine(installDir, "storage");
+        }
+    }
+
+    // The launcher script that started this, beside the install's publish.json, whose version it runs.
+    public string? InstalledLauncherPath {
+        get {
+            if (!IsStartedAsCommand || Path.GetDirectoryName(StoragePath) is not { } installPath)
+                return null;
+
+            var launcherPath = Path.Combine(installPath, CommandName);
+            return File.Exists(launcherPath) && File.Exists(Path.Combine(installPath, "publish.json"))
+                ? launcherPath
+                : null;
+        }
+    }
+
+    // Beside the launcher, as the installer places it: kill-switch-off.sh's copy.
+    public string? KillSwitchOffScriptPath {
+        get {
+            var scriptPath = Path.Combine(Path.GetDirectoryName(StoragePath) ?? "", KillSwitchOffScriptName);
+            return Path.IsPathRooted(scriptPath) && File.Exists(scriptPath) ? scriptPath : null;
+        }
+    }
+
+    // the installer's name for it (install-client.sh)
+    public const string KillSwitchOffScriptName = "kill-switch-off";
+
+    // The service's folder under /run, which only root writes: nobody else takes a name in it first.
+    public string RuntimePath => Path.Combine("/run", InstanceName);
+
+    public string ChannelSocketPath => Path.Combine(RuntimePath, "daemon.sock");
+
+    // Per user, under XDG's cache: the daemon's storage belongs to root and a desktop session
+    // cannot write there.
+    public string UiDataPath {
+        get {
+            var cacheHome = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
+            if (string.IsNullOrWhiteSpace(cacheHome))
+                cacheHome = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache");
+
+            return Path.Combine(cacheHome, appId);
+        }
+    }
+
+    // Under XDG's data rather than the UI's cache: settings and profiles are not something to lose.
+    public string DevStoragePath {
+        get {
+            var dataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+            if (string.IsNullOrWhiteSpace(dataHome))
+                dataHome = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
+
+            return Path.Combine(dataHome, appId);
+        }
+    }
+}

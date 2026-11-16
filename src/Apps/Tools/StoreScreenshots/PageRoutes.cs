@@ -1,8 +1,8 @@
 using Avalonia;
 using Avalonia.Layout;
 using VpnHood.AppUi.Common;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Views.Dialogs;
+using VpnHood.AppUi.Avalonia.Classic.Views;
+using VpnHood.AppUi.Avalonia.Classic.Views.Dialogs;
 
 namespace VpnHood.App.StoreScreenshots;
 

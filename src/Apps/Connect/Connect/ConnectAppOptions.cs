@@ -1,6 +1,6 @@
-﻿using VpnHood.AppLib.Api.Premium;
-using VpnHood.AppLib.Api.WebHost;
-using VpnHood.AppLib.App;
+﻿using VpnHood.AppLogic.Api.Premium;
+using VpnHood.AppLogic.Api.WebHost;
+using VpnHood.AppLogic.App;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Net.Toolkit.Assets;

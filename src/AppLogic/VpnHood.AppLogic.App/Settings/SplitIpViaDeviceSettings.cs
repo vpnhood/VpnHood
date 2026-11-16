@@ -1,0 +1,49 @@
+﻿
+using VpnHood.AppLogic.Api.SplitTunneling;
+using VpnHood.AppLogic.App.Utils;
+using VpnHood.Net.Toolkit.Storages;
+
+namespace VpnHood.AppLogic.App.Settings;
+
+// The split-ip-via-device source lists (see SplitTunneling.UseIpViaDevice). They shape the vpn adapter's
+// ranges, which are applied at connect only — a change while connected flags the session for a
+// reconnect instead of live-applying.
+internal class SplitIpViaDeviceSettings(Storage storage)
+    : SplitFileSettings(storage)
+{
+    // Raised by Set when the lists actually changed, AFTER the files are written — a handler that
+    // re-reads the settings sees the new content. The owner (VpnHoodApp) reacts.
+    public event EventHandler? Changed;
+
+    public string Includes {
+        get => Read("includes");
+        set => Write("includes", value);
+    }
+
+    public string Excludes {
+        get => Read("excludes");
+        set => Write("excludes", value);
+    }
+
+    public SplitIpsViaDevice Get() => new() {
+        Includes = Includes,
+        Excludes = Excludes
+    };
+
+    public void Set(SplitIpsViaDevice value)
+    {
+        // both before either is written: a refused one would leave the lists half saved
+        Validate(value.Includes);
+        Validate(value.Excludes);
+
+        var changed = Includes != value.Includes || Excludes != value.Excludes;
+
+        Includes = value.Includes;
+        Excludes = value.Excludes;
+
+        if (changed)
+            Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    protected override void Validate(string content) => IpRangeTextFileParser.Verify(content);
+}

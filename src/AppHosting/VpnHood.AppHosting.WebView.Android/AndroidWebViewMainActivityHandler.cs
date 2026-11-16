@@ -1,0 +1,131 @@
+using Android.Runtime;
+using Android.Views;
+using Microsoft.Extensions.Logging;
+using VpnHood.AppLogic.App;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.AppLogic.App.Android.Activities;
+using VpnHood.AppLogic.App.Android.Utils;
+using VpnHood.AppHosting.Common;
+using VpnHood.AppHosting.WebView;
+using VpnHood.Core.Client.Devices.Android.ActivityEvents;
+using VpnHood.Net.Toolkit.Graphics;
+using VpnHood.AppLogic.Abstractions.UiContexts;
+
+namespace VpnHood.AppHosting.WebView.Android;
+
+// Android host for the VpnHood SPA. All hosting business logic lives in the shared WebViewHost;
+// this handler only supplies the Android chrome (content-view timing, hardware back) and forwards the
+// activity lifecycle to the host. The WebView mechanics live in AndroidWebView.
+internal class AndroidWebViewMainActivityHandler(
+    IActivityEvent activityEvent,
+    AndroidWebViewMainActivityOptions options)
+    : AndroidAppMainActivityHandler(activityEvent, options, WindowBackgroundColor())
+{
+    private AndroidWebView? _spaWebView;
+    private WebViewHost? _host;
+    private AndroidBackInvokedCallback? _backInvokedCallback;
+
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        base.OnCreate(savedInstanceState);
+        _ = CreateContentWhenReady();
+    }
+
+    // the theme's window background, for the system bars and the ground behind them (WindowInsetUtils)
+    private static async Task<VhColor?> WindowBackgroundColor()
+    {
+        return (await WebViewTheme.Colors).WindowBackgroundColor;
+    }
+
+    // The loading screen and the web view draw with the theme's colours, so they are made once those
+    // are read - nothing shows before, where a colour that changed under the user would be seen. The
+    // wait comes back to the main looper, where views are made.
+    private async Task CreateContentWhenReady()
+    {
+        try {
+            var colors = await WebViewTheme.Colors;
+            if (ActivityEvent.Activity.IsDestroyed)
+                return; // gone while the look was read
+
+            CreateContent(colors);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create the app's web view.");
+        }
+    }
+
+    private void CreateContent(ThemeColors colors)
+    {
+        // Experimental. Fixing: Window couldn't find content container view.
+        // Some OEMs are subject to this issue, so postpone the content setup.
+        ActivityEvent.Activity.Window?.DecorView.Post(() => {
+            // the app's own web host: the platform started the app in this process
+            _spaWebView = new AndroidWebView(ActivityEvent, options, colors);
+            var webHost = VpnHoodApp.Instance.LocalWebHost ??
+                          throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
+            _host = new WebViewHost(_spaWebView, new AppWebViewPageHost(webHost));
+            _host.Start();
+
+            // Register back callback for Android 13+ (API 33+) with default priority (0). Android 13-15
+            // call it only when the app's manifest sets android:enableOnBackInvokedCallback="true", as
+            // the SPA sample's does; 16 calls it by default for an app that targets it.
+            if (OperatingSystem.IsAndroidVersionAtLeast(33)) {
+                _backInvokedCallback = new AndroidBackInvokedCallback(HandleBackInvoked);
+                ActivityEvent.Activity.OnBackInvokedDispatcher.RegisterOnBackInvokedCallback(priority: 0,
+                    _backInvokedCallback);
+            }
+        });
+    }
+
+    protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? keyEvent)
+    {
+        // For Android versions prior to 13 (API 33), handle the back button via OnKeyDown.
+        if (!OperatingSystem.IsAndroidVersionAtLeast(33) && keyCode == Keycode.Back && _spaWebView?.CanGoBack() == true) {
+            _spaWebView.GoBack();
+            return true;
+        }
+
+        return base.OnKeyDown(keyCode, keyEvent);
+    }
+
+    protected override void OnPause()
+    {
+        base.OnPause();
+
+        if (!AppUiContext.IsPartialIntentRunning)
+            _spaWebView?.OnActivityPause();
+    }
+
+    protected override void OnResume()
+    {
+        _host?.OnResume();
+        _spaWebView?.OnActivityResume();
+        base.OnResume();
+    }
+
+    protected override void OnDestroy()
+    {
+        // Unregister back callback if registered.
+        if (_backInvokedCallback != null) {
+            ActivityEvent.Activity.OnBackInvokedDispatcher.UnregisterOnBackInvokedCallback(_backInvokedCallback);
+            _backInvokedCallback.Dispose();
+            _backInvokedCallback = null;
+        }
+
+        _host?.Dispose();
+        _host = null;
+
+        base.OnDestroy();
+    }
+
+    private void HandleBackInvoked()
+    {
+        if (_spaWebView?.CanGoBack() == true) {
+            _spaWebView.GoBack();
+        }
+        else {
+            // Let the system handle the back action (minimize/close the app).
+            ActivityEvent.Activity.Finish();
+        }
+    }
+}

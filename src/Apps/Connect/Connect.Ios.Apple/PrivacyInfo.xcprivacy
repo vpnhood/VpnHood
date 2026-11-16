@@ -11,8 +11,8 @@
 
      CONNECT vs CLIENT: this app ships Sign in with Apple + StoreKit billing on the Portal backend,
      so it declares User ID, Email Address, and Purchase History for App Functionality. AppDelegate
-     disables the AppLib GA4 tracker and endpoint tracking.
-     The accessed-API list is identical because both apps run the same AppLib/iOS code.
+     disables the AppLogic GA4 tracker and endpoint tracking.
+     The accessed-API list is identical because both apps run the same AppLogic/iOS code.
 
      The reasoning behind every answer here — and the matching App Store Connect "App Privacy" panel
      answers, which Apple cross-checks against this manifest — is recorded in

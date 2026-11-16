@@ -1,5 +1,5 @@
-﻿using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.Exceptions;
+﻿using VpnHood.AppLogic.Api.App;
+using VpnHood.AppLogic.Api.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Toolkit.ApiClients;
 

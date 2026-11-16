@@ -1,0 +1,27 @@
+<Project>
+	<!-- The WebAssembly settings every Avalonia page project shares. A page project (one per UI:
+	     src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser is ours) is a Microsoft.NET.Sdk.WebAssembly
+	     executable that imports this file, references the host and its UI, and keeps its own
+	     wwwroot/ (index.html, main.js) - the page's title and splash are the page's. -->
+	<PropertyGroup>
+		<RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+		<WasmMainJSPath>wwwroot/main.js</WasmMainJSPath>
+
+		<!-- AOT: every touch on the page is CPU on its one thread, which .NET's interpreter makes a phone
+		     wait for. It doubles the bundle, which travels only over the LAN, and adds minutes to a
+		     publish, and a page's start gains nothing from it. -->
+		<RunAOTCompilation>true</RunAOTCompilation>
+
+		<!-- Trimmed to the full extent: the app's own assemblies are referenced for their DTOs alone, and
+		     every JSON type the page reaches is generated ahead of time, so reflection is off. A place
+		     that still needs it stops the publish, as it would throw on the page. -->
+		<PublishTrimmed>true</PublishTrimmed>
+		<TrimMode>full</TrimMode>
+		<JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+		<ILLinkTreatWarningsAsErrors>true</ILLinkTreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<!-- Published under the .NET 10 SDK, named by a global.json in the page project's folder: SkiaSharp's
+	     WebAssembly libraries are built for its Emscripten (3.1.56), which .NET 11's (6.x)
+	     cannot link. A plain build works under either; only the publish relinks. -->
+</Project>

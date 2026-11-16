@@ -3,7 +3,7 @@
 <dict>
 	<!-- The Apple TV's manifest (the csproj's AppBundleManifest for the tvOS target); Info.plist is iOS's.
 	     CFBundleIdentifier and CFBundleDisplayName are the build's: ApplicationId and ApplicationTitle,
-	     from the app's identity (VpnHood.AppLib.App.targets), which this file does not state again; so
+	     from the app's identity (VpnHood.AppLogic.App.targets), which this file does not state again; so
 	     are the version numbers. -->
 	<!-- As on iOS (Info.plist says why): NEVER true. -->
 	<key>ITSAppUsesNonExemptEncryption</key>

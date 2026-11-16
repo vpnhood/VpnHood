@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.App;
-using VpnHood.AppLib.App.Services.Updaters;
-using VpnHood.AppLib.Portal;
-using VpnHood.AppLib.Stores.MicrosoftStore;
-using VpnHood.AppUi.Hosting.Avalonia.Desktop;
-using VpnHood.AppUi.Hosting.Desktop;
-using VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
+using VpnHood.AppLogic.Abstractions.Accounts;
+using VpnHood.AppLogic.App;
+using VpnHood.AppLogic.App.Services.Updaters;
+using VpnHood.AppLogic.Portal;
+using VpnHood.AppLogic.Stores.MicrosoftStore;
+using VpnHood.AppHosting.Avalonia.Desktop;
+using VpnHood.AppHosting.Desktop;
+using VpnHood.AppHosting.Desktop.WindowsVpnPlugin;
+using VpnHood.AppUi.Avalonia.Classic;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Windows.Microsoft;

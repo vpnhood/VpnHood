@@ -8,7 +8,7 @@ using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
+using VpnHood.AppUi.Avalonia.Classic.Views;
 
 namespace VpnHood.App.StoreScreenshots;
 

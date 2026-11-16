@@ -1,5 +1,5 @@
-using VpnHood.AppLib.Api;
-using VpnHood.AppLib.Api.Proxies;
+using VpnHood.AppLogic.Api;
+using VpnHood.AppLogic.Api.Proxies;
 using VpnHood.Net.Toolkit.Generics;
 
 namespace VpnHood.App.StoreScreenshots;

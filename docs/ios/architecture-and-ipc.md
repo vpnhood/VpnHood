@@ -29,7 +29,7 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
   Group and the extension's bundle id named there.
 
 The host app's csproj (`VpnHood.App.Client.Ios.Apple`) references the app's side, `VpnHood.Core.Client.Devices.Ios`
-(through `VpnHood.AppLib.App.Ios` too); the extension's (`VpnHood.App.Client.Ios.Extension`) references the VPN service's
+(through `VpnHood.AppLogic.App.Ios` too); the extension's (`VpnHood.App.Client.Ios.Extension`) references the VPN service's
 side, `VpnHood.Core.Client.VpnServices.Host.Ios`, which brings in the device's project, the engine, IosTun and TcpStack
 (see [client-architecture.md](../client-architecture.md)).
 
@@ -38,7 +38,7 @@ side, `VpnHood.Core.Client.VpnServices.Host.Ios`, which brings in the device's p
 
 ## App Group — the IPC channel
 Both targets share App Group `group.com.vpnhood.client.ios`, which the build adds to both targets' entitlements
-from the product's id base (`VpnHood.AppLib.App.targets`; see [source-layout](../source-layout.md#the-apps-identity)).
+from the product's id base (`VpnHood.AppLogic.App.targets`; see [source-layout](../source-layout.md#the-apps-identity)).
 The VPN service's two folders are in the group's container: `vpn-service-config/` (each connect's options, the
 status and the log; kept out of backups) and `vpn-service/` (the person's proxies, which travel with a backup):
 ```

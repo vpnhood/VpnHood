@@ -1,10 +1,10 @@
-using VpnHood.AppLib.Api;
-using VpnHood.AppLib.Api.Ads;
-using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.Device;
-using VpnHood.AppLib.Api.Settings;
-using VpnHood.AppLib.Api.SplitTunneling;
-using VpnHood.AppLib.Api.Updaters;
+using VpnHood.AppLogic.Api;
+using VpnHood.AppLogic.Api.Ads;
+using VpnHood.AppLogic.Api.App;
+using VpnHood.AppLogic.Api.Device;
+using VpnHood.AppLogic.Api.Settings;
+using VpnHood.AppLogic.Api.SplitTunneling;
+using VpnHood.AppLogic.Api.Updaters;
 
 namespace VpnHood.App.StoreScreenshots;
 

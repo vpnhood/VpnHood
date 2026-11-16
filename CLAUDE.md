@@ -16,8 +16,8 @@ The design and code rules agreed while building are in
   `<Product>/<Product>.<Platform>.<Channel>` (`Client/Client.Android.Google`, `Connect/Connect.Ios.Apple`);
   the product's own project, what every distribution of it shares, is `<Product>/<Product>`. A fork
   copies one product folder as its template. The browser page every head serves lives with the UI it
-  compiles (`src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia.Browser`), whose `_publish.ps1` writes it
-  into the UI's own package (`VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip`),
+  compiles (`src/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser`), whose `_publish.ps1` writes it
+  into the UI's own package (`VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip`),
   placed beside each head as `assets/web-root.zip` by that package's targets; `publish_nugets.yml` builds
   it before the pack, and CI builds it once (`build-browser` in `publish_app.yml`) and hands it to every
   platform build.

@@ -3,10 +3,10 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Headless;
 using Avalonia.Threading;
-using VpnHood.AppLib.Api;
-using VpnHood.AppUi.Hosting.Avalonia;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
+using VpnHood.AppLogic.Api;
+using VpnHood.AppHosting.Avalonia;
+using VpnHood.AppUi.Avalonia.Classic;
+using VpnHood.AppUi.Avalonia.Classic.Views;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Logging;
 

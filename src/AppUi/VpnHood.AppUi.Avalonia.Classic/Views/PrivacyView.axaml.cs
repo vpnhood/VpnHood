@@ -1,0 +1,75 @@
+﻿using Avalonia.Controls;
+using Avalonia.Interactivity;
+using VpnHood.AppUi.Common;
+using VpnHood.AppHosting.Avalonia;
+using VpnHood.AppUi.Avalonia.Classic.Helpers;
+
+namespace VpnHood.AppUi.Avalonia.Classic.Views;
+
+public partial class PrivacyView : UserControl, IPage
+{
+    private readonly MainView _host;
+
+    public PrivacyView(MainView host)
+    {
+        _host = host;
+        InitializeComponent();
+
+        var s = Strings.Current;
+        // a build that collects nothing offers no consent and makes no claim about data
+        var isTrackerSupported = VhApp.IsAnonymousTrackerSupported;
+        TrackerItem.Title = s.AllowAnonymousTracker;
+        TrackerItem.Description = s.AllowAnonymousTrackerDesc;
+        TrackerItem.IsOn = VhApp.UserSettings.AllowAnonymousTracker;
+        TrackerItem.IsVisible = isTrackerSupported;
+        // only where the ad network asked for a consent, which Google requires a way back to
+        AdPrivacyItem.Title = s.AdPrivacyOptions;
+        AdPrivacyItem.Subtitle = s.AdPrivacyOptionsDesc;
+        AdPrivacyItem.IsVisible = VhApp.State.IsAdPrivacyOptionsRequired;
+        NoticeText.IsVisible = isTrackerSupported;
+        PolicyButton.IsVisible = VhApp.Descriptor.Links.PrivacyPolicy != null;
+        PolicyCard.IsVisible = NoticeText.IsVisible || PolicyButton.IsVisible;
+    }
+
+    public void FocusDefault()
+    {
+        if (TrackerItem.IsVisible) TrackerItem.FindFirstButton()?.LandFocus();
+        else if (AdPrivacyItem.IsVisible) AdPrivacyItem.FindFirstButton()?.LandFocus();
+        else if (PolicyButton.IsVisible) PolicyButton.LandFocus();
+        else Header.FocusBack();
+    }
+
+    private async void OnTrackerToggled(object? sender, EventArgs e)
+    {
+        try {
+            var settings = VhApp.UserSettings;
+            settings.AllowAnonymousTracker = TrackerItem.IsOn;
+            await VhApp.SaveUserSettings(settings, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    // the ad network's own form, over the app; AdMob reads the new answer itself
+    private async void OnAdPrivacyClick(object? sender, EventArgs e)
+    {
+        try {
+            await VhApp.Api.App.ShowAdPrivacyOptions(CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnPolicyClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            if (VhApp.Descriptor.Links.PrivacyPolicy is { } url)
+                await _host.OpenLink(url, Strings.Current.PrivacyPolicy, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+}

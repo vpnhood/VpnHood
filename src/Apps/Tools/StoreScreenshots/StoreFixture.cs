@@ -3,11 +3,11 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
-using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.Device;
-using VpnHood.AppLib.Api.Premium;
-using VpnHood.AppLib.Api.Proxies;
-using VpnHood.AppLib.Api.SplitTunneling;
+using VpnHood.AppLogic.Api.App;
+using VpnHood.AppLogic.Api.Device;
+using VpnHood.AppLogic.Api.Premium;
+using VpnHood.AppLogic.Api.Proxies;
+using VpnHood.AppLogic.Api.SplitTunneling;
 
 namespace VpnHood.App.StoreScreenshots;
 

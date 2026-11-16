@@ -1,0 +1,56 @@
+﻿<Project Sdk="MSTest.Sdk/4.5.2">
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<IsPackable>false</IsPackable>
+		<UseVSTest>true</UseVSTest>
+		<!--MSTest.Sdk injects the test packages implicitly; override its bundled versions via these properties, NOT
+		    PackageReference Update (which is a no-op against the SDK's late .targets Include). MSTestVersion defaults to
+		    the SDK's bundled version, so only the VSTest platform needs pinning to the latest.-->
+		<MicrosoftNETTestSdkVersion>18.11.0</MicrosoftNETTestSdkVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\AppLogic\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
+		<!-- the import of the releases before the Windows service, with the machine handed in -->
+		<ProjectReference Include="..\..\src\AppLogic\VpnHood.AppLogic.App.WindowsTun\VpnHood.AppLogic.App.WindowsTun.csproj" />
+		<ProjectReference Include="..\..\src\AppLogic\VpnHood.AppLogic.Portal\VpnHood.AppLogic.Portal.csproj" />
+		<ProjectReference Include="..\..\src\AppLogic\VpnHood.AppLogic.Api.HttpClients\VpnHood.AppLogic.Api.HttpClients.csproj" />
+		<ProjectReference Include="..\..\src\AppLogic\VpnHood.AppLogic.Api.WebHost\VpnHood.AppLogic.Api.WebHost.csproj" />
+		<ProjectReference Include="..\..\src\Net\VpnHood.Net.IpLocations.Providers.SqliteProvider\VpnHood.Net.IpLocations.Providers.SqliteProvider.csproj" />
+		<!-- the desktop's channel and connection, with stand-ins for the platform's half; the Linux
+		     half is plain .NET over /proc, so its check is tested here on Linux -->
+		<ProjectReference Include="..\..\src\AppHosting\VpnHood.AppHosting.Desktop.Daemon\VpnHood.AppHosting.Desktop.Daemon.csproj" />
+		<ProjectReference Include="..\..\src\AppHosting\VpnHood.AppHosting.Desktop.Linux\VpnHood.AppHosting.Desktop.Linux.csproj" />
+		<ProjectReference Include="..\..\src\Core\VpnHood.Core.Client.VpnServices.Host.Linux\VpnHood.Core.Client.VpnServices.Host.Linux.csproj" />
+		<!-- the UI's words, and the app as the UI's pages read it -->
+		<ProjectReference Include="..\..\src\AppUi\VpnHood.AppUi.Common\VpnHood.AppUi.Common.csproj" />
+		<!-- the theme's colours, read as a host reads them -->
+		<ProjectReference Include="..\..\src\AppHosting\VpnHood.AppHosting.Common\VpnHood.AppHosting.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- the shape vectors the portal's unit suite reads too: the two validators must not drift -->
+		<None Update="Fixtures/access-code-vectors.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="VpnHood.Net.IpLocations.Assets.Ip2LocationLite" Version="9.0.870" />
+		<PackageReference Include="VpnHood.Net.Proxies" Version="9.1.873" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="MSTest.TestAdapter" Version="4.4.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="MSTest.TestFramework" Version="4.4.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+	</ItemGroup>
+
+</Project>

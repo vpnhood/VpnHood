@@ -1,0 +1,48 @@
+﻿using Avalonia.Controls;
+using VpnHood.AppUi.Common;
+using VpnHood.AppHosting.Avalonia;
+using VpnHood.AppUi.Avalonia.Classic.Controls;
+using VpnHood.AppUi.Avalonia.Classic.Helpers;
+
+namespace VpnHood.AppUi.Avalonia.Classic.Views;
+
+public partial class ExtendSessionView : UserControl, IPage
+{
+    private readonly MainView _host;
+
+    public ExtendSessionView(MainView host)
+    {
+        _host = host;
+        InitializeComponent();
+
+        var s = Strings.Current;
+        Header.SetLargeTitle(TitleText, s.ExtendPremiumSession);
+
+        var state = VhApp.State;
+        var options = state.VpnProfile?.SelectedLocationInfo?.Options;
+        if (state.SessionStatus?.CanExtendByRewardedAd == true)
+            Rows.Children.Add(new PromoteRow(Mdi.PlayBoxLockOpenOutline, s.WatchRewardedAd,
+                s.ExtendByRewardedAdDesc(options?.PremiumByRewardedAd ?? 0), s.ShowAd,
+                () => ShowRewardedAd(CancellationToken.None)));
+        if (options?.PremiumByPurchase == true || options?.PremiumByCode == true)
+            Rows.Children.Add(new PromoteRow(Mdi.CrownCircleOutline, s.GoPremium, s.GoPremiumDesc, s.Upgrade, () => {
+                _host.Navigate(new PurchaseSubscriptionView(_host, null));
+                return Task.CompletedTask;
+            }));
+    }
+
+    public void FocusDefault()
+    {
+        if (Rows.Children.FirstOrDefault() is PromoteRow row) row.LandFocus();
+        else Header.FocusBack();
+    }
+
+    // the ad, then the word that the session grew, back on the home
+    private async Task ShowRewardedAd(CancellationToken cancellationToken)
+    {
+        using (_host.LoadingOnDevice(Strings.Current.ExtendByRewardedAdNote))
+            await VhApp.Api.App.ExtendByRewardedAd(cancellationToken);
+        _host.ShowSnackbar(Strings.Current.ExtendByRewardedAdConfirmMsg, SnackbarKind.Active);
+        _host.GoHome();
+    }
+}

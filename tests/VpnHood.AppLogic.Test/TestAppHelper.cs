@@ -1,0 +1,195 @@
+﻿using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
+using VpnHood.Net.Toolkit.Assets;
+using VpnHood.Net.Toolkit.Storages;
+using VpnHood.AppLogic.Api.Premium;
+using VpnHood.AppLogic.App;
+using VpnHood.AppLogic.App.Services.Ads;
+using VpnHood.AppLogic.Test.Providers;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
+using VpnHood.Test;
+using VpnHood.Test.Device;
+using VpnHood.Test.Providers;
+
+using VpnHood.Core.Client.Abstractions;
+using VpnHood.AppLogic.Abstractions.UiContexts;
+using System.Net;
+using VpnHood.Core.Common.Tokens;
+
+namespace VpnHood.AppLogic.Test;
+
+public class TestAppHelper(CancellationToken testCt) : TestHelper(testCt)
+{
+    // The asset folder the VpnHood.Net.IpLocations.Assets.Ip2LocationLite package's build places
+    // assembly. The package ships no code, so the name is the contract - named here for the tests
+    // the way each head names it for itself.
+    public const string IpLocationAssetPath = "iplocations/IpLocations.zip";
+
+    // the tests run beside their own files, so the plain provider is the right one
+    public static readonly IAssetProvider AssetProvider = new FolderAssetProvider(AppContext.BaseDirectory);
+
+    // isDebugMode: false stands for a release build where the test needs the difference: the web
+    // server's remote access, or trackers, which a Debug build never makes. The log options below are
+    // explicit, so the flag changes nothing else.
+    // storagePath: another app's, for a test that reopens what it saved. noBackupStoragePath: the
+    // device-only one, as a phone has; the storage itself where null, as on a desktop. storageProvider:
+    // where the files the app cannot rebuild are kept, plain files where null.
+    public AppOptions CreateAppOptions(bool isDebugMode = true, string? storagePath = null,
+        string? noBackupStoragePath = null, IStorageProvider? storageProvider = null)
+    {
+        // a storage of its own per app, since tests run many apps side by side
+        var storageFolderPath = storagePath ?? Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7());
+        var context = new AppOptionsContext {
+            AppId = "com.vpnhood.client.test",
+            AppName = "VpnHood! Test",
+            // the library's, which the update tests offer releases around (CheckNewVersionTest)
+            AppVersion = typeof(VpnHoodApp).Assembly.GetName().Version ??
+                         throw new InvalidOperationException("The library's assembly has no version."),
+            StoragePath = storageFolderPath,
+            NoBackupStoragePath = noBackupStoragePath ?? storageFolderPath,
+            StorageProvider = storageProvider ?? new FileSystemStorageProvider(),
+            PackagedAssetProvider = AssetProvider
+        };
+
+        var appOptions = new AppOptions(context, isDebugMode) {
+            PackageTitle = "VpnHoodTest",
+            CompanyName = "VpnHood",
+            LogoAssetPath = "images/logo-client.png",
+            PrivacyConsentAssetName = "privacy-consent-client",
+            IpLocationZipAsset = new Asset(AssetProvider, IpLocationAssetPath),
+            IsSingleton = false, // tests run many concurrent apps in one process
+            // the test app stands for a CONNECT-like head no store forbids anything to; store-build
+            // restrictions and the premium-less CLIENT shape are exercised by the tests that
+            // reassign this block (or null it) explicitly
+            Premium = new AppPremiumOptions {
+                AllowImportAccessCode = true,
+                IsPurchaseUrlSupported = true
+            },
+            DeviceUiProvider = new TestDeviceUiProvider(),
+            EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no UI in test, so we need to use event watcher
+            TrackerFactories = [new TestTrackerFactory()],
+            AllowEndPointTracker = true,
+            AutoDiagnose = false,
+            DisconnectOnDispose = true,
+            ConnectTimeout = TimeSpan.FromSeconds(5).WhenNoDebugger(),
+            Transport = new ClientTransportOptions {
+                SessionTimeout = TimeSpan.FromSeconds(2),
+                ServerQueryTimeout = TimeSpan.FromSeconds(2),
+                TcpConnectTimeout = TimeSpan.FromSeconds(2).WhenNoDebugger()
+            },
+            AdOptions = new AppAdOptions {
+                ShowAdPostDelay = TimeSpan.Zero,
+                LoadAdPostDelay = TimeSpan.Zero,
+                ExtendByRewardedAdThreshold = TimeSpan.Zero,
+                RejectAdBlocker = true,
+                AllowedPrivateDnsProviders = ["dns.google", "dns.test"]
+            },
+            LogServiceOptions = {
+                // every app would add its file to the process's log; tests asserting State.LogExists opt back in
+                Enabled = false,
+            }
+        };
+
+        return appOptions;
+    }
+
+    // The smallest page a web host will serve - an index.html - as the zip a head ships, so a test
+    // can tell the page from the API's replies by its title.
+    public IAsset CreateWebRootZip(string title)
+    {
+        Directory.CreateDirectory(WorkingPath);
+        var path = Path.Combine(WorkingPath, $"web-root_{Guid.CreateVersion7()}.zip");
+        using (var archive = ZipFile.Open(path, ZipArchiveMode.Create)) {
+            using var writer = new StreamWriter(archive.CreateEntry("index.html").Open());
+            writer.Write($"<html><title>{title}</title></html>");
+        }
+
+        return new FileAsset(path);
+    }
+
+    // A zip of the given entries, as a head ships one: a page's or the UI's files, as a test needs them.
+    public IAsset CreateZip(string name, params (string Path, byte[] Bytes)[] entries)
+    {
+        Directory.CreateDirectory(WorkingPath);
+        var path = Path.Combine(WorkingPath, $"{name}_{Guid.CreateVersion7()}.zip");
+        using (var archive = ZipFile.Open(path, ZipArchiveMode.Create)) {
+            foreach (var (entryPath, bytes) in entries) {
+                using var stream = archive.CreateEntry(entryPath).Open();
+                stream.Write(bytes);
+            }
+        }
+
+        return new FileAsset(path);
+    }
+
+    public VpnHoodApp CreateClientApp(AppOptions? appOptions = null, IDevice? device = null)
+    {
+        appOptions ??= CreateAppOptions();
+        device ??= new TestDevice(this, _ => new TestNullVpnAdapter());
+
+        //create app; not registered as the singleton, so keep the returned instance
+        var clientApp = VpnHoodApp.Init(device, appOptions);
+        clientApp.Diagnoser.HttpTimeout = TimeSpan.FromSeconds(2);
+        clientApp.Diagnoser.NsTimeout = TimeSpan.FromSeconds(2);
+        clientApp.UserSettings.SplitTunneling.UseIpViaDevice = true;
+        clientApp.UserSettings.SplitTunneling.UseIpViaApp = true;
+        clientApp.UserSettings.UseTcpForwarding = true;
+        clientApp.SettingsService.SplitIpViaDeviceSettings.Includes = TestIps.AllRemoteTestIps.ToOrderedIpRanges().ToText();
+        clientApp.UserSettings.LogAnonymous = false;
+
+        AppUiContext.Context = new TestAppUiContext();
+        return clientApp;
+    }
+
+    // A key for a server that need not exist, for tests that never connect: the account services need a
+    // current profile to carry premium.
+    public static Token CreateOfflineToken()
+    {
+        var randomId = Guid.NewGuid();
+        return new Token {
+            Name = "Default Test Server",
+            IssuedAt = DateTime.UtcNow,
+            SupportId = "1",
+            TokenId = randomId.ToString(),
+            Secret = randomId.ToByteArray(),
+            ServerToken = new ServerToken {
+                HostEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
+                CertificateHash = randomId.ToByteArray(),
+                HostName = randomId.ToString(),
+                HostPort = 443,
+                Secret = randomId.ToByteArray(),
+                CreatedTime = DateTime.UtcNow,
+                IsValidHostName = false
+            }
+        };
+    }
+
+    private static string GenerateSecureRandomDigits(int length)
+    {
+        var result = new StringBuilder(length);
+        using var rng = RandomNumberGenerator.Create();
+        var buffer = new byte[1];
+        while (result.Length < length) {
+            rng.GetBytes(buffer);
+            var digit = buffer[0] % 10;
+            result.Append(digit);
+        }
+
+        return result.ToString();
+    }
+
+    public string BuildAccessCode()
+    {
+        return AccessCodeUtils.Build(GenerateSecureRandomDigits(18));
+    }
+
+    public override void Dispose()
+    {
+        // AppRegionInfo is process-global; don't let a test's country override leak into the next test
+        AppRegionInfo.Reset();
+        base.Dispose();
+    }
+}

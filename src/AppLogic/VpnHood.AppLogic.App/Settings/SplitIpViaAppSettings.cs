@@ -1,0 +1,60 @@
+﻿
+using VpnHood.AppLogic.Api.SplitTunneling;
+using VpnHood.AppLogic.App.Utils;
+using VpnHood.Net.Toolkit.Storages;
+
+namespace VpnHood.AppLogic.App.Settings;
+
+// The split-ip-via-app source lists (see SplitTunneling.UseIpViaApp). They feed the split-ip db, which
+// live-applies to a running session through a reconfigure.
+internal class SplitIpViaAppSettings(Storage storage)
+    : SplitFileSettings(storage)
+{
+    // Raised by Set when the lists actually changed, AFTER the files are written — a handler that
+    // re-reads the settings sees the new content. The owner (VpnHoodApp) reacts.
+    public event EventHandler? Changed;
+
+    public string Includes {
+        get => Read("includes");
+        set => Write("includes", value);
+    }
+
+    public string Excludes {
+        get => Read("excludes");
+        set => Write("excludes", value);
+    }
+
+    public string Blocks {
+        get => Read("blocks");
+        set => Write("blocks", value);
+    }
+
+    // The sources' change signature, stored as the db's source_signature meta so
+    // SplitIpDbBuilder.EnsureAsync detects stale dbs without parsing the lists.
+    public string GetSignature() => GetSignature("includes", "excludes", "blocks");
+
+    public SplitIpsViaApp Get() => new() {
+        Includes = Includes,
+        Excludes = Excludes,
+        Blocks = Blocks
+    };
+
+    public void Set(SplitIpsViaApp value)
+    {
+        // all before any is written: a refused one would leave the lists half saved
+        Validate(value.Includes);
+        Validate(value.Excludes);
+        Validate(value.Blocks);
+
+        var changed = Includes != value.Includes || Excludes != value.Excludes || Blocks != value.Blocks;
+
+        Includes = value.Includes;
+        Excludes = value.Excludes;
+        Blocks = value.Blocks;
+
+        if (changed)
+            Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    protected override void Validate(string content) => IpRangeTextFileParser.Verify(content);
+}

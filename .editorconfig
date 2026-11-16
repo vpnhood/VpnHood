@@ -97,13 +97,14 @@ dotnet_style_object_initializer = true:suggestion
 dotnet_style_collection_initializer = true:suggestion
 
 # VH0001 (above) is for library and background code. VH0002 is for code that runs on a UI thread:
-# no .Vhc() there, which the CaptureContext debug switch flips, but a fixed ConfigureAwait.
-[src/AppUi/**.cs]
+# no .Vhc() there, which the CaptureContext debug switch flips, but a fixed ConfigureAwait. The looks and their
+# hosts, which run on the UI thread.
+[src/{AppUi,AppHosting}/**.cs]
 dotnet_diagnostic.VH0001.severity = none
 dotnet_diagnostic.VH0002.severity = warning
 
 # the desktop service, its command line and its setup: background code
-[src/AppUi/VpnHood.AppUi.Hosting.Desktop*/**.cs]
+[src/AppHosting/VpnHood.AppHosting.Desktop*/**.cs]
 dotnet_diagnostic.VH0001.severity = warning
 dotnet_diagnostic.VH0002.severity = none
 
@@ -112,7 +113,7 @@ dotnet_diagnostic.VH0001.severity = none
 dotnet_diagnostic.VH0002.severity = warning
 
 # the Android and iOS app layers, on the main thread
-[src/AppLib/{VpnHood.AppLib.App.Android,VpnHood.AppLib.App.Ios}/**.cs]
+[src/AppLogic/{VpnHood.AppLogic.App.Android,VpnHood.AppLogic.App.Ios}/**.cs]
 dotnet_diagnostic.VH0002.severity = warning
 
 [src/Apps/Tools/**.cs]

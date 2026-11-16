@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net11.0-android37.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<Description>Hosts the VpnHood Avalonia UI in an Android activity</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.Android" Version="12.1.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppHosting.Avalonia\VpnHood.AppHosting.Avalonia.csproj" />
+		<ProjectReference Include="..\..\AppLogic\VpnHood.AppLogic.App.Android\VpnHood.AppLogic.App.Android.csproj" />
+	</ItemGroup>
+</Project>

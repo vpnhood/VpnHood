@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Api;
+using VpnHood.AppLogic.Api;
 
 namespace VpnHood.App.StoreScreenshots;
 

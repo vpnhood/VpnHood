@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using VpnHood.AppLib.Api.WebHost.Helpers;
+using VpnHood.AppLogic.Api.WebHost.Helpers;
 using VpnHood.Core.Proxies.Management;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;

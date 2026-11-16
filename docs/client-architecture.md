@@ -11,8 +11,8 @@ flowchart LR
     HEAD["<b>Your head</b><br/>names the app,<br/>picks its providers"]
     subgraph APPSIDE["The app's process"]
         direction TB
-        UI["<b>AppUi</b><br/>the UI: ours, or yours"]
-        APP["<b>AppLib</b><br/>the app's logic"]
+        UI["<b>AppUi</b>, <b>AppHosting</b><br/>the UI: ours, or yours,<br/>and its host"]
+        APP["<b>AppLogic</b><br/>the app's logic"]
         DEV["<b>Core</b><br/>the manager, the device"]
         UI <-->|"① app API"| APP
         APP --> DEV
@@ -47,7 +47,7 @@ flowchart LR
    ([Build your VPN app](build-your-app.md); [what a head is made of](source-layout.md#what-a-head-is-made-of)).
    How a head builds the app at start, and gives it its store's providers:
    [How a VpnHood app starts](app-startup.md).
-2. **① The app API** is everything a UI needs from the app: six interfaces in `VpnHood.AppLib.Api` -
+2. **① The app API** is everything a UI needs from the app: six interfaces in `VpnHood.AppLogic.Api` -
    the app, profiles, account, billing, intents and proxies. A .NET UI holds them as `VpnHoodApi`: the
    app's own controllers in its process (`VpnHoodApp.Api`), or the same calls over HTTP
    (`VpnHoodApiHttpFactory`), as the page a paired phone opens makes them. A UI in any other language
@@ -62,11 +62,11 @@ flowchart LR
 
 | To build | On our | Through |
 | --- | --- | --- |
-| your own branded app | AppUi, AppLib and Core, from NuGet | a copy of [VpnHood.App.Template](https://github.com/vpnhood/VpnHood.App.Template) - see [Build your VPN app](build-your-app.md) |
-| your own UI, in any framework or language | AppLib and Core | ① the app API |
-| your own app in .NET, without AppLib | Core | the manager and the device: `Core.Client.VpnServices.Manager` and `Core.Client.Devices.<OS>` |
+| your own branded app | AppUi, AppLogic and Core, from NuGet | a copy of [VpnHood.App.Template](https://github.com/vpnhood/VpnHood.App.Template) - see [Build your VPN app](build-your-app.md) |
+| your own UI, in any framework or language | AppLogic and Core | ① the app API |
+| your own app in .NET, without AppLogic | Core | the manager and the device: `Core.Client.VpnServices.Manager` and `Core.Client.Devices.<OS>` |
 | your own app in another framework or language - Swift, Kotlin, C++ | Core's VPN service | ② the VPN service contract, spoken directly: our .NET device libraries are out of its reach, but the contract is plain files and JSON |
-| your own VPN engine - in C++, say - under our app | AppLib and AppUi | ② the same contract from the other side: read the options, answer the requests, write the status, inside the OS's VPN component that the device starts; the head declares the engine's report (`AppOptions.VpnEngineInfo`) |
+| your own VPN engine - in C++, say - under our app | AppLogic and AppUi | ② the same contract from the other side: read the options, answer the requests, write the status, inside the OS's VPN component that the device starts; the head declares the engine's report (`AppOptions.VpnEngineInfo`) |
 | networking for any .NET app | Net | its packages, which know nothing of a VPN |
 
 ## ② The VPN service contract
@@ -123,7 +123,7 @@ again from its type.
 
 ### Keeping to the contract
 
-Every AppLib relies on the contract as it is published, so an engine that changes it breaks every app
+Every AppLogic relies on the contract as it is published, so an engine that changes it breaks every app
 built on it. The contract is VpnHood's, and these rules keep it stable:
 
 1. **An engine keeps to the contract as it is.** It adds no request, field or file of its own. What it
@@ -139,7 +139,7 @@ built on it. The contract is VpnHood's, and these rules keep it stable:
 
 ## The two halves
 
-Every VpnHood client runs as two halves that talk over that channel: **the app** (AppUi and AppLib, with
+Every VpnHood client runs as two halves that talk over that channel: **the app** (AppUi and AppLogic, with
 Core's manager and device), and **the VPN service**, which holds the tunnel. On every platform they run
 in separate processes, except in a developer's run. Knowing which half a type or a project belongs to
 answers most "where does this go" questions.
@@ -149,7 +149,7 @@ answers most "where does this go" questions.
 | What it does | settings, profiles, accounts, always-on, the API the UI calls | the tunnel: the session, the engine, the adapter |
 | Its end of the channel | `VpnServiceManager` | `VpnServiceHost` |
 | Its part of the OS | the device (`IDevice`): it starts the VPN service, opens the channel and says what the OS can do | the platform's VPN service (`<OS>VpnService`): the component the OS runs a VPN in, which makes the adapter and the channel's listener |
-| Its projects | `AppLib`, `Core.Client.VpnServices.Manager`, `Core.Client.Devices.*` | `Core.Client.VpnServices.Host.*`, `Core.Client`, `Core.Tunneling` |
+| Its projects | `AppLogic`, `Core.Client.VpnServices.Manager`, `Core.Client.Devices.*` | `Core.Client.VpnServices.Host.*`, `Core.Client`, `Core.Tunneling` |
 
 The two never share memory, even in one process. The manager sends requests through the device's
 message client (`IMessageClient`), the VPN service answers through its listener (`IMessageListener`),
@@ -176,8 +176,8 @@ one debugger run. A desktop head's `dev` run starts the VPN host, as its service
 ## The projects
 
 ```text
-AppLib.App.<OS>
-    ├──→ AppLib.App ──→ Core.Client.VpnServices.Manager
+AppLogic.App.<OS>
+    ├──→ AppLogic.App ──→ Core.Client.VpnServices.Manager
     └──→ Core.Client.Devices.<OS>
              └──→ Core.Client.Devices.Abstractions ──→ Core.Client.VpnServices.Abstractions
 
@@ -197,21 +197,21 @@ Core.Client.VpnServices.Host.<OS>
 
 The rules the references keep:
 
-1. **Nothing on the app's side references the VPN service's side.** AppLib, AppUi, the stores, the
+1. **Nothing on the app's side references the VPN service's side.** AppLogic, AppUi, the stores, the
    ads and every `Core.Client.Devices.*` project compile without the engine (`Core.Client`,
    `Core.Tunneling`) and without `Core.Client.VpnServices.Host.*`.
 2. **`Core.Client.Devices.<OS>` is the app's half of the OS, plus what both halves share**: the VPN
    service's folders and names, the kill switch, the system logger, Android's message transport. The
    VPN service's side references it for those; nothing in it runs a tunnel.
 3. **`Core.Client.VpnServices.Host.<OS>` is the OS's VPN service and its entry point**, and never
-   references AppLib.
-4. **The device stays in Core.** It is how an app drives the VPN service without AppLib: a
+   references AppLogic.
+4. **The device stays in Core.** It is how an app drives the VPN service without AppLogic: a
    developer's own app references `Core.Client.Devices.<OS>` and `Core.Client.VpnServices.Manager`, and
-   none of AppLib.
+   none of AppLogic.
 5. **A head composes the two, and compiles against the halves it runs.** An app head references
-   `AppLib.App.<OS>` and compiles against nothing of the VPN service's side: a desktop head references its
+   `AppLogic.App.<OS>` and compiles against nothing of the VPN service's side: a desktop head references its
    VPN host's project marked `VhAppVpnHost`, which the build puts beside its executable
-   (`VpnHood.AppUi.Hosting.Desktop.Daemon`'s targets), and an iOS head bundles its extension, both
+   (`VpnHood.AppHosting.Desktop.Daemon`'s targets), and an iOS head bundles its extension, both
    referenced with `ReferenceOutputAssembly="false"`. A VPN service head (an iOS extension, a VPN host,
    a VPN plug-in) references `Core.Client.VpnServices.Host.<OS>` alone. A head that runs both halves in
    one process makes both: `AvaloniaUI.Dev` and a MAUI app on Windows hand the app a

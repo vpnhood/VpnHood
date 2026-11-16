@@ -1,5 +1,5 @@
-using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLogic.Abstractions.Accounts;
+using VpnHood.AppLogic.Abstractions.Billing;
 
 namespace VpnHood.App.AvaloniaUI.Dev;
 

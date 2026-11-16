@@ -6,7 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
 	</ItemGroup>
 
 	<ItemGroup>

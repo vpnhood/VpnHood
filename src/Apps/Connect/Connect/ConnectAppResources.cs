@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Api.App;
+﻿using VpnHood.AppLogic.Api.App;
 
 namespace VpnHood.App.Connect;
 

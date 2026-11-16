@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Api.WebHost.Helpers;
+using VpnHood.AppLogic.Api.WebHost.Helpers;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Managers;

@@ -1,12 +1,12 @@
-﻿using VpnHood.AppUi.Hosting.Avalonia.Ios;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
+﻿using VpnHood.AppHosting.Avalonia.Ios;
+using VpnHood.AppUi.Avalonia.Classic;
 using Foundation;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.App;
-using VpnHood.AppLib.App.Ios;
-using VpnHood.AppLib.Stores.AppStore;
-using VpnHood.AppLib.App.Services.Ads;
-using VpnHood.AppLib.App.Services.Updaters;
+using VpnHood.AppLogic.App;
+using VpnHood.AppLogic.App.Ios;
+using VpnHood.AppLogic.Stores.AppStore;
+using VpnHood.AppLogic.App.Services.Ads;
+using VpnHood.AppLogic.App.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Net.Toolkit.Logging;
 

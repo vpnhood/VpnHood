@@ -21,7 +21,7 @@ The db format, meta/rebuild rules, and filter semantics are the contract of the
 ## Flow
 
 ```text
-App process (VpnHoodApp / AppLib)                    VpnService process (VpnHoodClient)
+App process (VpnHoodApp / AppLogic)                    VpnService process (VpnHoodClient)
 ─────────────────────────────────                    ──────────────────────────────────
 SplitDbPublisherService.Publish                             SplitDbManifest.Read(folder)
   ├─ SplitCountryService.EnsureSplitIpDb               └─ one SqliteIpFilter per listed db

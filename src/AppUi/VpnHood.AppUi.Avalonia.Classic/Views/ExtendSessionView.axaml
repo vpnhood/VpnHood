@@ -1,0 +1,20 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:VpnHood.AppUi.Avalonia.Classic.Controls"
+             xmlns:ui="using:VpnHood.AppUi.Avalonia.Classic.Resources"
+             x:Class="VpnHood.AppUi.Avalonia.Classic.Views.ExtendSessionView"
+             Classes="grad-sheet">
+  <!-- More time on a premium session, by an ad while the
+       session allows it, or by an upgrade. The header stays as the page scrolls, with the title
+       once the big one has scrolled away. -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Padding="0,8,0,4" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel MaxWidth="720" Spacing="12">
+        <TextBlock x:Name="TitleText" Classes="h3" TextAlignment="Center" Margin="0,16,0,0" />
+        <Image ui:AppImage.Source="images/extend-session.webp" MaxWidth="400" MaxHeight="220" Stretch="Uniform" Margin="0,8" />
+        <StackPanel x:Name="Rows" Spacing="12" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

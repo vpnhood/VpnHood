@@ -1,10 +1,10 @@
 ﻿using Microsoft.Data.Sqlite;
-using VpnHood.AppLib.Api.App;
-using VpnHood.AppLib.Api.Exceptions;
-using VpnHood.AppLib.Api.SplitTunneling;
-using VpnHood.AppLib.App.Premium;
-using VpnHood.AppLib.App.Services;
-using VpnHood.AppLib.App.Settings;
+using VpnHood.AppLogic.Api.App;
+using VpnHood.AppLogic.Api.Exceptions;
+using VpnHood.AppLogic.Api.SplitTunneling;
+using VpnHood.AppLogic.App.Premium;
+using VpnHood.AppLogic.App.Services;
+using VpnHood.AppLogic.App.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Net.Toolkit.Storages;

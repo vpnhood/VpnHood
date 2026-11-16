@@ -1,0 +1,16 @@
+using System.IO.Pipes;
+using VpnHood.AppHosting.Desktop.Platform;
+
+namespace VpnHood.AppLogic.Test.Daemon;
+
+// A session by the name it is given, which counts the launches that let the open window come forward.
+internal sealed class TestDesktopSession(string name = "") : IDesktopSession
+{
+    private int _handForegroundCount;
+
+    public string Name => name;
+    public bool IsSandboxed => false;
+    public int HandForegroundCount => _handForegroundCount;
+
+    public void HandForegroundTo(NamedPipeClientStream window) => Interlocked.Increment(ref _handForegroundCount);
+}

@@ -1,8 +1,8 @@
 ﻿using Android.Runtime;
-using VpnHood.AppLib.App;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.AppUi.Hosting.Avalonia.Android;
-using VpnHood.AppLib.App.Android.Constants;
+using VpnHood.AppLogic.App;
+using VpnHood.AppUi.Avalonia.Classic;
+using VpnHood.AppHosting.Avalonia.Android;
+using VpnHood.AppLogic.App.Android.Constants;
 
 namespace VpnHood.App.Client.Android.Samsung;
 

@@ -6,7 +6,7 @@ changing anything here, and update it in the same change when the shape of the t
 
 ## What it does
 
-The Avalonia UI (`VpnHood.AppUi.Presentation.Classic.Avalonia`) is started headless against a
+The Avalonia UI (`VpnHood.AppUi.Avalonia.Classic`) is started headless against a
 **fixture** — a recording of what the app's API answers, with every identifying value replaced by
 synthetic data — one page is opened, and the frame is captured at a device's exact pixel size. A
 second pass draws the device around that capture (a phone mockup, a desktop window, or nothing at

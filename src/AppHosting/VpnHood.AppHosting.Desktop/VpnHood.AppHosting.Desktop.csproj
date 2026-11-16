@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<Description>The VpnHood desktop window: the window over a running app's own API, one per person and session, and the host that runs the app and its window in one process. Platform-free - the service and its commands are VpnHood.AppHosting.Desktop.Daemon's, and where an install keeps things is the platform package's to say (Desktop.Linux, Desktop.WindowsTun, Desktop.WindowsVpnPlugin)</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.CommandLine" Version="3.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- the service's window and its debugger's run (dev) are this window, over this connection -->
+		<InternalsVisibleTo Include="VpnHood.AppHosting.Desktop.Daemon" />
+		<!-- the window's single instance and the connection's handler, tested with stand-ins -->
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppUi.SmokeTest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The window reaches the app over loopback, through the same generated clients a paired
+		     browser uses. -->
+		<ProjectReference Include="..\..\AppLogic\VpnHood.AppLogic.Api.HttpClients\VpnHood.AppLogic.Api.HttpClients.csproj" />
+		<!-- The in-process host builds the app in the window's own process. -->
+		<ProjectReference Include="..\..\AppLogic\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
+		<!-- The UI a head names, which the window runs. -->
+		<ProjectReference Include="..\VpnHood.AppHosting.Desktop.Abstractions\VpnHood.AppHosting.Desktop.Abstractions.csproj" />
+	</ItemGroup>
+</Project>

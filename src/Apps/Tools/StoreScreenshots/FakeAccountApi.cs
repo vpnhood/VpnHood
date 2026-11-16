@@ -1,5 +1,5 @@
-using VpnHood.AppLib.Api;
-using VpnHood.AppLib.Api.Accounts;
+using VpnHood.AppLogic.Api;
+using VpnHood.AppLogic.Api.Accounts;
 
 namespace VpnHood.App.StoreScreenshots;
 

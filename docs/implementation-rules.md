@@ -21,7 +21,7 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
    Compatibility code, what stays only so older callers keep working - an old option, an old name, an
    old protocol - carries a dated remark, never a `todo:`, which would list it among the todos:
    `Compatibility (YYYY-MM): <who still calls it>; drop <when>`, so it can be found and removed.
-6. What only one head needs stays in that head, as a tiny helper, not as wiring across AppLib.
+6. What only one head needs stays in that head, as a tiny helper, not as wiring across AppLogic.
 7. Native and OS helpers take names as parameters, never brand constants; a default is brand-neutral,
    and our products override it (`VhAppCommandName`).
 8. A library never enforces the app id's format; it derives from it what the OS needs.
@@ -106,7 +106,7 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
 23. A Debug build's name must stand out.
 24. An updater runs apart from what it updates, as a standalone script: an app that fails to run
     must still get the release that fixes it.
-25. The app UI, AppLib and Core need no compatibility between them while nobody else uses them: they
+25. The app UI, AppLogic and Core need no compatibility between them while nobody else uses them: they
     are published and changed together. A renamed member just changes, with its JSON: the app's API,
     `status --json`, and the files and calls between the app and its VPN service. Two things must
     keep working across versions. A settings file must still load: a renamed setting is migrated as

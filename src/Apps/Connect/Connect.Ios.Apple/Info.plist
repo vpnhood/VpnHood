@@ -2,7 +2,7 @@
 <plist version="1.0">
 <dict>
 	<!-- CFBundleIdentifier and CFBundleDisplayName are the build's: ApplicationId and ApplicationTitle,
-	     from the app's identity (VpnHood.AppLib.App.targets), which this file does not state again. -->
+	     from the app's identity (VpnHood.AppLogic.App.targets), which this file does not state again. -->
 	<!-- false ="no encryption requiring Apple export-compliance documentation" — NOT "no encryption".
 	     Standards-body crypto only (AES-GCM/CTR, RSA, SHA-2, HMAC, TLS), nothing proprietary, no French
 	     store. Skips the per-build TestFlight compliance question. NEVER set true (true-without-code is

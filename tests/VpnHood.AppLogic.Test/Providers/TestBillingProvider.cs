@@ -1,0 +1,87 @@
+using VpnHood.AppLogic.Abstractions.Billing;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+
+namespace VpnHood.AppLogic.Test.Providers;
+
+internal class TestBillingProvider : IBillingProvider
+{
+    public Exception? PurchaseException { get; set; }
+    public Exception? SubscriptionPlanException { get; set; }
+    public PurchaseProof? RestoreResult { get; set; }
+    public PurchaseParams? LastPurchaseParams { get; private set; }
+    public PurchaseAttribution? LastAttribution { get; private set; }
+
+    public string ProviderId { get; set; } = StoreIds.GooglePlay;
+    public bool IsSubscriptionManagementSupported { get; set; } = true;
+    public bool WasSubscriptionManagementOpened { get; private set; }
+
+    public Task OpenSubscriptionManagement(IUiContext? uiContext, CancellationToken cancellationToken)
+    {
+        WasSubscriptionManagementOpened = true;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The product ids the catalog asked to be priced, as the store received them.</summary>
+    public IReadOnlyList<string>? LastRequestedProductIds { get; private set; }
+
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
+        CancellationToken cancellationToken)
+    {
+        LastRequestedProductIds = productIds;
+        if (SubscriptionPlanException != null)
+            throw SubscriptionPlanException;
+
+        await Task.CompletedTask;
+        return [
+            new SubscriptionPlan {
+                BasePrice = 12,
+                CurrentPrice = 9,
+                Period = "P1M",
+                PlanToken = "test_plan_1m",
+                CurrencySymbol = "$",
+                CurrencyCode = "USD"
+            }
+        ];
+    }
+
+    /// <summary>Runs while the store's sheet would be open — the window a real one leaves the app in.</summary>
+    public Func<Task>? WhileStoreIsAnswering { get; set; }
+
+    public async Task<PurchaseProof> Purchase(IUiContext? uiContext, PurchaseParams purchaseParams,
+        PurchaseAttribution attribution, CancellationToken cancellationToken)
+    {
+        LastPurchaseParams = purchaseParams;
+        LastAttribution = attribution;
+        if (PurchaseException != null)
+            throw PurchaseException;
+
+        if (WhileStoreIsAnswering != null)
+            await WhileStoreIsAnswering().ConfigureAwait(false);
+
+        return new PurchaseProof { Value = "test_purchase_data" };
+    }
+
+    public Task<PurchaseProof?> RestorePurchase(IUiContext? uiContext, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(RestoreResult);
+    }
+
+    /// <summary>The proofs the store was told are delivered, in order.</summary>
+    public List<PurchaseProof> FinishedPurchases { get; } = [];
+    public Exception? FinishException { get; set; }
+
+    public Task FinishPurchase(PurchaseProof purchaseProof, CancellationToken cancellationToken)
+    {
+        if (FinishException != null)
+            throw FinishException;
+
+        FinishedPurchases.Add(purchaseProof);
+        return Task.CompletedTask;
+    }
+
+    public PurchaseState PurchaseState => PurchaseState.None;
+
+    public void Dispose()
+    {
+    }
+}

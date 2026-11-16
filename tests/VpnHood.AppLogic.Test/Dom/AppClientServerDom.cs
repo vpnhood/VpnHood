@@ -1,0 +1,113 @@
+﻿using VpnHood.AppLogic.Abstractions.Ads;
+using VpnHood.AppLogic.App;
+using VpnHood.AppLogic.App.VpnProfiles;
+using VpnHood.AppLogic.App.Services.Ads;
+using VpnHood.AppLogic.Test.Providers;
+using VpnHood.Core.Client.Devices.Abstractions;
+using VpnHood.AppLogic.Api.App;
+using VpnHood.Core.Common.Tokens;
+using ConnectPlanId = VpnHood.AppLogic.Api.App.ConnectPlanId;
+using VpnHood.Core.Server;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Test.AccessManagers;
+using VpnHood.Test.Device;
+
+namespace VpnHood.AppLogic.Test.Dom;
+
+public class AppClientServerDom : IAsyncDisposable
+{
+    public TestAppHelper TestAppHelper { get; }
+    public TestAccessManager AccessManager { get; }
+    public TestAdProvider TestAdProvider { get; }
+    public VpnHoodServer Server { get; }
+    public VpnHoodApp App { get; }
+    public VpnProfile VpnProfile { get; }
+
+    private AppClientServerDom(
+        TestAppHelper testAppHelper,
+        TestAccessManager accessManager,
+        VpnHoodServer server,
+        AppOptions appOptions,
+        AdType adProviderAdType,
+        IDevice? device,
+        Token token)
+    {
+        TestAppHelper = testAppHelper;
+        AccessManager = accessManager;
+        Server = server;
+        TestAdProvider = new TestAdProvider(accessManager, adProviderAdType);
+        if (!appOptions.AdProviderItems.Any()) {
+            appOptions.AdProviderItems = [
+                new AppAdProviderItem {
+                    AdProvider = TestAdProvider,
+                    ProviderName = "UnitTestAd"
+                }
+            ];
+        }
+
+        // create app
+        App = testAppHelper.CreateClientApp(device: device, appOptions: appOptions);
+        VpnProfile = App.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        App.UserSettings.VpnProfileId = VpnProfile.VpnProfileId;
+        App.SettingsService.Save();
+    }
+
+
+    public static async Task<AppClientServerDom> CreateWithNullCapture(
+        TestAppHelper testAppHelper,
+        FileAccessManagerOptions? fileAccessManagerOptions = null,
+        AppOptions? appOptions = null)
+    {
+        var accessManager = await testAppHelper.CreateAccessManager(fileAccessManagerOptions);
+        appOptions ??= testAppHelper.CreateAppOptions();
+
+        // create server
+        var server = await testAppHelper.CreateServer(accessManager: accessManager);
+        var token = await testAppHelper.CreateAccessToken(server);
+        return new AppClientServerDom(testAppHelper,
+            accessManager: accessManager,
+            server: server,
+            device: null,
+            adProviderAdType: AdType.RewardedAd,
+            appOptions: appOptions,
+            token: token);
+    }
+
+    public static async Task<AppClientServerDom> Create(
+        TestAppHelper testAppHelper,
+        TestVpnAdapterOptions? adapterOptions = null,
+        AdType adProviderAdType = AdType.RewardedAd,
+        FileAccessManagerOptions? fileAccessManagerOptions = null,
+        AppOptions? appOptions = null)
+    {
+        var device = testAppHelper.CreateDevice(adapterOptions);
+        var accessManager = await testAppHelper.CreateAccessManager(fileAccessManagerOptions);
+        appOptions ??= testAppHelper.CreateAppOptions();
+
+        // create server
+        var server = await testAppHelper.CreateServer(
+            accessManager: accessManager,
+            socketFactory: device.SocketFactory);
+
+        var token = await testAppHelper.CreateAccessToken(server);
+        return new AppClientServerDom(testAppHelper,
+            accessManager: accessManager,
+            server: server,
+            appOptions: appOptions,
+            adProviderAdType: adProviderAdType,
+            device: device,
+            token: token);
+    }
+
+    public Task Connect(ConnectPlanId planId = ConnectPlanId.Normal)
+    {
+        return App.Connect(VpnProfile.VpnProfileId, TestAppHelper.TestCt, planId: planId);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await App.DisposeAsync();
+        await Server.DisposeAsync();
+        AccessManager.Dispose();
+    }
+}

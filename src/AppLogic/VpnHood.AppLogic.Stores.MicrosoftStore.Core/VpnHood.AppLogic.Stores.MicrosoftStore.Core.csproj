@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood Microsoft Store updates and reviews, which any Microsoft Store app can use.</Description>
+		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.AppLogic.Stores.MicrosoftStore</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLogic.Abstractions\VpnHood.AppLogic.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

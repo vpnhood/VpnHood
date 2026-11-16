@@ -4,7 +4,7 @@ The Connect app is a branding variant of the Client app — identical bootstrap,
 (bundle ids `com.vpnhood.connect.ios`, App Group `group.com.vpnhood.connect.ios`, built from
 `../Directory.Build.props`; see `docs/source-layout.md`) and the product's settings
 (`ConnectAppConfigs`) and premium features (`ConnectAppResources`).
-Shared iOS app code is in `src/AppLib/VpnHood.AppLib.App.Ios`. Building this project also builds and bundles
+Shared iOS app code is in `src/AppLogic/VpnHood.AppLogic.App.Ios`. Building this project also builds and bundles
 the extension appex (`src/Apps/Connect/Connect.Ios.Extension`).
 
 > Connect is provisioned (since 2026-07): bundle ids + App Group are registered in the Apple portal, and the

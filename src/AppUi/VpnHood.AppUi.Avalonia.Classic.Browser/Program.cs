@@ -1,0 +1,20 @@
+using Avalonia;
+using VpnHood.AppHosting.Avalonia.Browser;
+
+namespace VpnHood.AppUi.Avalonia.Classic.Browser;
+
+// The Classic Avalonia UI as a browser page. The host does everything (AvaloniaBrowserHost); this
+// names the UI it mounts, the way a head's desktop or Android host names it.
+internal static class Program
+{
+    private static Task Main(string[] args)
+    {
+        return AvaloniaBrowserHost.RunAsync<ClassicAvaloniaApp>(args, CancellationToken.None);
+    }
+
+    // Avalonia's designer and previewer look for this by name.
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        return AppBuilder.Configure<ClassicAvaloniaApp>();
+    }
+}

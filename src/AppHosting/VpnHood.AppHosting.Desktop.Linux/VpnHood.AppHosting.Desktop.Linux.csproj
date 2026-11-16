@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<Description>The VpnHood desktop host on Linux: systemd is the service, /opt is the install, XDG is the cache, and root is who runs the daemon. Everything the commands themselves do is VpnHood.AppHosting.Desktop.Daemon</Description>
+	</PropertyGroup>
+
+	<!-- The app's icon as Linux reads it (buildTransitive/), for every Linux head that takes this
+	     package. Its whole path in the package: a folder alone as PackagePath would nest it twice. -->
+	<ItemGroup>
+		<None Update="buildTransitive\VpnHood.AppHosting.Desktop.Linux.targets" Pack="true"
+		      PackagePath="buildTransitive\VpnHood.AppHosting.Desktop.Linux.targets" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppHosting.Desktop.Daemon\VpnHood.AppHosting.Desktop.Daemon.csproj" />
+		<!-- The app as Linux hosts it: the single-instance lock, the command file, the adapter
+		     a previous run may have left. -->
+		<ProjectReference Include="..\..\AppLogic\VpnHood.AppLogic.App.Linux\VpnHood.AppLogic.App.Linux.csproj" />
+	</ItemGroup>
+</Project>

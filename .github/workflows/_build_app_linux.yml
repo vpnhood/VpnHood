@@ -103,7 +103,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: browser-page
-          path: code/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive
+          path: code/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
       - name: Build Linux
         shell: pwsh
         run: |

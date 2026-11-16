@@ -8,7 +8,7 @@
 		<!-- The app's executable's name and "VpnPlugin" (VhAppExecutableName). The package's manifest names it:
 		     its VPN host's Executable and its background tasks' server. -->
 		<AssemblyName>$(VhAppExecutableName)VpnPlugin</AssemblyName>
-		<!-- no console launcher beside it (VpnHood.AppUi.Hosting.Desktop.WindowsTun.targets) -->
+		<!-- no console launcher beside it (VpnHood.AppHosting.Desktop.WindowsTun.targets) -->
 		<VhAppCommandName />
 		<Platforms>x64</Platforms>
 		<RuntimeIdentifier>win-x64</RuntimeIdentifier>

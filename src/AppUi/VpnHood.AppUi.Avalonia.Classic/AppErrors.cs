@@ -1,0 +1,24 @@
+using VpnHood.AppLogic.Api.App;
+using VpnHood.AppUi.Common;
+using VpnHood.AppHosting.Avalonia;
+
+namespace VpnHood.AppUi.Avalonia.Classic;
+
+// What a failure's message and buttons depend on besides the failure (ErrorMessages.For): the
+// standing of the session and the profile, and what the app asks for, off the state as it is when
+// the failure is shown.
+public static class AppErrors
+{
+    public static ErrorContext Context => new() {
+        HasDiagnoseRequested = VhApp.State.HasDiagnoseRequested,
+        HasVpnProfile = VhApp.VpnProfileId != null,
+        IsPremiumSupported = VhApp.IsPremiumSupported,
+        IsPremiumUser = VhApp.IsPremiumUser,
+        IsPremiumByAccount = VhApp.IsPremiumByAccount,
+        CanTryPremium = VhApp.CanTryPremium,
+        HasAccessCode = VhApp.State.VpnProfile?.HasAccessCode == true,
+        CanImportAccessCode = VhApp.CanImportAccessCode,
+        IsCustomDnsPremiumFeature = VhApp.IsPremiumFeature(AppFeature.CustomDns),
+        PromptForLog = VhApp.State.PromptForLog
+    };
+}

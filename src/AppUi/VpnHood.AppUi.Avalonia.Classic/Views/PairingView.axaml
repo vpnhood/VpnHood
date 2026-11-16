@@ -1,0 +1,84 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppUi.Common"
+             xmlns:controls="using:VpnHood.AppUi.Avalonia.Classic.Controls"
+             x:Class="VpnHood.AppUi.Avalonia.Classic.Views.PairingView">
+  <!-- The code and its address on one side, every
+       line of text on the other, Done under the remote, the two together in the screen's middle,
+       as a TV app shows its code. Under 600 logical px the text drops under the code and the page
+       scrolls. The listener lives exactly as long as this page is shown - no timer, no grace period -
+       so the person who opened it sees the whole time the TV can be reached. -->
+  <UserControl.Styles>
+    <Style Selector="StackPanel.code-pane">
+      <Setter Property="Grid.Column" Value="0" />
+    </Style>
+    <Style Selector="StackPanel.text-pane">
+      <Setter Property="Grid.Column" Value="2" />
+    </Style>
+    <!-- Secondary in the shape of a card, so a remote's ring reads from across a room. No warning
+         colour: it stays up while everything works -->
+    <Style Selector="Button.help-card">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.help-card TextBlock">
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <ContainerQuery Name="Page" Query="max-width:600">
+      <Style Selector="StackPanel.code-pane">
+        <Setter Property="Grid.ColumnSpan" Value="3" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+      </Style>
+      <Style Selector="StackPanel.text-pane">
+        <Setter Property="Grid.Row" Value="1" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.ColumnSpan" Value="3" />
+        <Setter Property="Margin" Value="0,24,0,0" />
+      </Style>
+    </ContainerQuery>
+  </UserControl.Styles>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <Grid Classes="page" ColumnDefinitions="Auto,40,*" RowDefinitions="Auto,Auto" VerticalAlignment="Center"
+          HorizontalAlignment="Center">
+
+      <StackPanel Classes="code-pane" Spacing="12" MaxWidth="340">
+        <Border Background="White" CornerRadius="6" Padding="10" HorizontalAlignment="Center">
+          <controls:QrCodeControl x:Name="Qr" Width="256" Height="256" />
+        </Border>
+        <!-- pinned left to right, as the other-addresses line is: an RTL locale
+             would reorder an address into something that cannot be typed. The pane is wide enough
+             for an IPv4 address with its pairing code on one line: broken in two, a second address
+             under it reads as a third -->
+        <TextBlock x:Name="AddressText" Classes="address" HorizontalAlignment="Center" TextAlignment="Center" FlowDirection="LeftToRight" />
+      </StackPanel>
+
+      <!-- Grid.Row and Grid.Column come from the styles above, which the container query
+           rewrites for a narrow page; a local value here would beat the query and leave this pane
+           beside the code instead of under it. -->
+      <!-- ReSharper disable Xaml.MissingGridIndex -->
+      <StackPanel Classes="text-pane" Spacing="14" VerticalAlignment="Center" MaxWidth="420">
+        <TextBlock Classes="title" Text="{Binding RemoteAccess, Source={x:Static res:Strings.Current}}" />
+        <TextBlock x:Name="RemoteAccessDescText" Classes="body" />
+        <!-- where to go on the phone, when this page was opened for something a remote cannot do -->
+        <TextBlock x:Name="HintText" Classes="body" IsVisible="False" />
+        <Border Classes="note">
+          <TextBlock Classes="body" Text="{Binding RemoteAccessKeepOpen, Source={x:Static res:Strings.Current}}" />
+        </Border>
+        <TextBlock x:Name="ConnectedText" Classes="muted" Text="{Binding RemoteAccessNoDevice, Source={x:Static res:Strings.Current}}" />
+        <!-- A phone that cannot reach the page shows only an error that names nothing, and the TV never
+             hears of it, so this stays up for any phone. It opens a dialog, not a page: leaving this page
+             stops the listener the phone is about to try again. -->
+        <Button x:Name="HelpButton" Classes="btn-secondary help-card" Click="OnHelpClick">
+          <TextBlock Classes="body" Text="{Binding RemoteAccessHelp, Source={x:Static res:Strings.Current}}" />
+        </Button>
+        <Button x:Name="DoneButton" Classes="btn-main" Content="{Binding Done, Source={x:Static res:Strings.Current}}"
+                HorizontalAlignment="Right" Click="OnDoneClick" />
+      </StackPanel>
+      <!-- ReSharper restore Xaml.MissingGridIndex -->
+
+    </Grid>
+  </ScrollViewer>
+</UserControl>

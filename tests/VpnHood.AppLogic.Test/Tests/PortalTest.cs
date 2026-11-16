@@ -1,0 +1,824 @@
+﻿using System.Globalization;
+using System.Security.Authentication;
+using System.Text.Json;
+using VpnHood.AppLogic.Abstractions.Accounts;
+using VpnHood.AppLogic.Abstractions.Billing;
+using VpnHood.AppLogic.Abstractions.UiContexts;
+using VpnHood.AppLogic.Portal;
+using VpnHood.AppLogic.Test.Providers;
+using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
+using VpnHood.Core.Common.Exceptions;
+using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Net.Toolkit.Storages;
+using VpnHood.Test;
+
+namespace VpnHood.AppLogic.Test.Tests;
+
+/// <summary>
+/// VpnHood.AppLogic.Portal against a scripted loopback portal: the real HTTP
+/// surface (routes, verbs, bodies, bearer headers, session persistence) with
+/// no real backend and no store.
+/// </summary>
+[TestClass]
+public class PortalTest
+{
+    public required TestContext TestContext { get; set; }
+    private CancellationToken TestCt => TestContext.CancellationToken;
+
+    private class TestUiContext : IUiContext
+    {
+        public Task<bool> IsDestroyed() => Task.FromResult(false);
+        public Task<bool> IsActive() => Task.FromResult(true);
+    }
+
+    private const string PackageName = "com.vpnhood.connect.android";
+    private const string SignInRoute = "POST /auth/sessions";
+    private const string SignOutRoute = "DELETE /auth/sessions/current";
+    private const string RestoreOptionsRoute = "POST /auth/restore-credentials/assertion-options";
+    private static readonly Guid ExternalUid = Guid.Parse("c0ffee00-0000-4000-8000-000000000001");
+
+    private TestPortalServer _portal = null!;
+    private string _storageFolder = null!;
+
+    [TestInitialize]
+    public void Initialize()
+    {
+        _portal = new TestPortalServer();
+        _storageFolder = Path.Combine(TestHelper.AssemblyWorkingPath, "portal", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_storageFolder);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        _portal.Dispose();
+        if (Directory.Exists(_storageFolder))
+            Directory.Delete(_storageFolder, recursive: true);
+    }
+
+    /// <summary>The sign-in answer: identity and lifetime only — who the person is comes from GET /account.</summary>
+    private static object SignInData(string accessToken = "session-token-1")
+    {
+        return new {
+            accessToken,
+            expiresAt = DateTime.UtcNow.AddDays(30).ToString("O"),
+            userId = ExternalUid.ToString()
+        };
+    }
+
+    /// <summary>The GET /account snapshot — the wire maps Account 1:1.</summary>
+    private static object SnapshotData(object? accessCodeInfo = null, object? subscription = null, string? name = null)
+    {
+        return new {
+            userId = ExternalUid.ToString(),
+            name,
+            email = "buyer@example.com",
+            accessCodeInfo,
+            subscription
+        };
+    }
+
+    private PortalAuthenticationProvider CreateAuthenticationProvider(
+        params IAuthenticationExternalProvider[] externalProviders)
+    {
+        return new PortalAuthenticationProvider(
+            new Storage(new FileSystemStorageProvider(), _storageFolder),
+            _portal.BaseUrl,
+            PackageName,
+            externalProviders.Length > 0
+                ? externalProviders
+                : [new TestAuthenticationExternalProvider("google-id-token")]);
+    }
+
+    [TestMethod]
+    public async Task SignIn_posts_the_id_token_and_persists_the_session()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        using var authenticationProvider = CreateAuthenticationProvider();
+
+        Assert.IsNull(authenticationProvider.UserId, "no session before sign-in");
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+
+        Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId);
+        var request = _portal.Requests.Single(x => x.Route == SignInRoute);
+        Assert.AreEqual("google", request.Body.GetProperty("provider").GetString());
+        Assert.AreEqual("google-id-token", request.Body.GetProperty("idToken").GetString());
+        Assert.AreEqual(PackageName, request.Body.GetProperty("packageName").GetString());
+
+        // session file persisted → a NEW provider instance is already signed in
+        using var reloadedProvider = CreateAuthenticationProvider();
+        Assert.AreEqual(ExternalUid.ToString(), reloadedProvider.UserId, "session must survive restarts");
+    }
+
+    [TestMethod]
+    public async Task Forgot_password_opens_the_page_the_portal_names()
+    {
+        // the portal's own address, whatever its scheme: the app never builds it
+        const string pageUrl = "https://account.example.com/billing/index.php?rp=/password/reset";
+        _portal.Enqueue("GET /auth/password-reset", new { url = pageUrl });
+        using var authenticationProvider = CreateAuthenticationProvider();
+
+        var url = await authenticationProvider.GetPasswordResetUrl(TestCt);
+
+        Assert.AreEqual(pageUrl, url?.AbsoluteUri);
+        var request = _portal.Requests.Single(x => x.Route == "GET /auth/password-reset");
+        Assert.IsNull(request.Authorization, "the page is public: no session is sent");
+    }
+
+    [TestMethod]
+    public async Task Requests_carry_the_app_language()
+    {
+        // the portal gives it to the website account it creates, which its mail follows
+        _portal.Enqueue("GET /auth/password-reset", new { url = "https://account.example.com/password/reset" });
+        using var authenticationProvider = CreateAuthenticationProvider();
+        var uiCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("fa");
+        try {
+            await authenticationProvider.GetPasswordResetUrl(TestCt);
+        }
+        finally {
+            CultureInfo.CurrentUICulture = uiCulture;
+        }
+
+        var request = _portal.Requests.Single(x => x.Route == "GET /auth/password-reset");
+        Assert.AreEqual("fa", request.AcceptLanguage);
+    }
+
+    [TestMethod]
+    public async Task Requests_carry_the_session_as_bearer_and_portal_token()
+    {
+        _portal.Enqueue(SignInRoute, SignInData(accessToken: "tok-abc"));
+        _portal.Enqueue("GET /account", SnapshotData());
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+        var account = await accountProvider.GetAccount(TestCt);
+
+        Assert.IsNotNull(account);
+        Assert.AreEqual("buyer@example.com", account.Email);
+        Assert.IsNull(account.Subscription, "nothing store-billed → no subscription");
+
+        var request = _portal.Requests.Single(x => x.Route == "GET /account");
+        Assert.AreEqual("Bearer tok-abc", request.Authorization);
+        Assert.AreEqual("tok-abc", request.PortalToken);
+    }
+
+    [TestMethod]
+    public async Task GetAccount_maps_the_snapshot_one_to_one()
+    {
+        var expiresAt = DateTime.UtcNow.AddDays(30);
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("GET /account", SnapshotData(
+            name: "Alex Smith",
+            accessCodeInfo: new { accessCode = "12345678901234567890", expirationTime = expiresAt.ToString("O") },
+            subscription: new {
+                storeId = StoreIds.GooglePlay,
+                createdTime = DateTime.UtcNow.AddDays(-2).ToString("O"),
+                expirationTime = expiresAt.ToString("O"),
+                priceAmount = 9.99,
+                priceCurrency = "USD",
+                billingPeriod = "P1M",
+                isAutoRenew = true
+            }));
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+
+        // one wire read IS the app model — nothing is re-ranked or re-assembled on this side
+        var account = await accountProvider.GetAccount(TestCt);
+        Assert.IsNotNull(account);
+        Assert.AreEqual(ExternalUid.ToString(), account.UserId);
+        Assert.AreEqual("Alex Smith", account.Name);
+        Assert.AreEqual("buyer@example.com", account.Email);
+        Assert.AreEqual("12345678901234567890", account.AccessCodeInfo?.AccessCode,
+            "THE one ranked code rides along with the account — one read, not two");
+        Assert.IsNotNull(account.AccessCodeInfo?.ExpirationTime, "the code carries its own clock");
+        Assert.AreEqual(StoreIds.GooglePlay, account.Subscription?.StoreId);
+        Assert.AreEqual(9.99m, account.Subscription?.PriceAmount);
+        Assert.AreEqual("USD", account.Subscription?.PriceCurrency);
+        Assert.AreEqual("P1M", account.Subscription?.BillingPeriod);
+        Assert.AreEqual(true, account.Subscription?.IsAutoRenew);
+        Assert.IsNotNull(account.Subscription?.ExpirationTime);
+        Assert.IsNotNull(account.Subscription?.CreatedTime);
+        Assert.AreEqual(SubscriptionManagement.AnotherStore, account.Subscription?.Management,
+            "no billing provider → nothing here can manage it, and no store may be named");
+    }
+
+    [TestMethod]
+    public async Task OrderProcessor_prepares_attribution_and_verifies_the_purchase()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        // the purchase answer IS the state — the delivered code lives on GET /account
+        _portal.Enqueue("POST /billing/purchases", "provisioned");
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        using var accountProvider = new PortalAccountProvider(authenticationProvider,
+            new TestBillingProvider(), _portal.BaseUrl, PackageName);
+        var orderProcessor = accountProvider.Billing?.OrderProcessor
+            ?? throw new InvalidOperationException("Billing must exist when a provider is given.");
+
+        // not signed in → PreparePurchase refuses
+        await Assert.ThrowsExactlyAsync<AuthenticationException>(() =>
+            orderProcessor.PreparePurchase(TestCt));
+
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+
+        var attribution = await orderProcessor.PreparePurchase(TestCt);
+        // one value for every store: the portal's uid, a UUID so Apple can take it as its
+        // appAccountToken without the abstraction carrying a field per store
+        Assert.AreEqual(ExternalUid.ToString(), attribution.UserId);
+        Assert.IsTrue(Guid.TryParse(attribution.UserId, out _), "every store needs it parseable as a UUID");
+
+        await orderProcessor.CompleteOrder(new PurchaseProof { Value = "purchase-token-xyz" },
+            TestCt);
+
+        var request = _portal.Requests.Single(x => x.Route == "POST /billing/purchases");
+        Assert.AreEqual(StoreIds.GooglePlay, request.Body.GetProperty("storeId").GetString());
+        Assert.AreEqual(PackageName, request.Body.GetProperty("packageName").GetString());
+        Assert.AreEqual("purchase-token-xyz",
+            request.Body.GetProperty("proof").GetProperty("purchaseToken").GetString());
+    }
+
+    [TestMethod]
+    public async Task A_problem_response_becomes_the_standard_ApiException()
+    {
+        _portal.Enqueue(SignInRoute, new TestPortalServer.ErrorScript {
+            Code = "invalid_id_token",
+            Detail = "Invalid sign-in token.",
+            StatusCode = 401
+        });
+        using var authenticationProvider = CreateAuthenticationProvider();
+
+        var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+                TestCt));
+        Assert.AreEqual(401, exception.StatusCode, "the real HTTP status, not ApiError's 400 default");
+        Assert.AreEqual("invalid_id_token", exception.Data["Code"], "clients branch on the machine code");
+        Assert.AreEqual("Invalid sign-in token.", exception.Message, "the problem detail, no raw response appended");
+    }
+
+    [TestMethod]
+    public async Task SignOut_revokes_the_session_and_deletes_the_file()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
+
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
+        using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+        Assert.IsNotNull(authenticationProvider.UserId);
+
+        await authenticationProvider.SignOut(new TestUiContext(), TestCt);
+
+        Assert.IsNull(authenticationProvider.UserId);
+        Assert.AreEqual(1, externalProvider.SignOutCalls);
+        var signOut = _portal.Requests.Single(x => x.Route == SignOutRoute);
+        Assert.AreEqual(JsonValueKind.Undefined, signOut.Body.ValueKind,
+            "a DELETE must not carry a body — some servers and proxies reject one");
+        using var reloadedProvider = CreateAuthenticationProvider();
+        Assert.IsNull(reloadedProvider.UserId, "the session file must be gone");
+    }
+
+    [TestMethod]
+    public async Task The_password_form_signs_in_and_out_with_no_window()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
+
+        // the desktop service: no window, and no provider that would need one
+        using var authenticationProvider = new PortalAuthenticationProvider(
+            new Storage(new FileSystemStorageProvider(), _storageFolder), _portal.BaseUrl,
+            PackageName, authenticationExternalProviders: []);
+
+        var result = await authenticationProvider.SignIn(null,
+            new SignInOptions {
+                ProviderId = AuthProviders.Password,
+                UserName = "buyer@example.com",
+                Password = "the-password"
+            }, TestCt);
+
+        Assert.AreEqual(SignInState.SignedIn, result.State);
+        Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId);
+
+        await authenticationProvider.SignOut(null, TestCt);
+        Assert.IsNull(authenticationProvider.UserId);
+        Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == SignOutRoute));
+    }
+
+    [TestMethod]
+    public async Task SignOut_completes_when_the_identity_provider_has_no_window_to_clear_in()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
+
+        // Google clears its credential only in a window: a TV driven by its paired phone may have none
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token") {
+            SignOutException = new UiContextNotAvailableException()
+        };
+        using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+
+        await authenticationProvider.SignOut(null, TestCt);
+
+        Assert.IsNull(authenticationProvider.UserId);
+        Assert.AreEqual(1, externalProvider.SignOutCalls);
+    }
+
+    [TestMethod]
+    public async Task DeleteAccount_erases_the_account()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("DELETE /account", TestPortalServer.NoContent);
+
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
+        var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+        await accountProvider.DeleteAccount(TestCt);
+
+        Assert.IsNotNull(_portal.Requests.SingleOrDefault(x => x.Route == "DELETE /account"));
+        // signing this device out is AccountService's half of the act — see
+        // AccountAccessCodeTest.Deletion_signs_this_device_out; the provider only erases the person,
+        // so a refusal (below) can leave the session exactly as it found it
+        Assert.IsNotNull(authenticationProvider.UserId);
+        Assert.AreEqual(0, externalProvider.SignOutCalls);
+    }
+
+    [TestMethod]
+    public async Task A_session_past_its_old_expiry_is_used_without_a_silent_sign_in()
+    {
+        // a session from before the portal's sessions lost their time limit: a silent sign-in would
+        // make a new account for a person who deleted theirs on another device
+        var accountFolder = Path.Combine(_storageFolder, "account");
+        Directory.CreateDirectory(accountFolder);
+        await File.WriteAllTextAsync(Path.Combine(accountFolder, "portalSession.json"), JsonSerializer.Serialize(new {
+            AccessToken = "old-session-token",
+            UserId = ExternalUid.ToString(),
+            ExpiresAt = DateTime.UtcNow.AddDays(-1),
+            ProviderId = AuthProviders.Google
+        }), TestCt);
+        _portal.Enqueue(SignInRoute, SignInData(accessToken: "new-account-token"));
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
+        using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+
+        var accessToken = await authenticationProvider.GetAccessToken(TestCt);
+
+        Assert.AreEqual("old-session-token", accessToken);
+        Assert.AreEqual(0, externalProvider.SignInCalls);
+        Assert.IsFalse(_portal.Requests.Any(x => x.Route == SignInRoute));
+    }
+
+    [TestMethod]
+    public async Task SetAccessCode_uses_one_put_for_a_code_and_null_removal()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        // the answer carries nothing: what the account serves afterwards is read from GET /account
+        _portal.Enqueue("PUT /account/access-code", new { });
+        _portal.Enqueue("PUT /account/access-code", new { });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(),
+            new SignInOptions { ProviderId = AuthProviders.Google }, TestCt);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+
+        await accountProvider.SetAccessCode("TEST-CODE", TestCt);
+        await accountProvider.SetAccessCode(null, TestCt);
+
+        var requests = _portal.Requests.Where(x => x.Route == "PUT /account/access-code").ToArray();
+        Assert.AreEqual("TEST-CODE", requests[0].Body.GetProperty("accessCode").GetString());
+        Assert.AreEqual(JsonValueKind.Null, requests[1].Body.GetProperty("accessCode").ValueKind,
+            "null is the resource's explicit empty value; there is no separate remove endpoint");
+        Assert.IsFalse(requests[0].Body.TryGetProperty("modifiedTime", out _),
+            "nothing is ordered by time: whichever upload arrives last wins, and that is the whole protocol");
+    }
+
+    [TestMethod]
+    public async Task ReportAccessCodeRejected_sends_the_code_in_the_body_and_nothing_else()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("POST /account/access-code/rejected", new { });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(),
+            new SignInOptions { ProviderId = AuthProviders.Google }, TestCt);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+
+        await accountProvider.ReportAccessCodeRejected("12345678901234567890", TestCt);
+
+        var request = _portal.Requests.Single(x => x.Route == "POST /account/access-code/rejected");
+        Assert.AreEqual("12345678901234567890", request.Body.GetProperty("accessCode").GetString());
+        Assert.DoesNotContain("12345678901234567890", request.Route,
+            "a bearer credential must never appear in a path: URLs are logged, cached and proxied");
+        foreach (var absent in new[] { "expirationTime", "reason", "errorCode", "observedTime", "revision" })
+            Assert.IsFalse(request.Body.TryGetProperty(absent, out _),
+                $"eligibility is one bit: '{absent}' is exactly the machinery this replaced");
+    }
+
+    [TestMethod]
+    public async Task DeleteAccount_blocked_by_web_services_keeps_the_session()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("DELETE /account", new TestPortalServer.ErrorScript {
+            Code = "deletion_blocked",
+            Detail = "This account has active web services. Cancel them in the web client area first, then delete the account.",
+            StatusCode = 409
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+
+        var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            accountProvider.DeleteAccount(TestCt));
+
+        Assert.AreEqual(409, exception.StatusCode);
+        Assert.AreEqual("deletion_blocked", exception.Data["Code"], "clients branch on the machine code");
+        Assert.IsNotNull(authenticationProvider.UserId,
+            "a refused deletion must leave the session intact — the user needs it to come back and retry");
+    }
+
+    [TestMethod]
+    public async Task A_rejected_session_signs_this_device_out()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        // the account was deleted — or its sessions revoked — on another device, so the token this
+        // device still holds matches no session row any more
+        _portal.Enqueue("GET /account", new TestPortalServer.ErrorScript {
+            Code = "unauthorized",
+            Detail = "Unauthorized.",
+            StatusCode = 401
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+
+        var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            accountProvider.GetAccount(TestCt));
+
+        Assert.AreEqual(401, exception.StatusCode);
+        Assert.IsNull(authenticationProvider.UserId,
+            "there is no refresh token, so a rejected session is gone for good");
+        using var reloadedProvider = CreateAuthenticationProvider();
+        Assert.IsNull(reloadedProvider.UserId, "the session file must be gone, not just the field");
+    }
+
+    [TestMethod]
+    public async Task A_failing_portal_keeps_the_session()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("GET /account", new TestPortalServer.ErrorScript {
+            Code = "internal_error",
+            Detail = "Something went wrong.",
+            StatusCode = 500
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+
+        await Assert.ThrowsExactlyAsync<ApiException>(() => accountProvider.GetAccount(TestCt));
+
+        Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId,
+            "only 401 means 'this is not a session'; a broken backend must never sign anyone out");
+    }
+
+    [TestMethod]
+    public async Task GetAccount_offers_to_manage_only_when_this_store_billed_it_and_can_show_it()
+    {
+        object SubscribedSnapshot(string storeId) => SnapshotData(
+            accessCodeInfo: new { accessCode = "12345678901234567890", expirationTime = (string?)null },
+            subscription: new {
+                storeId,
+                createdTime = (string?)null,
+                expirationTime = DateTime.UtcNow.AddDays(30).ToString("O"),
+                priceAmount = (double?)null,
+                priceCurrency = (string?)null,
+                billingPeriod = (string?)null,
+                isAutoRenew = true
+            });
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("GET /account", SubscribedSnapshot(StoreIds.GooglePlay));
+        _portal.Enqueue("GET /account", SubscribedSnapshot(StoreIds.AppStore));
+        _portal.Enqueue("GET /account", SubscribedSnapshot(StoreIds.GooglePlay));
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+        var billingProvider = new TestBillingProvider();
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, billingProvider,
+            _portal.BaseUrl, PackageName);
+
+        // this build's store billed the subscription, and it can show the screen → offered
+        var account = await accountProvider.GetAccount(TestCt);
+        Assert.AreEqual(SubscriptionManagement.Available, account?.Subscription?.Management);
+
+        // another store billed it → premium still works, but nothing here can manage it
+        account = await accountProvider.GetAccount(TestCt);
+        Assert.IsNotNull(account);
+        Assert.AreEqual(StoreIds.AppStore, account.Subscription?.StoreId,
+            "a cross-store subscription must stay premium, and must name the store that billed it");
+        Assert.AreEqual(SubscriptionManagement.AnotherStore, account.Subscription?.Management,
+            "a store this build does not ship to must not be named");
+
+        // the right store, on a device that cannot show its screen — a TV. Distinct from the case
+        // above: OUR store billed it, so the UI may name it and send the person to another device.
+        billingProvider.IsSubscriptionManagementSupported = false;
+        account = await accountProvider.GetAccount(TestCt);
+        Assert.AreEqual(StoreIds.GooglePlay, account?.Subscription?.StoreId);
+        Assert.AreEqual(SubscriptionManagement.NotOnThisDevice, account?.Subscription?.Management);
+    }
+
+    [TestMethod]
+    public async Task GetAccount_maps_a_cancelled_subscription_as_premium_until_it_expires()
+    {
+        var expiresAt = DateTime.UtcNow.AddDays(12);
+        _portal.Enqueue(SignInRoute, SignInData());
+        // the store reports the cancellation as isAutoRenew=false; the subscription stands until it expires
+        _portal.Enqueue("GET /account", SnapshotData(
+            accessCodeInfo: new { accessCode = "12345678901234567890", expirationTime = expiresAt.ToString("O") },
+            subscription: new {
+                storeId = StoreIds.GooglePlay,
+                createdTime = DateTime.UtcNow.AddDays(-18).ToString("O"),
+                expirationTime = expiresAt.ToString("O"),
+                priceAmount = 9.99,
+                priceCurrency = "USD",
+                billingPeriod = "P1M",
+                isAutoRenew = false
+            }));
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
+            _portal.BaseUrl, PackageName);
+
+        var account = await accountProvider.GetAccount(TestCt);
+
+        Assert.IsNotNull(account);
+        Assert.AreEqual(StoreIds.GooglePlay, account.Subscription?.StoreId,
+            "a cancelled but unexpired subscription is still a subscription");
+        Assert.AreEqual(false, account.Subscription?.IsAutoRenew, "the UI must show 'ends on', not 'renews on'");
+        Assert.AreEqual(expiresAt.ToString("O"), account.Subscription?.ExpirationTime?.ToUniversalTime().ToString("O"));
+        Assert.AreEqual(9.99m, account.Subscription?.PriceAmount);
+        Assert.AreEqual("USD", account.Subscription?.PriceCurrency);
+        Assert.AreEqual("P1M", account.Subscription?.BillingPeriod);
+        Assert.AreEqual(SubscriptionManagement.Available, account.Subscription?.Management,
+            "the buyer must still be able to reach the store screen to resubscribe");
+    }
+
+    [TestMethod]
+    public async Task GetAccount_drops_the_subscription_once_the_portal_serves_none()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        // after the cancelled period ran out the snapshot carries no subscription and no code
+        _portal.Enqueue("GET /account", SnapshotData());
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = AuthProviders.Google },
+            TestCt);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
+            _portal.BaseUrl, PackageName);
+
+        var account = await accountProvider.GetAccount(TestCt);
+
+        Assert.IsNotNull(account, "the person is still signed in");
+        Assert.IsNull(account.Subscription, "the expired subscription must not linger");
+        Assert.IsNull(account.Subscription?.ExpirationTime);
+        Assert.IsNull(account.Subscription?.IsAutoRenew);
+    }
+
+    [TestMethod]
+    public async Task SignIn_selects_the_external_provider_by_the_method_id()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
+
+        var googleProvider = new TestAuthenticationExternalProvider("google-id-token");
+        var appleProvider = new TestAuthenticationExternalProvider("apple-id-token", AuthProviders.Apple);
+        using var authenticationProvider = CreateAuthenticationProvider(googleProvider, appleProvider);
+
+        CollectionAssert.AreEqual(new[] { AuthProviders.Google, AuthProviders.Apple, AuthProviders.Password },
+            authenticationProvider.ProviderIds.ToArray(),
+            "every wired provider must be advertised, in order — and the portal's own password form is always appended last");
+
+        // an id no wired provider declares is refused before any token or portal call
+        await Assert.ThrowsExactlyAsync<NotSupportedException>(() =>
+            authenticationProvider.SignIn(new TestUiContext(), new SignInOptions { ProviderId = "github" },
+                TestCt));
+
+        await authenticationProvider.SignIn(new TestUiContext(),
+            new SignInOptions { ProviderId = AuthProviders.Apple }, TestCt);
+
+        Assert.AreEqual(0, googleProvider.SignInCalls, "only the selected provider may be asked for a token");
+        Assert.AreEqual(1, appleProvider.SignInCalls);
+        var request = _portal.Requests.Single(x => x.Route == SignInRoute);
+        Assert.AreEqual("apple", request.Body.GetProperty("provider").GetString());
+        Assert.AreEqual("apple-id-token", request.Body.GetProperty("idToken").GetString());
+
+        // sign-out targets the provider that established the session, not the bystanders
+        await authenticationProvider.SignOut(new TestUiContext(), TestCt);
+        Assert.AreEqual(0, googleProvider.SignOutCalls);
+        Assert.AreEqual(1, appleProvider.SignOutCalls);
+    }
+
+    [TestMethod]
+    public async Task SignIn_with_password_reports_the_second_factor_then_completes_it()
+    {
+        // the same route answers all three password-form calls, in order
+        _portal.Enqueue(SignInRoute, new { challenge = new { token = "challenge-1", type = "totp" } });
+        _portal.Enqueue(SignInRoute, new {
+            accessToken = "session-token-1",
+            expiresAt = DateTime.UtcNow.AddDays(30).ToString("O"),
+            userId = ExternalUid.ToString(),
+            newBackupCode = "backup-2"
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+
+        var challenged = await authenticationProvider.SignIn(new TestUiContext(),
+            new SignInOptions {
+                ProviderId = AuthProviders.Password,
+                UserName = "buyer@example.com",
+                Password = "the-password"
+            }, TestCt);
+
+        Assert.AreEqual(SignInState.TotpRequired, challenged.State);
+        Assert.IsNull(challenged.NewBackupCode, "a challenge carries no backup code");
+        Assert.IsNull(authenticationProvider.UserId, "a challenge signs NOTHING in");
+
+        // the repeat carries only the code — the provider holds the challenge token
+        var completed = await authenticationProvider.SignIn(new TestUiContext(),
+            new SignInOptions { ProviderId = AuthProviders.Password, TwoFactorCode = "123456" },
+            TestCt);
+
+        Assert.AreEqual(SignInState.SignedIn, completed.State);
+        Assert.AreEqual("backup-2", completed.NewBackupCode, "a spent backup code comes back rotated, shown once");
+        Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId);
+
+        var completion = _portal.Requests.Last(x => x.Route == SignInRoute);
+        Assert.AreEqual("challenge-1", completion.Body.GetProperty("challengeToken").GetString());
+        Assert.AreEqual("123456", completion.Body.GetProperty("code").GetString());
+    }
+
+    [TestMethod]
+    public async Task SignIn_with_password_refuses_a_second_factor_this_build_cannot_ask_for()
+    {
+        _portal.Enqueue(SignInRoute, new { challenge = new { token = "challenge-1", type = "webauthn" } });
+        using var authenticationProvider = CreateAuthenticationProvider();
+
+        // a kind no dialog here can prompt for is refused; the alternative is a person stranded on
+        // a screen asking the wrong question
+        var exception = await Assert.ThrowsExactlyAsync<NotSupportedException>(() =>
+            authenticationProvider.SignIn(new TestUiContext(),
+                new SignInOptions {
+                    ProviderId = AuthProviders.Password,
+                    UserName = "buyer@example.com",
+                    Password = "the-password"
+                }, TestCt));
+
+        // the machine code is the UI's contract: without it the dialog can only show raw English
+        Assert.AreEqual("unsupported_two_factor", exception.Data["Code"]);
+
+        Assert.IsNull(authenticationProvider.UserId);
+
+        // and the unanswerable challenge was never held
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            authenticationProvider.SignIn(new TestUiContext(),
+                new SignInOptions { ProviderId = AuthProviders.Password, TwoFactorCode = "123456" },
+                TestCt));
+    }
+
+    [TestMethod]
+    public async Task GetProductIds_asks_the_portal_for_the_store_products()
+    {
+        // the portal answers products, not plans: it has already collapsed the base plans of one
+        // product, because the store enumerates those itself and the app cannot act on them
+        _portal.Enqueue("GET /billing/products", new[] { "premium", "premium_plus" });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
+            _portal.BaseUrl, PackageName);
+
+        var productIds = await accountProvider.GetProductIds(TestCt);
+        CollectionAssert.AreEqual(new[] { "premium", "premium_plus" }, productIds.ToArray());
+
+        // the catalog is public: it is read without a session, and the app+store select the rows
+        var request = _portal.Requests.Single(x => x.Route == "GET /billing/products");
+        Assert.IsNull(request.Authorization, "the plans page renders before anyone signs in");
+        StringAssert.Contains(request.Query, $"store={StoreIds.GooglePlay}");
+        StringAssert.Contains(request.Query, $"packageName={PackageName}");
+    }
+
+    [TestMethod]
+    public async Task GetProductIds_fails_loudly_when_the_portal_cannot_answer()
+    {
+        _portal.Enqueue("GET /billing/products",
+            new TestPortalServer.ErrorScript { Code = "not_found", Detail = "no portal here", StatusCode = 404 });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
+            _portal.BaseUrl, PackageName);
+
+        // No embedded stand-in: a purchase started against ids the portal cannot confirm would still
+        // charge at the store and then have nowhere to be redeemed. The UI turns this into "the store
+        // is unavailable, try again", which is the only honest offer while the backend is down.
+        await Assert.ThrowsExactlyAsync<ApiException>(() => accountProvider.GetProductIds(TestCt));
+
+        // ...but an answer of "nothing is sellable" is an answer, not a failure
+        _portal.Enqueue("GET /billing/products", Array.Empty<string>());
+        Assert.AreEqual(0, (await accountProvider.GetProductIds(TestCt)).Count);
+    }
+
+    private PortalAuthenticationProvider CreateRestoringProvider(string? assertionResponseJson)
+    {
+        return new PortalAuthenticationProvider(
+            new Storage(new FileSystemStorageProvider(), _storageFolder), _portal.BaseUrl, PackageName,
+            [new TestAuthenticationExternalProvider("google-id-token")],
+            restoreCredentialProvider: new TestRestoreCredentialProvider(assertionResponseJson));
+    }
+
+    // The zero-tap check takes the app's window, which is process-wide: never beside a test that clears it.
+    [TestMethod]
+    [DoNotParallelize]
+    public async Task Zero_tap_restoration_is_asked_once_per_install()
+    {
+        AppUiContext.Context = new TestUiContext();
+        _portal.Enqueue(RestoreOptionsRoute, new { requestJson = "{}" });
+
+        // no key on this device, a final answer: the next process asks nothing
+        using var firstProcess = CreateRestoringProvider(assertionResponseJson: null);
+        Assert.IsNull(await firstProcess.GetAccessToken(TestCt));
+        using var secondProcess = CreateRestoringProvider(assertionResponseJson: null);
+        Assert.IsNull(await secondProcess.GetAccessToken(TestCt));
+
+        Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == RestoreOptionsRoute));
+    }
+
+    [TestMethod]
+    [DoNotParallelize]
+    public async Task Zero_tap_restoration_is_asked_again_after_no_answer()
+    {
+        AppUiContext.Context = new TestUiContext();
+
+        // nothing scripted, so the portal answers 500: the next process asks again
+        using var firstProcess = CreateRestoringProvider(assertionResponseJson: null);
+        Assert.IsNull(await firstProcess.GetAccessToken(TestCt));
+        _portal.Enqueue(RestoreOptionsRoute, new { requestJson = "{}" });
+        using var secondProcess = CreateRestoringProvider(assertionResponseJson: null);
+        Assert.IsNull(await secondProcess.GetAccessToken(TestCt));
+
+        Assert.AreEqual(2, _portal.Requests.Count(x => x.Route == RestoreOptionsRoute));
+    }
+
+    [TestMethod]
+    [DoNotParallelize]
+    public async Task Zero_tap_restoration_stops_once_the_portal_refuses_the_key()
+    {
+        AppUiContext.Context = new TestUiContext();
+        _portal.Enqueue(RestoreOptionsRoute, new { requestJson = "{}" });
+        _portal.Enqueue(SignInRoute, new TestPortalServer.ErrorScript {
+            Code = "invalid_restore_credential", Detail = "The restore credential is not valid.", StatusCode = 401
+        });
+
+        using var firstProcess = CreateRestoringProvider(assertionResponseJson: """{"id":"key-1"}""");
+        Assert.IsNull(await firstProcess.GetAccessToken(TestCt));
+        using var secondProcess = CreateRestoringProvider(assertionResponseJson: """{"id":"key-1"}""");
+        Assert.IsNull(await secondProcess.GetAccessToken(TestCt));
+
+        Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == RestoreOptionsRoute));
+        Assert.ContainsSingle(_portal.Requests.Where(x => x.Route == SignInRoute));
+    }
+
+    [TestMethod]
+    public void Providers_with_duplicate_method_ids_are_rejected()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => {
+            using var _ = CreateAuthenticationProvider(
+                new TestAuthenticationExternalProvider("token-1"),
+                new TestAuthenticationExternalProvider("token-2"));
+        });
+    }
+}

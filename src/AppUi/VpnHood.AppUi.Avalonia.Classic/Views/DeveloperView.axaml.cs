@@ -1,0 +1,124 @@
+﻿using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Threading;
+using VpnHood.AppHosting.Avalonia;
+using VpnHood.AppUi.Avalonia.Classic.Helpers;
+using VpnHood.AppUi.Avalonia.Classic.ViewModels;
+using VpnHood.AppUi.Common;
+
+namespace VpnHood.AppUi.Avalonia.Classic.Views;
+
+// The debug fields of UserSettings: DebugData1
+// a space-separated set of commands, DebugData2 free text, and both saved when the page closes. A
+// command the app does not know is not shown but is not lost either: it is kept and written back
+// beside the ones that are.
+public partial class DeveloperView : UserControl, IPage, IDisposable
+{
+    private readonly MainView _host;
+    private readonly DebugCommandItem[] _commands;
+    private readonly string[] _unknown;
+    private readonly bool _isTvUi = VhApp.IsTvUi;
+
+    public DeveloperView(MainView host)
+    {
+        _host = host;
+        InitializeComponent();
+
+        var current = (VhApp.UserSettings.DebugData1 ?? "")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        _commands = VhApp.Descriptor.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) }).ToArray();
+        _unknown = current.Except(VhApp.Descriptor.DebugCommands).ToArray();
+
+        CommandList.ItemsSource = _commands;
+        DebugData2Box.Text = VhApp.UserSettings.DebugData2;
+
+        // a bar the page's width is a finger's target; a remote's is a button of its own size
+        if (VhApp.IsTvUi) {
+            LogButton.HorizontalAlignment = HorizontalAlignment.Right;
+            LogButton.MinWidth = 160;
+        }
+
+        foreach (var command in _commands)
+            command.PropertyChanged += (_, _) => ShowChosen();
+        ShowChosen();
+    }
+
+    // The commands are what this page is opened for, and the field is one key from both the
+    // fields under it and the back button above.
+    public void FocusDefault()
+    {
+        CommandsField.LandFocus();
+    }
+
+    // the list drops from the field as wide as the field, as a combobox's does
+    private void OnCommandsOpening(object? sender, EventArgs e)
+    {
+        CommandsPanel.Width = CommandsField.Bounds.Width;
+    }
+
+    // The field shows what the list has on, as the combobox shows its chips.
+    private void ShowChosen()
+    {
+        var chosen = _commands.Where(x => x.IsOn).ToArray();
+        ChosenList.ItemsSource = chosen;
+        NoCommandText.IsVisible = chosen.Length == 0;
+    }
+
+    private async void OnLogClick(object? sender, RoutedEventArgs e)
+    {
+        // the dialog's "Open log", which opens the app web server's log.txt in a browser tab; this
+        // head has no browser, so the log is a page of its own
+        try {
+            await Save(CancellationToken.None);
+            _host.Navigate(new LogView());
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
+    }
+
+    // Every way out saves: Back pops the page (Dispose), and a host that tears the view down
+    // without popping it still detaches this one. Saving twice costs nothing - it is a no-op
+    // when nothing differs - and the page is shown again when the log page above it is closed.
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        Save(CancellationToken.None).Forget("Could not save the debug settings.");
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    // Against the layout this page opened in, not the last save: the log page's save may have changed it.
+    // Queued, as the host is still taking this page off its stack, and not at a background priority,
+    // which the home's animation while connecting would hold back.
+    private async Task SaveAndFollowLayout(CancellationToken cancellationToken)
+    {
+        await Save(cancellationToken);
+        if (VhApp.IsTvUi != _isTvUi)
+            await Dispatcher.UIThread.InvokeAsync(_host.Recreate, DispatcherPriority.Normal, cancellationToken);
+    }
+
+    // Saving applies the settings, so it happens only when something differs: most debug commands take
+    // effect at the next launch, but the save itself reaches the running app.
+    private async Task Save(CancellationToken cancellationToken)
+    {
+        var commands = _commands.Where(x => x.IsOn).Select(x => x.Command).Concat(_unknown);
+        var debugData1 = string.Join(' ', commands);
+        var debugData2 = DebugData2Box.Text?.Trim();
+
+        var newData1 = debugData1.Length > 0 ? debugData1 : null;
+        var newData2 = debugData2?.Length > 0 ? debugData2 : null;
+        var settings = VhApp.UserSettings;
+        if (newData1 == settings.DebugData1 && newData2 == settings.DebugData2)
+            return;
+
+        settings.DebugData1 = newData1;
+        settings.DebugData2 = newData2;
+        await VhApp.SaveUserSettings(settings, cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        SaveAndFollowLayout(CancellationToken.None).Forget("Could not save the debug settings.");
+    }
+}

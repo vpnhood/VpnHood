@@ -62,7 +62,7 @@ $vpnHostName = Get-ProjectProperty $projectFile "VhAppVpnHostName";
 $targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.TargetFramework;
 $publishDir = "$projectDir/bin/Publish-$distribution";
 # the install root's two launchers, over current\<app>.dll, which only the setup installs
-# (VhRootLaunchersDir in VpnHood.AppUi.Hosting.Desktop.WindowsTun.targets)
+# (VhRootLaunchersDir in VpnHood.AppHosting.Desktop.WindowsTun.targets)
 $launchersDir = "$projectDir/bin/Publish-$distribution-root";
 
 # module paths (dir keyed by the stable app folder; file names use the artifact title)

@@ -62,7 +62,7 @@ sequenceDiagram
 ## Giving the app its providers
 
 What differs from store to store - sign-in, billing, updates, reviews, ads - the app's logic asks for
-through interfaces of `VpnHood.AppLib.Abstractions`, and nothing else. Your head makes a class for each
+through interfaces of `VpnHood.AppLogic.Abstractions`, and nothing else. Your head makes a class for each
 from its store's package and puts it in the options; the app only ever calls the interface:
 
 ```mermaid
@@ -70,7 +70,7 @@ flowchart TB
     HEAD["<b>Your head</b><br/>AppOptionsFactory"]
     CLS["<b>GooglePlayAppUpdaterProvider</b><br/>from your store's package"]
     APP["<b>VpnHoodApp</b><br/>the app's logic"]
-    IF["<b>IAppUpdaterProvider</b><br/>AppLib.Abstractions"]
+    IF["<b>IAppUpdaterProvider</b><br/>AppLogic.Abstractions"]
     HEAD -->|new| CLS
     HEAD -->|"AppOptions, with it"| APP
     APP -->|calls only| IF
@@ -91,7 +91,7 @@ A build for another store swaps the classes and keeps the rest:
 | `AccountProvider` · `IAccountProvider` | Google Play: `PortalAccountProvider`, with `GooglePlayAuthenticationProvider` and `GooglePlayBillingProvider`. App Store: `PortalAccountProvider`, with `AppleAuthenticationProvider` and `AppStoreBillingProvider`. Windows, Linux: `PortalAccountProvider`, with the portal's own sign-in and `PortalWebBillingProvider`. |
 | `UpdaterOptions.UpdaterProvider` · `IAppUpdaterProvider` | Google Play: `GooglePlayAppUpdaterProvider`. App Store: `AppStoreAppUpdaterProvider`. Windows, Linux, installed from your website: `WindowsAppUpdaterProvider`, `LinuxAppUpdaterProvider`. |
 | `UserReviewProvider` · `IAppUserReviewProvider` | Google Play: `GooglePlayInAppUserReviewProvider`. App Store: `AppStoreInAppUserReviewProvider`. |
-| `AdProviderItems` · `IAdProvider` | Google Play: AdMob's, from `VpnHood.AppLib.Ads.AdMob.Android`. |
+| `AdProviderItems` · `IAdProvider` | Google Play: AdMob's, from `VpnHood.AppLogic.Ads.AdMob.Android`. |
 | `TrackerFactories` · `ITrackerFactory` | `Ga4TrackerFactory`, except in the App Store build, which sends no analytics. |
 | `DeviceUiProvider` · `IDeviceUiProvider`, `CultureProvider` · `IAppCultureProvider` | Left out: the host fills the platform's own. |
 

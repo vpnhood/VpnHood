@@ -1,0 +1,61 @@
+﻿using VpnHood.AppLogic.App.Premium;
+using VpnHood.AppLogic.App.Settings;
+using VpnHood.AppLogic.App.Utils;
+using VpnHood.Core.Filtering.Sqlite;
+using VpnHood.Net.Toolkit.Extensions;
+
+namespace VpnHood.AppLogic.App.Services;
+
+/// <summary>
+/// Provides the database of the split by domain, built before a connect from the person's three lists: the domains to
+/// tunnel past the app's own filters by IP address and country, for traffic that reaches the VPN; to leave outside;
+/// and to drop.
+/// </summary>
+/// <param name="settingsService">The app's settings.</param>
+/// <param name="premiumFeatureChecker">The premium gate.</param>
+public class SplitDomainService(AppSettingsService settingsService, IPremiumFeatureChecker premiumFeatureChecker)
+{
+    internal event EventHandler? StateChanged;
+
+    internal bool IsBusy { get; private set; }
+
+    // Build or reuse the db for the current source files and return its path, or null when the feature
+    // is inactive — this service owns its whole activity decision (SplitTunneling.UseDomain + premium plan). The
+    // file name carries the source signature and the schema, so a changed source or a release's new schema
+    // builds a NEW file and a running VpnService can keep the superseded db open until it live-swaps to the
+    // returned path. Missing files count as empty, and empty sources leave their sets empty (a no-op gate).
+    // Failures propagate and fail to connect: a split the user configured is enforced or the connection does
+    // not proceed — never silently skipped.
+    internal async Task<string?> EnsureSplitDomainDb(string dbFolder, CancellationToken cancellationToken)
+    {
+        // effective: the super toggle and the premium plan are both resolved here, so an inactive
+        // feature is simply a false flag — no second gate to keep in sync
+        if (!settingsService.UserSettings.SplitTunneling.ToEffective(premiumFeatureChecker).UseDomain)
+            return null;
+
+        var splitDomainSettings = settingsService.SplitDomainSettings;
+
+        try {
+            // set loading state
+            IsBusy = true;
+            StateChanged?.Invoke(this, EventArgs.Empty);
+
+            // the signature is stat-only (modified time + length); the text files are parsed only on
+            // rebuild. It is captured once so the file name and the stored meta describe the same source.
+            var signature = splitDomainSettings.GetSignature();
+            var dbBuilder = new DomainListDbBuilder(
+                () => signature,
+                includesFactory: () => DomainTextFileParser.Parse(splitDomainSettings.Includes) ?? [],
+                excludesFactory: () => DomainTextFileParser.Parse(splitDomainSettings.Excludes) ?? [],
+                blocksFactory: () => DomainTextFileParser.Parse(splitDomainSettings.Blocks) ?? []);
+
+            var dbPath = Path.Combine(dbFolder, dbBuilder.GetFileName("split-domain"));
+            await dbBuilder.EnsureAsync(dbPath, cancellationToken).Vhc();
+            return dbPath;
+        }
+        finally {
+            IsBusy = false;
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+}

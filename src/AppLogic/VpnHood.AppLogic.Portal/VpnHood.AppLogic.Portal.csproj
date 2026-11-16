@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Accounts, sign-in and web purchases for VpnHood apps, through the VpnHood Portal API.</Description>
+		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.AppLogic.Abstractions\VpnHood.AppLogic.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

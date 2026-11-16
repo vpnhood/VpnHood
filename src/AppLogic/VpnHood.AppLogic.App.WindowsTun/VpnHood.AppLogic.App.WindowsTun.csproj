@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>The VpnHood app on Windows with WinTun: it runs as a service, one per app, with the VPN service in a process of its own.</Description>
+		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.WindowsTun\VpnHood.Core.Client.Devices.WindowsTun.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
+	</ItemGroup>
+
+</Project>

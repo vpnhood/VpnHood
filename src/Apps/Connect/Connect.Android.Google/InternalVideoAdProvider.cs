@@ -1,16 +1,16 @@
 using Avalonia.Android;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Abstractions.Ads.AdExceptions;
-using VpnHood.AppLib.App.Android.Activities;
+using VpnHood.AppLogic.Abstractions.Ads;
+using VpnHood.AppLogic.Abstractions.Ads.AdExceptions;
+using VpnHood.AppLogic.App.Android.Activities;
 using VpnHood.AppUi.Common;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Views;
+using VpnHood.AppUi.Avalonia.Classic.Views;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.Devices.Android;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
-using VpnHood.AppLib.Abstractions.UiContexts;
+using VpnHood.AppLogic.Abstractions.UiContexts;
 
 namespace VpnHood.App.Connect.Android.Google;
 

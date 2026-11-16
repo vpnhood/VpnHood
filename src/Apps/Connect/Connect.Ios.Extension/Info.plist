@@ -2,7 +2,7 @@
 <plist version="1.0">
 <dict>
 	<!-- CFBundleIdentifier and CFBundleDisplayName are the build's: ApplicationId and ApplicationTitle,
-	     from the app's identity (VpnHood.AppLib.App.targets), which this file does not state again. -->
+	     from the app's identity (VpnHood.AppLogic.App.targets), which this file does not state again. -->
 	<!-- false ="no encryption requiring Apple export-compliance documentation" — mirrors the host app;
 	     standards-body crypto only, no France. NEVER true (rejected at upload without an Apple-issued
 	     code, error 90592). See docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md. -->

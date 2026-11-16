@@ -5,7 +5,7 @@ which states the storage folder every shipped build has used and loads the produ
 (`ClientAppConfigs`). Its bundle id, name, App Group and extension bundle id come from the product's
 identity (`../Directory.Build.props`), which the build turns into the bundle, the entitlements and
 `AppConstants` (see `docs/source-layout.md`). The shared Apple app code (`VpnHoodIosApp`) lives in
-`src/AppLib/VpnHood.AppLib.App.Ios`, the Avalonia UI's host in `src/AppUi/VpnHood.AppUi.Hosting.Avalonia.Ios`,
+`src/AppLogic/VpnHood.AppLogic.App.Ios`, the Avalonia UI's host in `src/AppHosting/VpnHood.AppHosting.Avalonia.Ios`,
 shared client resources in `src/Apps/Client`. Building this project also builds and bundles the extension
 appex (`src/Apps/Client/Client.Ios.Extension`), for the same platform.
 

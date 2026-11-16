@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>The VpnHood app on Linux: it runs as a root service, with the VPN service in a process of its own, and logs to the systemd journal.</Description>
+		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Linux\VpnHood.Core.Client.Devices.Linux.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
+	</ItemGroup>
+
+</Project>

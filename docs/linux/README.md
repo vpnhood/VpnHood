@@ -270,7 +270,7 @@ window, and the service with its commands - and one small adapter per platform.
 
 ```
 src/AppUi/
-├── VpnHood.AppUi.Hosting.Desktop/    the window, which every desktop host runs
+├── VpnHood.AppHosting.Desktop/    the window, which every desktop host runs
 │   ├── InProcessDesktopHost.cs       the app and its window in one process, the whole job where the OS
 │   │                                 holds the tunnel (the Windows VPN plug-in's); "dev" runs its window
 │   ├── DesktopInitParams.cs          what a head declares: its init params, its UI, whether it takes keys
@@ -285,7 +285,7 @@ src/AppUi/
 │   ├── Channel/                      the handler every call of the window goes through, and the answer
 │   │                                 it follows
 │   └── Exceptions/                   the daemon not running, or refusing the caller
-├── VpnHood.AppUi.Hosting.Desktop.Daemon/  the service and the command line, for the hosts that have one
+├── VpnHood.AppHosting.Desktop.Daemon/  the service and the command line, for the hosts that have one
 │   ├── DesktopHost.cs                builds the command tree and dispatches
 │   ├── Platform/                     what a service's platform implements: IDesktopPlatform - paths, the
 │   │                                 instance, how to be the daemon (and a debugger's), its logs, and what
@@ -297,20 +297,20 @@ src/AppUi/
 │   ├── Commands/                     one type per command, and what they share: the printer, the
 │   │                                 session, the profile lookup
 │   └── Updaters/                     the desktop's own updater
-├── VpnHood.AppUi.Hosting.Desktop.Linux/  systemd, /opt, XDG, root
+├── VpnHood.AppHosting.Desktop.Linux/  systemd, /opt, XDG, root
 │   ├── LinuxDesktopHost.cs           a Linux head's entry point
 │   ├── LinuxDesktopPlatform.cs       what Linux answers, as an IDesktopPlatform
 │   ├── LinuxDesktopPaths.cs
 │   ├── LinuxInstanceController.cs    systemctl / journalctl, streams passed through
 │   └── LinuxDaemonHost.cs            VpnHoodLinuxApp: the service's, root required, or a debugger's
-├── VpnHood.AppUi.Hosting.Desktop.WindowsTun/  the same design on Windows: a LocalSystem service, ProgramData
+├── VpnHood.AppHosting.Desktop.WindowsTun/  the same design on Windows: a LocalSystem service, ProgramData
 │   ├── WindowsDesktopHost.cs         a Windows head's entry point
 │   ├── WindowsDesktopPlatform.cs     what Windows answers, as an IDesktopPlatform
 │   ├── WindowsDesktopPaths.cs        ProgramData for the service, the person's local app data for the UI
 │   ├── WindowsInstanceController.cs  the service control manager; elevates a stop as sudo would
 │   ├── WindowsServiceSetup.cs        "service install | uninstall"
 │   └── WindowsDaemonHost.cs          VpnHoodWindowsApp: the service's, in storage only it may write, or a debugger's
-└── VpnHood.AppUi.Hosting.Desktop.WindowsVpnPlugin/  an MSIX package's: no service, Windows' VPN host has the tunnel
+└── VpnHood.AppHosting.Desktop.WindowsVpnPlugin/  an MSIX package's: no service, Windows' VPN host has the tunnel
     ├── WindowsVpnPluginDesktopHost.cs      its head's entry point, over InProcessDesktopHost
     ├── WindowsVpnPluginDesktopPlatform.cs  what the package answers, as an IInProcessDesktopPlatform
     ├── WindowsVpnPluginDesktopPaths.cs     LocalState, the instance named by the app id
@@ -318,22 +318,22 @@ src/AppUi/
 ```
 
 A head is then its options — the product's, and its channel's lines — and one line naming its UI,
-an `IDesktopUi` (`VpnHood.AppUi.Hosting.Desktop.Abstractions`), which the window runs on the host's main
+an `IDesktopUi` (`VpnHood.AppHosting.Desktop.Abstractions`), which the window runs on the host's main
 thread: `static int Main` returns `LinuxDesktopHost.Run(args, …)` — see
 [`Client.Linux.Web/App.cs`](../../src/Apps/Client/Client.Linux.Web/App.cs). Nothing in the shared
 projects read a static or name a platform: every command is handed an `IDesktopPlatform`, which
 each platform implements (`LinuxDesktopPlatform`, `WindowsDesktopPlatform`). Only Windows has
 `service install`, and a daemon run the service control manager stops by a call. The tray is the
 UI's, not the platform's (`AvaloniaDesktopUi`).
-`VpnHood.AppLib.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
+`VpnHood.AppLogic.App.Linux` is back to the one thing it always was, `VpnHoodLinuxApp`.
 
 Beside each desktop head is its VPN host head (`Client.Linux.VpnHost`, `Client.Windows.VpnHost`), whose
 `Main` is one call into the VPN service's project (`VpnHood.Core.Client.VpnServices.Host.Linux`,
-`.WindowsTun`), `LinuxVpnHost.Run` or `WindowsVpnHost.Run`: Core alone, no AppLib. The desktop head
+`.WindowsTun`), `LinuxVpnHost.Run` or `WindowsVpnHost.Run`: Core alone, no AppLogic. The desktop head
 references it marked `VhAppVpnHost`, with `ReferenceOutputAssembly="false"`, and compiles against
 nothing of it: its build and its publish put the VPN host's whole output beside the head's, both
 executables in one folder over one runtime, a file both carry the same file or the build fails
-(`VpnHood.AppUi.Hosting.Desktop.Daemon`'s targets). The app finds
+(`VpnHood.AppHosting.Desktop.Daemon`'s targets). The app finds
 it there by the name its build records (`VhAppVpnHostName`, `<binary's name>VpnHost`). The daemon starts it
 at each connect, and it ends with its session; with the daemon too - on Linux the unit's stop sends it
 SIGTERM, which closes its session, and on Windows a kill-on-close job ends it with the daemon's process.

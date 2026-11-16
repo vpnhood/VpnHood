@@ -6,7 +6,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using Microsoft.Win32;
-using VpnHood.AppUi.Hosting.Desktop.WindowsTun;
+using VpnHood.AppHosting.Desktop.WindowsTun;
 
 namespace VpnHood.AppUi.SmokeTest;
 

@@ -1,0 +1,190 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppUi.Common"
+             x:Class="VpnHood.AppUi.Avalonia.Classic.Views.MainView"
+             xmlns:animation="using:VpnHood.AppUi.Avalonia.Classic.Animation"
+             xmlns:helpers="using:VpnHood.AppUi.Avalonia.Classic.Helpers"
+             XYFocus.NavigationModes="Enabled"
+             FontFamily="fonts:VpnHood#Poppins"
+             FontWeight="Light"
+             FlowDirection="{Binding IsRightToLeft, Source={x:Static res:Strings.Current}, Converter={x:Static helpers:FlowDirectionConverter.Instance}}"
+             Background="{StaticResource BackgroundBrush}">
+  <!-- One host, one page at a time; the pages push and pop through the code-behind, and Back
+       pops. The host is the "Page" container the layouts query (AppTheme, the views): its own
+       width, never its content's, decides which layout a page takes. The pages change hands with
+       the page transition (OutInTransition), reversed on the way back. Over the page,
+       in this order: the reconnect bar, the drawer, the dialogs
+       and the snackbar. The font is Poppins Light for text, Bold where a style says.
+       The language's direction is set here, on the root (Strings.IsRightToLeft), and everything
+       beneath mirrors with it: the drawer's "Left" is the start edge, the right in Persian. -->
+  <!-- The update notice's two layouts, by the width of its layer (the "Notice" container): narrow, the
+       icon and the words over the actions, then the versions and Later at the foot; wide, the words and
+       the versions beside the actions and Later, so the bar stays low. Its look is AppTheme's. -->
+  <UserControl.Styles>
+    <Style Selector="Border.update-notice StackPanel.update-texts">
+      <Setter Property="Grid.Column" Value="1" />
+      <Setter Property="Grid.ColumnSpan" Value="3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.update-notice StackPanel.update-actions">
+      <Setter Property="Grid.Row" Value="1" />
+      <Setter Property="Grid.ColumnSpan" Value="4" />
+      <Setter Property="Margin" Value="0,12,0,0" />
+    </Style>
+    <Style Selector="Border.update-notice Border.update-divider">
+      <Setter Property="Grid.Row" Value="2" />
+      <Setter Property="Grid.ColumnSpan" Value="4" />
+      <Setter Property="Margin" Value="0,12,0,8" />
+    </Style>
+    <Style Selector="Border.update-notice StackPanel.update-versions">
+      <Setter Property="Grid.Row" Value="3" />
+      <Setter Property="Grid.ColumnSpan" Value="3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.update-notice Button.update-later">
+      <Setter Property="Grid.Row" Value="3" />
+      <Setter Property="Grid.Column" Value="3" />
+      <Setter Property="HorizontalAlignment" Value="Right" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <ContainerQuery Name="Notice" Query="min-width:600">
+      <!-- a wide window's bar keeps its parts within reach of each other -->
+      <Style Selector="Grid#UpdateNoticeContent">
+        <Setter Property="MaxWidth" Value="1100" />
+      </Style>
+      <Style Selector="Border.update-notice TextBlock.update-icon">
+        <Setter Property="Grid.RowSpan" Value="2" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+      </Style>
+      <Style Selector="Border.update-notice StackPanel.update-texts">
+        <Setter Property="Grid.ColumnSpan" Value="1" />
+      </Style>
+      <Style Selector="Border.update-notice StackPanel.update-versions">
+        <Setter Property="Grid.Row" Value="1" />
+        <Setter Property="Grid.Column" Value="1" />
+        <Setter Property="Grid.ColumnSpan" Value="1" />
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="Spacing" Value="16" />
+        <Setter Property="Margin" Value="0,4,0,0" />
+      </Style>
+      <Style Selector="Border.update-notice StackPanel.update-actions">
+        <Setter Property="Grid.Row" Value="0" />
+        <Setter Property="Grid.RowSpan" Value="2" />
+        <Setter Property="Grid.Column" Value="2" />
+        <Setter Property="Grid.ColumnSpan" Value="1" />
+        <Setter Property="MinWidth" Value="200" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="24,0,0,0" />
+      </Style>
+      <Style Selector="Border.update-notice Border.update-divider">
+        <Setter Property="IsVisible" Value="False" />
+      </Style>
+      <Style Selector="Border.update-notice Button.update-later">
+        <Setter Property="Grid.Row" Value="0" />
+        <Setter Property="Grid.RowSpan" Value="2" />
+        <Setter Property="Margin" Value="12,0,0,0" />
+      </Style>
+    </ContainerQuery>
+  </UserControl.Styles>
+  <Panel>
+    <TransitioningContentControl x:Name="Host" Container.Name="Page" Container.Sizing="Width">
+      <TransitioningContentControl.PageTransition>
+        <animation:OutInTransition />
+      </TransitioningContentControl.PageTransition>
+    </TransitioningContentControl>
+
+    <!-- ReconnectRequiredAlert: a connect-only setting changed while a session runs -->
+    <Border x:Name="ReconnectBar" Classes="reconnect-bar" VerticalAlignment="Top" IsVisible="False" Margin="0,78,0,0">
+      <Grid ColumnDefinitions="*,Auto,Auto" MaxWidth="720">
+        <TextBlock Text="{Binding ReconnectRequiredMsg, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="alert-link" Click="OnReconnectClick" Margin="8,0">
+          <TextBlock Text="{Binding Reconnect, Source={x:Static res:Strings.Current}}" />
+        </Button>
+        <Button Grid.Column="2" Classes="icon small" Click="OnReconnectDismissClick"
+                AutomationProperties.Name="{Binding Close, Source={x:Static res:Strings.Current}}">
+          <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Close}" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- the kill switch's block with no session, over the home, in the reconnect bar's place, which shows only in a
+         session: the internet is blocked until a person disconnects, or, where it is kept while disconnected, until
+         that is turned off on the Kill Switch page -->
+    <Border x:Name="KillSwitchBar" Classes="reconnect-bar" VerticalAlignment="Top" IsVisible="False" Margin="0,78,0,0">
+      <Grid ColumnDefinitions="*,Auto" MaxWidth="720">
+        <TextBlock Text="{Binding KillSwitchBlockingMsg, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center"
+                   TextWrapping="Wrap" />
+        <Button Grid.Column="1" Classes="alert-link" Click="OnKillSwitchBarClick" Margin="8,0">
+          <TextBlock x:Name="KillSwitchBarLink" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- the drawer, off the TV UI: a scrim, and the panel from the start edge. Both are animated
+         from the code-behind. -->
+    <Panel x:Name="DrawerLayer" IsVisible="False">
+      <Border x:Name="DrawerScrim" Background="{StaticResource ScrimBrush}" PointerPressed="OnScrimPressed" />
+      <ContentControl x:Name="DrawerContent" HorizontalAlignment="Left" />
+    </Panel>
+
+    <!-- the dialogs: a scrim, and the one on top of the stack, centred, as wide as the window lets
+         it be up to its own MaxWidth (Border.dialog) -->
+    <Panel x:Name="DialogLayer" IsVisible="False">
+      <Border x:Name="DialogScrim" Background="{StaticResource ScrimBrush}" />
+      <ContentControl x:Name="DialogContent" VerticalAlignment="Center" Margin="16" />
+    </Panel>
+
+    <!-- UpdateSnackbar: a newer version and the way to it, until Later - a bar along the top of the app,
+         under the status bar as the page's background is (MainView.ApplySystemBars). The layer keeps it
+         to the home (MainView.Show). One set of parts in two layouts by the layer's width
+         (the styles above), so no part here carries a Grid position: a local value would beat the wide
+         layout's. -->
+    <!-- ReSharper disable Xaml.MissingGridIndex -->
+    <Panel x:Name="UpdateNoticeLayer" Container.Name="Notice" Container.Sizing="Width">
+      <Border x:Name="UpdateNotice" Classes="update-notice" IsVisible="False">
+        <Grid x:Name="UpdateNoticeContent" ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+          <TextBlock x:Name="UpdateNoticeIcon" Classes="mdi update-icon" />
+          <StackPanel Classes="update-texts" Spacing="4">
+            <TextBlock x:Name="UpdateNoticeText" Classes="body-large" />
+            <StackPanel x:Name="UpdateProgress" Spacing="4">
+              <ProgressBar x:Name="UpdateProgressBar" Minimum="0" Maximum="100" />
+              <TextBlock x:Name="UpdateProgressText" Classes="body-small" />
+            </StackPanel>
+            <TextBlock x:Name="UpdatePackageText" Classes="body-small" />
+          </StackPanel>
+          <!-- where the app updates itself: Update downloads the package, its progress, then Install -->
+          <StackPanel Classes="update-actions" Spacing="8">
+            <Button x:Name="UpdateDownloadButton" Classes="btn-main block" Click="OnUpdateDownloadClick" Content="{Binding UpdateNow, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateInstallButton" Classes="btn-main block" Click="OnUpdateInstallClick" Content="{Binding Install, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateStoreButton" Classes="btn-main block" Click="OnUpdateStoreClick" Content="{Binding UpdateFromGooglePlay, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateDirectButton" Classes="btn-main block" Click="OnUpdateDirectClick" Content="{Binding UpdateFromDirectLink, Source={x:Static res:Strings.Current}}" />
+            <Button x:Name="UpdateNoStoreButton" Classes="btn-secondary block" Click="OnUpdateNoStoreClick" Content="{Binding DoNotHaveAccessToGooglePlay, Source={x:Static res:Strings.Current}}" />
+            <StackPanel x:Name="UpdateAlternative" Spacing="4" IsVisible="False">
+              <Button Classes="btn-secondary block" Click="OnUpdateDirectClick" Content="{Binding UpdateFromAlternativeLink, Source={x:Static res:Strings.Current}}" />
+              <TextBlock Classes="body-small" TextAlignment="Center" Opacity="0.6" Text="{Binding UpdateFromAlternativeLinkNotice, Source={x:Static res:Strings.Current}}" />
+            </StackPanel>
+          </StackPanel>
+          <Border Classes="divider update-divider" />
+          <StackPanel Classes="update-versions">
+            <TextBlock x:Name="UpdateCurrentText" Classes="body-small" Opacity="0.6" />
+            <TextBlock x:Name="UpdateNewText" Classes="body-small" />
+          </StackPanel>
+          <Button x:Name="UpdateLaterButton" Classes="btn-text update-later" Click="OnUpdateLaterClick" Content="{Binding Later, Source={x:Static res:Strings.Current}}" />
+        </Grid>
+      </Border>
+    </Panel>
+    <!-- ReSharper restore Xaml.MissingGridIndex -->
+
+    <!-- GeneralSnackbar: a sentence at the top, gone by itself, by a tap or by Close; a screen reader says it -->
+    <Border x:Name="Snackbar" Classes="snackbar" IsVisible="False" PointerEntered="OnSnackbarPointerEntered"
+            PointerExited="OnSnackbarPointerExited" PointerPressed="OnSnackbarPointerPressed"
+            PointerReleased="OnSnackbarPointerReleased" Tapped="OnSnackbarTapped">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock x:Name="SnackbarIcon" Classes="mdi" FontSize="22" Margin="0,0,10,0" />
+        <TextBlock x:Name="SnackbarText" Grid.Column="1" AutomationProperties.LiveSetting="Polite" />
+        <Button x:Name="SnackbarClose" Grid.Column="2" Margin="12,0,0,0" IsVisible="False" Click="OnSnackbarCloseClick"
+                Content="{Binding Close, Source={x:Static res:Strings.Current}}" />
+      </Grid>
+    </Border>
+  </Panel>
+</UserControl>

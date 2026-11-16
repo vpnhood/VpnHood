@@ -15,7 +15,7 @@ switch](#the-switch)).
 
 | Reporter | Runs in | Reports to | Who names the id |
 | --- | --- | --- | --- |
-| **The app's tracker** | the app ([`VpnHoodApp`](../../src/AppLib/VpnHood.AppLib.App/VpnHoodApp.cs)) and, per connection, the VPN service ([`VpnHoodClient`](../../src/Core/VpnHood.Core.Client/VpnHoodClient.cs)) | the head's id | the head |
+| **The app's tracker** | the app ([`VpnHoodApp`](../../src/AppLogic/VpnHood.AppLogic.App/VpnHoodApp.cs)) and, per connection, the VPN service ([`VpnHoodClient`](../../src/Core/VpnHood.Core.Client/VpnHoodClient.cs)) | the head's id | the head |
 | **The access manager's tracker** | the VPN service, once per session | the id the server hands over at connect | whoever runs the access manager |
 | **The server's tracker** | the VPN server ([`ServerApp`](../../src/Apps/Server/ServerApp.cs)) | its own id | fixed in its code |
 | **The UI** | the device | nothing of its own: it reports through the app | — |
@@ -81,7 +81,7 @@ sequenceDiagram
 
 **The id** is the `MeasurementId` of the
 [`Ga4TrackerFactory`](../../src/Core/VpnHood.Core.Client.VpnServices.Abstractions/Tracking/Ga4TrackerFactory.cs)
-a head lists in `AppOptions.TrackerFactories` ([`AppOptions`](../../src/AppLib/VpnHood.AppLib.App/AppOptions.cs)).
+a head lists in `AppOptions.TrackerFactories` ([`AppOptions`](../../src/AppLogic/VpnHood.AppLogic.App/AppOptions.cs)).
 The list is empty by default, so a head that means to report names its own; VpnHood's products list
 GA4 with the id from their private appsettings, and Connect's Google Play head lists Firebase's
 Android SDK in its place. Each factory makes one tracker, and several report as one, each getting the
@@ -89,7 +89,7 @@ switch and every event (`CompositeTracker`). A Debug build makes none, whatever 
 GA4 factory without an id makes a `NullTracker`. Nothing is sent then, and the UI hides the switch
 (`AppDescriptor.IsAnonymousTrackerSupported`).
 
-**The app sends** ([`AppTrackerBuilder`](../../src/AppLib/VpnHood.AppLib.App/AppTrackerBuilder.cs),
+**The app sends** ([`AppTrackerBuilder`](../../src/AppLogic/VpnHood.AppLogic.App/AppTrackerBuilder.cs),
 [`TrackerExtensions`](../../src/Net/VpnHood.Net.Toolkit/Extensions/TrackerExtensions.cs)):
 
 | Event | When | Carries |
@@ -166,7 +166,7 @@ as its browser build, or a UI of a fork's own.
 1. It has no id of its own. What it reports goes through the app API into the app's tracker: a
    rating becomes `vh_user_review`.
 2. It shows the switch on its Privacy page
-   ([`PrivacyView`](../../src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/Views/PrivacyView.axaml.cs)),
+   ([`PrivacyView`](../../src/AppUi/VpnHood.AppUi.Avalonia.Classic/Views/PrivacyView.axaml.cs)),
    and hides it where the build collects nothing.
 3. It adds no analytics of its own. A UI of one's own
    may, set up from `AppDescriptor.CustomData`, and only while the switch is on.
@@ -189,7 +189,7 @@ UI of one's own shows its first-run page while that state is set and saves the b
 | Report | Stopped by |
 | --- | --- |
 | Each tracker's `session_start` | `TrackerCreateParams.IsEnabled`: the app and the VPN service make every tracker with the switch, and one made switched off sends nothing |
-| The app's events | [`AppTrackerService`](../../src/AppLib/VpnHood.AppLib.App/Services/Trackers/AppTrackerService.cs), which sets the tracker's `IsEnabled` at each settings save |
+| The app's events | [`AppTrackerService`](../../src/AppLogic/VpnHood.AppLogic.App/Services/Trackers/AppTrackerService.cs), which sets the tracker's `IsEnabled` at each settings save |
 | The VPN service's `vh_usage` | its tracker, made with the switch, and set in a running session by the reconfigure the app sends on every change |
 | A VPN service started without the app, from its saved options (always-on, the quick-settings tile, the system restarting it) | the switch in those options ([`VpnServiceOptionsFile`](../../src/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnServiceOptionsFile.cs)), saved at each connect and at each settings change, connected or not |
 | A successful `vh_connect_attempt`, and the access manager's `session_start` | `VpnHoodClientConfig.AllowAnonymousTracker` |

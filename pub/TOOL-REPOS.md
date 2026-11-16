@@ -21,7 +21,7 @@ machinery, including the shared publish script.
 ## Naming
 
 - **Repo and package id:** `VpnHood.Tools.<Name>` — e.g. `VpnHood.Tools.ResourceTranslator`.
-  `Core`/`AppLib`/`Apps` are runtime families; `Tools` is build-time/developer tooling.
+  `Core`/`AppLogic`/`Apps` are runtime families; `Tools` is build-time/developer tooling.
 - **Command:** short and typed often — `vhtranslator`, `nettester`. Set via `ToolCommandName`; it is
   deliberately *not* the package id.
 - **Root namespace:** matches the package id.

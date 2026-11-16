@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net11.0</TargetFramework>
-		<Description>The VpnHood VPN client engine: it finds a server, builds a session with it, and runs the session's tunnel on a VPN adapter. To build an app, start from VpnHood.AppLib.App.</Description>
+		<Description>The VpnHood VPN client engine: it finds a server, builds a session with it, and runs the session's tunnel on a VPN adapter. To build an app, start from VpnHood.AppLogic.App.</Description>
 		<OutputType>Library</OutputType>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="VpnHood.Test" />
-		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -3,39 +3,40 @@
 How `src/` is organised, what a platform app is made of, and what a fork copies. Written for
 someone opening this repo for the first time.
 
-## The five layers
+## The six layers
 
-Everything under `src/` is one of five things, and each layer only knows about the ones above it in
+Everything under `src/` is one of six things, and each layer only knows about the ones above it in
 this table.
 
 | Folder | What it is | Ships as |
 | --- | --- | --- |
 | `src/Net/` | networking with no VPN in it: packets, a user-space TCP stack, QUIC, the TUN and WinDivert adapters, IP locations, and the toolkit they share | NuGet |
 | `src/Core/` | the VPN engine: the tunnel, the client, the server, split tunneling and proxies | NuGet |
-| `src/AppLib/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.WindowsTun`, `App.WindowsVpnPlugin`), and the store and ad providers | NuGet |
-| `src/AppUi/` | the user interface: the app's state as a UI sees it, the look, and the hosts that mount a UI on a platform | NuGet |
+| `src/AppLogic/` | the app around the engine: `VpnHoodApp`, its options, its HTTP API and web host, the app on each platform (`App.Android`, `App.Ios`, `App.Linux`, `App.WindowsTun`, `App.WindowsVpnPlugin`), and the store and ad providers | NuGet |
+| `src/AppHosting/` | the hosts that mount a UI on a platform: a window, a web view, a page in a browser, the desktop's daemon and its command line | NuGet |
+| `src/AppUi/` | the user interface: the app's state as a UI sees it, its words, the look and the look's assets | NuGet |
 | `src/Apps/` | the apps we ship, and the tools we run ourselves | the stores, our site |
 
-Nothing in `Net`, `Core`, `AppLib` or `AppUi` knows that VpnHood Client or VpnHood Connect exist. That
-is the rule that makes a fork possible: a fork replaces `src/Apps/` and nothing else. `Net` goes one
-step further and knows nothing of a VPN, so any .NET app can use it.
+Nothing in `Net`, `Core`, `AppLogic`, `AppHosting` or `AppUi` knows that VpnHood Client or VpnHood Connect
+exist. That is the rule that makes a fork possible: a fork replaces `src/Apps/` and nothing else. `Net` goes
+one step further and knows nothing of a VPN, so any .NET app can use it.
 
-Inside `AppUi`, no host references a look, so a new look changes no host. The hosts
-(`VpnHood.AppUi.Hosting.*`) know the app through its API alone, and an Avalonia look through the
+A person who changes the look works in `AppUi` alone: no host references a look, so a new look changes no
+host. The hosts (`VpnHood.AppHosting.*`) know the app through its API alone, and an Avalonia look through the
 contract it fulfils: `IAvaloniaUi`, whose start steps the host calls and in which the look sets up its
 own model of the app (`VhApp`) and its words; and `VpnHoodAvaloniaAppBase`, on which the look states its
 TV layout and the words a desktop host shows around it (`IDesktopStrings`). What the hosts share
-whatever the look is sits in `VpnHood.AppUi.Hosting.Common`: the colours of the system's chrome around
+whatever the look is sits in `VpnHood.AppHosting.Common`: the colours of the system's chrome around
 the UI, read from the theme's manifest in the UI's files (`ThemeColors`). `VpnHood.AppUi.Common`, a
 look and a look's assets are the looks' alone.
 
 ## How a folder is named
 
-**In `Net`, `Core`, `AppLib` and `AppUi`, every project sits directly under its layer, in a folder
+**In `Net`, `Core`, `AppLogic`, `AppHosting` and `AppUi`, every project sits directly under its layer, in a folder
 named with its full project id**: `VpnHood.Core.Client.Devices.Android.csproj` lives in
 `src/Core/VpnHood.Core.Client.Devices.Android/`. There are no grouping folders, as in dotnet/runtime's
 `src/libraries/`: the ids sort a family together on their own (`VpnHood.Net.Quic.*`,
-`VpnHood.AppLib.Stores.*`), and the id alone says where a project is. A layer's folder is the second
+`VpnHood.AppLogic.Stores.*`), and the id alone says where a project is. A layer's folder is the second
 word of its ids: `src/Net/` holds `VpnHood.Net.*`, `src/Core/` holds `VpnHood.Core.*`.
 
 The solution file keeps the grouping on screen: `VpnHood.slnx` has a solution folder per family
@@ -102,31 +103,31 @@ src/Core/
 └── VpnHood.Core.Tunneling/
 ```
 
-## `src/AppLib/` — the app
+## `src/AppLogic/` — the app
 
 ```text
-src/AppLib/
-├── VpnHood.AppLib.Abstractions/                the contracts the providers implement
-├── VpnHood.AppLib.Ads.AdMob.Android/
-├── VpnHood.AppLib.Api/                         the app's API: its interfaces and DTOs
-├── VpnHood.AppLib.Api.HttpClients/             the API over HTTP, for a UI outside the app's process
-├── VpnHood.AppLib.Api.WebHost/                 the web host that serves it
-├── VpnHood.AppLib.App/                         VpnHoodApp and AppOptions
-├── VpnHood.AppLib.App.Android/                 the app on each platform: VpnHoodAndroidApp, VpnHoodIosApp, …
-├── VpnHood.AppLib.App.Ios/
-├── VpnHood.AppLib.App.Linux/
-├── VpnHood.AppLib.App.WindowsTun/
-├── VpnHood.AppLib.App.WindowsVpnPlugin/
-├── VpnHood.AppLib.Portal/                      accounts and purchases through the VpnHood Portal API
-├── VpnHood.AppLib.Stores.AppStore/             App Store billing and Sign in with Apple
-├── VpnHood.AppLib.Stores.AppStore.Core/        App Store updates and reviews
-├── VpnHood.AppLib.Stores.GooglePlay/           Play Billing and Google sign-in
-└── VpnHood.AppLib.Stores.GooglePlay.Core/      Play in-app updates and reviews
+src/AppLogic/
+├── VpnHood.AppLogic.Abstractions/                the contracts the providers implement
+├── VpnHood.AppLogic.Ads.AdMob.Android/
+├── VpnHood.AppLogic.Api/                         the app's API: its interfaces and DTOs
+├── VpnHood.AppLogic.Api.HttpClients/             the API over HTTP, for a UI outside the app's process
+├── VpnHood.AppLogic.Api.WebHost/                 the web host that serves it
+├── VpnHood.AppLogic.App/                         VpnHoodApp and AppOptions
+├── VpnHood.AppLogic.App.Android/                 the app on each platform: VpnHoodAndroidApp, VpnHoodIosApp, …
+├── VpnHood.AppLogic.App.Ios/
+├── VpnHood.AppLogic.App.Linux/
+├── VpnHood.AppLogic.App.WindowsTun/
+├── VpnHood.AppLogic.App.WindowsVpnPlugin/
+├── VpnHood.AppLogic.Portal/                      accounts and purchases through the VpnHood Portal API
+├── VpnHood.AppLogic.Stores.AppStore/             App Store billing and Sign in with Apple
+├── VpnHood.AppLogic.Stores.AppStore.Core/        App Store updates and reviews
+├── VpnHood.AppLogic.Stores.GooglePlay/           Play Billing and Google sign-in
+└── VpnHood.AppLogic.Stores.GooglePlay.Core/      Play in-app updates and reviews
 ```
 
 The store packages take their names from `StoreIds`, so a Microsoft Store package would be
-`VpnHood.AppLib.Stores.Microsoft`. A project's namespace is its id: `VpnHood.AppLib.App.Android`,
-`VpnHood.AppLib.Stores.GooglePlay`, `VpnHood.AppLib.Ads.AdMob.Android`.
+`VpnHood.AppLogic.Stores.Microsoft`. A project's namespace is its id: `VpnHood.AppLogic.App.Android`,
+`VpnHood.AppLogic.Stores.GooglePlay`, `VpnHood.AppLogic.Ads.AdMob.Android`.
 
 ## `src/Apps/` — one folder per product
 
@@ -193,14 +194,14 @@ manifest and resources come from the library ([What every Android app shares](#w
 | `MainActivity.cs` (Android) | the one activity, Avalonia's: the launcher's, the Quick Settings tile's preferences', and in CLIENT the access keys' links and files (below). Its Java name is pinned to the one the app shipped under, as launchers keep the home-screen icon by it |
 | `_publish.ps1` | the one entry point that builds and packages this head; CI calls exactly this |
 
-The head references its product project, the platform glue it needs from `AppLib`, and the UI
-hosts it mounts from `AppUi`; where it runs the VPN service too, the VPN service's side - an Android
+The head references its product project, the platform glue it needs from `AppLogic`, the UI
+host it mounts from `AppHosting` and the look from `AppUi`; where it runs the VPN service too, the VPN service's side - an Android
 head `VpnHood.Core.Client.VpnServices.Host.Android`, which its APK carries beside the app, and a desktop
 head its VPN host's head - see [client-architecture.md](client-architecture.md). A desktop head mounts
 one more host than a mobile one: its platform's
-`VpnHood.AppUi.Hosting.Desktop.Linux` or `.Desktop.WindowsTun`, over the shared
-`VpnHood.AppUi.Hosting.Desktop.Daemon`, the daemon that holds the app and the command line, and
-`VpnHood.AppUi.Hosting.Desktop`, the window that shows it, all in one binary — see [linux/](linux/README.md#how-it-fits-together). The Microsoft Store head mounts
+`VpnHood.AppHosting.Desktop.Linux` or `.Desktop.WindowsTun`, over the shared
+`VpnHood.AppHosting.Desktop.Daemon`, the daemon that holds the app and the command line, and
+`VpnHood.AppHosting.Desktop`, the window that shows it, all in one binary — see [linux/](linux/README.md#how-it-fits-together). The Microsoft Store head mounts
 `.Desktop.WindowsVpnPlugin` instead, over the window's project alone, with no daemon: the app runs in its window's process, and
 Windows' VPN host holds the tunnel. It has two files more, `Package.appxmanifest`, its package's
 manifest, which `_publish.ps1` stamps, and `_install.ps1`, which installs that package on this
@@ -209,9 +210,9 @@ which serve every product's Store head.
 
 ## What every Android app shares
 
-An Android head needs no manifest and no resource file of its own: `VpnHood.AppLib.App.Android` gives
+An Android head needs no manifest and no resource file of its own: `VpnHood.AppLogic.App.Android` gives
 every Android app the same ones, placed by its build targets
-(`buildTransitive/VpnHood.AppLib.App.Android.targets`, which a package reference imports and
+(`buildTransitive/VpnHood.AppLogic.App.Android.targets`, which a package reference imports and
 `src/Apps/Directory.Build.targets` imports for our heads). A head, ours or a fork's, overrides any of
 them in its own folder:
 
@@ -253,7 +254,7 @@ comes before the head says it is an Android one.
 `Client/Client/` and `Connect/Connect/` hold what every distribution of that product agrees on:
 the options every head shares (`ClientAppOptions`, `ConnectAppOptions`), the product's settings —
 what its private appsettings can say (`ClientAppConfigs`, `ConnectAppConfigs`, over `AppConfigs` in
-`VpnHood.AppLib.App`), with the files from `.user/<product>` embedded here once for every head —
+`VpnHood.AppLogic.App`), with the files from `.user/<product>` embedded here once for every head —
 the packages the product pins (today the IP-location database), the app framework and web host its
 heads build on, and any product-wide constant — Connect's premium feature list lives there, and
 CLIENT's access-key forms (`ClientAccessKeys`). Its `android/locales_config.xml` is the languages its
@@ -279,7 +280,7 @@ Each product folder has a `Directory.Build.props` that states the app once, for 
 | `VhAppLocaleConfig` | `Client/android/locales_config.xml` | the languages the app's words come in, as Android's per-app language setting takes them: an Android locale-config file, which every Android head on the shared manifest needs ([What every Android app shares](#what-every-android-app-shares)) |
 | `VhAppSetupImage` | `setup.bmp` | the picture the Windows setup's Welcome and Finish pages show: a 24-bit BMP, 328 by 628 (twice the pages' 164 by 314, sharp on a high-DPI screen), stretched to them as it is; a path beside the Windows head when not a full one. NSIS's own picture when not stated |
 
-`VpnHood.AppLib.App`'s build files (`buildTransitive/VpnHood.AppLib.App.props` and `.targets`, the files a
+`VpnHood.AppLogic.App`'s build files (`buildTransitive/VpnHood.AppLogic.App.props` and `.targets`, the files a
 package reference of it imports) make the rest, so a head names no id and no name:
 
 - **the app id** (`ApplicationId`): the base, the platform, then `.web` for a build our website hands
@@ -317,7 +318,7 @@ arrive as **files placed by MSBuild targets**, and the head names each one in `A
 | File | Comes from | Named by | Holds |
 | --- | --- | --- | --- |
 | `assets/ui.zip` | `VpnHood.AppUi.Assets.Classic` | `AppOptions.UiZipAssets` | images, country flags, fonts, content documents, the words of every language, country names, and each theme's colours for the OS chrome and the launch screen |
-| `assets/web-root.zip` | `VpnHood.AppUi.Presentation.Classic.Avalonia` | `AppOptions.WebRootZipAsset` | the page the app's web host serves to a paired device |
+| `assets/web-root.zip` | `VpnHood.AppUi.Avalonia.Classic` | `AppOptions.WebRootZipAsset` | the page the app's web host serves to a paired device |
 
 Each of those packages owns a `buildTransitive/*.targets` that places its file the way the platform
 reads files — `AndroidAsset` on Android, `BundleResource` on Apple, copy-to-output elsewhere — which a
@@ -331,19 +332,19 @@ The app's web host serves a page to a phone paired with a TV. That page is the A
 to WebAssembly - the same UI the head itself runs in process, drawn by a browser instead.
 
 ```text
-VpnHood.AppUi.Presentation.Classic.Avalonia/          the UI itself: pages, controls, themes
-VpnHood.AppUi.Hosting.Avalonia.Browser/               mounts ANY Avalonia UI as a page: AvaloniaBrowserHost.RunAsync<TUi>
-VpnHood.AppUi.Presentation.Classic.Avalonia.Browser/  names which UI: a global.json, a csproj, a three-line Main
+VpnHood.AppUi.Avalonia.Classic/          the UI itself: pages, controls, themes
+VpnHood.AppHosting.Avalonia.Browser/               mounts ANY Avalonia UI as a page: AvaloniaBrowserHost.RunAsync<TUi>
+VpnHood.AppUi.Avalonia.Classic.Browser/  names which UI: a global.json, a csproj, a three-line Main
         │  _publish.ps1, under the .NET 10 SDK
         ▼
-VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip   in the UI's own package
+VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip   in the UI's own package
         │  buildTransitive/*.targets
         ▼
      <head>/assets/web-root.zip
 ```
 
 The host library is an Avalonia host like `Avalonia.Desktop`, `Avalonia.Android` and
-`Avalonia.Ios`, and like them it runs the one start `VpnHood.AppUi.Hosting.Avalonia` writes
+`Avalonia.Ios`, and like them it runs the one start `VpnHood.AppHosting.Avalonia` writes
 (`AvaloniaUiHosting`) and names no UI: it takes one as a type argument on the `IAvaloniaUi` contract, so the UI a build
 does not name is not in the bundle. A second presentation gets its own page by adding its own
 `.Browser` project of the same ten lines.

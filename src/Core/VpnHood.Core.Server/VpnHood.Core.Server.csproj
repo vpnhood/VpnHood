@@ -17,7 +17,7 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="VpnHood.Test" />
 		<InternalsVisibleTo Include="VpnHood.Test.KestrelParity" />
-		<InternalsVisibleTo Include="VpnHood.AppLib.Test" />
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
 	</ItemGroup>
 
 </Project>

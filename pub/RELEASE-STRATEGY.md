@@ -217,7 +217,7 @@ override with `-revision <n>`). Implemented directly in
 instead of carrying a hand-maintained list: it globs `src/**/*.csproj` and packs every project that
 does **not** opt out with `<IsPackable>false</IsPackable>` — the standard .NET convention. Apps under
 `src/Apps` declare `IsPackable=false`; every library under
-`src/Net`, `src/Core` and `src/AppLib` is packable by default. To publish a new library, just add it — no script
+`src/Net`, `src/Core` and `src/AppLogic` is packable by default. To publish a new library, just add it — no script
 edit. To keep one out, set `IsPackable=false` on it.
 
 Don't go back to a hand-kept list: one drifted silently, with a path typo that failed on Linux CI
@@ -228,7 +228,7 @@ workflows call.
 ### Build environment, speed, and the publishing gate
 
 - **Windows runner + workloads.** The packable suite spans `net11.0`, `net11.0-android`,
-  `net11.0-windows` (incl. the WPF library `VpnHood.AppUi.Hosting.WebView.Windows`) and `net11.0-ios`,
+  `net11.0-windows` (incl. the WPF library `VpnHood.AppHosting.WebView.Windows`) and `net11.0-ios`,
   with the browser page's libraries on `net10.0`. Only a Windows host can build the Windows/WPF
   projects, so `publish_nugets.yml` runs on `windows-latest`, installs the `android`+`ios` workloads,
   and installs the .NET 11 SDK `global.json` names and the .NET 10 one the page's own names.

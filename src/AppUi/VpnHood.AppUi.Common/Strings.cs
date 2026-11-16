@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
-using VpnHood.AppLib.Api.App;
+using VpnHood.AppLogic.Api.App;
 using VpnHood.Net.Toolkit.Assets;
 
 namespace VpnHood.AppUi.Common;

@@ -1,0 +1,176 @@
+using System.Net.Http.Headers;
+using Microsoft.Extensions.Logging;
+using VpnHood.AppLogic.App;
+using VpnHood.Net.Toolkit.Logging;
+using WebKit;
+
+namespace VpnHood.AppHosting.WebView.Ios;
+
+// Handles the target="_blank"/window.open links the SPA opens (the "open log" button and the error dialog's
+// "Open Report"). Loopback URLs point at the app's own on-device report server, which external Safari can't
+// reach (unreachable cross-process, and torn down the moment the app backgrounds), so the resource is fetched
+// in-app, with the local token as its header (localToken: the token of the page's own address), and shown in a
+// modal viewer: the user reads the log inline, searches it with the native find bar, and can
+// Save-to-Files/AirDrop/Mail it via the Share button. Anything non-loopback is a real external link and is
+// handed to the system browser.
+internal sealed class IosReportViewer(UIViewController hostController, UIColor backgroundColor, Func<string?> localToken)
+{
+    // ReSharper disable once ShortLivedHttpClient
+    // we rarely use it and don't want to keep a static instance around
+    private HttpClient CreateHttpClient()
+    {
+        var httpClient = new HttpClient();
+        if (localToken() is { } token)
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        return httpClient;
+    }
+
+    public void HandleNewWindow(NSUrl? url)
+    {
+        if (url?.AbsoluteString is not { } urlString || !Uri.TryCreate(urlString, UriKind.Absolute, out var uri))
+            return;
+
+        if (!uri.IsLoopback) {
+            UIApplication.SharedApplication.OpenUrl(url, new NSDictionary(), null);
+            return;
+        }
+
+        _ = DownloadAndViewAsync(uri);
+    }
+
+    private async Task DownloadAndViewAsync(Uri uri)
+    {
+        try {
+            using var httpClient = CreateHttpClient();
+            var content = await httpClient.GetByteArrayAsync(uri);
+
+            // Keep the served resource's extension (e.g. log.txt) so the viewer renders it as text and the
+            // exported copy is treated as a text file by Files/Mail.
+            var fileName = Path.GetFileName(uri.LocalPath);
+            if (string.IsNullOrEmpty(fileName))
+                fileName = "report.txt";
+            // after the app, so a shared copy says whose log it is
+            var filePath = Path.Combine(Path.GetTempPath(), $"{VpnHoodApp.Instance.Descriptor.PackageTitle}-{fileName}");
+            await File.WriteAllBytesAsync(filePath, content);
+
+            hostController.BeginInvokeOnMainThread(() => PresentReportViewer(filePath, uri));
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Failed to download the report for viewing.");
+        }
+    }
+
+    // Show the downloaded report in a modal WKWebView (text/plain renders inline) inside a navigation
+    // controller, with a Search button (in-app find), a Share button (native iOS share sheet) and a Done button
+    // to dismiss. This runs in the app process (no extension jetsam budget), so a second web view is fine.
+    private void PresentReportViewer(string filePath, Uri sourceUri)
+    {
+        var viewer = new UIViewController { Title = Path.GetFileName(filePath) };
+        var view = viewer.View!;
+        view.BackgroundColor = backgroundColor;
+
+        var webView = new WKWebView(CGRect.Empty, new WKWebViewConfiguration()) {
+            TranslatesAutoresizingMaskIntoConstraints = false
+        };
+        // Native Safari-style find-on-page (iOS 16+). External Safari can't search the log because it lives on
+        // the app's loopback report server, so we give the same find bar in-app instead.
+        if (OperatingSystem.IsIOSVersionAtLeast(16))
+            webView.FindInteractionEnabled = true;
+
+        view.AddSubview(webView);
+        NSLayoutConstraint.ActivateConstraints([
+            webView.TopAnchor.ConstraintEqualTo(view.SafeAreaLayoutGuide.TopAnchor),
+            webView.BottomAnchor.ConstraintEqualTo(view.BottomAnchor),
+            webView.LeadingAnchor.ConstraintEqualTo(view.LeadingAnchor),
+            webView.TrailingAnchor.ConstraintEqualTo(view.TrailingAnchor)
+        ]);
+
+        var fileUrl = NSUrl.FromFilename(filePath);
+        webView.LoadFileUrl(fileUrl, NSUrl.FromFilename(Path.GetDirectoryName(filePath)!));
+
+        var nav = new UINavigationController(viewer);
+
+        var shareButton = new UIBarButtonItem(UIBarButtonSystemItem.Action);
+        shareButton.Clicked += (_, _) => PresentShareSheet(filePath, nav, shareButton);
+
+        // Refresh: re-fetch the report from its (loopback) source and reload, so the user can pull the
+        // latest log without closing and reopening the viewer. Disabled while a fetch is in flight. The
+        // Clicked handler runs on the main thread and the awaits resume there, so the UI calls are safe.
+        var refreshButton = new UIBarButtonItem(UIBarButtonSystemItem.Refresh);
+        refreshButton.Clicked += async (_, _) => {
+            refreshButton.Enabled = false;
+            try {
+                using var httpClient = CreateHttpClient();
+                var content = await httpClient.GetByteArrayAsync(sourceUri);
+                await File.WriteAllBytesAsync(filePath, content);
+                webView.LoadFileUrl(NSUrl.FromFilename(filePath),
+                    NSUrl.FromFilename(Path.GetDirectoryName(filePath)!));
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "Failed to refresh the report.");
+            }
+            finally {
+                refreshButton.Enabled = true;
+            }
+        };
+
+        // Jump to the end of the report. UIKit has no system bar-button item for this, so it uses the SF
+        // Symbol (iOS 13+), falling back to a text button on the off chance the symbol can't be loaded.
+        var jumpToEndIcon = UIImage.GetSystemImage("arrow.down.to.line");
+        var jumpToEndButton = new UIBarButtonItem {
+            Style = UIBarButtonItemStyle.Plain,
+            Image = jumpToEndIcon,
+            Title = jumpToEndIcon is null ? "End" : null
+        };
+        jumpToEndButton.Clicked += (_, _) => ScrollToEnd(webView);
+
+        // Show a Search button that opens the find bar, alongside Share + Jump-to-end + Refresh. (First item
+        // sits at the far right.)
+        if (OperatingSystem.IsIOSVersionAtLeast(16)) {
+            var searchButton = new UIBarButtonItem(UIBarButtonSystemItem.Search);
+            searchButton.Clicked += (_, _) => webView.FindInteraction?.PresentFindNavigatorShowingReplace(false);
+            viewer.NavigationItem.RightBarButtonItems = [shareButton, searchButton, jumpToEndButton, refreshButton];
+        }
+        else {
+            viewer.NavigationItem.RightBarButtonItems = [shareButton, jumpToEndButton, refreshButton];
+        }
+
+        // This is a modal sheet, so the dismissal is a Close (✕) button — the iOS-idiomatic control for
+        // closing a modal. A back chevron would be wrong here: it means "pop the navigation stack", but the
+        // report is presented over the SPA, not pushed onto it.
+        var closeButton = new UIBarButtonItem(UIBarButtonSystemItem.Close);
+        closeButton.Clicked += (_, _) => nav.DismissViewController(true, null);
+        viewer.NavigationItem.LeftBarButtonItem = closeButton;
+
+        // Present from the host controller; the share sheet is later presented from this nav (the top-most VC).
+        hostController.PresentViewController(nav, animated: true, completionHandler: null);
+    }
+
+    // Scroll to the end of the report: a log's newest lines are its last ones, and dragging through a long log
+    // to reach them is tedious. The bottom offset of a scroll view is its content height minus the visible
+    // height, plus the inset iOS keeps for the home indicator; a non-positive result means the report already
+    // fits on one screen and there is nothing to scroll.
+    private static void ScrollToEnd(WKWebView webView)
+    {
+        var scrollView = webView.ScrollView;
+        double maxOffsetY = scrollView.ContentSize.Height - scrollView.Bounds.Height +
+                            scrollView.ContentInset.Bottom;
+
+        if (maxOffsetY > 0)
+            scrollView.SetContentOffset(new CGPoint(0, maxOffsetY), animated: true);
+    }
+
+    // The local text file, to every target. The loopback address goes to nobody, a browser included: it asks for
+    // the token, which no browser can send.
+    private static void PresentShareSheet(string filePath, UIViewController presenter, UIBarButtonItem anchor)
+    {
+        var activityController = new UIActivityViewController([NSUrl.FromFilename(filePath)], applicationActivities: null);
+
+        // iPad requires the share sheet's popover to be anchored — pin it to the Share bar button item.
+        if (activityController.PopoverPresentationController is { } popover)
+            popover.BarButtonItem = anchor;
+
+        presenter.PresentViewController(activityController, animated: true, completionHandler: null);
+    }
+}

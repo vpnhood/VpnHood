@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Headless;
-using VpnHood.AppUi.Presentation.Classic.Avalonia;
-using VpnHood.AppUi.Presentation.Classic.Avalonia.Resources;
+using VpnHood.AppUi.Avalonia.Classic;
+using VpnHood.AppUi.Avalonia.Classic.Resources;
 
 namespace VpnHood.App.StoreScreenshots;
 

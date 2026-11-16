@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>The VpnHood app's web hosts: they serve the app's API over HTTP, and a web UI's files, to a UI on the device and to a paired device on the network.</Description>
+		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Watson.Lite" Version="6.6.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
+		<InternalsVisibleTo Include="VpnHood.Test" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <!-- The contract this server puts on HTTP, and the in-process host that answers it. The
+	       dependency goes this way only: a UI on the device takes the host without this server. -->
+	  <ProjectReference Include="..\VpnHood.AppLogic.Api\VpnHood.AppLogic.Api.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLogic.App\VpnHood.AppLogic.App.csproj" />
+	</ItemGroup>
+
+</Project>

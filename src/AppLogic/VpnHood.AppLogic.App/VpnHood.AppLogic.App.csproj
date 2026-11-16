@@ -1,0 +1,61 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>The VpnHood app without its screens: connecting, servers and access keys, settings, accounts, ads, updates, and the API a UI reads the app through. A head adds the platform and the UI.</Description>
+		<TargetFramework>net11.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<!-- The DTO converters map every enum with no default arm, so a member added on one side fails the
+		     build here (CS8509) rather than arriving somewhere as a fallback. A value no member names (CS8524)
+		     is wrong input, which throws there (SwitchExpressionException) as it should. -->
+		<WarningsAsErrors>$(WarningsAsErrors);CS8509</WarningsAsErrors>
+		<NoWarn>$(NoWarn);CS8524</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <InternalsVisibleTo Include="VpnHood.Test" />
+	  <InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
+	</ItemGroup>
+
+	<!-- The app's identity (buildTransitive/, the .props and .targets beside this file): every head
+	     reaches this package, so an app states its id base and its name once and its heads build their
+	     ids, names and constants from them. No build/ copy: NuGet takes buildTransitive/ for a direct
+	     reference too. Each file's whole path in the package: a default None item keeps its folder,
+	     and a folder alone as PackagePath would nest it twice. -->
+	<ItemGroup>
+		<None Update="buildTransitive\VpnHood.AppLogic.App.props" Pack="true" PackagePath="buildTransitive\VpnHood.AppLogic.App.props" />
+		<None Update="buildTransitive\VpnHood.AppLogic.App.targets" Pack="true" PackagePath="buildTransitive\VpnHood.AppLogic.App.targets" />
+		<!-- the Android launcher icon the .targets adds -->
+		<None Update="buildTransitive\android\mipmap-anydpi-v33\ic_launcher.xml" Pack="true" PackagePath="buildTransitive\android\mipmap-anydpi-v33\ic_launcher.xml" />
+		<!-- the iOS launch screen the .targets writes in the theme's colour -->
+		<None Update="buildTransitive\ios\LaunchScreen.storyboard" Pack="true" PackagePath="buildTransitive\ios\LaunchScreen.storyboard" />
+		<!-- and Apple TV's -->
+		<None Update="buildTransitive\tvos\LaunchScreen.storyboard" Pack="true" PackagePath="buildTransitive\tvos\LaunchScreen.storyboard" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Net\VpnHood.Net.IpLocations\VpnHood.Net.IpLocations.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Proxies.Management.Sqlite\VpnHood.Core.Proxies.Management.Sqlite.csproj" />
+		<ProjectReference Include="..\VpnHood.AppLogic.Abstractions\VpnHood.AppLogic.Abstractions.csproj" />
+		<!-- The shapes and the six interfaces this app fills: the contract, which knows nothing of it. -->
+		<ProjectReference Include="..\VpnHood.AppLogic.Api\VpnHood.AppLogic.Api.csproj" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <Compile Update="Resources.Designer.cs">
+	    <DependentUpon>Resources.resx</DependentUpon>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Update="Resources.resx">
+	    <SubType>Designer</SubType>
+	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+	    <Generator>ResXFileCodeGenerator</Generator>
+	  </EmbeddedResource>
+	</ItemGroup>
+
+</Project>

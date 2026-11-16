@@ -366,4 +366,4 @@ MigrationBackup/
 .build/
 
 # The Classic Avalonia UI's browser page, which its _publish.ps1 writes into the UI's package
-/src/AppUi/VpnHood.AppUi.Presentation.Classic.Avalonia/buildTransitive/web-root.zip
+/src/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip

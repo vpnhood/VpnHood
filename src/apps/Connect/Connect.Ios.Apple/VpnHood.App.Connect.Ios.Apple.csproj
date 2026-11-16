@@ -80,7 +80,7 @@
     <!-- App Store updates and, on iOS, reviews (AppStoreAppUpdaterProvider / AppStoreInAppUserReviewProvider). -->
     <ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.Stores.AppStore.Core\VpnHood.AppLogic.Stores.AppStore.Core.csproj" />
     <!-- StoreKit 2 billing + Sign in with Apple (AppStoreBillingProvider / AppleAuthenticationProvider).
-         The Swift facade + binding come from the VpnHood.AppLib.Stores.AppStore.Native NuGet it
+         The Swift facade + binding come from the VpnHood.AppLogic.Stores.AppStore.Native NuGet it
          references; being a binding package, its xcframework links into the app automatically. -->
     <ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.Stores.AppStore\VpnHood.AppLogic.Stores.AppStore.csproj" />
     <!-- Portal (WHMCS vpnhoodiap) account backend: sign-in sessions, entitlements, purchase verify. -->

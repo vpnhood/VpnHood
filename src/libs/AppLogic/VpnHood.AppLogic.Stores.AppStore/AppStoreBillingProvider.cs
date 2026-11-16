@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLogic.Abstractions.Billing;
 using VpnHood.AppLogic.Stores.AppStore.Exceptions;
-using VpnHood.AppLib.Stores.AppStore.Native;
+using VpnHood.AppLogic.Stores.AppStore.Native;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;

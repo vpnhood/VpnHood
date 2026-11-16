@@ -7,7 +7,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
-using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Graphics;
@@ -101,7 +100,7 @@ public static class AvaloniaDesktopHost
                      throw new InvalidOperationException("The UI has made no main window.");
         var ui = Application.Current as VpnHoodAvaloniaAppBase ??
                  throw new InvalidOperationException($"The UI is no {nameof(VpnHoodAvaloniaAppBase)}, so it states no window shape.");
-        AvaloniaWindowFit.Apply(window, ui.WindowFit);
+        AvaloniaWindowFit.Apply(window, ui);
         SetTitleBar(window, ui.ChromeColor);
 
         // A person's close only hides the window while the desktop shows the tray, which the UI waits
@@ -146,9 +145,9 @@ public static class AvaloniaDesktopHost
         using var stateFollower = new AvaloniaAppStateFollower(api);
         using var tray = trayArea == null
             ? null
-            : new AvaloniaDesktopTray(Application.Current ?? throw new InvalidOperationException("Avalonia has no application."),
-                api, stateFollower, VhApp.Descriptor.AppName, ShowMainWindow, () => lifetime.Shutdown());
-        using var taskbarBadge = AvaloniaTaskbarBadge.Create(window, stateFollower, shell);
+            : new AvaloniaDesktopTray(ui, api, stateFollower, AvaloniaUiHosting.AppName, ui.DesktopStrings,
+                ShowMainWindow, () => lifetime.Shutdown());
+        using var taskbarBadge = AvaloniaTaskbarBadge.Create(window, stateFollower, ui.DesktopStrings, shell);
 
         // Start shows the main window it is given; one kept back waits for ShowMainWindow, unless a
         // launch has asked for it already
@@ -251,17 +250,19 @@ public static class AvaloniaDesktopHost
         lifetime.Start([]);
     }
 
-    // The words in the device's language: loading them leaves English. Null where the content cannot
+    // The UI's words in the device's language: loading them leaves English. Null where the content cannot
     // be loaded - a broken store, fonts that cannot be read, a cache that cannot be written - and the
     // message is the host's English: it is the last word a person gets, and must not fail with what
     // it reports, so nothing cancels it.
-    private static Strings? TryLoadStrings<TUi>(IAssetProvider assets)
+    private static IDesktopStrings? TryLoadStrings<TUi>(IAssetProvider assets)
         where TUi : IAvaloniaUi
     {
         try {
             TUi.PrepareContentAsync(assets, CancellationToken.None).GetAwaiter().GetResult();
-            Strings.Current.SetCultureAsync(CultureInfo.CurrentUICulture, CancellationToken.None).GetAwaiter().GetResult();
-            return Strings.Current;
+            var strings = (Application.Current as VpnHoodAvaloniaAppBase)?.DesktopStrings ??
+                          throw new InvalidOperationException($"The UI is no {nameof(VpnHoodAvaloniaAppBase)}, so it has no words for the host.");
+            strings.SetCultureAsync(CultureInfo.CurrentUICulture, CancellationToken.None).GetAwaiter().GetResult();
+            return strings;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not load the UI's words. The message is shown in English.");

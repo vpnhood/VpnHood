@@ -4,7 +4,7 @@ using VpnHood.Net.Toolkit.Assets;
 using VpnHood.Net.Toolkit.Graphics;
 using VpnHood.Net.Toolkit.Logging;
 
-namespace VpnHood.AppUi.Common;
+namespace VpnHood.AppUi.Hosting.Common;
 
 // The colours the native chrome around the UI draws with - the window's, the bars' - as the theme
 // gives them in the UI's store: themes/<theme>/manifest.json. The theme's, not the app's, which only
@@ -86,7 +86,7 @@ public class ThemeColors
         if (stream is null)
             return null;
 
-        return await JsonSerializer.DeserializeAsync(stream, AssetJsonContext.Default.ThemeManifest, cancellationToken).ConfigureAwait(false)
+        return await JsonSerializer.DeserializeAsync(stream, ThemeJsonContext.Default.ThemeManifest, cancellationToken).ConfigureAwait(false)
                ?? throw new InvalidOperationException($"The theme's manifest '{folder}/manifest.json' is empty.");
     }
 

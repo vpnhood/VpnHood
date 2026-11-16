@@ -2,6 +2,7 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using VpnHood.AppLib.Api;
 using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Avalonia;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
@@ -21,7 +22,7 @@ namespace VpnHood.AppUi.Presentation.Classic.Avalonia;
 // two palettes; a head that names another gets that one instead, and none of this is in its build.
 public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
 {
-    // The words this UI has, which the head declares to the app (VhApp.Configure).
+    // The words this UI has, which it declares to the app as the host configures it (ConfigureAsync).
     public static IReadOnlyList<string> AvailableCultures => Strings.AvailableCultures;
 
     // The window on a desktop: a phone's shape where its screen has room for it; else landscape, as
@@ -35,6 +36,17 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         MinLandscapeHeight = 400
     };
 
+    public override bool IsTvUi => VhApp.IsTvUi;
+
+    // the words the desktop host shows around this UI: the tray's, the taskbar button's, its message's
+    public override IDesktopStrings DesktopStrings { get; } = new ClassicDesktopStrings();
+
+    // The app the pages read: before Avalonia starts, as its features decide the theme.
+    public static Task InitAsync(VpnHoodApi api, CancellationToken cancellationToken)
+    {
+        return VhApp.Init(api, cancellationToken);
+    }
+
     // What this UI needs before its first view, out of the store the head hands in: the words, and
     // the fonts. The head calls it, so the moment is the head's - on Android before the activity's
     // view, from a browser page once the API is up - and the fonts are registered as soon as
@@ -43,6 +55,13 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
     {
         await Strings.InitAsync(assets, cancellationToken).ConfigureAwait(false);
         await AppAssets.PrepareAsync(assets, cancellationToken).ConfigureAwait(false);
+    }
+
+    // The app told which languages this UI has words for, and given its words for the app's own text,
+    // again on every change of language: once the words are loaded (PrepareContentAsync).
+    public static Task ConfigureAsync(CancellationToken cancellationToken)
+    {
+        return VhApp.Configure(AvailableCultures, cancellationToken);
     }
 
     public override void Initialize()

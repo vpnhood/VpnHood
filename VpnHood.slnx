@@ -122,6 +122,7 @@
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Avalonia.Ios/VpnHood.AppUi.Hosting.Avalonia.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
+    <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Common/VpnHood.AppUi.Hosting.Common.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop/VpnHood.AppUi.Hosting.Desktop.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Abstractions/VpnHood.AppUi.Hosting.Desktop.Abstractions.csproj" />
     <Project Path="src/AppUi/VpnHood.AppUi.Hosting.Desktop.Daemon/VpnHood.AppUi.Hosting.Desktop.Daemon.csproj" />

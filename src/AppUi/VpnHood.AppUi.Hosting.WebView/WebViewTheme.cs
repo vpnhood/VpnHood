@@ -1,5 +1,5 @@
 using VpnHood.AppLib.App;
-using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Common;
 
 namespace VpnHood.AppUi.Hosting.WebView;
 

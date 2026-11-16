@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
-using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Graphics;
 
@@ -30,6 +29,21 @@ public abstract class VpnHoodAvaloniaAppBase : Application
 
     /// <summary>Gets the shape a desktop window takes for this UI: its layout's, which only its design knows.</summary>
     public abstract DesktopWindowFitOptions WindowFit { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the UI draws its TV layout: on a TV, and not as the remote a paired phone shows.
+    /// </summary>
+    /// <remarks>
+    /// It can change while the app runs, as on a desktop switched into TV mode, where the UI then makes its view again; a
+    /// host reads it as the view is made and as it fits the window, and never keeps it.
+    /// </remarks>
+    public abstract bool IsTvUi { get; }
+
+    /// <summary>
+    /// Gets the words a desktop host shows around the UI, in the UI's language: its tray's, its taskbar button's, and its
+    /// message's where it has no app to give the UI.
+    /// </summary>
+    public abstract IDesktopStrings DesktopStrings { get; }
 
     /// <summary>
     /// Imports an access key the system opened the app with, as the chosen server, and says so, or that it could not read
@@ -69,7 +83,7 @@ public abstract class VpnHoodAvaloniaAppBase : Application
     public override void OnFrameworkInitializationCompleted()
     {
         // Avalonia's designer makes the UI with no app and gives it no API: it gets no view.
-        if (VhApp.IsInit)
+        if (AvaloniaUiHosting.IsInit)
             ShowMainView();
         base.OnFrameworkInitializationCompleted();
     }
@@ -79,7 +93,7 @@ public abstract class VpnHoodAvaloniaAppBase : Application
         switch (ApplicationLifetime) {
             case IClassicDesktopStyleApplicationLifetime desktop:
                 desktop.MainWindow = new Window {
-                    Title = VhApp.Descriptor.AppName,
+                    Title = AvaloniaUiHosting.AppName,
                     CanResize = false,
                     CanMaximize = false,
                     Background = ThemeBrush("BackgroundBrush"),
@@ -111,16 +125,16 @@ public abstract class VpnHoodAvaloniaAppBase : Application
             window.Content = CreateConfiguredMainView();
     }
 
-    // The view, once the head has configured the UI: the folder it draws from, and the app told
-    // which languages it has (VhApp.Configure).
+    // The view, once the head has prepared the UI: the folder it draws from, and the app configured
+    // for it (AvaloniaUiHosting.PrepareAsync).
     private Control CreateConfiguredMainView()
     {
-        if (!VhApp.IsConfigured)
+        if (!AvaloniaUiHosting.IsConfigured)
             throw new InvalidOperationException(
-                $"The UI has not been configured. A head must call {nameof(VhApp)}.{nameof(VhApp.Configure)} before the view is made.");
+                $"The UI has not been configured. A head must call {nameof(AvaloniaUiHosting)}.{nameof(AvaloniaUiHosting.PrepareAsync)} before the view is made.");
 
         var view = CreateMainView();
-        return VhApp.IsTvUi ? new TvScreenFit { Child = view } : view;
+        return IsTvUi ? new TvScreenFit { Child = view } : view;
     }
 
     // the theme's brush for the one surface XAML does not reach: the desktop window itself. A UI

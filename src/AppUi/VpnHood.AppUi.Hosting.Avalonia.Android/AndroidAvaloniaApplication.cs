@@ -49,7 +49,7 @@ public abstract class AndroidAvaloniaApplication<TUi>(IntPtr javaReference, JniH
         if (!VpnHoodApp.IsInit)
             return; // Avalonia's OnCreate starts it; Android's own does nothing
 
-        AvaloniaUiHosting.InitAsync(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
+        AvaloniaUiHosting.InitAsync<TUi>(VpnHoodApp.Instance.Api, CancellationToken.None).GetAwaiter().GetResult();
         base.OnCreate();
     }
 

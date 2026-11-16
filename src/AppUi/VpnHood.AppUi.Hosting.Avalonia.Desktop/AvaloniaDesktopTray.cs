@@ -6,7 +6,6 @@ using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -27,6 +26,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
     private readonly VpnHoodApi _api;
     private readonly AvaloniaAppStateFollower _stateFollower;
     private readonly string _appName;
+    private readonly IDesktopStrings _strings;
     private readonly Action _showWindow;
     private readonly Action _exit;
     private readonly TrayIcon _trayIcon;
@@ -42,11 +42,12 @@ internal sealed class AvaloniaDesktopTray : IDisposable
     private AppState? _state;
 
     public AvaloniaDesktopTray(Application application, VpnHoodApi api, AvaloniaAppStateFollower stateFollower,
-        string appName, Action showWindow, Action exit)
+        string appName, IDesktopStrings strings, Action showWindow, Action exit)
     {
         _api = api;
         _stateFollower = stateFollower;
         _appName = appName;
+        _strings = strings;
         _showWindow = showWindow;
         _exit = exit;
         var appIcon = ReadAppIcon();
@@ -78,7 +79,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         };
         _trayIcon.Clicked += (_, _) => ShowWindow();
         UpdateWords();
-        Strings.Current.PropertyChanged += Strings_PropertyChanged;
+        _strings.PropertyChanged += Strings_PropertyChanged;
 
         // attached to the application, which removes it from the tray when the UI thread ends
         TrayIcon.SetIcons(application, new TrayIcons { _trayIcon });
@@ -120,10 +121,10 @@ internal sealed class AvaloniaDesktopTray : IDisposable
         if (_cancellation.IsCancellationRequested)
             return;
 
-        _openItem.Header = Strings.Current.Open;
-        _connectItem.Header = Strings.Current.Connect;
-        _disconnectItem.Header = Strings.Current.Disconnect;
-        _exitItem.Header = Strings.Current.ExitAndDisconnect;
+        _openItem.Header = _strings.Open;
+        _connectItem.Header = _strings.Connect;
+        _disconnectItem.Header = _strings.Disconnect;
+        _exitItem.Header = _strings.ExitAndDisconnect;
         if (_state != null)
             Update(_state);
     }
@@ -154,8 +155,8 @@ internal sealed class AvaloniaDesktopTray : IDisposable
             _ => _disconnectedIcon
         };
         _trayIcon.ToolTipText = state.IsKillSwitchBlocking
-            ? $"{_appName} - {Strings.Current.KillSwitchBlockingMsg}"
-            : $"{_appName} - {Strings.Current.ConnectionStateText(state.ConnectionState)}";
+            ? $"{_appName} - {_strings.KillSwitchBlockingMessage}"
+            : $"{_appName} - {_strings.ConnectionStateText(state.ConnectionState)}";
         _connectItem.IsEnabled = state.CanConnect;
         // the kill switch's block with no session, which a person's disconnect lifts
         _disconnectItem.IsEnabled = state.CanDisconnect || state.IsKillSwitchBlocking;
@@ -209,7 +210,7 @@ internal sealed class AvaloniaDesktopTray : IDisposable
 
         _cancellation.TryCancel();
         _stateFollower.StateRead -= StateFollower_StateRead;
-        Strings.Current.PropertyChanged -= Strings_PropertyChanged;
+        _strings.PropertyChanged -= Strings_PropertyChanged;
         _trayIcon.Dispose();
         _cancellation.Dispose();
     }

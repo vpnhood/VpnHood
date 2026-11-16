@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<VhApiDocsComplete>true</VhApiDocsComplete>
+		<Description>What the UI hosts share whatever look they run - the colours of the system's chrome around the UI, as the UI's theme names them in its content - so that no host references a look's library</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The UI's content store the theme is read from, and the colour type it is read into. -->
+		<ProjectReference Include="..\..\Net\VpnHood.Net.Toolkit\VpnHood.Net.Toolkit.csproj" />
+	</ItemGroup>
+</Project>

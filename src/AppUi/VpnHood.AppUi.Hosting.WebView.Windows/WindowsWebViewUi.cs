@@ -2,7 +2,7 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Api;
 using VpnHood.AppLib.Api.App;
-using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.AppUi.Hosting.WebView.Windows.WinNative;
 using VpnHood.Net.Toolkit.Logging;

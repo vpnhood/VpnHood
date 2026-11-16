@@ -20,6 +20,15 @@ Nothing in `Net`, `Core`, `AppLib` or `AppUi` knows that VpnHood Client or VpnHo
 is the rule that makes a fork possible: a fork replaces `src/Apps/` and nothing else. `Net` goes one
 step further and knows nothing of a VPN, so any .NET app can use it.
 
+Inside `AppUi`, no host references a look, so a new look changes no host. The hosts
+(`VpnHood.AppUi.Hosting.*`) know the app through its API alone, and an Avalonia look through the
+contract it fulfils: `IAvaloniaUi`, whose start steps the host calls and in which the look sets up its
+own model of the app (`VhApp`) and its words; and `VpnHoodAvaloniaAppBase`, on which the look states its
+TV layout and the words a desktop host shows around it (`IDesktopStrings`). What the hosts share
+whatever the look is sits in `VpnHood.AppUi.Hosting.Common`: the colours of the system's chrome around
+the UI, read from the theme's manifest in the UI's files (`ThemeColors`). `VpnHood.AppUi.Common`, a
+look and a look's assets are the looks' alone.
+
 ## How a folder is named
 
 **In `Net`, `Core`, `AppLib` and `AppUi`, every project sits directly under its layer, in a folder

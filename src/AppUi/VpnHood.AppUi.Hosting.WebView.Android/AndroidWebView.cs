@@ -3,7 +3,7 @@ using VpnHood.AppLib.Api.App;
 using VpnHood.AppLib.App;
 using Android.Webkit;
 using VpnHood.AppLib.App.Android.Activities;
-using VpnHood.AppUi.Common;
+using VpnHood.AppUi.Hosting.Common;
 using VpnHood.AppUi.Hosting.WebView;
 using VpnHood.Core.Client.Devices.Android.ActivityEvents;
 using VpnHood.Core.Client.Devices.Android.Utils;

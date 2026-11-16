@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using VpnHood.AppUi.Common;
 using VpnHood.AppUi.Hosting.Desktop.Abstractions;
 using VpnHood.Net.Toolkit.Graphics;
 
@@ -13,37 +12,37 @@ namespace VpnHood.AppUi.Hosting.Avalonia.Desktop;
 // again, which may be the other layout's. The layout is read at each fit, never kept: it can change.
 internal static class AvaloniaWindowFit
 {
-    public static void Apply(Window window, DesktopWindowFitOptions options)
+    public static void Apply(Window window, VpnHoodAvaloniaAppBase ui)
     {
-        Fit(window, options, isRefit: false, isPlaced: false);
+        Fit(window, ui, isRefit: false, isPlaced: false);
 
         // the frame goes from unknown to known only once, and the window manager has placed the
         // window by then
         window.PropertyChanged += (_, e) => {
             var isFrameKnown = e.Property == TopLevel.FrameSizeProperty && e.OldValue is null && e.NewValue is not null;
             if (isFrameKnown || e.Property == ContentControl.ContentProperty)
-                Fit(window, options, isRefit: true, isPlaced: true);
+                Fit(window, ui, isRefit: true, isPlaced: true);
         };
 
         // The window may be off a screen that shrank, so it goes back to the middle; a minimized one
         // stays, its frame its button's.
         window.Screens.Changed += (_, _) => {
             if (window.WindowState != WindowState.Minimized)
-                Fit(window, options, isRefit: true, isPlaced: false);
+                Fit(window, ui, isRefit: true, isPlaced: false);
         };
     }
 
     // A placed window moves only with a size that changes. The window manager keeps a window it moves
     // inside the work area at the size the window has at that moment, so a refit's new size goes to
     // the platform first, or GNOME stops a window about to shrink where its old size still fits.
-    private static void Fit(Window window, DesktopWindowFitOptions options, bool isRefit, bool isPlaced)
+    private static void Fit(Window window, VpnHoodAvaloniaAppBase ui, bool isRefit, bool isPlaced)
     {
         if ((window.Screens.ScreenFromWindow(window) ?? window.Screens.Primary) is not { } screen)
             return;
 
         var workArea = screen.WorkingArea.ToRect(screen.Scaling);
         var placement = DesktopWindowFit.Fit(new VhRect(workArea.X, workArea.Y, workArea.Width, workArea.Height),
-            FrameOf(window), options, VhApp.IsTvUi);
+            FrameOf(window), ui.WindowFit, ui.IsTvUi);
         var size = placement.ContentSize;
         if (isPlaced && size == new VhSize(window.Width, window.Height))
             return;

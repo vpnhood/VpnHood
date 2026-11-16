@@ -1,4 +1,4 @@
-namespace VpnHood.AppUi.Common;
+namespace VpnHood.AppUi.Hosting.Common;
 
 // themes/<theme>/manifest.json, as the UI's build writes it into the store.
 internal sealed class ThemeManifest

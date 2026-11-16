@@ -51,7 +51,8 @@ Your app reaches your servers through the access key in `DefaultAccessKey`. To r
 
 ## How it fits together
 
-Each head stands on VpnHood's three layers: the user interface, the app's logic and the VPN engine. Each layer can
-be replaced on its own, and the networking packages beneath them work in any .NET application.
+Each head stands on VpnHood's layers: the user interface, the host that runs it on each platform, the app's logic
+and the VPN engine. Each layer can be replaced on its own, and the networking packages beneath them work in any .NET
+application.
 [VpnHood Client Architecture](client-architecture.md) shows the layers, the contracts between them, and which part
 to use for what you are building.

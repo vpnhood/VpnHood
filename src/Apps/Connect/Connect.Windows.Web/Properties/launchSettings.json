@@ -3,7 +3,7 @@
     "Connect.Win": {
       "commandName": "Executable",
       "executablePath": "dotnet",
-      "commandLineArgs": "VpnHoodConnect.dll dev"
+      "commandLineArgs": "$(TargetFileName) dev"
     }
   }
 }

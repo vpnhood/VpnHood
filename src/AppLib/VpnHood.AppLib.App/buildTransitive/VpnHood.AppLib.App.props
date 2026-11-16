@@ -14,12 +14,17 @@
 	     new base and a new name.
 
 	     VhAppPackageTitle is the name without spaces. The release files begin with it, the update feeds
-	     included; the Windows executable, its service and its folders are called by it, and so are the
-	     Linux binary, its unit and its folders: a desktop head
+	     included, and an install is called by it: the Windows executable, its service and its folders,
+	     and the Linux binary, its unit and its folders. It is taken from the name's letters and digits
+	     unless the app states its own; an installed app keeps these names for good, so an app that has
+	     shipped states its package title rather than let a new name move its service and folders.
+
+	     VhAppExecutableName is the desktop executable's name, which names its service or unit and its
+	     log too: the package title, with "Debug" after it in a Debug build, so a developer's build beside
+	     an installed release has a service of its own rather than take the release's. A desktop head
 	     makes it its AssemblyName, which is why it is settled here, before the SDK derives the output's
-	     names from the assembly's. It is taken from the name's letters and digits unless the app states
-	     its own; an installed app keeps these names for good, so an app that has shipped states its
-	     package title rather than let a new name move its service and folders.
+	     names from the assembly's; the SDK has not yet given Configuration its default, Debug, so an
+	     empty one is Debug here.
 
 	     VhAppCommandName is what a person types at a terminal: Windows' console launcher beside the
 	     window's executable, and Linux's launcher script. The package title and "Cli" unless the app
@@ -27,7 +32,8 @@
 
 	     VhAppVpnHostName is the VPN host's, the VPN service's own executable on Windows and Linux, which
 	     the service starts at each connect: its head makes it its AssemblyName, and it reads this file too,
-	     as it references nothing of the app. The package title and "VpnHost" unless the app states its own.
+	     as it references nothing of the app. The executable's name and "VpnHost" unless the app states its
+	     own.
 
 	     Product is the name the executable's details show and the Windows service is listed under.
 	     Set here because the SDK sets it to the assembly's name before a targets file could, and so it
@@ -35,8 +41,10 @@
 	     from Company unless the app states its own. -->
 	<PropertyGroup Condition="'$(VhAppName)' != ''">
 		<VhAppPackageTitle Condition="'$(VhAppPackageTitle)' == ''">$([System.Text.RegularExpressions.Regex]::Replace('$(VhAppName)', '[^A-Za-z0-9]', ''))</VhAppPackageTitle>
+		<VhAppExecutableName Condition="'$(VhAppExecutableName)' == '' And ('$(Configuration)' == 'Debug' Or '$(Configuration)' == '')">$(VhAppPackageTitle)Debug</VhAppExecutableName>
+		<VhAppExecutableName Condition="'$(VhAppExecutableName)' == ''">$(VhAppPackageTitle)</VhAppExecutableName>
 		<VhAppCommandName Condition="'$(VhAppCommandName)' == ''">$(VhAppPackageTitle)Cli</VhAppCommandName>
-		<VhAppVpnHostName Condition="'$(VhAppVpnHostName)' == ''">$(VhAppPackageTitle)VpnHost</VhAppVpnHostName>
+		<VhAppVpnHostName Condition="'$(VhAppVpnHostName)' == ''">$(VhAppExecutableName)VpnHost</VhAppVpnHostName>
 		<Product Condition="'$(Product)' == ''">$(VhAppName)</Product>
 		<_VhAppHasCompany Condition="'$(Company)' != ''">true</_VhAppHasCompany>
 		<Copyright Condition="'$(Copyright)' == '' And '$(Company)' != ''">&#169; $(Company). All rights reserved.</Copyright>

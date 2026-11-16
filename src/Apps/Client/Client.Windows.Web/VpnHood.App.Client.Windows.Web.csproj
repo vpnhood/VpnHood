@@ -6,8 +6,9 @@
 		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
 		<UseWindowsForms>False</UseWindowsForms>
 		<!-- The executable, its service and their folders are called by the app's package title
-		     (../Directory.Build.props). -->
-		<AssemblyName>$(VhAppPackageTitle)</AssemblyName>
+		     (../Directory.Build.props); a Debug build's by the title and "Debug", so it runs beside an
+		     installed release (VhAppExecutableName). -->
+		<AssemblyName>$(VhAppExecutableName)</AssemblyName>
 		<!-- The website hands this build out, and its id says so, leaving the bare one to a Microsoft
 		     Store build. It shipped without the channel, so every install counts once more against its
 		     access key's device limit until its old entry expires - accepted by the owner on

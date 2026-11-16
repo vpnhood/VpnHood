@@ -5,8 +5,9 @@
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
 		<SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
-		<!-- The package's manifest names it: its VPN host's Executable and its background tasks' server. -->
-		<AssemblyName>$(VhAppPackageTitle)VpnPlugin</AssemblyName>
+		<!-- The app's executable's name and "VpnPlugin" (VhAppExecutableName). The package's manifest names it:
+		     its VPN host's Executable and its background tasks' server. -->
+		<AssemblyName>$(VhAppExecutableName)VpnPlugin</AssemblyName>
 		<!-- no console launcher beside it (VpnHood.AppUi.Hosting.Desktop.WindowsTun.targets) -->
 		<VhAppCommandName />
 		<Platforms>x64</Platforms>

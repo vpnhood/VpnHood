@@ -5,9 +5,10 @@
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net11.0-windows10.0.26100.0</TargetFramework>
 		<UseWindowsForms>False</UseWindowsForms>
-		<!-- The executable is called by the app's package title (../Directory.Build.props), as the
-		     website build's is; the package's manifest names it. -->
-		<AssemblyName>$(VhAppPackageTitle)</AssemblyName>
+		<!-- The desktop executable's name, as every desktop head's (VhAppExecutableName): the app's package
+		     title (../Directory.Build.props), with "Debug" after it in a Debug build. The package's manifest
+		     names it when it is published. -->
+		<AssemblyName>$(VhAppExecutableName)</AssemblyName>
 		<!-- No command line yet (docs/todo.md), so no console launcher beside the executable. -->
 		<VhAppCommandName />
 		<ApplicationIcon>..\app.ico</ApplicationIcon>

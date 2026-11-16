@@ -273,20 +273,24 @@ Each product folder has a `Directory.Build.props` that states the app once, for 
 | --- | --- | --- |
 | `VhAppIdBase` | `com.vpnhood.client` | every id of the app starts with it |
 | `VhAppName` | `VpnHood! CLIENT` | the name the app shows |
-| `VhAppPackageTitle` | `VpnHoodClient` | the name without spaces: the start of every release file's name, the update feeds' included (`AppConstants.PackageTitle`); the desktop executable, its service or unit, their folders. Taken from the name's letters and digits when not stated; an app that has shipped states it, since installs keep these names |
+| `VhAppPackageTitle` | `VpnHoodClient` | the name without spaces: the start of every release file's name, the update feeds' included (`AppConstants.PackageTitle`); an install's desktop executable, its service or unit, their folders (a Debug build's executable has `Debug` after it, below). Taken from the name's letters and digits when not stated; an app that has shipped states it, since installs keep these names |
 | `Company` | `OmegaHood LLC` | the app's maker, as the UI (`AppConstants.CompanyName`) and the executable's details name it, with a copyright made from it where none is stated. The repo's own `Directory.Build.props` states it for every project, so the products do not |
 | `VhAdMobApplicationId` | — | the AdMob application id a head that shows AdMob ads names in its manifest (`AppConstants.AdMobApplicationId`); Connect states it. Google's sample app id when not stated |
 | `VhAppLocaleConfig` | `Client/android/locales_config.xml` | the languages the app's words come in, as Android's per-app language setting takes them: an Android locale-config file, which every Android head on the shared manifest needs ([What every Android app shares](#what-every-android-app-shares)) |
 | `VhAppSetupImage` | `setup.bmp` | the picture the Windows setup's Welcome and Finish pages show: a 24-bit BMP, 328 by 628 (twice the pages' 164 by 314, sharp on a high-DPI screen), stretched to them as it is; a path beside the Windows head when not a full one. NSIS's own picture when not stated |
 
-A build target in `VpnHood.AppLib.App` (`buildTransitive/VpnHood.AppLib.App.targets`, the file a
-package reference of it imports) makes the rest, so a head names no id and no name:
+`VpnHood.AppLib.App`'s build files (`buildTransitive/VpnHood.AppLib.App.props` and `.targets`, the files a
+package reference of it imports) make the rest, so a head names no id and no name:
 
 - **the app id** (`ApplicationId`): the base, the platform, then `.web` for a build our website hands
   out (the head states `VhAppIdChannel`), then `.debug` in Debug, except on iOS, where every bundle id
   needs a provisioning profile of its own. Connect's Windows installer is
   `com.vpnhood.connect.windows.web`;
 - **the name a build shows**: the app's name, with `(DEBUG)` after it in Debug;
+- **the desktop executable's name** (`VhAppExecutableName`), which a Windows or Linux head makes its
+  `AssemblyName`: the package title, with `Debug` after it in Debug (`VpnHoodClientDebug`), so a Debug build has
+  its own service or unit, log source and VPN host (`VhAppVpnHostName`, the executable's name and `VpnHost`) beside
+  an installed release, rather than take the release's service for its own;
 - **on iOS**, the bundle's display name, the network extension's id (`<base>.ios.networkextension`)
   and the App Group (`group.<base>.ios`), which the build adds to both targets' entitlements;
 - **`AppConstants`**, a class the build writes for the code: `AppId` and `AdMobApplicationId`,

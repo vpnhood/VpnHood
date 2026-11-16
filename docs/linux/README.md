@@ -334,7 +334,7 @@ references it marked `VhAppVpnHost`, with `ReferenceOutputAssembly="false"`, and
 nothing of it: its build and its publish put the VPN host's whole output beside the head's, both
 executables in one folder over one runtime, a file both carry the same file or the build fails
 (`VpnHood.AppUi.Hosting.Desktop.Daemon`'s targets). The app finds
-it there by the name its build records (`VhAppVpnHostName`, `<package title>VpnHost`). The daemon starts it
+it there by the name its build records (`VhAppVpnHostName`, `<binary's name>VpnHost`). The daemon starts it
 at each connect, and it ends with its session; with the daemon too - on Linux the unit's stop sends it
 SIGTERM, which closes its session, and on Windows a kill-on-close job ends it with the daemon's process.
 It writes the daemon's sinks from its first line (the journal, the Event Log) and its own `vpn.log`,

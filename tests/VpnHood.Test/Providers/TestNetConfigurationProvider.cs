@@ -39,4 +39,14 @@ public class TestNetConfigurationProvider : INetConfigurationProvider
     {
         throw new NotSupportedException();
     }
+
+    public (int Max, TimeSpan TcpIdleTimeout)? ConnectionTracking { get; private set; }
+    public int ConnectionTrackingSetCount { get; private set; }
+
+    public Task SetConnectionTracking(int max, TimeSpan tcpIdleTimeout, CancellationToken cancellationToken)
+    {
+        ConnectionTracking = (max, tcpIdleTimeout);
+        ConnectionTrackingSetCount++;
+        return Task.CompletedTask;
+    }
 }

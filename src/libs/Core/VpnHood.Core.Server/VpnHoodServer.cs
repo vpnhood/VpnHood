@@ -308,22 +308,30 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             if (_netConfigurationService != null) {
                 foreach (var ipEndPoint in serverConfig.TcpEndPointsValue)
                     await _netConfigurationService
-                        .AddIpAddress(ipEndPoint.Address, serverConfig.AddListenerIpsToNetwork, cancellationToken)
+                        .AddIpAddress(ipEndPoint.Address, serverConfig.OsOptions.AddListenerIpsToNetwork,
+                            cancellationToken)
                         .Vhc();
             }
 
             // Set TcpCongestionControl
-            if (_netConfigurationService != null && !string.IsNullOrEmpty(serverConfig.TcpCongestionControlValue)) {
+            if (_netConfigurationService != null &&
+                !string.IsNullOrEmpty(serverConfig.OsOptions.TcpCongestionControlValue)) {
                 await _netConfigurationService
-                    .SetTcpCongestionControl(serverConfig.TcpCongestionControlValue, cancellationToken).Vhc();
+                    .SetTcpCongestionControl(serverConfig.OsOptions.TcpCongestionControlValue, cancellationToken)
+                    .Vhc();
             }
 
             _tcpCongestionControl = _netConfigurationService != null
                 ? await _netConfigurationService.GetTcpCongestionControl(cancellationToken).Vhc()
                 : null;
 
+            if (_netConfigurationService != null) {
+                await _netConfigurationService.SetConnectionTracking(serverConfig.OsOptions.ConnectionTrackingMaxValue,
+                    serverConfig.OsOptions.ConnectionTrackingTcpIdleTimeoutValue, cancellationToken).Vhc();
+            }
+
             if (_swapMemoryProvider != null) {
-                await ConfigureSwapMemory(serverConfig.SwapMemorySizeMb, cancellationToken).Vhc();
+                await ConfigureSwapMemory(serverConfig.OsOptions.SwapMemorySizeMb, cancellationToken).Vhc();
             }
 
             // Reconfigure server host

@@ -62,7 +62,7 @@ public class ServerTest : TestBase
     public async Task Add_IpAddress_ToSystem()
     {
         using var accessManager = await TestHelper.CreateAccessManager();
-        accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
+        accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
 
         var netConfigurationProvider = new TestNetConfigurationProvider();
         await using var server =
@@ -83,7 +83,7 @@ public class ServerTest : TestBase
     public async Task A_server_host_close_past_its_limit_leaves_the_rest_of_the_close_to_run()
     {
         using var accessManager = await TestHelper.CreateAccessManager();
-        accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
+        accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
         var netConfigurationProvider = new TestNetConfigurationProvider();
         var quicServer = new QuicListenerCloseHoldingServer();
         var server = new VpnHoodServer(accessManager, new ServerOptions {
@@ -111,7 +111,7 @@ public class ServerTest : TestBase
     public async Task A_quick_close_ends_a_server_whose_graceful_close_is_held()
     {
         using var accessManager = await TestHelper.CreateAccessManager();
-        accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
+        accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
         var netConfigurationProvider = new TestNetConfigurationProvider();
         var quicServer = new QuicListenerCloseHoldingServer();
         var server = new VpnHoodServer(accessManager, new ServerOptions {
@@ -242,7 +242,7 @@ public class ServerTest : TestBase
     public async Task A_configuration_the_close_interrupts_applies_nothing_and_records_no_error()
     {
         using var accessManager = await TestHelper.CreateAccessManager();
-        accessManager.ServerConfig.AddListenerIpsToNetwork = "*";
+        accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
         accessManager.ConfigureHold.IsHeld = true;
         var netConfigurationProvider = new TestNetConfigurationProvider();
         var server = new VpnHoodServer(accessManager, new ServerOptions {
@@ -740,6 +740,13 @@ public class ServerTest : TestBase
             MaxCompletionPortThreads = 10,
             MinCompletionPortThreads = 11,
             UpdateStatusInterval = TimeSpan.FromHours(11),
+            OsOptions = new OsOptions {
+                TcpCongestionControl = "cubic",
+                ConnectionTrackingMax = 12,
+                ConnectionTrackingTcpIdleTimeout = TimeSpan.FromMinutes(13),
+                SwapMemorySizeMb = 14,
+                AddListenerIpsToNetwork = "eth1"
+            },
             NetFilterOptions = new NetFilterOptions {
                 BlockIpV6 = true,
                 ExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.2")],
@@ -782,6 +789,34 @@ public class ServerTest : TestBase
 
         oldServerConfig.Merge(newServerConfig);
         Assert.AreEqual(JsonSerializer.Serialize(oldServerConfig), JsonSerializer.Serialize(newServerConfig));
+    }
+
+    // servers before the Os group read these settings by their old names, and older settings files hold them there
+    [TestMethod]
+    public void Os_settings_load_from_their_old_names_and_go_out_by_them_too()
+    {
+        var oldJson = """
+                      {
+                        "TcpCongestionControl": "cubic",
+                        "SwapMemorySizeMb": 14,
+                        "AddListenerIpsToNetwork": "eth1",
+                        "Os": { "ConnectionTrackingMax": 12 }
+                      }
+                      """;
+        var serverConfig = JsonSerializer.Deserialize<ServerConfig>(oldJson) ??
+                           throw new InvalidOperationException("No configuration was read.");
+        Assert.AreEqual("cubic", serverConfig.OsOptions.TcpCongestionControl);
+        Assert.AreEqual(14, serverConfig.OsOptions.SwapMemorySizeMb);
+        Assert.AreEqual("eth1", serverConfig.OsOptions.AddListenerIpsToNetwork);
+        Assert.AreEqual(12, serverConfig.OsOptions.ConnectionTrackingMax);
+
+        var json = JsonSerializer.SerializeToNode(new ServerConfig {
+            OsOptions = { TcpCongestionControl = "reno", SwapMemorySizeMb = 15, AddListenerIpsToNetwork = "eth2" }
+        }) ?? throw new InvalidOperationException("No JSON was written.");
+        Assert.AreEqual("reno", json["TcpCongestionControl"]?.GetValue<string>());
+        Assert.AreEqual(15, json["SwapMemorySizeMb"]?.GetValue<int>());
+        Assert.AreEqual("eth2", json["AddListenerIpsToNetwork"]?.GetValue<string>());
+        Assert.AreEqual(15, json["Os"]?["SwapMemorySizeMb"]?.GetValue<int>());
     }
 
     [TestMethod]
@@ -839,6 +874,32 @@ public class ServerTest : TestBase
         Assert.AreEqual(new Uri($"https://{tlsEndPoint}{path}"), response.Headers.Location);
     }
 
+    // many of a VPN's connections end without a close, and the OS's own tracking of them fills its NAT's table
+    [TestMethod]
+    public async Task Connection_tracking_takes_its_defaults_or_the_access_managers_values()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        var netConfigurationProvider = new TestNetConfigurationProvider();
+        await using var server =
+            await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);
+        Assert.AreEqual((1_048_576, TimeSpan.FromHours(1)), netConfigurationProvider.ConnectionTracking);
+
+        // the access manager's
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 2_000_000;
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingTcpIdleTimeout = TimeSpan.FromMinutes(20);
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await server.ConfigureAndSendStatus(TestCt);
+        Assert.AreEqual((2_000_000, TimeSpan.FromMinutes(20)), netConfigurationProvider.ConnectionTracking);
+
+        // both left to the OS
+        var setCount = netConfigurationProvider.ConnectionTrackingSetCount;
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 0;
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingTcpIdleTimeout = TimeSpan.Zero;
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await server.ConfigureAndSendStatus(TestCt);
+        Assert.AreEqual(setCount, netConfigurationProvider.ConnectionTrackingSetCount);
+    }
+
     [TestMethod]
     public async Task SwapMemory_Status()
     {
@@ -876,7 +937,7 @@ public class ServerTest : TestBase
             serverStatus?.AvailableSwapMemory);
 
         // configure by access manager
-        accessManager.ServerConfig.SwapMemorySizeMb = 2500;
+        accessManager.ServerConfig.OsOptions.SwapMemorySizeMb = 2500;
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         swapMemoryProvider.AppUsed = 100 * VhUtils.Megabytes;
         await server.ConfigureAndSendStatus(TestCt);

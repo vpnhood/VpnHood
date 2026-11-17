@@ -11,7 +11,7 @@ namespace VpnHood.Core.Server.Access.Configurations;
 /// </summary>
 /// <remarks>
 /// A setting left <see langword="null"/> takes its default, which the property of its name ending in <c>Value</c>
-/// gives. In JSON, the three groups are named <c>Tracking</c>, <c>Session</c> and <c>NetFilter</c>.
+/// gives. In JSON, the four groups are named <c>Tracking</c>, <c>Session</c>, <c>NetFilter</c> and <c>Os</c>.
 /// </remarks>
 public class ServerConfig
 {
@@ -26,6 +26,14 @@ public class ServerConfig
     /// <summary>Gets or sets which destinations the server's clients may reach.</summary>
     [JsonPropertyName("NetFilter")]
     public NetFilterOptions NetFilterOptions { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets what the server sets on its machine's operating system, where it manages it (Linux).
+    /// </summary>
+    // filled in place, so an old name read before the group keeps its value
+    [JsonPropertyName("Os")]
+    [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
+    public OsOptions OsOptions { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the TCP endpoints the server listens on, or <see langword="null"/> for port 443 on every IPv4 and
@@ -104,17 +112,29 @@ public class ServerConfig
     /// </summary>
     public int? MaxCompletionPortThreads { get; set; }
 
-    /// <summary>
-    /// Gets or sets the swap the server wants in all, in megabytes, where it manages swap (Linux): its own swap file
-    /// makes up what the system's other swap lacks, and <see langword="null"/> or 0 removes its own.
-    /// </summary>
-    public int? SwapMemorySizeMb { get; set; }
+    /// <summary>Gets or sets <see cref="OsOptions.SwapMemorySizeMb"/> by its name outside <see cref="OsOptions"/>.</summary>
+    /// <remarks>
+    /// Compatibility (2026-11): servers before the <c>Os</c> group read it here, and older settings files hold it
+    /// here; drop once no supported server is that old.
+    /// </remarks>
+    [Obsolete("Use OsOptions.SwapMemorySizeMb.")]
+    public int? SwapMemorySizeMb {
+        get => OsOptions.SwapMemorySizeMb;
+        set => OsOptions.SwapMemorySizeMb = value;
+    }
 
     /// <summary>
-    /// Gets or sets the network interface the server adds its TCP endpoints' addresses to where the system lacks them,
-    /// where it manages its network (Linux); <see langword="null"/>, empty or <c>*</c> for the first interface.
+    /// Gets or sets <see cref="OsOptions.AddListenerIpsToNetwork"/> by its name outside <see cref="OsOptions"/>.
     /// </summary>
-    public string? AddListenerIpsToNetwork { get; set; }
+    /// <remarks>
+    /// Compatibility (2026-11): servers before the <c>Os</c> group read it here, and older settings files hold it
+    /// here; drop once no supported server is that old.
+    /// </remarks>
+    [Obsolete("Use OsOptions.AddListenerIpsToNetwork.")]
+    public string? AddListenerIpsToNetwork {
+        get => OsOptions.AddListenerIpsToNetwork;
+        set => OsOptions.AddListenerIpsToNetwork = value;
+    }
 
     /// <summary>
     /// Gets or sets the TLS certificates the server presents; at least one is required. The default is none.
@@ -122,10 +142,17 @@ public class ServerConfig
     public CertificateData[] Certificates { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the TCP congestion control the server sets on its OS where it manages its network (Linux), or
-    /// <see langword="null"/> to leave the OS's. The default is <c>bbr</c>.
+    /// Gets or sets <see cref="OsOptions.TcpCongestionControl"/> by its name outside <see cref="OsOptions"/>.
     /// </summary>
-    public string? TcpCongestionControl { get; set; } = "bbr";
+    /// <remarks>
+    /// Compatibility (2026-11): servers before the <c>Os</c> group read it here, and older settings files hold it
+    /// here; drop once no supported server is that old.
+    /// </remarks>
+    [Obsolete("Use OsOptions.TcpCongestionControl.")]
+    public string? TcpCongestionControl {
+        get => OsOptions.TcpCongestionControl;
+        set => OsOptions.TcpCongestionControl = value;
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether the server answers ACME HTTP-01 challenges on port 80 of its TCP
@@ -173,10 +200,6 @@ public class ServerConfig
     [JsonIgnore]
     public bool LogAnonymizerValue => LogAnonymizer ?? true;
 
-    /// <summary>Gets <see cref="TcpCongestionControl"/>, which has no default of its own here.</summary>
-    [JsonIgnore]
-    public string? TcpCongestionControlValue => TcpCongestionControl;
-
     /// <summary>Gets <see cref="EnableHttp01Challenge"/>, or its default, <see langword="false"/>.</summary>
     [JsonIgnore]
     public bool EnableHttp01ChallengeValue => EnableHttp01Challenge ?? false;
@@ -191,6 +214,7 @@ public class ServerConfig
         TrackingOptions.Merge(obj.TrackingOptions);
         SessionOptions.Merge(obj.SessionOptions);
         NetFilterOptions.Merge(obj.NetFilterOptions);
+        OsOptions.Merge(obj.OsOptions);
         if (obj.TcpEndPoints != null) TcpEndPoints = obj.TcpEndPoints;
         if (obj.UdpEndPoints != null) UdpEndPoints = obj.UdpEndPoints;
         if (obj.QuicEndPoints != null) QuicEndPoints = obj.QuicEndPoints;
@@ -202,9 +226,6 @@ public class ServerConfig
         if (obj.ServerSecret != null) ServerSecret = obj.ServerSecret;
         if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
         if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
-        if (obj.SwapMemorySizeMb != null) SwapMemorySizeMb = obj.SwapMemorySizeMb;
-        if (obj.AddListenerIpsToNetwork != null) AddListenerIpsToNetwork = obj.AddListenerIpsToNetwork;
-        if (obj.TcpCongestionControl != null) TcpCongestionControl = obj.TcpCongestionControl;
         if (obj.EnableHttp01Challenge != null) EnableHttp01Challenge = obj.EnableHttp01Challenge;
     }
 
@@ -217,6 +238,7 @@ public class ServerConfig
         TrackingOptions.ApplyDefaults();
         SessionOptions.ApplyDefaults();
         NetFilterOptions.ApplyDefaults();
+        OsOptions.ApplyDefaults();
         TcpEndPoints = TcpEndPointsValue;
         UdpEndPoints = UdpEndPointsValue;
         ReverseProxyProviders = ReverseProxyProvidersValue;
@@ -224,7 +246,6 @@ public class ServerConfig
         DnsServers = DnsServersValue;
         UpdateStatusInterval = UpdateStatusIntervalValue;
         LogAnonymizer = LogAnonymizerValue;
-        TcpCongestionControl = TcpCongestionControlValue;
         EnableHttp01Challenge = EnableHttp01ChallengeValue;
     }
 }

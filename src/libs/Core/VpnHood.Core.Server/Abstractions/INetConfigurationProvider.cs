@@ -3,8 +3,8 @@
 namespace VpnHood.Core.Server.Abstractions;
 
 /// <summary>
-/// Represents what manages the server machine's network for the server: its interfaces' addresses and TCP's congestion
-/// control, as the server's configuration asks.
+/// Represents what manages the server machine's network for the server: its interfaces' addresses, TCP's congestion
+/// control and its connection tracking, as the server's configuration asks.
 /// </summary>
 public interface INetConfigurationProvider
 {
@@ -50,4 +50,20 @@ public interface INetConfigurationProvider
     /// <returns>A task that completes once the provider is done.</returns>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     Task SetTcpCongestionControl(string value, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets how the machine tracks connections, as its NAT needs: the most it tracks at once, which it never lowers,
+    /// and how long it keeps tracking an established TCP connection that sends nothing. A provider may leave them
+    /// where the machine allows no change or tracks no connections.
+    /// </summary>
+    /// <param name="max">The most connections, or 0 to leave it.</param>
+    /// <param name="tcpIdleTimeout">The time, or <see cref="TimeSpan.Zero"/> to leave it.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes once the provider is done.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="max"/> or <paramref name="tcpIdleTimeout"/> is negative, or the time is over what the machine
+    /// takes.
+    /// </exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    Task SetConnectionTracking(int max, TimeSpan tcpIdleTimeout, CancellationToken cancellationToken);
 }

@@ -136,6 +136,24 @@ internal class NetConfigurationService(INetConfigurationProvider netConfiguratio
         }
     }
 
+    public async Task SetConnectionTracking(int max, TimeSpan tcpIdleTimeout, CancellationToken cancellationToken)
+    {
+        try {
+            if (max == 0 && tcpIdleTimeout == TimeSpan.Zero)
+                return;
+
+            await netConfigurationProvider.SetConnectionTracking(max, tcpIdleTimeout, cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) {
+            throw;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not set connection tracking. Max: {Max}, TcpIdleTimeout: {TcpIdleTimeout}",
+                max, tcpIdleTimeout);
+        }
+    }
+
     // sync only: the removals are local commands, which the server's quick close runs too. An add that ends after
     // this removes its address itself
     public void Dispose()

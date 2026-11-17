@@ -18,7 +18,9 @@ nor build VpnHood itself, and taking a newer VpnHood means changing one version 
    own.
 
 The template's [README](https://github.com/vpnhood/VpnHood.App.Template#readme) has every setting, what each
-platform's build needs, and how to publish.
+platform's build needs, and how to publish. If an AI coding agent works on your app, the template's
+[AGENTS.md](https://github.com/vpnhood/VpnHood.App.Template/blob/main/AGENTS.md) tells it where each change goes and
+which lines never to change.
 
 ## The samples
 
@@ -47,7 +49,8 @@ them references. [How a VpnHood app starts](app-startup.md) shows what a head wr
 ## Your own servers
 
 Your app reaches your servers through the access key in `DefaultAccessKey`. To run them, see
-[the self-hosted VPN docs](https://www.vpnhood.com/self-hosted-vpn/docs/).
+[the self-hosted VPN docs](https://www.vpnhood.com/self-hosted-vpn/docs/). When VpnHood! MANAGER runs them, its
+[API](https://developer.vpnhood.com/manager-api/) gives each of your customers an access key from your billing system.
 
 ## How it fits together
 

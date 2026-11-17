@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Server.Abstractions;
+﻿namespace VpnHood.Core.Server.OsConfiguration;
 
 /// <summary>Represents the server machine's swap memory, in bytes.</summary>
 public class SwapMemoryInfo

@@ -1,8 +1,8 @@
 using Ga4.Trackers;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Quic.Abstractions;
-using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Server.OsConfiguration;
 using VpnHood.Core.Server.SystemInformation;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
@@ -39,15 +39,17 @@ public class ServerOptions
     internal IReadOnlyList<IpNetwork> NonPublicNetworks { get; init; } = IpNetwork.NonPublicNetworks;
 
     /// <summary>
-    /// Gets what manages the machine's network, as the server's configuration asks, or <see langword="null"/> for none.
+    /// Gets what reads and changes the machine's OS as the server's configuration asks, or <see langword="null"/> for
+    /// none, where the server changes nothing on it.
     /// </summary>
-    public INetConfigurationProvider? NetConfigurationProvider { get; init; }
+    /// <remarks>
+    /// The server makes no change without admin rights, and puts back the OS's own value of a setting it changed when
+    /// its configuration no longer sets it.
+    /// </remarks>
+    public IOsConfigurationProvider? OsConfigurationProvider { get; init; }
 
-    /// <summary>
-    /// Gets what manages the machine's swap memory, as the server's configuration asks, or <see langword="null"/> for
-    /// none.
-    /// </summary>
-    public ISwapMemoryProvider? SwapMemoryProvider { get; init; }
+    // a test's provider changes nothing real, so a test stands in for an admin's process
+    internal bool IsPrivilegedProcess { get; init; } = Environment.IsPrivilegedProcess;
 
     /// <summary>
     /// Gets the VPN adapter that takes the sessions' TCP packets out, with its NAT, or <see langword="null"/> for none,

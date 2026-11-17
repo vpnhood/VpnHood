@@ -11,10 +11,10 @@ using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Core.Server;
-using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
 using VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
+using VpnHood.Core.Server.OsConfiguration;
 using VpnHood.Core.Server.SystemInformation;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
@@ -366,13 +366,8 @@ public class ServerApp : IDisposable
             ? new LinuxSystemInfoProvider()
             : new WinSystemInfoProvider();
 
-        // NetConfigurationProvider
-        INetConfigurationProvider? configurationProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-            ? new LinuxNetConfigurationProvider(VhLogger.Instance)
-            : null;
-
-        ISwapMemoryProvider? swapMemoryProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
-            ? new LinuxSwapMemoryProvider(VhLogger.Instance)
+        IOsConfigurationProvider? osConfigurationProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            ? new LinuxOsConfigurationProvider()
             : null;
 
         // run server
@@ -386,8 +381,7 @@ public class ServerApp : IDisposable
                 Tracker = _tracker,
                 VpnAdapter = _vpnAdapter,
                 SystemInfoProvider = systemInfoProvider,
-                NetConfigurationProvider = configurationProvider,
-                SwapMemoryProvider = swapMemoryProvider,
+                OsConfigurationProvider = osConfigurationProvider,
                 QuicServer = MsQuicServer.IsSupported ? new MsQuicServer() : null,
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig,

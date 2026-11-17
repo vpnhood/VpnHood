@@ -8,27 +8,28 @@ namespace VpnHood.Core.Server.Access.Configurations;
 /// </summary>
 /// <remarks>
 /// A setting left <see langword="null"/> takes its default, which the property of its name ending in <c>Value</c>
-/// gives. In JSON, the server's configuration names this group <c>Os</c>.
+/// gives. In JSON, the server's configuration names this group <c>Os</c>. The server changes the running OS only, so a
+/// restart of the machine puts back the OS's own values, and it makes no change without admin rights.
 /// </remarks>
 public class OsOptions
 {
     /// <summary>
-    /// Gets or sets the TCP congestion control the server sets on its OS, or <see langword="null"/> or <c>*</c> to leave
-    /// the OS's. The default is <c>bbr</c>.
+    /// Gets or sets the TCP congestion control the server sets on its OS, or <see langword="null"/> or <c>*</c> to put
+    /// back the OS's own where the server changed it. The default is <c>bbr</c>.
     /// </summary>
     public string? TcpCongestionControl { get; set; } = "bbr";
 
     /// <summary>
     /// Gets or sets the most connections the OS tracks at once, as the server's NAT needs: a full table drops new
-    /// connections, its clients' and its own. <see langword="null"/> for 1,048,576, and 0 to leave the OS's; it never
-    /// lowers the OS's.
+    /// connections, its clients' and its own. <see langword="null"/> for 1,048,576, and 0 to put back the OS's own where
+    /// the server changed it; it never goes below the OS's own.
     /// </summary>
     public int? ConnectionTrackingMax { get; set; }
 
     /// <summary>
     /// Gets or sets how long the OS keeps tracking an established TCP connection that sends nothing, or
-    /// <see langword="null"/> for 1 hour, and zero to leave the OS's: Linux's 5 days fill the table, as many of a VPN's
-    /// connections end without a close, such as when a phone changes networks.
+    /// <see langword="null"/> for 1 hour, and zero to put back the OS's own where the server changed it: Linux's 5 days
+    /// fill the table, as many of a VPN's connections end without a close, such as when a phone changes networks.
     /// </summary>
     [JsonConverter(typeof(TimeSpanConverter))]
     public TimeSpan? ConnectionTrackingTcpIdleTimeout { get; set; }

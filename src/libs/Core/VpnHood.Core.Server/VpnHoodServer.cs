@@ -9,10 +9,10 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
+using VpnHood.Core.Server.OsConfiguration;
 using VpnHood.Core.Server.ProbeResistance;
 using VpnHood.Core.Server.ReverseProxies;
 using VpnHood.Core.Server.SystemInformation;
@@ -53,9 +53,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private Task _configureTask = Task.CompletedTask;
     private Task _sendStatusTask = Task.CompletedTask;
     private readonly Http01ChallengeService _http01ChallengeService;
-    private readonly NetConfigurationService? _netConfigurationService;
+    private readonly OsConfigurationService? _osConfigurationService;
     private readonly ISystemInfoProvider _systemInfoProvider;
-    private readonly ISwapMemoryProvider? _swapMemoryProvider;
     private readonly NetFilter _netFilter;
     private readonly IReadOnlyList<IpNetwork> _nonPublicNetworks;
     private readonly ReverseProxyTrust _reverseProxyTrust;
@@ -119,10 +118,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _configErrorTracker = new ConfigErrorTracker(options.StoragePath, options.ConfigErrorStrikeDuration, options.ConfigErrorRetryInterval);
         _publicIpDiscovery = options.PublicIpDiscovery;
-        _netConfigurationService = options.NetConfigurationProvider != null
-            ? new NetConfigurationService(options.NetConfigurationProvider)
+        _osConfigurationService = options.OsConfigurationProvider != null
+            ? new OsConfigurationService(options.OsConfigurationProvider, options.StoragePath, options.IsPrivilegedProcess)
             : null;
-        _swapMemoryProvider = options.SwapMemoryProvider;
         _config = options.Config;
         _serverHostDisposeTimeout = options.ServerHostDisposeTimeout;
         _reverseProxyTrust = new ReverseProxyTrust(options.StoragePath, httpMessageHandler: null);
@@ -245,6 +243,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 ? await IPAddressUtil.GetPublicIpAddresses(cancellationToken).Vhc()
                 : [];
 
+            var networkInterfaceNames = _osConfigurationService != null
+                ? await _osConfigurationService.GetNetworkInterfaceNames(cancellationToken).Vhc()
+                : null;
+
             var providerSystemInfo = _systemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo {
                 EnvironmentVersion = Environment.Version,
@@ -262,9 +264,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 FreeQuicPortV4 = freeQuicPortV4,
                 FreeQuicPortV6 = freeQuicPortV6,
                 IsRestarted = _isRestarted,
-                NetworkInterfaceNames = _netConfigurationService != null
-                    ? await _netConfigurationService.GetNetworkInterfaceNames(cancellationToken).Vhc()
-                    : null
+                NetworkInterfaceNames = networkInterfaceNames?.ToArray()
             };
 
             VhLogger.Instance.LogInformation("ServerInfo: {ServerInfo}", GetServerInfoReport(serverInfo));
@@ -304,34 +304,11 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 IpMapper = _netFilter.IpMapper
             };
 
-            // Add listener ip addresses to the ip address manager if requested
-            if (_netConfigurationService != null) {
-                foreach (var ipEndPoint in serverConfig.TcpEndPointsValue)
-                    await _netConfigurationService
-                        .AddIpAddress(ipEndPoint.Address, serverConfig.OsOptions.AddListenerIpsToNetwork,
-                            cancellationToken)
-                        .Vhc();
-            }
-
-            // Set TcpCongestionControl
-            if (_netConfigurationService != null &&
-                !string.IsNullOrEmpty(serverConfig.OsOptions.TcpCongestionControlValue)) {
-                await _netConfigurationService
-                    .SetTcpCongestionControl(serverConfig.OsOptions.TcpCongestionControlValue, cancellationToken)
-                    .Vhc();
-            }
-
-            _tcpCongestionControl = _netConfigurationService != null
-                ? await _netConfigurationService.GetTcpCongestionControl(cancellationToken).Vhc()
-                : null;
-
-            if (_netConfigurationService != null) {
-                await _netConfigurationService.SetConnectionTracking(serverConfig.OsOptions.ConnectionTrackingMaxValue,
-                    serverConfig.OsOptions.ConnectionTrackingTcpIdleTimeoutValue, cancellationToken).Vhc();
-            }
-
-            if (_swapMemoryProvider != null) {
-                await ConfigureSwapMemory(serverConfig.OsOptions.SwapMemorySizeMb, cancellationToken).Vhc();
+            // the OS's settings, the listeners' addresses with them before the listeners start
+            if (_osConfigurationService != null) {
+                await _osConfigurationService.Configure(serverConfig.OsOptions,
+                    serverConfig.TcpEndPointsValue.Select(x => x.Address).ToArray(), cancellationToken).Vhc();
+                _tcpCongestionControl = await _osConfigurationService.GetTcpCongestionControl(cancellationToken).Vhc();
             }
 
             // Reconfigure server host
@@ -403,22 +380,6 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         }
     }
 
-    private async Task<SwapMemoryInfo?> TryGetSwapMemoryInfo(CancellationToken cancellationToken)
-    {
-        if (_swapMemoryProvider == null)
-            return null;
-
-        try {
-            return await _swapMemoryProvider.GetInfo(cancellationToken).Vhc();
-        }
-        catch (OperationCanceledException) {
-            throw;
-        }
-        catch {
-            return null;
-        }
-    }
-
     // Compatibility (2026-11): a minimum below the proof's protocol takes older apps' requests with no proof; drop
     // when protocol 14 and older end in April 2027, as the server's own minimum is then the proof's protocol
     private void WarnIfProbeResistanceIsOff()
@@ -431,37 +392,6 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             "your users' apps are updated. Protocol 14 and older are supported until April 2027, so update all apps " +
             "and servers by then.",
             nameof(SessionOptions.MinClientProtocolVersion), ServerHost.MinClientProtocolVersion, RequestProof.ProtocolVersion);
-    }
-
-    private async Task ConfigureSwapMemory(long? sizeMb, CancellationToken cancellationToken)
-    {
-        if (_swapMemoryProvider == null)
-            throw new InvalidOperationException("SwapMemoryProvider is not available.");
-
-        try {
-            var info = await _swapMemoryProvider.GetInfo(cancellationToken).Vhc();
-            var size = sizeMb * VhUtils.Megabytes ?? 0;
-            var otherSize = info.TotalSize - info.AppSize;
-            var newAppSize = Math.Max(0, size - otherSize);
-
-            if (Math.Abs(info.AppSize - newAppSize) < VhUtils.Megabytes) {
-                if (size == 0 && info.AppSize == 0)
-                    return; // there is no need to configure swap file
-
-                VhLogger.Instance.LogInformation(
-                    "Swap file size is already near to the requested size. CurrentSize: {CurrentSize}, RequestedSize: {RequestedSize}",
-                    VhUtils.FormatBytes(info.TotalSize), VhUtils.FormatBytes(size));
-                return;
-            }
-
-            await _swapMemoryProvider.SetAppSwapMemorySize(newAppSize, cancellationToken).Vhc();
-        }
-        catch (OperationCanceledException) {
-            throw;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not configure swap file.");
-        }
     }
 
     private static StaticIpFilter ConfigIpFilter(IIpFilter? ipFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
@@ -616,7 +546,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
 
     internal async Task<ServerStatus> GetStatus(CancellationToken cancellationToken)
     {
-        var swapMemoryInfo = await TryGetSwapMemoryInfo(cancellationToken).Vhc();
+        var swapMemoryInfo = _osConfigurationService != null
+            ? await _osConfigurationService.GetSwapMemoryInfo(cancellationToken).Vhc()
+            : null;
         var systemInfo = _systemInfoProvider.GetSystemInfo();
         var serverStatus = new ServerStatus {
             SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
@@ -701,7 +633,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         SessionManager.Dispose();
         _http01ChallengeService.Dispose();
         _reverseProxyTrust.Dispose();
-        _netConfigurationService?.Dispose();
+        _osConfigurationService?.Dispose();
         if (_autoDisposeAccessManager)
             AccessManager.Dispose();
 

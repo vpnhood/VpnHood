@@ -12,6 +12,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Configurations;
+using VpnHood.Core.Server.OsConfiguration;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
@@ -64,19 +65,19 @@ public class ServerTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
 
-        var netConfigurationProvider = new TestNetConfigurationProvider();
+        var osConfigurationProvider = new TestOsConfigurationProvider();
         await using var server =
-            await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);
+            await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
 
-        var interfaceNames = await netConfigurationProvider.GetInterfaceNames(TestCt);
-        CollectionAssert.AreEqual(interfaceNames, accessManager.LastServerInfo?.NetworkInterfaceNames);
-        Assert.HasCount(1, netConfigurationProvider.IpAddresses);
-        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Key,
+        var interfaceNames = await osConfigurationProvider.GetInterfaceNames(TestCt);
+        CollectionAssert.AreEqual(interfaceNames.ToArray(), accessManager.LastServerInfo?.NetworkInterfaceNames);
+        Assert.HasCount(1, osConfigurationProvider.IpAddresses);
+        Assert.AreEqual(osConfigurationProvider.IpAddresses.Single().Key,
             accessManager.ServerConfig.TcpEndPointsValue.First().Address);
-        Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Value, interfaceNames.First());
+        Assert.AreEqual(osConfigurationProvider.IpAddresses.Single().Value, interfaceNames.First());
 
         await server.DisposeAsync();
-        Assert.IsEmpty(netConfigurationProvider.IpAddresses);
+        Assert.IsEmpty(osConfigurationProvider.IpAddresses);
     }
 
     [TestMethod]
@@ -84,12 +85,13 @@ public class ServerTest : TestBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
-        var netConfigurationProvider = new TestNetConfigurationProvider();
+        var osConfigurationProvider = new TestOsConfigurationProvider();
         var quicServer = new QuicListenerCloseHoldingServer();
         var server = new VpnHoodServer(accessManager, new ServerOptions {
             SocketFactory = new TestSocketFactory(),
             QuicServer = quicServer,
-            NetConfigurationProvider = netConfigurationProvider,
+            OsConfigurationProvider = osConfigurationProvider,
+            IsPrivilegedProcess = true,
             StoragePath = TestHelper.WorkingPath,
             AutoDisposeAccessManager = false,
             PublicIpDiscovery = false,
@@ -97,13 +99,13 @@ public class ServerTest : TestBase
         });
         await server.Start(TestCt);
         Assert.HasCount(1, server.ServerHost.QuicEndPoints);
-        Assert.HasCount(1, netConfigurationProvider.IpAddresses);
+        Assert.HasCount(1, osConfigurationProvider.IpAddresses);
 
         // the QUIC listener's close never ends on its own
         await server.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10), TestCt);
         Assert.AreEqual(1, quicServer.HeldCloseCount);
         Assert.AreEqual(ServerState.Disposed, server.State);
-        Assert.IsEmpty(netConfigurationProvider.IpAddresses);
+        Assert.IsEmpty(osConfigurationProvider.IpAddresses);
         quicServer.ReleaseCloses();
     }
 
@@ -112,12 +114,13 @@ public class ServerTest : TestBase
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
-        var netConfigurationProvider = new TestNetConfigurationProvider();
+        var osConfigurationProvider = new TestOsConfigurationProvider();
         var quicServer = new QuicListenerCloseHoldingServer();
         var server = new VpnHoodServer(accessManager, new ServerOptions {
             SocketFactory = new TestSocketFactory(),
             QuicServer = quicServer,
-            NetConfigurationProvider = netConfigurationProvider,
+            OsConfigurationProvider = osConfigurationProvider,
+            IsPrivilegedProcess = true,
             StoragePath = TestHelper.WorkingPath,
             AutoDisposeAccessManager = false,
             PublicIpDiscovery = false,
@@ -136,7 +139,7 @@ public class ServerTest : TestBase
         await Task.Run(server.Dispose, TestCt).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
         Assert.AreEqual(ServerState.Disposed, server.State);
         Assert.IsTrue(session.IsDisposed);
-        Assert.IsEmpty(netConfigurationProvider.IpAddresses);
+        Assert.IsEmpty(osConfigurationProvider.IpAddresses);
 
         // released, the graceful close finds the rest closed
         quicServer.ReleaseCloses();
@@ -244,10 +247,11 @@ public class ServerTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
         accessManager.ConfigureHold.IsHeld = true;
-        var netConfigurationProvider = new TestNetConfigurationProvider();
+        var osConfigurationProvider = new TestOsConfigurationProvider();
         var server = new VpnHoodServer(accessManager, new ServerOptions {
             SocketFactory = new TestSocketFactory(),
-            NetConfigurationProvider = netConfigurationProvider,
+            OsConfigurationProvider = osConfigurationProvider,
+            IsPrivilegedProcess = true,
             StoragePath = TestHelper.WorkingPath,
             AutoDisposeAccessManager = false,
             PublicIpDiscovery = false
@@ -260,32 +264,33 @@ public class ServerTest : TestBase
         var close = server.DisposeAsync().AsTask();
 
         // held and released at once, the adds are counted but not stopped
-        netConfigurationProvider.AddHold.IsHeld = true;
-        netConfigurationProvider.AddHold.Release();
+        osConfigurationProvider.AddHold.IsHeld = true;
+        osConfigurationProvider.AddHold.Release();
         accessManager.ConfigureHold.Release();
 
         // it adds no IP, and records no strike, which would keep the next start from configuring
         await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => start);
         await close.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
-        Assert.AreEqual(0, netConfigurationProvider.AddHold.HeldCount);
+        Assert.AreEqual(0, osConfigurationProvider.AddHold.HeldCount);
         Assert.IsFalse(File.Exists(Path.Combine(TestHelper.WorkingPath, ConfigErrorTracker.StrikeFileName)));
     }
 
     [TestMethod]
     public async Task An_address_added_after_the_close_is_removed_at_once()
     {
-        var netConfigurationProvider = new TestNetConfigurationProvider { AddHold = { IsHeld = true } };
-        var netConfigurationService = new NetConfigurationService(netConfigurationProvider);
+        var osConfigurationProvider = new TestOsConfigurationProvider { AddHold = { IsHeld = true } };
+        var osConfigurationService = new OsConfigurationService(osConfigurationProvider, TestHelper.WorkingPath,
+            isPrivilegedProcess: true);
 
         // an add under way, held at the provider, when the close runs
-        var add = netConfigurationService.AddIpAddress(IPAddress.Parse("10.10.0.1"), "eth0", TestCt);
-        await VhTestUtil.AssertEqualsWait(1, () => netConfigurationProvider.AddHold.HeldCount,
+        var add = osConfigurationService.AddIpAddress(IPAddress.Parse("10.10.0.1"), "eth0", TestCt);
+        await VhTestUtil.AssertEqualsWait(1, () => osConfigurationProvider.AddHold.HeldCount,
             "The add should be under way.", cancellationToken: TestCt);
-        netConfigurationService.Dispose();
-        netConfigurationProvider.AddHold.Release();
+        osConfigurationService.Dispose();
+        osConfigurationProvider.AddHold.Release();
 
         await add.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
-        Assert.IsEmpty(netConfigurationProvider.IpAddresses);
+        Assert.IsEmpty(osConfigurationProvider.IpAddresses);
     }
 
     [TestMethod]
@@ -876,35 +881,120 @@ public class ServerTest : TestBase
 
     // many of a VPN's connections end without a close, and the OS's own tracking of them fills its NAT's table
     [TestMethod]
-    public async Task Connection_tracking_takes_its_defaults_or_the_access_managers_values()
+    public async Task Os_settings_take_their_defaults_or_the_access_managers_values()
     {
         using var accessManager = await TestHelper.CreateAccessManager();
-        var netConfigurationProvider = new TestNetConfigurationProvider();
+        var osConfigurationProvider = new TestOsConfigurationProvider();
         await using var server =
-            await TestHelper.CreateServer(accessManager, netConfigurationProvider: netConfigurationProvider);
-        Assert.AreEqual((1_048_576, TimeSpan.FromHours(1)), netConfigurationProvider.ConnectionTracking);
+            await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
+        Assert.AreEqual("bbr", osConfigurationProvider.TcpCongestionControl);
+        Assert.AreEqual(1_048_576, osConfigurationProvider.ConnectionTrackingMax);
+        Assert.AreEqual(TimeSpan.FromHours(1), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
+        Assert.AreEqual("bbr", accessManager.LastServerStatus?.TcpCongestionControl);
 
         // the access manager's
+        accessManager.ServerConfig.OsOptions.TcpCongestionControl = "reno";
         accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 2_000_000;
         accessManager.ServerConfig.OsOptions.ConnectionTrackingTcpIdleTimeout = TimeSpan.FromMinutes(20);
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await server.ConfigureAndSendStatus(TestCt);
-        Assert.AreEqual((2_000_000, TimeSpan.FromMinutes(20)), netConfigurationProvider.ConnectionTracking);
+        Assert.AreEqual("reno", osConfigurationProvider.TcpCongestionControl);
+        Assert.AreEqual(2_000_000, osConfigurationProvider.ConnectionTrackingMax);
+        Assert.AreEqual(TimeSpan.FromMinutes(20), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
 
-        // both left to the OS
-        var setCount = netConfigurationProvider.ConnectionTrackingSetCount;
+        // never below the OS's own
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 1000;
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await server.ConfigureAndSendStatus(TestCt);
+        Assert.AreEqual(262_144, osConfigurationProvider.ConnectionTrackingMax);
+    }
+
+    // a value set by mistake is undone by taking the setting off, and a restart of the server keeps the OS's own known
+    [TestMethod]
+    public async Task Os_settings_taken_off_put_back_the_OSs_own_after_a_restart_of_the_server_too()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 2_000_000;
+        var osConfigurationProvider = new TestOsConfigurationProvider();
+        var server = await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
+        Assert.AreEqual(2_000_000, osConfigurationProvider.ConnectionTrackingMax);
+        await server.DisposeAsync();
+
+        // the next server finds the settings off, and the OS still holding its values
+        accessManager.ServerConfig.OsOptions.TcpCongestionControl = "*";
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 0;
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingTcpIdleTimeout = TimeSpan.Zero;
+        await using var server2 =
+            await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
+        Assert.AreEqual("cubic", osConfigurationProvider.TcpCongestionControl);
+        Assert.AreEqual(262_144, osConfigurationProvider.ConnectionTrackingMax);
+        Assert.AreEqual(TimeSpan.FromDays(5), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
+    }
+
+    // as after an admin's change, or a restart of the machine, which puts back the OS's own by itself
+    [TestMethod]
+    public async Task A_value_the_server_did_not_set_is_the_OSs_own()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 2_000_000;
+        var osConfigurationProvider = new TestOsConfigurationProvider();
+        await using var server =
+            await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
+        osConfigurationProvider.TcpCongestionControl = "reno";
+        osConfigurationProvider.ConnectionTrackingMax = 500_000;
+        osConfigurationProvider.ConnectionTrackingTcpIdleTimeout = TimeSpan.FromMinutes(30);
+
+        accessManager.ServerConfig.OsOptions.TcpCongestionControl = "*";
         accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 0;
         accessManager.ServerConfig.OsOptions.ConnectionTrackingTcpIdleTimeout = TimeSpan.Zero;
         accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await server.ConfigureAndSendStatus(TestCt);
-        Assert.AreEqual(setCount, netConfigurationProvider.ConnectionTrackingSetCount);
+        Assert.AreEqual("reno", osConfigurationProvider.TcpCongestionControl);
+        Assert.AreEqual(500_000, osConfigurationProvider.ConnectionTrackingMax);
+        Assert.AreEqual(TimeSpan.FromMinutes(30), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
+    }
+
+    [TestMethod]
+    public async Task Without_admin_rights_the_server_changes_nothing_on_the_OS_and_still_reports_it()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
+        accessManager.ServerConfig.OsOptions.SwapMemorySizeMb = 2500;
+        var osConfigurationProvider = new TestOsConfigurationProvider();
+        await using var server = new VpnHoodServer(accessManager, new ServerOptions {
+            SocketFactory = new TestSocketFactory(),
+            OsConfigurationProvider = osConfigurationProvider,
+            IsPrivilegedProcess = false,
+            StoragePath = TestHelper.WorkingPath,
+            AutoDisposeAccessManager = false,
+            PublicIpDiscovery = false
+        });
+        await server.Start(TestCt);
+        Assert.AreEqual(ServerState.Ready, server.State);
+
+        Assert.AreEqual(0, osConfigurationProvider.ChangeCount);
+        Assert.AreEqual("cubic", accessManager.LastServerStatus?.TcpCongestionControl);
+        CollectionAssert.AreEqual(new[] { "eth0", "eth1" }, accessManager.LastServerInfo?.NetworkInterfaceNames);
+    }
+
+    [TestMethod]
+    public async Task A_setting_the_OS_lacks_leaves_the_others()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        var osConfigurationProvider = new TestOsConfigurationProvider { ConnectionTrackingMax = null };
+        await using var server =
+            await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
+
+        Assert.AreEqual("bbr", osConfigurationProvider.TcpCongestionControl);
+        Assert.IsNull(osConfigurationProvider.ConnectionTrackingMax);
+        Assert.AreEqual(ServerState.Ready, server.State);
     }
 
     [TestMethod]
     public async Task SwapMemory_Status()
     {
         // create server
-        var swapMemoryProvider = new TestSwapMemoryProvider {
+        var swapMemoryProvider = new TestOsConfigurationProvider {
             AppSize = 100 * VhUtils.Megabytes,
             AppUsed = 10 * VhUtils.Megabytes,
             OtherSize = 200 * VhUtils.Megabytes,
@@ -913,7 +1003,7 @@ public class ServerTest : TestBase
 
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager,
-            swapMemoryProvider: swapMemoryProvider);
+            osConfigurationProvider: swapMemoryProvider);
 
         // check initial status. AppSize should be 0
         swapMemoryProvider.AppUsed = 0;

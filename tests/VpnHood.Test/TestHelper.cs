@@ -13,10 +13,10 @@ using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Core.Server;
-using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagers;
+using VpnHood.Core.Server.OsConfiguration;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
@@ -194,16 +194,14 @@ public class TestHelper : IDisposable
         bool autoStart = true,
         TimeSpan? configureInterval = null,
         bool useHttpAccessManager = true,
-        INetConfigurationProvider? netConfigurationProvider = null,
-        ISwapMemoryProvider? swapMemoryProvider = null,
+        IOsConfigurationProvider? osConfigurationProvider = null,
         ISocketFactory? socketFactory = null)
     {
         return CreateServer(accessManager, null,
             autoStart: autoStart,
             configureInterval: configureInterval,
             useHttpAccessManager: useHttpAccessManager,
-            netConfigurationProvider: netConfigurationProvider,
-            swapMemoryProvider: swapMemoryProvider,
+            osConfigurationProvider: osConfigurationProvider,
             socketFactory: socketFactory);
     }
 
@@ -228,8 +226,7 @@ public class TestHelper : IDisposable
     private async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager,
         FileAccessManagerOptions? fileAccessManagerOptions,
         bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
-        INetConfigurationProvider? netConfigurationProvider = null,
-        ISwapMemoryProvider? swapMemoryProvider = null,
+        IOsConfigurationProvider? osConfigurationProvider = null,
         IVpnAdapter? vpnAdapter = null,
         ISocketFactory? socketFactory = null)
     {
@@ -259,8 +256,8 @@ public class TestHelper : IDisposable
             StoragePath = WorkingPath,
             NetFilter = ServerNetFilter,
             NonPublicNetworks = ServerNonPublicNetworks,
-            NetConfigurationProvider = netConfigurationProvider,
-            SwapMemoryProvider = swapMemoryProvider,
+            OsConfigurationProvider = osConfigurationProvider,
+            IsPrivilegedProcess = true, // a test's provider changes nothing real
             VpnAdapter = vpnAdapter,
             PublicIpDiscovery = false, //it slows down our tests
             Http01ChallengeThrottling = false //avoid throttling concurrent challenge requests in tests

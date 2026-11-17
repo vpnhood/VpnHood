@@ -520,6 +520,30 @@ public class IpNetworkTest : TestBase
     }
 
     [TestMethod]
+    public void The_local_networks_are_the_private_and_link_local_ones()
+    {
+        var local = IpNetwork.LocalNetworks.ToIpRanges();
+        string[] inside = [
+            "10.1.2.3", "172.16.0.1", "172.31.255.255", "192.168.1.1", "169.254.1.1",
+            "fc00::1", "fd00::1", "fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "fe80::1",
+            "febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff"
+        ];
+
+        // no loopback, multicast, NAT64 or unassigned address is a local network's, in either family
+        string[] outside = [
+            "8.8.8.8", "100.64.0.1", "127.0.0.1", "224.0.0.251", "255.255.255.255",
+            "::", "::1", "64:ff9b::808:808", "4000::1", "fbff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "fec0::1",
+            "ff02::fb", "2001:4860:4860::8888"
+        ];
+
+        foreach (var text in inside)
+            Assert.IsTrue(local.Contains(IPAddress.Parse(text)), text);
+
+        foreach (var text in outside)
+            Assert.IsFalse(local.Contains(IPAddress.Parse(text)), text);
+    }
+
+    [TestMethod]
     public void IpRangeOrderedList_Contains_searches_mapped_and_mixed_ranges()
     {
         // an IPv4-mapped range is the IPv4 range it names, and merges with those it overlaps or touches; a range from

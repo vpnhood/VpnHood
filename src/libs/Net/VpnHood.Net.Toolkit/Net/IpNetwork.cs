@@ -175,14 +175,18 @@ public class IpNetwork
     public static IpNetwork AllGlobalUnicastV6 => field ??= Parse("2000::/3");
 
     /// <summary>
-    /// Gets the IPv6 networks outside the global unicast space <see cref="AllGlobalUnicastV6"/>: <c>::/3</c>,
-    /// <c>4000::/2</c> and <c>8000::/1</c>.
+    /// Gets the IPv6 networks of local networks: the unique local <c>fc00::/7</c> (RFC 4193) and the link-local
+    /// <see cref="LinkLocalNetworkV6"/>.
     /// </summary>
     /// <remarks>
-    /// So it holds the loopback, unique local, link-local and multicast addresses, and the space no registry assigns
-    /// yet, where <see cref="LocalNetworksV4"/> holds the private and link-local networks alone.
+    /// Neither the loopback address <c>::1</c>, the multicast network <c>ff00::/8</c>, the NAT64 prefix
+    /// <c>64:ff9b::/96</c> nor the space no registry assigns yet is in it: <see cref="NonPublicNetworks"/> holds every
+    /// network that is not public.
     /// </remarks>
-    public static IReadOnlyList<IpNetwork> LocalNetworksV6 => field ??= AllGlobalUnicastV6.Invert().ToArray();
+    public static IReadOnlyList<IpNetwork> LocalNetworksV6 => field ??= [
+        Parse("fc00::/7"),
+        LinkLocalNetworkV6
+    ];
 
     /// <summary>Gets <see cref="LocalNetworksV4"/> followed by <see cref="LocalNetworksV6"/>.</summary>
     public static IReadOnlyList<IpNetwork> LocalNetworks => field ??= LocalNetworksV4.Concat(LocalNetworksV6).ToArray();

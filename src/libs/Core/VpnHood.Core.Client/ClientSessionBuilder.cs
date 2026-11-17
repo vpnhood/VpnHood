@@ -242,17 +242,6 @@ internal class ClientSessionBuilder(
 
             ClientHelper.ValidateTcpSupport(helloResponse, config);
 
-            // Server splitting the user should hear about: public space the declarations leave out.
-            // Local/special carve-outs (the usual LAN skip) cannot expose the public IP, and an entirely
-            // unsupported family is IsIpV6SupportedByServer's story — both stay out of this flag, or it
-            // would light the app's split indicator on nearly every server.
-            var publicIpRanges = IpNetwork.All.ToIpRanges()
-                .Exclude(IpNetwork.LocalNetworks.ToIpRanges())
-                .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
-                .Exclude(IpNetwork.LoopbackNetworks.ToIpRanges());
-            if (!helloResponse.IsIpV6Supported)
-                publicIpRanges = publicIpRanges.Exclude(IpNetwork.AllV6.ToIpRange());
-
             var sessionInfo = new SessionInfo {
                 SessionId = helloResponse.SessionId.ToString(),
                 ClientPublicIpAddress = helloResponse.ClientPublicAddress,
@@ -260,8 +249,8 @@ internal class ClientSessionBuilder(
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
                 IsLocalNetworkAllowed = serverAllowedLocalNetworks.Any(),
                 DnsConfig = dnsConfig,
-                IsTrafficSplitByServer = publicIpRanges.Exclude(serverIncludeIpRangesByApp).Any() ||
-                                         publicIpRanges.Exclude(serverIncludeIpRangesByDevice).Any(),
+                IsTrafficSplitByServer = ClientHelper.IsTrafficSplitByServer(serverIncludeIpRangesByApp,
+                    serverIncludeIpRangesByDevice, helloResponse.IsIpV6Supported),
                 IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
                 IsPremiumSession = helloResponse.AccessUsage?.IsPremium ?? false,
                 IsUdpChannelSupported = hostUdpEndPoint != null,

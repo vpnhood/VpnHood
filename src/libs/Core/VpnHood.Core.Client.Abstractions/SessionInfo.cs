@@ -86,9 +86,10 @@ public class SessionInfo
     /// Gets a value indicating whether the server's own configuration leaves public destinations outside the tunnel.
     /// </summary>
     /// <remarks>
-    /// The local networks, multicast and loopback the server leaves out do not count, as they cannot expose the public
-    /// address; nor does an IP version the server carries not at all, which <see cref="IsIpV6SupportedByServer"/>
-    /// reports.
+    /// Only public destinations count (<see cref="VpnHood.Net.Toolkit.Net.IpNetwork.PublicNetworks"/>): the local
+    /// networks, multicast, loopback and other networks that are not public, which the server leaves out, cannot expose
+    /// the public address; nor does an IP version the server carries not at all, which
+    /// <see cref="IsIpV6SupportedByServer"/> reports.
     /// </remarks>
     public required bool IsTrafficSplitByServer { get; init; }
 

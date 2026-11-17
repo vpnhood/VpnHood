@@ -254,6 +254,21 @@ internal static class ClientHelper
         return includeIpRanges; //sort and unify
     }
 
+    // Server splitting the user should hear about: public space the server's ranges leave out. A network that
+    // is not public (the usual LAN skip) cannot expose the public IP, and an entirely unsupported family is
+    // IsIpV6SupportedByServer's story; both stay out of this flag, or it would light the app's split indicator on
+    // nearly every server, as on those that leave out every IPv6 address outside 2000::/3 as local.
+    public static bool IsTrafficSplitByServer(IpRangeOrderedList serverIncludeIpRangesByApp,
+        IpRangeOrderedList serverIncludeIpRangesByDevice, bool isIpV6SupportedByServer)
+    {
+        var publicIpRanges = IpNetwork.PublicNetworks.ToIpRanges();
+        if (!isIpV6SupportedByServer)
+            publicIpRanges = publicIpRanges.Exclude(IpNetwork.AllV6.ToIpRange());
+
+        return publicIpRanges.Exclude(serverIncludeIpRangesByApp).Any() ||
+               publicIpRanges.Exclude(serverIncludeIpRangesByDevice).Any();
+    }
+
     // throws where the client and the server share no way for TCP; warns where the server overrides the TCP forwarding switch
     public static void ValidateTcpSupport(HelloResponse helloResponse, VpnHoodClientConfig config)
     {

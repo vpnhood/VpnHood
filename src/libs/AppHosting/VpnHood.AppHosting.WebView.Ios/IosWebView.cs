@@ -7,7 +7,7 @@ using WebKit;
 
 namespace VpnHood.AppHosting.WebView.Ios;
 
-// iOS IWebView adapter: the only iOS-specific SPA-hosting code. It owns a WKWebView (plus a
+// iOS IWebView adapter: the only iOS-specific code that hosts the page. It owns a WKWebView (plus a
 // loading spinner and an error label) inside the given UIViewController, and maps the
 // WKNavigationDelegate callbacks onto the platform-neutral events WebViewHost drives.
 internal sealed class IosWebView : IWebView
@@ -29,7 +29,7 @@ internal sealed class IosWebView : IWebView
         _backgroundColor = backgroundColor;
         _reportViewer = new IosReportViewer(controller, backgroundColor, () => _localToken);
 
-        // Loading indicator, centered and shown immediately (SPA zip extraction + socket bind happen
+        // Loading indicator, centered and shown immediately (the page's zip extraction + socket bind happen
         // before the first navigation). Hidden automatically once stopped.
         _spinner = new UIActivityIndicatorView(UIActivityIndicatorViewStyle.Large) {
             TranslatesAutoresizingMaskIntoConstraints = false,
@@ -53,10 +53,10 @@ internal sealed class IosWebView : IWebView
         // Autoplay/JS-opened windows without a user gesture (parity with the Android WebView).
         config.MediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.None;
 
-        // Disable user zoom: the SPA is app UI, not a web document, so pinch/double-tap zoom is a bug
+        // Disable user zoom: the page is app UI, not a web document, so pinch/double-tap zoom is a bug
         // (users zoom by accident and can't reset). Pin the viewport scale and swallow the pinch
         // gesture. Unlike mobile Safari, an app WKWebView honors user-scalable=no. Injected at
-        // document-end so it overrides whatever viewport the SPA's HTML declared.
+        // document-end so it overrides whatever viewport the page's HTML declared.
         config.UserContentController.AddUserScript(new WKUserScript(
             new NSString(
                 "var vp = document.querySelector('meta[name=viewport]');" +
@@ -80,15 +80,15 @@ internal sealed class IosWebView : IWebView
         // app background color (not white), so the system bars blend into the app like Android.
         _webView.ScrollView.BackgroundColor = _backgroundColor;
 
-        // Disable the rubber-band over-scroll bounce: the SPA is app UI, not a scrollable web
+        // Disable the rubber-band over-scroll bounce: the page is app UI, not a scrollable web
         // document, so dragging the whole page and having it snap back looks broken (and Android's
         // WebView doesn't do it). Overflowing content still scrolls normally; it just stops hard at
         // the edges instead of bouncing.
         _webView.ScrollView.Bounces = false;
 
         // True edge-to-edge: by default WKWebView auto-insets content for the safe area, which would
-        // double up with the SPA's own SystemBarsInfo padding. Disable the automatic inset so the page
-        // fills the whole window and ONLY the SPA pads itself — matching Android's edge-to-edge.
+        // double up with the page's own SystemBarsInfo padding. Disable the automatic inset so the page
+        // fills the whole window and ONLY the page pads itself — matching Android's edge-to-edge.
         _webView.ScrollView.ContentInsetAdjustmentBehavior =
             UIScrollViewContentInsetAdjustmentBehavior.Never;
 
@@ -147,13 +147,13 @@ internal sealed class IosWebView : IWebView
 
     private sealed class NavDelegate(IosWebView owner) : WKNavigationDelegate
     {
-        // Keeps the SPA in its own WebView. A main-frame navigation to a web page would REPLACE the app
+        // Keeps the page in its own WebView. A main-frame navigation to a web page would REPLACE the app
         // UI with that page — no browser chrome, no back button, no way home, and the loopback server the
-        // SPA is served from is gone the moment the app backgrounds, so it reads as a crash. target="_blank"
+        // page is served from is gone the moment the app backgrounds, so it reads as a crash. target="_blank"
         // avoids that by going through the UI delegate, but relying on it means every link author AND every
         // machine-regenerated translation that carries an <a> has to remember the attribute; one that
         // doesn't, kills the app. So the invariant is enforced here rather than asked for at each call site.
-        // Android has always done this (AndroidSpaWebViewClient.ShouldOverrideUrlLoading); this is parity.
+        // Android has always done this (AndroidWebViewClient.ShouldOverrideUrlLoading); this is parity.
         public override void DecidePolicy(WKWebView webView, WKNavigationAction navigationAction,
             Action<WKNavigationActionPolicy> decisionHandler)
         {
@@ -162,7 +162,7 @@ internal sealed class IosWebView : IWebView
             // A null TargetFrame means "open in a new window" (target="_blank"/window.open): allow it so
             // the UI delegate still gets it and routes through IosReportViewer, which additionally keeps
             // loopback URLs — the log/report — in the in-app viewer that external Safari cannot reach.
-            // Sub-frame loads are the page's own business. Loopback IS the SPA, so its initial load and
+            // Sub-frame loads are the page's own business. Loopback IS the page, so its initial load and
             // reloads must proceed or the UI never appears. Non-http(s) schemes (about:, blob:) are
             // WKWebView's internal plumbing and must not be handed to the system browser.
             if (navigationAction.TargetFrame?.MainFrame != true ||
@@ -174,10 +174,10 @@ internal sealed class IosWebView : IWebView
                 return;
             }
 
-            // A real off-origin web link that would have navigated the SPA away. Host only, never the
+            // A real off-origin web link that would have navigated the page away. Host only, never the
             // full URL: these can carry a premium/purchase token and the log is user-shareable.
             VhLogger.Instance.LogInformation(
-                "Opening an external link in the system browser instead of the SPA WebView. Host: {Host}",
+                "Opening an external link in the system browser instead of the page's WebView. Host: {Host}",
                 VhLogger.FormatHostName(uri.Host));
 
             decisionHandler(WKNavigationActionPolicy.Cancel);

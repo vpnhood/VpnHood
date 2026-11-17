@@ -6,7 +6,7 @@ using WebKit;
 
 namespace VpnHood.AppHosting.WebView.Ios;
 
-// Handles the target="_blank"/window.open links the SPA opens (the "open log" button and the error dialog's
+// Handles the target="_blank"/window.open links the page opens (the "open log" button and the error dialog's
 // "Open Report"). Loopback URLs point at the app's own on-device report server, which external Safari can't
 // reach (unreachable cross-process, and torn down the moment the app backgrounds), so the resource is fetched
 // in-app, with the local token as its header (localToken: the token of the page's own address), and shown in a
@@ -138,7 +138,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
 
         // This is a modal sheet, so the dismissal is a Close (✕) button — the iOS-idiomatic control for
         // closing a modal. A back chevron would be wrong here: it means "pop the navigation stack", but the
-        // report is presented over the SPA, not pushed onto it.
+        // report is presented over the page, not pushed onto it.
         var closeButton = new UIBarButtonItem(UIBarButtonSystemItem.Close);
         closeButton.Clicked += (_, _) => nav.DismissViewController(true, null);
         viewer.NavigationItem.LeftBarButtonItem = closeButton;

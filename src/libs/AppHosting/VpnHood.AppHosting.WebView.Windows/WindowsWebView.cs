@@ -8,8 +8,8 @@ using VpnHood.Net.Toolkit.Logging;
 namespace VpnHood.AppHosting.WebView.Windows;
 
 // Windows' IWebView adapter, WebView2 in a window of its own (WebView2Window): the only
-// WebView2-specific SPA-hosting code. When the Edge WebView2 runtime is unavailable it invokes the
-// window-provided fallback (open the SPA in the system browser).
+// WebView2-specific code that hosts the page. When the Edge WebView2 runtime is unavailable it invokes the
+// window-provided fallback (open the page in the system browser).
 internal sealed class WindowsWebView(WebView2Window window, string userDataPath, bool isTv,
     Action onWebView2Unavailable) : IWebView
 {
@@ -147,7 +147,7 @@ internal sealed class WindowsWebView(WebView2Window window, string userDataPath,
 
     public void ShowError(string message)
     {
-        VhLogger.Instance.LogError("SPA host error: {Message}", message);
+        VhLogger.Instance.LogError("Web view host error: {Message}", message);
         onWebView2Unavailable();
     }
 

@@ -63,7 +63,7 @@ public class IosWebViewController : UIViewController
             // the app's own web host: the platform started the app in this process
             var webView = new IosWebView(this, backgroundColor);
             var webHost = VpnHoodApp.Instance.LocalWebHost ??
-                          throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
+                          throw new InvalidOperationException("This app was given no web host, so its page cannot be shown.");
             _host = new WebViewHost(webView, new AppWebViewPageHost(webHost));
             _host.Start();
 

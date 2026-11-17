@@ -1,6 +1,6 @@
 # VpnHood.AppHosting.WebView
 
-Shared, platform-neutral hosting for the VpnHood SPA (the web UI served by
+Shared, platform-neutral hosting for a UI drawn as a web page (the page served by
 `VpnHoodAppWebHost` and shown in a native web view). One controller holds **all** the
 hosting business logic; each OS supplies only a thin adapter for the native web-view mechanics.
 
@@ -31,7 +31,7 @@ the shared logic is a **controller** (`WebViewHost`) that talks to a per-OS **ad
   `ShowError(string)`, `Post(Action)` (marshal to the UI thread), and events `PageLoaded`,
   `LoadFailed`, `ContentProcessGone`. Threading contract: the host calls these on the UI thread and
   expects the events on the UI thread. Adapters only report; they never decide.
-- **`WebViewHost`** — owns server `Init`, launch-URL computation (`?nocache={SpaHash}` plus an
+- **`WebViewHost`** — owns server `Init`, the launch URL (the web host's address, which carries the web root's hash, plus an
   optional `LaunchUrlBuilder` hook), resume→`AppUiContext.NotifyResumed()`, and reload after a
   failure or server restart.
 - **`IWebViewPageHost`** — what the controller needs of the page's server: `EnsureStarted` (the
@@ -48,7 +48,7 @@ not responding" screen).
 
 1. **Watchdog** — a 5 s timer restarts the listener when `IsListening` is false. CavemanTcp clears
    the flag when its accept loop exits, so this only ever restarts a listener that is actually gone.
-   After a successful restart, `Restarted` makes the native host reload the SPA, including assets
+   After a successful restart, `Restarted` makes the native host reload the page, including assets
    whose loading was interrupted after the main document finished.
 2. **Resume probe** — the server subscribes to `AppUiContext.OnResumed` itself. iOS suspends the
    process and can close the loopback socket meanwhile while the accept loop still believes it is
@@ -56,7 +56,7 @@ not responding" screen).
 3. **Load again after a failure** (in `WebViewHost`) — `LoadFailed` (main-document connection
    failure) or `ContentProcessGone` makes the host give the server one real connect check (a failed
    load is a concrete "unreachable" signal, and the flag can lie after an iOS suspension), then load
-   the SPA again after 1 s (Android rebuilds its WebView before reporting). The delay is the only bound: a listener that keeps failing is retried
+   the page again after 1 s (Android rebuilds its WebView before reporting). The delay is the only bound: a listener that keeps failing is retried
    every second instead of dead-ending on an error screen, and the watchdog has brought it back by
    then. The fatal error screen is reserved for `Start()` throwing (the server cannot bind at all).
 
@@ -109,7 +109,7 @@ the OS reads - its attributes, its `[Register]` name, its access keys.
 
 - **Android** — content-view swap (loader → WebView on first `PageLoaded`); WebView-version
   "update WebView" redirect (`ResolveUrl`); hardware back (API<33 `OnKeyDown` + API33+ back
-  callback). The old `KillSpaServer` debug OnPause/OnResume hook was dropped (the watchdog
+  callback). The old debug OnPause/OnResume hook that killed the server was dropped (the watchdog
   supersedes it). `LoadFailed` is raised for main-frame connection errors; a dead render process
   rebuilds the WebView, then raises `ContentProcessGone`.
 - **Windows** — the WebView2 "runtime missing" fallback (hide the window, open the page in the

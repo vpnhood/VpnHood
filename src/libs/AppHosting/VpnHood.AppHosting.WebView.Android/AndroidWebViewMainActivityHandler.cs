@@ -13,7 +13,7 @@ using VpnHood.AppLogic.Abstractions.UiContexts;
 
 namespace VpnHood.AppHosting.WebView.Android;
 
-// Android host for the VpnHood SPA. All hosting business logic lives in the shared WebViewHost;
+// Android host for a UI drawn as a web page. All hosting business logic lives in the shared WebViewHost;
 // this handler only supplies the Android chrome (content-view timing, hardware back) and forwards the
 // activity lifecycle to the host. The WebView mechanics live in AndroidWebView.
 internal class AndroidWebViewMainActivityHandler(
@@ -21,7 +21,7 @@ internal class AndroidWebViewMainActivityHandler(
     AndroidWebViewMainActivityOptions options)
     : AndroidAppMainActivityHandler(activityEvent, options, WindowBackgroundColor())
 {
-    private AndroidWebView? _spaWebView;
+    private AndroidWebView? _webView;
     private WebViewHost? _host;
     private AndroidBackInvokedCallback? _backInvokedCallback;
 
@@ -60,15 +60,15 @@ internal class AndroidWebViewMainActivityHandler(
         // Some OEMs are subject to this issue, so postpone the content setup.
         ActivityEvent.Activity.Window?.DecorView.Post(() => {
             // the app's own web host: the platform started the app in this process
-            _spaWebView = new AndroidWebView(ActivityEvent, options, colors);
+            _webView = new AndroidWebView(ActivityEvent, options, colors);
             var webHost = VpnHoodApp.Instance.LocalWebHost ??
-                          throw new InvalidOperationException("This app was given no web host, so its SPA cannot be shown.");
-            _host = new WebViewHost(_spaWebView, new AppWebViewPageHost(webHost));
+                          throw new InvalidOperationException("This app was given no web host, so its page cannot be shown.");
+            _host = new WebViewHost(_webView, new AppWebViewPageHost(webHost));
             _host.Start();
 
             // Register back callback for Android 13+ (API 33+) with default priority (0). Android 13-15
-            // call it only when the app's manifest sets android:enableOnBackInvokedCallback="true", as
-            // the SPA sample's does; 16 calls it by default for an app that targets it.
+            // call it only when the app's manifest sets android:enableOnBackInvokedCallback="true";
+            // 16 calls it by default for an app that targets it.
             if (OperatingSystem.IsAndroidVersionAtLeast(33)) {
                 _backInvokedCallback = new AndroidBackInvokedCallback(HandleBackInvoked);
                 ActivityEvent.Activity.OnBackInvokedDispatcher.RegisterOnBackInvokedCallback(priority: 0,
@@ -80,8 +80,8 @@ internal class AndroidWebViewMainActivityHandler(
     protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? keyEvent)
     {
         // For Android versions prior to 13 (API 33), handle the back button via OnKeyDown.
-        if (!OperatingSystem.IsAndroidVersionAtLeast(33) && keyCode == Keycode.Back && _spaWebView?.CanGoBack() == true) {
-            _spaWebView.GoBack();
+        if (!OperatingSystem.IsAndroidVersionAtLeast(33) && keyCode == Keycode.Back && _webView?.CanGoBack() == true) {
+            _webView.GoBack();
             return true;
         }
 
@@ -93,13 +93,13 @@ internal class AndroidWebViewMainActivityHandler(
         base.OnPause();
 
         if (!AppUiContext.IsPartialIntentRunning)
-            _spaWebView?.OnActivityPause();
+            _webView?.OnActivityPause();
     }
 
     protected override void OnResume()
     {
         _host?.OnResume();
-        _spaWebView?.OnActivityResume();
+        _webView?.OnActivityResume();
         base.OnResume();
     }
 
@@ -120,8 +120,8 @@ internal class AndroidWebViewMainActivityHandler(
 
     private void HandleBackInvoked()
     {
-        if (_spaWebView?.CanGoBack() == true) {
-            _spaWebView.GoBack();
+        if (_webView?.CanGoBack() == true) {
+            _webView.GoBack();
         }
         else {
             // Let the system handle the back action (minimize/close the app).

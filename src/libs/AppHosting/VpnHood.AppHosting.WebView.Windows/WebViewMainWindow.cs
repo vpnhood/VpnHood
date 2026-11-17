@@ -5,7 +5,7 @@ using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.AppHosting.WebView.Windows;
 
-// The SPA in a window of its own, drawn with what WindowsWebViewUi read from the app before it: the
+// The page in a window of its own, drawn with what WindowsWebViewUi read from the app before it: the
 // name, the look out of the UI's store, whether it is a TV. It follows the connection over the API
 // for its taskbar badge, fits its screen again when that changes, and ends its thread's message loop
 // when it is gone.
@@ -55,7 +55,7 @@ internal sealed class WebViewMainWindow
         _connectedIcon = LoadIcon("BadgeConnected.ico");
         _connectingIcon = LoadIcon("BadgeConnecting.ico");
 
-        // The SPA through the shared WebViewHost (the launch URL, reload on failure), at the address
+        // The page through the shared WebViewHost (the launch URL, reload on failure), at the address
         // the host hands the window: the service's, or in dev the app's own in this process.
         var webView = new WindowsWebView(_window, windowParams.WebViewDataPath, windowParams.IsTv, OnWebView2Unavailable);
         _webViewHost = new WebViewHost(webView, new DesktopWebViewPageHost(windowParams.ApiUrlProvider));
@@ -65,7 +65,7 @@ internal sealed class WebViewMainWindow
 
     public Win32Window Window => _window.Window;
 
-    // Shown, or brought forward; where WebView2 is missing, the SPA in the system browser instead.
+    // Shown, or brought forward; where WebView2 is missing, the page in the system browser instead.
     public void ShowOrOpen()
     {
         if (_isWebViewUnavailable) {
@@ -125,7 +125,7 @@ internal sealed class WebViewMainWindow
 
     private void OnWebView2Unavailable()
     {
-        // Edge WebView2 runtime missing (or the SPA host gave up): hide the window and open the SPA in
+        // Edge WebView2 runtime missing (or the web view host gave up): hide the window and open the page in
         // the system browser instead. Invoked on the window's thread, maybe more than once.
         if (_isWebViewUnavailable)
             return;

@@ -12,7 +12,7 @@ using NativeWebView = Android.Webkit.WebView;
 
 namespace VpnHood.AppHosting.WebView.Android;
 
-// Android IWebView adapter: the only Android-specific SPA-hosting code. It owns the Android
+// Android IWebView adapter: the only Android-specific code that hosts the page. It owns the Android
 // WebView, swapping the activity's content between the loading screen and the WebView, and reports
 // the WebView client callbacks to WebViewHost. The WebView-version "please update" redirect is
 // Android-specific, so it lives here (it needs the live WebView).
@@ -38,7 +38,7 @@ internal sealed class AndroidWebView : IWebView
         _options = options;
         _colors = colors;
 
-        // Loading screen shown until the SPA first renders (swapped out in SetLoading(false)).
+        // Loading screen shown until the page first renders (swapped out in SetLoading(false)).
         AndroidAppLoader.Init(Activity, colors);
     }
 
@@ -110,7 +110,7 @@ internal sealed class AndroidWebView : IWebView
     }
 
     // The render process died; the WebView instance is unusable from now on (reloading it does
-    // nothing), so it must be destroyed and rebuilt before the host loads the SPA again.
+    // nothing), so it must be destroyed and rebuilt before the host loads the page again.
     private void OnWebViewRenderProcessGone(object? sender, EventArgs e)
     {
         var oldWebView = _webView;
@@ -144,8 +144,8 @@ internal sealed class AndroidWebView : IWebView
             Activity.Window?.SetNavigationBarColor(navigationBarColor.ToAndroidColor());
     }
 
-    // The bundled SPA is served from the app's web host; if the installed system WebView is older
-    // than the SPA needs, redirect to the upgrade page instead (mirrors the previous GetLaunchUrl).
+    // The bundled page is served from the app's web host; if the installed system WebView is older
+    // than the page needs, redirect to the upgrade page instead (mirrors the previous GetLaunchUrl).
     private Uri ResolveUrl(Uri mainUrl)
     {
         if (_webView == null)

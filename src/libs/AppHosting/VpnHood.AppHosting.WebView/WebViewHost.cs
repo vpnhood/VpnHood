@@ -58,7 +58,7 @@ public sealed class WebViewHost : IDisposable
                 _launchUrl = await _pageHost.EnsureStarted(CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Failed to start the SPA web server.");
+                VhLogger.Instance.LogError(ex, "Failed to start the page's web server.");
                 _view.Post(() => _view.ShowError(ex.Message));
                 return;
             }
@@ -84,15 +84,15 @@ public sealed class WebViewHost : IDisposable
                 _viewInitialized = true;
             }
 
-            LoadSpa();
+            LoadPage();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Failed to initialize the SPA web view.");
+            VhLogger.Instance.LogError(ex, "Failed to initialize the web view.");
             _view.ShowError(ex.Message);
         }
     }
 
-    private void LoadSpa()
+    private void LoadPage()
     {
         _view.SetLoading(true);
         _view.Load(GetLaunchUrl());
@@ -116,7 +116,7 @@ public sealed class WebViewHost : IDisposable
     // its repeats are debug.
     private void OnLoadFailed(object? sender, EventArgs e)
     {
-        VhLogger.Instance.Log(_isLoadFailing ? LogLevel.Debug : LogLevel.Warning, "SPA web view load failed; reloading.");
+        VhLogger.Instance.Log(_isLoadFailing ? LogLevel.Debug : LogLevel.Warning, "Web view load failed; reloading.");
         _isLoadFailing = true;
         ReloadAfterDelay();
     }
@@ -131,11 +131,11 @@ public sealed class WebViewHost : IDisposable
 
     private void OnContentProcessGone(object? sender, EventArgs e)
     {
-        VhLogger.Instance.LogWarning("SPA web view content process terminated; reloading.");
+        VhLogger.Instance.LogWarning("Web view content process terminated; reloading.");
         ReloadAfterDelay();
     }
 
-    // Load the SPA again after a short delay. A failed load is a concrete "unreachable" signal, so
+    // Load the page again after a short delay. A failed load is a concrete "unreachable" signal, so
     // the server gets one real connect check first (its own state flag can lie after an iOS
     // suspension); a listener that really is gone is rebound before the reload. The delay is the
     // only bound on retries: it keeps a still-failing load at one attempt per second instead of
@@ -153,14 +153,14 @@ public sealed class WebViewHost : IDisposable
                 _launchUrl = await _pageHost.EnsureStarted(CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Failed to check the SPA web server after a failed load.");
+                VhLogger.Instance.LogError(ex, "Failed to check the page's web server after a failed load.");
             }
 
             await Task.Delay(ReloadDelay);
             _view.Post(() => {
                 _reloadPending = false;
                 if (!_disposed)
-                    LoadSpa();
+                    LoadPage();
             });
         });
     }

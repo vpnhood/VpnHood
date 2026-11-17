@@ -10,7 +10,7 @@ using NativeWebView = Android.Webkit.WebView;
 
 namespace VpnHood.AppHosting.WebView.Android;
 
-// In-app viewer for the on-device report/log — the loopback URL the SPA opens via window.open (e.g. the
+// In-app viewer for the on-device report/log — the loopback URL the page opens via window.open (e.g. the
 // "open log" button). Mirrors the iOS report viewer: shows the report in a full-screen dialog WebView with a
 // find-on-page bar (Search) and an export action (Share), instead of kicking the user out to an external
 // browser that can't reach the loopback server. Every request carries the local token as its header, which

@@ -27,7 +27,7 @@ internal class AndroidWebViewClient(Func<string?> localToken) : WebViewClient
         if (webView == null || url == null || IsMainHost(url))
             return false;
 
-        // The SPA opens the log/report via window.open at the on-device loopback server. Show it in an in-app
+        // The page opens the log/report via window.open at the on-device loopback server. Show it in an in-app
         // viewer (with find + share) instead of an external browser, which can't reach the loopback server and
         // kicks the user out of the app. Non-loopback links are real external links → system browser.
         if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsLoopback &&
@@ -64,11 +64,11 @@ internal class AndroidWebViewClient(Func<string?> localToken) : WebViewClient
     {
         base.OnReceivedError(view, request, error);
 
-        // Sub-resource failures are the SPA's own business; only the main document matters here.
+        // Sub-resource failures are the page's own business; only the main document matters here.
         if (request?.IsForMainFrame != true || error == null)
             return;
 
-        VhLogger.Instance.LogWarning("SPA web view main-frame load failed: {ErrorCode} {Description}",
+        VhLogger.Instance.LogWarning("Web view main-frame load failed: {ErrorCode} {Description}",
             error.ErrorCode, error.Description);
 
         // Only connection-level failures mean the loopback server is unreachable. Anything else —
@@ -89,7 +89,7 @@ internal class AndroidWebViewClient(Func<string?> localToken) : WebViewClient
     // true claims the recovery — returning false (the default) makes Android kill the whole app.
     public override bool OnRenderProcessGone(NativeWebView? view, RenderProcessGoneDetail? detail)
     {
-        VhLogger.Instance.LogWarning("SPA web view render process is gone.");
+        VhLogger.Instance.LogWarning("Web view render process is gone.");
         RenderProcessGone?.Invoke(this, EventArgs.Empty);
         return true;
     }

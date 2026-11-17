@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace VpnHood.AppLogic.Api.Accounts;
 
 /// <summary>
@@ -5,6 +7,7 @@ namespace VpnHood.AppLogic.Api.Accounts;
 /// not.
 /// </summary>
 /// <remarks>The two reasons ask opposite things of the UI: one may not name a store, the other names this build's.</remarks>
+[JsonConverter(typeof(JsonStringEnumConverter<SubscriptionManagement>))]
 public enum SubscriptionManagement
 {
     /// <summary>

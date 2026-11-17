@@ -40,6 +40,7 @@ public abstract class PacketTransportBase : IPacketTransport
     private bool _disposing;
     private readonly PacketTransportStat _stat = new();
     private bool _isSending;
+    private EventHandler<IpPacket>? _packetReceived;
 
     // what the send in flight gave up of its batch (DropPacket), for the batch's counts and its end. One batch is
     // sent at a time, so these are that batch's alone; the list is made at the first drop and kept
@@ -85,7 +86,28 @@ public abstract class PacketTransportBase : IPacketTransport
     protected virtual string Name => VhLogger.FormatType(this);
 
     /// <inheritdoc/>
-    public event EventHandler<IpPacket>? PacketReceived;
+    /// <exception cref="InvalidOperationException">
+    /// A handler is attached already, or the handler added is more than one method.
+    /// </exception>
+    // One handler, as it takes each packet: a second saw a packet the first had disposed or handed on, and one that
+    // threw had the transport dispose a packet the first had taken. Removed as any event's handler is, by its
+    // method and its target.
+    public event EventHandler<IpPacket>? PacketReceived {
+        add {
+            if (value is null)
+                return;
+
+            if (!value.HasSingleTarget || Interlocked.CompareExchange(ref _packetReceived, value, null) != null)
+                throw new InvalidOperationException(
+                    $"{nameof(PacketReceived)} takes one handler, which takes each packet it is given.");
+        }
+        remove {
+            var packetReceived = _packetReceived;
+            if (packetReceived != null && packetReceived.Equals(value))
+                Interlocked.CompareExchange(ref _packetReceived, null, packetReceived);
+        }
+    }
+
     /// <inheritdoc/>
     public ReadOnlyPacketTransportStat PacketStat { get; }
     // a subclass that queues its packets elsewhere counts them here
@@ -167,7 +189,7 @@ public abstract class PacketTransportBase : IPacketTransport
             _stat.ReceivedBytes += ipPacket.PacketLength;
             _stat.ReceivedPackets++;
             LogPacket(ipPacket, "Received a packet.");
-            var packetReceived = PacketReceived;
+            var packetReceived = _packetReceived;
             if (packetReceived == null) {
                 ipPacket.Dispose();
                 return;
@@ -550,7 +572,7 @@ public abstract class PacketTransportBase : IPacketTransport
     /// </summary>
     protected virtual void DisposeManaged()
     {
-        PacketReceived = null;
+        _packetReceived = null;
     }
 
     /// <summary>

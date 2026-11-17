@@ -83,6 +83,13 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     protected override bool IsSocketProtectedByBind => false;
 
     /// <inheritdoc/>
+    /// <value>
+    /// Always <see langword="true"/>: Android blocks the traffic of an IP version the VPN has no address, route or DNS
+    /// server of, as the adapter never allows a family by itself (<c>VpnService.Builder.allowFamily</c>).
+    /// </value>
+    protected override bool IsIpVersionWithoutAddressBlocked => true;
+
+    /// <inheritdoc/>
     /// <remarks>
     /// It starts the description of the interface: a non-blocking <see cref="VpnService.Builder"/> that, from Android
     /// 10, takes its meteredness from the networks under it. The interface itself comes with <see cref="AdapterOpen"/>.

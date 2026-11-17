@@ -15,9 +15,11 @@ internal static class IpV6ExtensionHeaders
     }
 
     // The upper layer behind a packet's extension headers, and where it starts. It stops at a header it does not read
-    // through, which it returns: a Routing header, as the upper layer's checksum covers the final destination the
-    // header names (RFC 8200 8.1), or a header that runs past the packet. A fragment other than the first stops at its
-    // Fragment header, as no upper layer follows it, and gives its place in the datagram, in units of 8 bytes
+    // through, which it returns: a Routing header that has segments left, as the upper layer's checksum then covers
+    // the final destination the header names, not the packet's (RFC 8200 8.1), or a header that runs past the packet.
+    // A Routing header with no segments left is passed over, as the node it has reached does (RFC 8200 4.4): the
+    // packet's destination is the final one. A fragment other than the first stops at its Fragment header, as no
+    // upper layer follows it, and gives its place in the datagram, in units of 8 bytes
     public static IpProtocol FindUpperLayer(ReadOnlySpan<byte> packet, out int offset, out bool isFragment,
         out int fragmentOffset)
     {
@@ -36,6 +38,14 @@ internal static class IpV6ExtensionHeaders
 
                 case IpProtocol.IpSecAuthenticationHeader:
                     length = (packet[offset + 1] + 2) * 4;
+                    break;
+
+                case IpProtocol.IPv6RoutingHeader:
+                    // segments left, the fourth byte of every routing type
+                    if (packet[offset + 3] != 0)
+                        return protocol;
+
+                    length = (packet[offset + 1] + 1) * 8;
                     break;
 
                 case IpProtocol.IPv6FragmentHeader: {

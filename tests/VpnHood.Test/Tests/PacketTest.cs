@@ -413,11 +413,12 @@ public class PacketTest : TestBase
         using var tcpPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("[2001:db8::1]:1000"),
             IPEndPoint.Parse("[2001:db8::2]:443"), [], [1, 2, 3]);
 
-        // a Routing header, whose final destination the TCP checksum would cover
+        // a Routing header that has segments left, whose final destination the TCP checksum covers, not the packet's
         using var routedPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
             IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6HopByHopOptions),
-            IpV6ExtensionHeaderBuilder.Routing());
+            IpV6ExtensionHeaderBuilder.Routing(segmentsLeft: 1));
         Assert.AreEqual(IpProtocol.IPv6RoutingHeader, routedPacket.Protocol);
+        Assert.IsTrue(((IpV6Packet)routedPacket).HasUnreadExtensionHeader);
         Assert.AreEqual(48, routedPacket.Header.Length);
 
         // a header that runs past the packet
@@ -425,6 +426,31 @@ public class PacketTest : TestBase
             IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6DestinationOptions, length: 10));
         Assert.AreEqual(IpProtocol.IPv6DestinationOptions, truncatedPacket.Protocol);
         Assert.AreEqual(40, truncatedPacket.Header.Length);
+    }
+
+    // A Routing header with no segments left is one its node passes over (RFC 8200 4.4): the packet has reached its
+    // final destination, which the upper layer's checksum covers. Stopped at, the packet named no upper layer, so a
+    // change of its address, as a NAT's, left the TCP checksum on the old one
+    [TestMethod]
+    public void IPv6_reads_through_a_Routing_header_with_no_segments_left()
+    {
+        using var tcpPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("[2001:db8::1]:1000"),
+            IPEndPoint.Parse("[2001:db8::2]:443"), [], [1, 2, 3]);
+        tcpPacket.UpdateAllChecksums();
+
+        using var ipPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+            IpV6ExtensionHeaderBuilder.Routing(segmentsLeft: 0));
+        Assert.AreEqual(IpProtocol.Tcp, ipPacket.Protocol);
+        Assert.IsFalse(((IpV6Packet)ipPacket).HasUnreadExtensionHeader);
+        Assert.AreEqual(48, ipPacket.Header.Length);
+        Assert.AreEqual(443, ipPacket.GetDestinationEndPoint().Port);
+        Assert.IsTrue(ipPacket.ExtractTcp().IsChecksumValid(ipPacket));
+
+        // the checksum follows a change of the packet's address
+        ipPacket.DestinationAddress = IPAddress.Parse("2001:db8::3");
+        Assert.IsFalse(ipPacket.ExtractTcp().IsChecksumValid(ipPacket));
+        ipPacket.UpdateAllChecksums();
+        Assert.IsTrue(ipPacket.ExtractTcp().IsChecksumValid(ipPacket));
     }
 
     [TestMethod]

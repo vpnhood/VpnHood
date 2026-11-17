@@ -1,6 +1,7 @@
 # Latest
 
 * Fix: With Split DNS on Always use VPN, a name under your network's own DNS domain is no longer looked up outside the VPN. A name that only your network's DNS server knows, such as `nas.lan`, no longer resolves while connected; choose Allow Bypass VPN if you need such names. Where the system does not let the app do this, as Ubuntu 20.04 and 22.04 on a network of that kind that systemd-networkd manages, the app does not connect and says so #linux
+* Fix: The app no longer shows Connected while IPv6 goes outside the VPN: on a computer that has IPv6 but refuses the VPN its IPv6 address, the app does not connect and says why, and it disconnects when such a computer moves to a network with IPv6. A computer with no IPv6 connects as before #windows #linux
 * Update: Split Domains takes no `*`: `example.com` covers the domain and all its subdomains, as `*.example.com` did, and a `*` anywhere else, as `*ads.example.com`, never matched anything. A list with one is refused when you save it, and the app says which entry. A list saved before loses the `*.` at the start of its entries, which changes nothing
 * Update: In Split Domains, the most specific domain wins, so you can make exceptions: with `google.com` excluded and `mail.google.com` included, mail goes through the VPN and the rest of Google around it, and a site under a blocked domain can be excluded or included. Block > Exclude > Include decides only for the same domain
 * Fix: In Split Domains, an entry that ends with a dot, as `mail.example.com.`, matches its domain, where it matched nothing

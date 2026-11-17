@@ -12,6 +12,8 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class PacketTransportTest : TestBase
 {
+    private IpPacket? _takenPacket; // the packet TakePacket was last given
+
     private static IpPacket BuildPacket(int sourcePort)
     {
         return PacketBuilder.BuildUdp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("10.0.0.3"), sourcePort, 53,
@@ -436,6 +438,48 @@ public class PacketTransportTest : TestBase
         Assert.ThrowsExactly<ObjectDisposedException>(() => transport.SendPacketQueued(latePacket));
         Assert.IsTrue(lateMemory.IsDisposed);
         Assert.AreEqual(2, transport.PacketStat.DroppedPackets);
+    }
+
+    // The handler takes each packet, so there is one: a second saw a packet the first had disposed or handed on, and
+    // one that threw had the transport dispose a packet the first had taken
+    [TestMethod]
+    public void PacketReceived_takes_one_handler()
+    {
+        using var transport = new TestHeldPacketTransport(queueCapacity: 1, autoDisposePackets: false);
+        transport.PacketReceived += TakePacket;
+
+        // a second handler is refused, and so is one of two methods
+        Assert.ThrowsExactly<InvalidOperationException>(() => transport.PacketReceived += FailPacket);
+        using var otherTransport = new TestHeldPacketTransport(queueCapacity: 1, autoDisposePackets: false);
+        EventHandler<IpPacket> twoMethods = TakePacket;
+        twoMethods += FailPacket;
+        Assert.ThrowsExactly<InvalidOperationException>(() => otherTransport.PacketReceived += twoMethods);
+
+        // the first takes its packets, which no other handler's failure gives back to the transport
+        var takenMemory = BuildPacketMemory(1);
+        transport.Receive(PacketBuilder.Attach(new PacketMemory(takenMemory)));
+        Assert.IsNotNull(_takenPacket);
+        Assert.IsFalse(takenMemory.IsDisposed);
+
+        // removed, by its method and its target, it leaves the place to another; one that is not attached removes
+        // nothing
+        transport.PacketReceived -= FailPacket;
+        Assert.ThrowsExactly<InvalidOperationException>(() => transport.PacketReceived += FailPacket);
+        transport.PacketReceived -= TakePacket;
+        transport.PacketReceived += FailPacket;
+        var givenBackMemory = BuildPacketMemory(2);
+        transport.Receive(PacketBuilder.Attach(new PacketMemory(givenBackMemory)));
+        Assert.IsTrue(givenBackMemory.IsDisposed);
+    }
+
+    private void TakePacket(object? sender, IpPacket ipPacket)
+    {
+        _takenPacket = ipPacket;
+    }
+
+    private void FailPacket(object? sender, IpPacket ipPacket)
+    {
+        throw new InvalidOperationException("Test: the handler failed.");
     }
 
     [TestMethod]

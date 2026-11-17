@@ -14,8 +14,8 @@ public interface IPacketTransport : IDisposable
 {
     /// <summary>
     /// Occurs when the transport receives a packet. The handler takes the packet: it delivers or disposes it, or
-    /// throws to give it back to the transport, which disposes it. Attach one handler only: a second could see a
-    /// packet the first one disposed or handed on.
+    /// throws to give it back to the transport, which disposes it. It takes one handler only: a second could see a
+    /// packet the first one disposed or handed on, so <see cref="PacketTransportBase"/> refuses it.
     /// </summary>
     event EventHandler<IpPacket>? PacketReceived;
 

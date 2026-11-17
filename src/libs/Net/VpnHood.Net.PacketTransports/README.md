@@ -21,7 +21,8 @@ dotnet add package VpnHood.Net.PacketTransports
   (`Blocking`, up to `BlockingTimeout`) or drops the oldest packet, and whether the transport disposes each
   packet once sent (`AutoDisposePackets`).
 - A packet has one owner at a time. One sent to the transport is the transport's, whatever the outcome; one
-  raised by `PacketReceived` is the handler's, which forwards or disposes it, so attach one handler only.
+  raised by `PacketReceived` is the handler's, which forwards or disposes it, so the event takes one handler
+  only: attaching a second throws `InvalidOperationException`.
 - `PacketStat` counts what is sent, received and dropped.
 - `FairPacketQueue` is a send queue split into lanes by a hash of a packet's ports, so one flow that floods
   fills mostly its own lane.

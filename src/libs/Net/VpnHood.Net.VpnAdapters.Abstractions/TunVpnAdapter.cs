@@ -82,6 +82,15 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private volatile bool _keepStarted;
     private CancellationTokenSource _keepStartedCts = new();
 
+    // The owner's stops so far, counted before a stop takes the keeping. An owner's start reads the count at its
+    // beginning and again as it marks the adapter started: a stop that came while the start still waited for what
+    // was there to end canceled the keeping before the start's own, and found nothing to stop.
+    private int _ownerStopCount;
+
+    // This run was asked to route IPv6 and its interface refused its IPv6 address, on a host with no IPv6 address of
+    // its own: it goes on without IPv6 until the host gets one, whose traffic would leave beside the tunnel.
+    private volatile bool _isIpV6Unrouted;
+
     // This run's reader, which a stop may wait for (WaitForReader), and the run it reads for, by its task's
     // id: a stop retires it, so a reader that outlives the stop leaves instead of reading the next run's
     // session. The sender is waited for by the transport's own sending flag (WaitForSender), so nothing
@@ -133,6 +142,16 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// addresses, and that search runs on an unprotected socket after a network change.
     /// </remarks>
     protected abstract bool IsSocketProtectedByBind { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the system blocks the host's traffic of an IP version the interface has no
+    /// address of, rather than let it leave by the host's own network. The default is <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Where it is <see langword="false"/>, a start fails when the interface refuses its IPv6 address while the
+    /// options route IPv6 and the host has an IPv6 address of its own (see <see cref="Start"/>).
+    /// </remarks>
+    protected virtual bool IsIpVersionWithoutAddressBlocked => false;
 
     /// <summary>
     /// Gets the ID the app filter knows this app by, which it always lets into the tunnel, or
@@ -423,15 +442,25 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// it and starts reading packets.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Await one start before the next. A start on an adapter that is up, or that is restarting, first ends what is
     /// there, as <see cref="Stop()"/> does, but logs a teardown that fails rather than throw it. From here the adapter
     /// keeps itself started until <see cref="Stop()"/>, disposal, or a failure it does not recover from (without
     /// <see cref="VpnAdapterSettings.AutoRestart"/>).
     /// <see cref="IsStarted"/> is <see langword="true"/> from the start's beginning, before the interface exists. A
     /// failed start tries to remove what it added and leaves the adapter stopped, with none of the run's addresses
-    /// and gateways; it raises no <see cref="Failed"/>, as the caller has the exception. An IPv6 address the
-    /// interface refuses is logged, and the run goes on without IPv6. Once the adapter is up and before the start
-    /// completes, it raises <see cref="Started"/> on its own thread.
+    /// and gateways; it raises no <see cref="Failed"/>, as the caller has the exception. Once the adapter is up and
+    /// before the start completes, it raises <see cref="Started"/> on its own thread.
+    /// </para>
+    /// <para>
+    /// An IPv6 address the interface refuses fails the start where <see cref="VpnAdapterOptions.IncludeNetworks"/>
+    /// route IPv6 and the host has an IPv6 address of its own, any but a link-local one: its IPv6 traffic would
+    /// leave beside the tunnel. Otherwise the refusal is logged and the run goes on without IPv6: on a host with no
+    /// such address, with options that route no IPv6, as a server's, and where the system blocks such traffic
+    /// (<see cref="IsIpVersionWithoutAddressBlocked"/>). A run that goes on because the host has no such address
+    /// ends when the host gets one, as by a failure of the adapter's own: a restart with
+    /// <see cref="VpnAdapterSettings.AutoRestart"/>, or <see cref="Failed"/>.
+    /// </para>
     /// </remarks>
     /// <param name="options">The options this run uses, which each restart uses again.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -443,7 +472,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     /// <exception cref="NotSupportedException"><see cref="VpnAdapterOptions.UseNat"/> is set and the adapter's NAT does not translate IPv4.</exception>
     /// <exception cref="InvalidOperationException">
     /// Both <see cref="VpnAdapterOptions.IncludeApps"/> and <see cref="VpnAdapterOptions.ExcludeApps"/> are non-empty
-    /// on an adapter with an app filter, or the filter has no <see cref="AppPackageId"/>.
+    /// on an adapter with an app filter, or the filter has no <see cref="AppPackageId"/>; or the interface refused
+    /// its IPv6 address where the options route IPv6 and the host has an IPv6 address of its own.
     /// </exception>
     /// <exception cref="Exception">A route could not be added; the message names it.</exception>
     // The owner awaits a start before the next: one a stop overtook stops the adapter as it fails, and so a
@@ -451,6 +481,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
+
+        // before the wait below: a Stop that lands in it ends this start, as one that lands later does
+        var ownerStopCount = Volatile.Read(ref _ownerStopCount);
         await StopBeforeStart(cancellationToken).Vhc();
 
         // a cancellation during that wait: the run that was there is stopped, and nothing is started in its place
@@ -469,7 +502,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // a Stop or a Dispose meanwhile ends the start at its next step, rather than letting it add the
             // rest - a tun, routes, DNS - after the stop, until its end finds it stopped
             using var startCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, keepStartedCts.Token);
-            runId = await StartCore(options, startCts.Token).Vhc();
+            runId = await StartCore(options, ownerStopCount, startCts.Token).Vhc();
         }
         catch {
             // the caller has the exception: nothing to keep started, unless a later start has taken over since
@@ -524,7 +557,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     }
 
     // The start itself, for the owner's Start and for a restart. Returns the run it started, by its reader's id.
-    private async Task<int> StartCore(VpnAdapterOptions options, CancellationToken cancellationToken)
+    // ownerStopCount is the count of the owner's stops when the caller began: a stop since ends the start.
+    private async Task<int> StartCore(VpnAdapterOptions options, int ownerStopCount,
+        CancellationToken cancellationToken)
     {
         _startOptions = options;
 
@@ -540,9 +575,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             _isStarting = true;
             lock (_stopLock) {
                 // a disposal or a stop that got here first found nothing to stop, so nothing may start after it;
-                // a stop that cleared the flag before this start set it may still cancel this start's token
+                // a stop that cleared the flag before this start set it may still cancel this start's token, and
+                // one that came before the owner's start had made its keeping at all shows by the count alone
                 ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
-                if (!_keepStarted || _keepStartedCts.IsCancellationRequested)
+                if (!_keepStarted || _keepStartedCts.IsCancellationRequested ||
+                    Volatile.Read(ref _ownerStopCount) != ownerStopCount)
                     throw new OperationCanceledException("The VPN adapter has been stopped while starting.");
                 IsStarted = true;
                 wasStarted = true;
@@ -562,7 +599,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // the host's addresses before the primary IPs, so a change between the two is one the start's look at
             // its end sees; after the virtual networks, by which the record leaves our own adapter out
-            _lastPrimaryAdapterAddresses = GetPrimaryAdapterAddresses();
+            var hostAddresses = GetPrimaryAdapterAddresses();
+            _lastPrimaryAdapterAddresses = hostAddresses;
             var primaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
             var primaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
             PrimaryAdapterIpV4 = primaryAdapterIpV4;
@@ -604,9 +642,19 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                     throw;
                 }
                 catch (Exception ex) {
+                    // Without its address the interface takes no IPv6, so the IPv6 routes this run was asked for are
+                    // not made, and the host's own IPv6 would leave beside the tunnel while the run shows up: the
+                    // start fails. A host with no IPv6 address of its own, as one with IPv6 turned off, has none
+                    // to leave; a run asked for no IPv6 routes, as a server's, has none to take; and a system
+                    // that blocks an IP version the interface has none of lets none leave: there the run goes on
+                    var isIpV6Unrouted = !IsIpVersionWithoutAddressBlocked && options.IncludeNetworks.Any(x => x.IsV6);
+                    if (isIpV6Unrouted && HasIpV6OfItsOwn(hostAddresses))
+                        throw CreateIpV6UnroutedException(ex);
+
                     VhLogger.Instance.LogError(ex,
                         "Failed to add IPv6 address to TUN adapter. AdapterIpNetworkV6: {AdapterIpNetworkV6}",
                         adapterIpNetworkV6);
+                    _isIpV6Unrouted = isIpV6Unrouted;
                     adapterIpNetworkV6 = null;
                     AdapterIpNetworkV6 = null;
                     GatewayIpV6 = null;
@@ -787,20 +835,25 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-        // first: a restart under way starts nothing after its stop, and a pending retry ends
+        // Counted first: an owner's start that has not made its keeping yet finds the count moved, where the cancel
+        // below reaches only the keeping before it. Then a restart under way starts nothing after its stop, and a
+        // pending retry ends
+        Interlocked.Increment(ref _ownerStopCount);
         _keepStarted = false;
         _keepStartedCts.TryCancel();
         using var restartLock = WaitForRestart();
         Stop(throwException: true);
     }
 
-    // Returns whether this call stopped it: not when it was not started, or another call is stopping it.
+    // Returns whether this call stopped it: not when it was not started, or another call is stopping it, or the
+    // run that is up is not the one the caller names by its reader's id: a look that found its run at fault and
+    // stops it later must not stop a run the owner has started since.
     // The call that passes the guard owns the stop: the adapter counts as stopped whatever its teardown
     // did, as the next start removes a leftover, and a stop that went unnoticed would be the worse.
-    private bool Stop(bool throwException)
+    private bool Stop(bool throwException, int runId = NoRunId)
     {
         lock (_stopLock) {
-            if (!IsStarted || _isStopping)
+            if (!IsStarted || _isStopping || (runId != NoRunId && _readerRunId != runId))
                 return false;
 
             VhLogger.Instance.LogInformation("Stopping {AdapterName} adapter.", AdapterName);
@@ -881,6 +934,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         AdapterIpNetworkV6 = null;
         GatewayIpV4 = null;
         GatewayIpV6 = null;
+        _isIpV6Unrouted = false;
     }
 
     /// <summary>
@@ -1396,6 +1450,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             var currentAddresses = GetPrimaryAdapterAddresses();
             if (currentAddresses.SetEquals(_lastPrimaryAdapterAddresses))
                 return;
+
+            // a run that could not take IPv6 ends where the host has some of its own now
+            if (EndRunIfIpV6Unrouted(currentAddresses)) {
+                _lastPrimaryAdapterAddresses = currentAddresses;
+                return;
+            }
+
             var isSameNetworks = IsSameNetworks(currentAddresses, _lastPrimaryAdapterAddresses);
 
             // a change a restart handles is recorded by its start: recorded here, a restart that a start under way
@@ -1448,6 +1509,40 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         PrimaryNetworkChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    // The host has an IPv6 address of its own now, which this run could not take into the tunnel: the run ends, as
+    // its start had failed on such a host. Left up, it showed connected while the host's IPv6 left beside the
+    // tunnel. Returns whether it ended the run. By the host's addresses, never by its routes: a route that comes
+    // back raises no event, and a translated network (NPTv6) gives the host no global address.
+    private bool EndRunIfIpV6Unrouted(IEnumerable<IPAddress> hostAddresses)
+    {
+        // the run first, then its mark: the stop below ends this run alone, never one the owner has started since
+        var runId = _readerRunId;
+        if (runId == NoRunId || !_isIpV6Unrouted || !HasIpV6OfItsOwn(hostAddresses))
+            return false;
+
+        var ex = CreateIpV6UnroutedException(innerException: null);
+        VhLogger.Instance.LogError(ex, "The host has IPv6 now, which the VPN adapter does not route. Stopping it.");
+        if (!Stop(throwException: false, runId))
+            return false;
+
+        OnUnrequestedStop(ex);
+        return true;
+    }
+
+    // any but a link's own address (fe80::/10), which reaches nothing beyond its link
+    private static bool HasIpV6OfItsOwn(IEnumerable<IPAddress> hostAddresses)
+    {
+        return hostAddresses.Any(x => x.IsV6 && !x.IsIPv6LinkLocal);
+    }
+
+    private static InvalidOperationException CreateIpV6UnroutedException(Exception? innerException)
+    {
+        return new InvalidOperationException(
+            "Could not keep IPv6 inside the VPN: the VPN's interface refused its IPv6 address, and this device has " +
+            "IPv6 of its own, which would go outside the VPN. To connect, turn IPv6 off on this device's network, or " +
+            "turn it on for the VPN's interface.", innerException);
+    }
+
     // The same networks: each IPv4 address, and each IPv6 one by its /64, as the OS rotates its temporary IPv6
     // addresses within their prefix (RFC 8981), daily on Windows
     internal static bool IsSameNetworks(IEnumerable<IPAddress> addresses, IEnumerable<IPAddress> otherAddresses)
@@ -1471,8 +1566,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     // The host's addresses, less our own adapter's: Windows and Linux name it after us, but Android's
     // tun0 and iOS's utunN are known by their address alone. By the address, not the network: a client's
-    // virtual network is the server's whole pool, which a LAN may share.
-    private HashSet<IPAddress> GetPrimaryAdapterAddresses()
+    // virtual network is the server's whole pool, which a LAN may share. internal virtual, so a test's adapter
+    // names the host's addresses itself: a test never moves the host's network.
+    internal virtual HashSet<IPAddress> GetPrimaryAdapterAddresses()
     {
         var adapterAddresses = new[] { AdapterIpNetworkV4?.Prefix, AdapterIpNetworkV6?.Prefix }.OfType<IPAddress>().ToArray();
         return NetworkInterface.GetAllNetworkInterfaces()
@@ -1553,8 +1649,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             if (!_keepStarted || IsDisposing || IsDisposed)
                 return NoRunId;
 
-            // start the adapter with the same options; the start reads the primary IPs itself, with the adapter off
-            return await StartCore(startOptions, cancellationToken).Vhc();
+            // start the adapter with the same options; the start reads the primary IPs itself, with the adapter off.
+            // The owner's stops as they are now: one that came before canceled this restart's keeping, seen above
+            return await StartCore(startOptions, Volatile.Read(ref _ownerStopCount), cancellationToken).Vhc();
         }
         // this restart's own failure, not the owner's stop ending it: the adapter answers it
         catch (Exception ex) when (!keepStartedToken.IsCancellationRequested) {

@@ -987,10 +987,6 @@ public class ClientServerTest : TestBase
     {
         using var vpnAdapter = new TestUdpServerVpnAdapter();
 
-        // check will server use the adapter 
-        var adapterUsed = false;
-        vpnAdapter.PacketReceived += (_, _) => { adapterUsed = true; };
-
         // create access server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
@@ -1002,7 +998,9 @@ public class ClientServerTest : TestBase
         // test udp
         await TestHelper.Test_UdpEcho(MockEps.UdpV4EndPoint1);
         await TestHelper.Test_UdpEcho(MockEps.UdpV4EndPoint2);
-        Assert.IsTrue(adapterUsed);
+
+        // the server used the adapter: by its count, as its packets have one handler, the server's
+        Assert.IsTrue(vpnAdapter.PacketStat.ReceivedPackets > 0);
     }
 
     [TestMethod]

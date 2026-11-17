@@ -12,8 +12,10 @@ namespace VpnHood.Net.Packets;
 /// </para>
 /// <para>
 /// A parsed packet reads through its Hop-by-Hop Options, Destination Options, Fragment and Authentication
-/// headers to the upper layer, as Linux does. It stops at a Routing header and at a header that runs past the
-/// packet: then <see cref="Protocol"/> names that header and <see cref="HasUnreadExtensionHeader"/> is
+/// headers to the upper layer, as Linux does, and through a Routing header with no segments left, whose packet
+/// has reached its final destination. It stops at a Routing header that has segments left, as the upper layer's
+/// checksum then covers the destination that header names, and at a header that runs past the packet: then
+/// <see cref="Protocol"/> names that header and <see cref="HasUnreadExtensionHeader"/> is
 /// <see langword="true"/>. ESP, Mobility, HIP and Shim6 end the chain as protocols of their own:
 /// <see cref="Protocol"/> names them, and <see cref="HasUnreadExtensionHeader"/> is <see langword="false"/>. A fragment
 /// other than the first stops after its Fragment header, so its <see cref="IpPacket.Payload"/> holds fragment data.

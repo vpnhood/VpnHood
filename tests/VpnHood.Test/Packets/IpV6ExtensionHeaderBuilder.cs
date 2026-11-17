@@ -14,9 +14,11 @@ public static class IpV6ExtensionHeaderBuilder
         return (type, [0, length, 1, 4, 0, 0, 0, 0]);
     }
 
-    public static (IpProtocol Type, byte[] Bytes) Routing()
+    // of type 4, the segment routing header (RFC 8754), with as many segments in its list as it has left
+    public static (IpProtocol Type, byte[] Bytes) Routing(byte segmentsLeft)
     {
-        return (IpProtocol.IPv6RoutingHeader, [0, 0, 4, 0, 0, 0, 0, 0]);
+        byte[] header = [0, (byte)(segmentsLeft * 2), 4, segmentsLeft, (byte)Math.Max(segmentsLeft - 1, 0), 0, 0, 0];
+        return (IpProtocol.IPv6RoutingHeader, [.. header, .. new byte[segmentsLeft * 16]]);
     }
 
     public static (IpProtocol Type, byte[] Bytes) Authentication()

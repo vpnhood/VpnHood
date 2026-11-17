@@ -43,7 +43,9 @@ public class VpnAdapterOptions
 
     /// <summary>
     /// Gets the interface's IPv6 address with its network in the tunnel, or <see langword="null"/> to carry no
-    /// IPv6. When the address cannot be added, the run goes on without IPv6.
+    /// IPv6. When the interface refuses the address, the start fails where <see cref="IncludeNetworks"/> route IPv6
+    /// and the host has an IPv6 address of its own, whose traffic would leave beside the tunnel; elsewhere the run
+    /// goes on without IPv6 (see <see cref="TunVpnAdapter.Start"/>).
     /// </summary>
     public IpNetwork? VirtualIpNetworkV6 { get; init; }
 

@@ -38,8 +38,9 @@ internal sealed class NetProtector(NetProtectorOptions options) : IDisposable
     // its reporter takes each refusal once
     public int NetScanErrorCount => _netScanReporter.TotalEventCount;
 
-    // false for a packet whose upper layer the checks cannot read, while the kernel reads it all the same: a fragment,
-    // which it reassembles, or an IPv6 packet stopped at an extension header, which it reads through
+    // false for a packet whose upper layer the checks cannot read, while it reaches a host all the same: a fragment,
+    // which the kernel reassembles, or an IPv6 packet stopped at an extension header, as a Routing header that has
+    // segments left, whose upper layer goes on to the destination it names
     public bool VerifyReadable(IpPacket ipPacket)
     {
         if (!ipPacket.IsFragment && ipPacket is not IpV6Packet { HasUnreadExtensionHeader: true })

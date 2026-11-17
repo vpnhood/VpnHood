@@ -390,22 +390,28 @@ public class VpnAdapterRecoveryTest : TestBase
         using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { CheckInterface = true };
         await adapter.Start(CreateAdapterOptions(), TestCt);
 
-        // a look for the interface holds the restart lock, which the owner's next start waits for
-        adapter.HoldInterfaceCheck = true;
-        var checkTask = Task.Run(adapter.HandleNetworkAvailabilityChanged, TestCt);
-        await AssertEqualsWait(true, () => adapter.IsInterfaceCheckHeld);
-        using var startCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
-        var startTask = adapter.Start(CreateAdapterOptions(), startCts.Token);
+        try {
+            // a look for the interface holds the restart lock, which the owner's next start waits for
+            adapter.HoldInterfaceCheck = true;
+            var checkTask = Task.Run(adapter.HandleNetworkAvailabilityChanged, TestCt);
+            await AssertEqualsWait(true, () => adapter.IsInterfaceCheckHeld);
+            using var startCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+            var startTask = adapter.Start(CreateAdapterOptions(), startCts.Token);
 
-        // The start is canceled in that wait. It has taken the run's keeping by then, so it ends the run all the
-        // same: left up by the canceled wait, the run had no one to restart it, or to tell of its failure
-        await startCts.CancelAsync();
-        adapter.ReleaseInterfaceCheck();
-        await checkTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
-        await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            startTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
-        Assert.IsFalse(adapter.IsStarted);
-        Assert.AreEqual(1, adapter.OpenCount);
+            // The start is canceled in that wait. It has taken the run's keeping by then, so it ends the run all the
+            // same: left up by the canceled wait, the run had no one to restart it, or to tell of its failure
+            await startCts.CancelAsync();
+            adapter.ReleaseInterfaceCheck();
+            await checkTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+            await Assert.ThrowsAsync<OperationCanceledException>(() =>
+                startTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+            Assert.IsFalse(adapter.IsStarted);
+            Assert.AreEqual(1, adapter.OpenCount);
+        }
+        finally {
+            // an assertion that failed before the hold was released: the adapter's disposal waits for what it keeps
+            adapter.ReleaseInterfaceCheck();
+        }
     }
 
     [TestMethod]
@@ -634,24 +640,156 @@ public class VpnAdapterRecoveryTest : TestBase
         Assert.IsNull(adapter.GatewayIpV4);
     }
 
-    [TestMethod]
-    public async Task An_IPv6_address_the_interface_refuses_leaves_no_IPv6_gateway()
+    private static VpnAdapterOptions CreateDualStackAdapterOptions(bool routeIpV6)
     {
-        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { FailAddIpV6 = true };
-        var options = new VpnAdapterOptions {
+        return new VpnAdapterOptions {
             SessionName = null,
             VirtualIpNetworkV4 = IpNetwork.Parse("10.0.0.1/24"),
             VirtualIpNetworkV6 = IpNetwork.Parse("fd00::1/64"),
-            IncludeNetworks = [IpNetwork.AllV4, IpNetwork.AllV6],
+            IncludeNetworks = routeIpV6 ? [IpNetwork.AllV4, IpNetwork.AllV6] : [IpNetwork.AllV4],
             DnsServers = []
+        };
+    }
+
+    // a host's own addresses: IPv4, and of IPv6 its link's own alone, which reaches nothing beyond the link
+    private static IReadOnlyList<IPAddress> CreateHostAddresses(string? ipV6Address = null)
+    {
+        IPAddress[] hostAddresses = [IPAddress.Parse("192.168.1.10"), IPAddress.Parse("fe80::10")];
+        return ipV6Address != null ? [.. hostAddresses, IPAddress.Parse(ipV6Address)] : hostAddresses;
+    }
+
+    [TestMethod]
+    public async Task An_IPv6_address_the_interface_refuses_leaves_no_IPv6_gateway()
+    {
+        // a host with no IPv6 address of its own: it has none to leave beside the tunnel
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) {
+            FailAddIpV6 = true, HostAddresses = CreateHostAddresses()
         };
 
         // the run goes on without IPv6, and shows none of it
-        await adapter.Start(options, TestCt);
+        await adapter.Start(CreateDualStackAdapterOptions(routeIpV6: true), TestCt);
         Assert.IsTrue(adapter.IsStarted);
         Assert.IsNotNull(adapter.GatewayIpV4);
         Assert.IsNull(adapter.AdapterIpNetworkV6);
         Assert.IsNull(adapter.GatewayIpV6);
+    }
+
+    // Without its IPv6 address the interface takes no IPv6, so the run makes none of the IPv6 routes it was asked for.
+    // On a host with an IPv6 address of its own the start went on all the same, and the host's IPv6 left beside the
+    // tunnel while the run showed up. By the address, whatever its routes: a global one, or a local one, which a
+    // network that translates it (NPTv6) takes out to the internet
+    [TestMethod]
+    [DataRow("2001:db8::10")]
+    [DataRow("fd12:3456:789a::10")]
+    public async Task An_IPv6_address_the_interface_refuses_fails_the_start_on_a_host_with_IPv6(string hostIpV6Address)
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) {
+            FailAddIpV6 = true, HostAddresses = CreateHostAddresses(hostIpV6Address)
+        };
+
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            adapter.Start(CreateDualStackAdapterOptions(routeIpV6: true), TestCt));
+        Assert.IsInstanceOfType<IOException>(ex.InnerException);
+        StringAssert.Contains(ex.Message, "IPv6");
+        Assert.IsFalse(adapter.IsStarted);
+        Assert.IsFalse(adapter.IsAdded);
+
+        // a run asked for no IPv6 routes, as a server's, has none to take: it goes on without IPv6
+        await adapter.Start(CreateDualStackAdapterOptions(routeIpV6: false), TestCt);
+        Assert.IsTrue(adapter.IsStarted);
+        Assert.IsNull(adapter.GatewayIpV6);
+    }
+
+    // A run that goes on without IPv6, on a host that had none: the host gets an IPv6 address, as by moving to another
+    // network, which the run cannot take. It ends there and tells its owner, as its start had failed on such a host
+    [TestMethod]
+    public async Task A_run_whose_interface_refused_IPv6_ends_when_the_host_gets_IPv6()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) {
+            FailAddIpV6 = true, HostAddresses = CreateHostAddresses()
+        };
+        await adapter.Start(CreateDualStackAdapterOptions(routeIpV6: true), TestCt);
+        Assert.IsTrue(adapter.IsStarted);
+
+        // the system tells of the new address, as it tells of every change of the host's addresses
+        adapter.HostAddresses = CreateHostAddresses("2001:db8::10");
+        var ex = await WaitForFailed(adapter, () => {
+            adapter.HandleNetworkAddressChanged();
+            return Task.CompletedTask;
+        });
+        Assert.IsInstanceOfType<InvalidOperationException>(ex);
+        StringAssert.Contains(ex.Message, "IPv6");
+        Assert.IsFalse(adapter.IsStarted);
+    }
+
+    [TestMethod]
+    public async Task A_run_asked_for_no_IPv6_routes_stays_up_when_the_host_gets_IPv6()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) {
+            FailAddIpV6 = true, HostAddresses = CreateHostAddresses()
+        };
+        var failedCount = 0;
+        adapter.Failed += (_, _) => failedCount++;
+        await adapter.Start(CreateDualStackAdapterOptions(routeIpV6: false), TestCt);
+
+        // as a server's run: it takes none of the host's IPv6 into the tunnel, so none of it is left beside it
+        adapter.HostAddresses = CreateHostAddresses("2001:db8::10");
+        adapter.HandleNetworkAddressChanged();
+        await Task.Delay(500, TestCt);
+        Assert.IsTrue(adapter.IsStarted);
+        Assert.AreEqual(0, failedCount);
+    }
+
+    // The owner's stop lands while its start still waits for what is there to end, before the start has made its own
+    // keeping: the stop canceled the keeping before it, found nothing to stop and returned, and the start then
+    // brought the adapter up after it
+    [TestMethod]
+    public async Task A_stop_while_a_start_waits_for_what_is_there_ends_the_start()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false) { CheckInterface = true };
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+
+        try {
+            // a look for the interface holds the restart lock, which the owner's next start waits for
+            adapter.HoldInterfaceCheck = true;
+            var checkTask = Task.Run(adapter.HandleNetworkAvailabilityChanged, TestCt);
+            await AssertEqualsWait(true, () => adapter.IsInterfaceCheckHeld);
+
+            // with NAT the start looks at its NAT before it marks the adapter started, where the test holds it
+            adapter.HoldNatCheck = true;
+            var startTask = adapter.Start(new VpnAdapterOptions {
+                SessionName = null,
+                VirtualIpNetworkV4 = IpNetwork.Parse("10.0.0.1/24"),
+                DnsServers = [],
+                UseNat = true
+            }, TestCt);
+
+            // the stop lands in the start's wait, and waits for the lock behind it; on a thread of its own, whose
+            // state tells that it waits
+            var stopThread = new Thread(adapter.Stop) { IsBackground = true };
+            stopThread.Start();
+            await AssertEqualsWait(true,
+                () => (stopThread.ThreadState & System.Threading.ThreadState.WaitSleepJoin) != 0);
+
+            // the look ends: the start takes the lock, ends the run that is there and goes on to its NAT; the stop
+            // then finds nothing to stop, and returns
+            adapter.ReleaseInterfaceCheck();
+            await checkTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+            await AssertEqualsWait(true, () => adapter.IsNatCheckHeld);
+            Assert.IsTrue(stopThread.Join(TimeSpan.FromSeconds(10)));
+
+            // the start ends by the stop it began before
+            adapter.ReleaseNatCheck();
+            await Assert.ThrowsAsync<OperationCanceledException>(() =>
+                startTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+            Assert.IsFalse(adapter.IsStarted);
+            Assert.AreEqual(1, adapter.OpenCount);
+        }
+        finally {
+            // an assertion that failed before a hold was released: the adapter's disposal waits for what the hold keeps
+            adapter.ReleaseInterfaceCheck();
+            adapter.ReleaseNatCheck();
+        }
     }
 
     [TestMethod]

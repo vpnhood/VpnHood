@@ -326,7 +326,9 @@ public static class IpPacketExtensions
         /// <remarks>
         /// A fragment's payload checksum is left as it is, since it covers the whole datagram, which no fragment
         /// holds; after a change of an address, <see cref="UpdatePayloadChecksum"/> brings it in line. A payload of
-        /// another protocol is left as it is.
+        /// another protocol is left as it is, and so is that of an IPv6 packet whose reading stopped at an extension
+        /// header (<see cref="IpV6Packet.HasUnreadExtensionHeader"/>): behind a Routing header that has segments
+        /// left, the checksum covers the destination that header names, not the packet's.
         /// </remarks>
         /// <exception cref="ArgumentException">The payload is not a valid packet of its protocol.</exception>
         public void UpdateAllChecksums()

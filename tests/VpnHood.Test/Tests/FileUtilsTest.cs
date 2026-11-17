@@ -98,6 +98,114 @@ public class FileUtilsTest : TestBase
         Assert.AreEqual("only copy", await File.ReadAllTextAsync(filePath, TestCt));
     }
 
+    // A link gives one place two names, as Android's /data/data and iOS's /var do. Compared as they are written, the
+    // two were a place and a new place that has one already, so the only copy was deleted
+    [TestMethod]
+    public async Task A_move_to_its_own_place_through_a_link_keeps_the_only_copy()
+    {
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "only copy", TestCt);
+        var folderPath = Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException("No folder.");
+        var linkPath = folderPath + "-link";
+        await CreateFolderLink(linkPath, folderPath);
+
+        // the file, by the link in its parent folder
+        Assert.IsTrue(FileUtils.MoveOrDiscard(filePath, Path.Combine(linkPath, "file.json")));
+        Assert.AreEqual("only copy", await File.ReadAllTextAsync(filePath, TestCt));
+
+        // the folder and its link, either way round
+        Assert.IsTrue(FileUtils.MoveOrDiscard(folderPath, linkPath));
+        Assert.IsTrue(FileUtils.MoveOrDiscard(linkPath, folderPath));
+        Assert.AreEqual("only copy", await File.ReadAllTextAsync(filePath, TestCt));
+    }
+
+    // Deleted for the one inside it, which is the one in use, the folder took that one along
+    [TestMethod]
+    public async Task A_move_of_a_folder_into_itself_is_refused_and_keeps_it()
+    {
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "kept", TestCt);
+        var folderPath = Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException("No folder.");
+        var innerFolderPath = Path.Combine(folderPath, "inner");
+        Directory.CreateDirectory(innerFolderPath);
+        var innerFilePath = Path.Combine(innerFolderPath, "file.json");
+        await File.WriteAllTextAsync(innerFilePath, "kept too", TestCt);
+
+        // a place inside that has one already, and one that has none
+        Assert.ThrowsExactly<IOException>(() => FileUtils.MoveOrDiscard(folderPath, innerFolderPath));
+        Assert.ThrowsExactly<IOException>(() => FileUtils.MoveOrDiscard(folderPath, Path.Combine(folderPath, "new")));
+
+        // a link inside that leads out of the folder: what it leads to would stay, and the link go with the folder
+        var outerFolderPath = folderPath + "-outer";
+        Directory.CreateDirectory(outerFolderPath);
+        var linkPath = Path.Combine(folderPath, "link");
+        await CreateFolderLink(linkPath, outerFolderPath);
+        Assert.ThrowsExactly<IOException>(() => FileUtils.MoveOrDiscard(folderPath, linkPath));
+        Assert.IsTrue(Directory.Exists(linkPath));
+
+        Assert.AreEqual("kept", await File.ReadAllTextAsync(filePath, TestCt));
+        Assert.AreEqual("kept too", await File.ReadAllTextAsync(innerFilePath, TestCt));
+    }
+
+    // Windows names one place with and without its device prefix
+    [TestMethod]
+    public async Task A_move_to_its_own_place_by_its_device_path_keeps_the_only_copy()
+    {
+        if (!OperatingSystem.IsWindows())
+            Assert.Inconclusive("Only Windows has device paths.");
+
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "only copy", TestCt);
+
+        Assert.IsTrue(FileUtils.MoveOrDiscard(filePath, @"\\?\" + filePath));
+        Assert.IsTrue(FileUtils.MoveOrDiscard(@"\\?\" + filePath, filePath));
+        Assert.AreEqual("only copy", await File.ReadAllTextAsync(filePath, TestCt));
+    }
+
+    // A link's target with ".." after a link: unix leaves the folder that link leads to, and Windows the name as it
+    // is written, so the two reach different files. The move must take the link for the file the system reaches
+    [TestMethod]
+    public async Task A_link_is_followed_as_the_system_follows_it()
+    {
+        // folder/inner/file.json and folder/file.json, and folder/side, a link to folder/inner/deep
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "outer", TestCt);
+        var folderPath = Path.GetDirectoryName(filePath) ?? throw new InvalidOperationException("No folder.");
+        var innerFilePath = Path.Combine(folderPath, "inner", "file.json");
+        Directory.CreateDirectory(Path.Combine(folderPath, "inner", "deep"));
+        await File.WriteAllTextAsync(innerFilePath, "inner", TestCt);
+        await CreateFolderLink(Path.Combine(folderPath, "side"), Path.Combine(folderPath, "inner", "deep"));
+
+        // folder/link, which leads to side/../file.json
+        var linkPath = Path.Combine(folderPath, "link.json");
+        try {
+            File.CreateSymbolicLink(linkPath, Path.Combine("side", "..", "file.json"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+            Assert.Inconclusive($"This account may not make a symbolic link. {ex.Message}");
+        }
+
+        // the file the system reaches by the link is the link's own place, and stays; the other is the old one
+        var isInnerReached = await File.ReadAllTextAsync(linkPath, TestCt) == "inner";
+        var reachedFilePath = isInnerReached ? innerFilePath : filePath;
+        var otherFilePath = isInnerReached ? filePath : innerFilePath;
+        Assert.IsTrue(FileUtils.MoveOrDiscard(reachedFilePath, linkPath));
+        Assert.IsTrue(File.Exists(reachedFilePath));
+        Assert.IsTrue(FileUtils.MoveOrDiscard(otherFilePath, linkPath));
+        Assert.IsFalse(File.Exists(otherFilePath));
+        Assert.IsTrue(File.Exists(reachedFilePath));
+    }
+
+    // a symbolic link, or on Windows a junction, which needs no right a test may lack
+    private Task CreateFolderLink(string linkPath, string folderPath)
+    {
+        if (OperatingSystem.IsWindows())
+            return OsUtils.ExecuteCommandAsync("cmd.exe", $"/c mklink /J \"{linkPath}\" \"{folderPath}\"", TestCt);
+
+        Directory.CreateSymbolicLink(linkPath, folderPath);
+        return Task.CompletedTask;
+    }
+
     [TestMethod]
     public async Task A_move_into_a_missing_folder_fails_and_keeps_the_file()
     {

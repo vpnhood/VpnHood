@@ -10,6 +10,9 @@ namespace VpnHood.Net.Toolkit.Utils;
 /// </summary>
 public static class FileUtils
 {
+    // the links one path may pass before it counts as a loop, as Linux has it
+    private const int MaxLinkCount = 40;
+
     /// <summary>
     /// Moves a file or a folder to a new place, unless the new place has one already, which is then the one in use, so the
     /// old one is deleted.
@@ -17,11 +20,12 @@ public static class FileUtils
     /// <param name="sourcePath">The file's or folder's path.</param>
     /// <param name="targetPath">The new path.</param>
     /// <returns>
-    /// <see langword="true"/> if it was moved or deleted, or the two paths are the same place;
-    /// <see langword="false"/> if it is gone, as another process may have moved it first.
+    /// <see langword="true"/> if it was moved or deleted, or the two paths are the same place, by their names or
+    /// through a link; <see langword="false"/> if it is gone, as another process may have moved it first.
     /// </returns>
     /// <exception cref="IOException">
-    /// The move or the deletion failed, as when the new place's folder is missing.
+    /// The move or the deletion failed, as when the new place's folder is missing; the new place lies inside the
+    /// folder to move; or a path passes more than 40 links.
     /// </exception>
     /// <exception cref="UnauthorizedAccessException">The process may not move or delete it.</exception>
     public static bool MoveOrDiscard(string sourcePath, string targetPath)
@@ -32,9 +36,20 @@ public static class FileUtils
                 return false;
 
             // The same place: it is there already. Taken for a new place that has one, it would be deleted, the
-            // only copy with it.
-            if (IsSamePath(sourcePath, targetPath))
+            // only copy with it. By where the paths lead, as a link gives one place two names: Android's
+            // /data/data, iOS's /var.
+            var source = ResolveLinks(sourcePath, followLast: true);
+            var target = ResolveLinks(targetPath, followLast: true);
+            if (IsSamePath(source, target))
                 return true;
+
+            // Deleted for the one in it, the folder would take that one along; moved, it cannot go into itself. By
+            // where the new place leads, and by where its own name lies: a link in the folder that leads out of it
+            // would go with the folder too
+            if (isFolder &&
+                (IsInside(target, source) || IsInside(ResolveLinks(targetPath, followLast: false), source)))
+                throw new IOException(
+                    $"The new place lies inside the folder to move. SourcePath: {sourcePath}, TargetPath: {targetPath}");
 
             var isTargetPresent = File.Exists(targetPath) || Directory.Exists(targetPath);
             if (isFolder && isTargetPresent) Directory.Delete(sourcePath, recursive: true);
@@ -51,16 +66,118 @@ public static class FileUtils
     }
 
     // as the file system compares names: without their case on Windows and macOS
-    private static bool IsSamePath(string path1, string path2)
-    {
-        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+    private static StringComparison PathComparison =>
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
 
-        return string.Equals(
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(path1)),
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(path2)),
-            comparison);
+    // of two paths as ResolveLinks gives them
+    private static bool IsSamePath(string path1, string path2)
+    {
+        return string.Equals(path1, path2, PathComparison);
+    }
+
+    // of two paths as ResolveLinks gives them
+    private static bool IsInside(string path, string folderPath)
+    {
+        return path.StartsWith(Path.TrimEndingDirectorySeparator(folderPath) + Path.DirectorySeparatorChar,
+            PathComparison);
+    }
+
+    // The path as the file system reaches it: full, without its last separator, and with the links on its way
+    // followed, name by name, as the system follows them. followLast is false for the place the last name itself
+    // lies at, whatever it leads to.
+    private static string ResolveLinks(string path, bool followLast)
+    {
+        var fullPath = Path.GetFullPath(TrimDevicePrefix(path));
+        var resolvedPath = Path.GetPathRoot(fullPath) ?? string.Empty;
+        var names = new Stack<string>();
+        PushNames(names, fullPath[resolvedPath.Length..]);
+
+        var linkCount = 0;
+        while (names.TryPop(out var name)) {
+            if (name == ".")
+                continue;
+
+            // the root's parent is the root
+            if (name == "..") {
+                resolvedPath = Path.GetDirectoryName(resolvedPath) ?? resolvedPath;
+                continue;
+            }
+
+            var currentPath = Path.Combine(resolvedPath, name);
+            var linkTarget = followLast || names.Count > 0 ? GetLinkTarget(currentPath) : null;
+            if (linkTarget == null) {
+                resolvedPath = currentPath;
+                continue;
+            }
+
+            if (++linkCount > MaxLinkCount)
+                throw new IOException($"The path passes too many links. Path: {path}");
+
+            // Windows takes the ".." of a link's target off the names before them, as they are written, so the
+            // target is made full that way, from the folder the link lies in; unix walks them folder by folder,
+            // as the loop does
+            if (OperatingSystem.IsWindows())
+                linkTarget = Path.GetFullPath(TrimDevicePrefix(linkTarget), resolvedPath);
+
+            // a target with a root starts the walk again there; any other goes on from the folder the link lies in
+            if (Path.IsPathRooted(linkTarget)) {
+                resolvedPath = Path.GetPathRoot(linkTarget) ?? string.Empty;
+                linkTarget = linkTarget[resolvedPath.Length..];
+            }
+
+            PushNames(names, linkTarget);
+        }
+
+        return resolvedPath;
+    }
+
+    // a path's names onto the stack, its first name on top
+    private static void PushNames(Stack<string> names, string path)
+    {
+        var pathNames = path.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+
+        for (var i = pathNames.Length - 1; i >= 0; i--)
+            names.Push(pathNames[i]);
+    }
+
+    // What the link at a path is written to lead to; null for what is no link, is not there, or may not be looked
+    // at, as a parent folder the system keeps from the app. Such a name counts as it is written, as every name did
+    // before links were followed: the walk must not fail a move that needs no look at its parents.
+    private static string? GetLinkTarget(string path)
+    {
+        try {
+            var attributes = File.GetAttributes(path);
+            if (!attributes.HasFlag(FileAttributes.ReparsePoint))
+                return null;
+
+            FileSystemInfo fileSystemInfo = attributes.HasFlag(FileAttributes.Directory)
+                ? new DirectoryInfo(path)
+                : new FileInfo(path);
+
+            return fileSystemInfo.LinkTarget;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+            return null;
+        }
+    }
+
+    // A Windows path written for the device namespace, \\?\C:\folder or \\?\UNC\server\share, as the plain path of
+    // the same place: as they are written, the two compare as two places. Any other path as it is; a volume's or a
+    // device's own name has no plain form.
+    private static string TrimDevicePrefix(string path)
+    {
+        if (!OperatingSystem.IsWindows() || path.Length < 4 || path[0] != '\\' || path[1] != '\\' ||
+            path[2] is not ('?' or '.') || path[3] != '\\')
+            return path;
+
+        var devicePath = path[4..];
+        if (devicePath.StartsWith(@"UNC\", StringComparison.OrdinalIgnoreCase))
+            return @"\\" + devicePath[4..];
+
+        return devicePath.Length >= 2 && char.IsAsciiLetter(devicePath[0]) && devicePath[1] == ':' ? devicePath : path;
     }
 
     /// <summary>

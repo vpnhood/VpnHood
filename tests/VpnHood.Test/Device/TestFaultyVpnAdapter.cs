@@ -20,6 +20,7 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     private readonly ManualResetEventSlim _heldPacketRelease = new(false);
     private readonly ManualResetEventSlim _readRelease = new(false);
     private readonly ManualResetEventSlim _interfaceCheckRelease = new(false);
+    private readonly ManualResetEventSlim _natCheckRelease = new(false);
     private readonly TaskCompletionSource _startRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public volatile bool HoldBeforeAdd; // the start holds before it adds the adapter until ReleaseStart
     public volatile bool IsStartHeld;
@@ -34,8 +35,11 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
     public volatile bool CheckInterface; // the adapter looks for its interface when the network changes
     public volatile bool HoldInterfaceCheck; // that look holds, under the restart lock, until ReleaseInterfaceCheck
     public volatile bool IsInterfaceCheckHeld;
+    public volatile bool HoldNatCheck; // a start's first look at its NAT, before it marks the adapter started, holds until ReleaseNatCheck
+    public volatile bool IsNatCheckHeld;
     public volatile bool FailClose;
     public volatile bool FailAddIpV6; // the interface refuses its IPv6 address
+    public volatile IReadOnlyList<IPAddress>? HostAddresses; // the host's own addresses, or null for the test machine's
     public volatile bool RefuseWrite; // the interface takes no packet: every write finds it full
     public volatile int ReadBufferSize; // the size of the buffer the reader last asked for
     public volatile bool HoldReader; // the reader's next wait holds until ReleaseReader
@@ -74,6 +78,25 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         }
 
         return true;
+    }
+
+    // with NAT, a start asks it first, before it marks the adapter started; one look holds
+    public override bool IsNatSupported(IpVersion ipVersion)
+    {
+        if (HoldNatCheck) {
+            HoldNatCheck = false;
+            IsNatCheckHeld = true;
+            _natCheckRelease.Wait();
+            IsNatCheckHeld = false;
+        }
+
+        return base.IsNatSupported(ipVersion);
+    }
+
+    // a test never moves the test machine's network: the host's addresses are what the test says
+    internal override HashSet<IPAddress> GetPrimaryAdapterAddresses()
+    {
+        return HostAddresses?.ToHashSet() ?? base.GetPrimaryAdapterAddresses();
     }
 
     protected override async Task AdapterAdd(CancellationToken cancellationToken)
@@ -234,6 +257,12 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         _interfaceCheckRelease.Set();
     }
 
+    public void ReleaseNatCheck()
+    {
+        HoldNatCheck = false;
+        _natCheckRelease.Set();
+    }
+
     // as WinTun's: the reader and the batch being sent leave before what they use is freed
     protected override void AdapterClose()
     {
@@ -254,6 +283,7 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         _heldPacketRelease.Set();
         _readRelease.Set();
         _interfaceCheckRelease.Set();
+        _natCheckRelease.Set();
         _startRelease.TrySetResult();
         base.DisposeManaged();
     }

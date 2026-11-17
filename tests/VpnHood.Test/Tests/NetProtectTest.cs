@@ -69,11 +69,10 @@ public class NetProtectTest : TestBase
     public async Task MaxUdpDnsPacketsPerSecond_by_vpn_adapter()
     {
         using var vpnAdapter = new TestUdpServerVpnAdapter();
-        var adapterUsed = false;
-        vpnAdapter.PacketReceived += (_, _) => adapterUsed = true;
-
         await Test_MaxUdpDnsPacketsPerSecond(vpnAdapter);
-        Assert.IsTrue(adapterUsed);
+
+        // the server used the adapter: by its count, as its packets have one handler, the server's
+        Assert.IsTrue(vpnAdapter.PacketStat.ReceivedPackets > 0);
     }
 
     [TestMethod]
@@ -149,8 +148,14 @@ public class NetProtectTest : TestBase
             IpV6ExtensionHeaderBuilder.Options(IpProtocol.IPv6HopByHopOptions));
         Assert.IsTrue(netProtector.VerifyReadable(readPacket));
 
-        // one it stops at, behind which the kernel finds TCP all the same
-        using var routedPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket, IpV6ExtensionHeaderBuilder.Routing());
+        // a Routing header with no segments left hides nothing either: the packet's destination is the final one
+        using var arrivedPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+            IpV6ExtensionHeaderBuilder.Routing(segmentsLeft: 0));
+        Assert.IsTrue(netProtector.VerifyReadable(arrivedPacket));
+
+        // one it stops at: a Routing header that has segments left, whose TCP goes on to the destination it names
+        using var routedPacket = IpV6ExtensionHeaderBuilder.Insert(tcpPacket,
+            IpV6ExtensionHeaderBuilder.Routing(segmentsLeft: 1));
         Assert.IsFalse(netProtector.VerifyReadable(routedPacket));
 
         // fragments, which the kernel reassembles

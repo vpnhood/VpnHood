@@ -6,6 +6,7 @@
 * Fix: In Split Domains, an entry that ends with a dot, as `mail.example.com.`, matches its domain, where it matched nothing
 * Fix: A split list that is refused when you save no longer saves the lists above it on the same page
 * Improve: When a split list refuses an entry, the app says why in your language and names the entry; an IP list no longer refuses a comment line that starts with spaces
+* Improve: When an ad fails, or the server's address cannot be found, the app says so in your language, where it showed a technical message in English
 * Update: The app has a new icon, its name on a ribbon across the top
 * Feature: The app runs on Android TV, and Remote Access lets you set it up from a phone or computer on the same network #android #store
 * Feature: The app runs on Apple TV, and Remote Access lets you set it up from a phone or computer on the same network #ios

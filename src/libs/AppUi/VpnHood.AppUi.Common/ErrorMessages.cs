@@ -73,6 +73,7 @@ public static class ErrorMessages
                 return new ErrorMessage.Ignored();
 
             case ExceptionType.UnreachableServer:
+            case ExceptionType.EndPointDiscovery:
                 return new ErrorMessage.Dialog(strings.UnreachableServerMessage, Diagnose(context));
 
             case ExceptionType.UnreachableServerLocation: {
@@ -120,6 +121,7 @@ public static class ErrorMessages
             case ExceptionType.LoadAd:
                 return new ErrorMessage.Dialog(strings.RewardedAdLoadErrorMsg);
             case ExceptionType.ShowAd:
+            case ExceptionType.Ad:
                 return new ErrorMessage.Dialog(strings.RewardedAdShowErrorMsg);
             case ExceptionType.AdBlocker:
                 return AdBlocker(data, error.Message, context);

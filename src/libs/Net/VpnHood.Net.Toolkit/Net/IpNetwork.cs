@@ -245,6 +245,16 @@ public class IpNetwork
         Parse("8000::/1")
     ];
 
+    /// <summary>
+    /// Gets the networks of both families whose addresses are public: every address outside
+    /// <see cref="NonPublicNetworks"/>, built at its first read.
+    /// </summary>
+    /// <remarks>
+    /// A guard that searches it takes it as an ordered range list once, with <c>ToIpRanges()</c>.
+    /// </remarks>
+    public static IReadOnlyList<IpNetwork> PublicNetworks => field ??=
+        NonPublicNetworks.ToIpRanges().Invert().ToIpNetworks().ToArray();
+
     /// <summary>Gets the networks of every address: <see cref="AllV4"/> and <see cref="AllV6"/>.</summary>
     public static IReadOnlyList<IpNetwork> All => field ??= [AllV4, AllV6];
 

@@ -503,6 +503,23 @@ public class IpNetworkTest : TestBase
     }
 
     [TestMethod]
+    public void The_public_networks_are_every_address_outside_the_non_public_ones()
+    {
+        var publicRanges = IpNetwork.PublicNetworks.ToIpRanges();
+        var nonPublic = IpNetwork.NonPublicNetworks.ToIpRanges();
+
+        foreach (var text in new[] { "1.1.1.1", "8.8.8.8", "2001:4860:4860::8888", "2606:4700:4700::1111" })
+            Assert.IsTrue(publicRanges.Contains(IPAddress.Parse(text)), text);
+
+        foreach (var text in new[] { "10.1.2.3", "127.0.0.1", "169.254.169.254", "::1", "fe80::1", "2001:db8::1" })
+            Assert.IsFalse(publicRanges.Contains(IPAddress.Parse(text)), text);
+
+        // no address is in both lists, and none is in neither
+        Assert.IsEmpty(publicRanges.Intersect(nonPublic));
+        Assert.IsEmpty(IpNetwork.All.ToIpRanges().Exclude(publicRanges).Exclude(nonPublic));
+    }
+
+    [TestMethod]
     public void IpRangeOrderedList_Contains_searches_mapped_and_mixed_ranges()
     {
         // an IPv4-mapped range is the IPv4 range it names, and merges with those it overlaps or touches; a range from

@@ -13,6 +13,7 @@ public class TestOsConfigurationProvider : IOsConfigurationProvider
 
     // null where the machine lacks it, as Linux's own values
     public string? TcpCongestionControl { get; set; } = "cubic";
+    public IReadOnlyList<string> AvailableTcpCongestionControls { get; set; } = ["reno", "cubic", "bbr"];
     public int? ConnectionTrackingMax { get; set; } = 262_144;
     public TimeSpan ConnectionTrackingTcpIdleTimeout { get; set; } = TimeSpan.FromDays(5);
 
@@ -60,6 +61,9 @@ public class TestOsConfigurationProvider : IOsConfigurationProvider
     {
         if (TcpCongestionControl == null)
             throw new NotSupportedException("No congestion control here.");
+
+        if (!AvailableTcpCongestionControls.Contains(name))
+            throw new NotSupportedException($"The kernel has no {name} congestion control.");
 
         TcpCongestionControl = name;
         Interlocked.Increment(ref _changeCount);

@@ -13,11 +13,20 @@ namespace VpnHood.Core.Server.Access.Configurations;
 /// </remarks>
 public class OsOptions
 {
+    private string? _tcpCongestionControl = "bbr";
+    private bool _isTcpCongestionControlSet;
+
     /// <summary>
     /// Gets or sets the TCP congestion control the server sets on its OS, or <see langword="null"/> or <c>*</c> to put
     /// back the OS's own where the server changed it. The default is <c>bbr</c>.
     /// </summary>
-    public string? TcpCongestionControl { get; set; } = "bbr";
+    public string? TcpCongestionControl {
+        get => _tcpCongestionControl;
+        set {
+            _tcpCongestionControl = value;
+            _isTcpCongestionControlSet = true;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the most connections the OS tracks at once, as the server's NAT needs: a full table drops new
@@ -59,11 +68,15 @@ public class OsOptions
     public TimeSpan ConnectionTrackingTcpIdleTimeoutValue =>
         ConnectionTrackingTcpIdleTimeout ?? TimeSpan.FromHours(1);
 
-    /// <summary>Copies over these options each one another set sets.</summary>
+    /// <summary>
+    /// Copies over these options each one another set sets; its default <see cref="TcpCongestionControl"/> is no setting.
+    /// </summary>
     /// <param name="obj">The options that win where they are set.</param>
     public void Merge(OsOptions obj)
     {
-        if (obj.TcpCongestionControl != null) TcpCongestionControl = obj.TcpCongestionControl;
+        // a set one only: the other options' default would hide this one's value
+        if (obj._isTcpCongestionControlSet && obj.TcpCongestionControl != null)
+            TcpCongestionControl = obj.TcpCongestionControl;
         if (obj.ConnectionTrackingMax != null) ConnectionTrackingMax = obj.ConnectionTrackingMax;
         if (obj.ConnectionTrackingTcpIdleTimeout != null)
             ConnectionTrackingTcpIdleTimeout = obj.ConnectionTrackingTcpIdleTimeout;

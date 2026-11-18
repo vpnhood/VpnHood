@@ -15,7 +15,6 @@ public class LinuxOsConfigurationProvider : IOsConfigurationProvider
 {
     private const string TcpCongestionControlPath = "/proc/sys/net/ipv4/tcp_congestion_control";
     private const string TcpAvailableCongestionControlPath = "/proc/sys/net/ipv4/tcp_available_congestion_control";
-    private const string DefaultQdiscPath = "/proc/sys/net/core/default_qdisc";
     private const string ConnectionTrackingMaxPath = "/proc/sys/net/netfilter/nf_conntrack_max";
     private const string ConnectionTrackingTcpIdleTimeoutPath =
         "/proc/sys/net/netfilter/nf_conntrack_tcp_timeout_established";
@@ -77,7 +76,6 @@ public class LinuxOsConfigurationProvider : IOsConfigurationProvider
                 throw new NotSupportedException($"The kernel has no {name} congestion control.");
         }
 
-        await WriteProcSys(DefaultQdiscPath, "fq", cancellationToken).Vhc();
         await WriteProcSys(TcpCongestionControlPath, name, cancellationToken).Vhc();
     }
 

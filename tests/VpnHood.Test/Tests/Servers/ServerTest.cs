@@ -977,6 +977,52 @@ public class ServerTest : TestBase
         CollectionAssert.AreEqual(new[] { "eth0", "eth1" }, accessManager.LastServerInfo?.NetworkInterfaceNames);
     }
 
+    // a wrong value, then 0, as an admin may set by mistake
+    [TestMethod]
+    public async Task A_change_that_fails_keeps_the_OSs_own_to_put_back()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        var osConfigurationProvider = new TestOsConfigurationProvider();
+        await using var server =
+            await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
+
+        accessManager.ServerConfig.OsOptions.TcpCongestionControl = "bbr2";
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = -5;
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingTcpIdleTimeout = TimeSpan.FromMilliseconds(500);
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await server.ConfigureAndSendStatus(TestCt);
+        Assert.AreEqual("bbr", osConfigurationProvider.TcpCongestionControl);
+        Assert.AreEqual(1_048_576, osConfigurationProvider.ConnectionTrackingMax);
+        Assert.AreEqual(TimeSpan.FromHours(1), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
+
+        accessManager.ServerConfig.OsOptions.TcpCongestionControl = "*";
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 0;
+        accessManager.ServerConfig.OsOptions.ConnectionTrackingTcpIdleTimeout = TimeSpan.Zero;
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await server.ConfigureAndSendStatus(TestCt);
+        Assert.AreEqual("cubic", osConfigurationProvider.TcpCongestionControl);
+        Assert.AreEqual(262_144, osConfigurationProvider.ConnectionTrackingMax);
+        Assert.AreEqual(TimeSpan.FromDays(5), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
+    }
+
+    // a server's own settings file may hold a few settings over the access manager's
+    [TestMethod]
+    public void A_local_configuration_that_leaves_TcpCongestionControl_out_keeps_the_access_managers()
+    {
+        var serverConfig = new ServerConfig { OsOptions = { TcpCongestionControl = "reno" } };
+        var localConfig = JsonSerializer.Deserialize<ServerConfig>("""{ "Os": { "ConnectionTrackingMax": 12 } }""") ??
+                          throw new InvalidOperationException("No configuration was read.");
+        serverConfig.Merge(localConfig);
+        Assert.AreEqual("reno", serverConfig.OsOptions.TcpCongestionControl);
+        Assert.AreEqual(12, serverConfig.OsOptions.ConnectionTrackingMax);
+
+        // one it sets wins, by its old name too
+        localConfig = JsonSerializer.Deserialize<ServerConfig>("""{ "TcpCongestionControl": "cubic" }""") ??
+                      throw new InvalidOperationException("No configuration was read.");
+        serverConfig.Merge(localConfig);
+        Assert.AreEqual("cubic", serverConfig.OsOptions.TcpCongestionControl);
+    }
+
     [TestMethod]
     public async Task A_setting_the_OS_lacks_leaves_the_others()
     {

@@ -7,7 +7,7 @@ using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Server.OsConfiguration;
 
-// Sets the OS's settings, saving the OS's own value of each before the server's first change, in a file that outlives
+// Sets the OS's settings, saving the OS's own value of each with the server's first change, in a file that outlives
 // the server, and putting it back where the server no longer wants its own. A value the server did not set, as after an
 // admin's change or a restart of the machine, is the OS's own. A failure is logged, and the next configuration tries
 // again
@@ -25,26 +25,16 @@ internal class OsSettingRestorer(IOsConfigurationProvider osConfigurationProvide
                 ? originals.TcpCongestionControl ?? current
                 : current;
             var target = name ?? original;
-
-            // on record before the change, so a change that fails still leaves the OS's own known
-            if (target != original) {
-                originals.TcpCongestionControl = original;
-                originals.TcpCongestionControlApplied = target;
-                await SaveOriginals(originals, cancellationToken).Vhc();
-            }
-
             if (target != current) {
                 VhLogger.Instance.LogInformation("Updating TcpCongestionControl. From: {Current}, To: {Target}",
                     current, target);
                 await osConfigurationProvider.SetTcpCongestionControl(target, cancellationToken).Vhc();
             }
 
-            // off the record once the OS's own holds
-            if (target == original && originals.TcpCongestionControl != null) {
-                originals.TcpCongestionControl = null;
-                originals.TcpCongestionControlApplied = null;
-                await SaveOriginals(originals, cancellationToken).Vhc();
-            }
+            // on record only once the change holds, so one that fails leaves the record as it was
+            originals.TcpCongestionControl = target != original ? original : null;
+            originals.TcpCongestionControlApplied = target != original ? target : null;
+            await SaveOriginals(originals, cancellationToken).Vhc();
         }
         catch (OperationCanceledException) {
             throw;
@@ -58,30 +48,24 @@ internal class OsSettingRestorer(IOsConfigurationProvider osConfigurationProvide
     public async Task SetConnectionTrackingMax(int? max, CancellationToken cancellationToken)
     {
         try {
+            if (max != null)
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(max.Value, nameof(max));
+
             var current = await osConfigurationProvider.GetConnectionTrackingMax(cancellationToken).Vhc();
             var originals = await LoadOriginals(cancellationToken).Vhc();
             var original = originals.ConnectionTrackingMaxApplied == current
                 ? originals.ConnectionTrackingMax ?? current
                 : current;
             var target = Math.Max(max ?? original, original);
-
-            if (target != original) {
-                originals.ConnectionTrackingMax = original;
-                originals.ConnectionTrackingMaxApplied = target;
-                await SaveOriginals(originals, cancellationToken).Vhc();
-            }
-
             if (target != current) {
                 VhLogger.Instance.LogInformation("Updating ConnectionTrackingMax. From: {Current}, To: {Target}",
                     current, target);
                 await osConfigurationProvider.SetConnectionTrackingMax(target, cancellationToken).Vhc();
             }
 
-            if (target == original && originals.ConnectionTrackingMax != null) {
-                originals.ConnectionTrackingMax = null;
-                originals.ConnectionTrackingMaxApplied = null;
-                await SaveOriginals(originals, cancellationToken).Vhc();
-            }
+            originals.ConnectionTrackingMax = target != original ? original : null;
+            originals.ConnectionTrackingMaxApplied = target != original ? target : null;
+            await SaveOriginals(originals, cancellationToken).Vhc();
         }
         catch (OperationCanceledException) {
             throw;
@@ -95,30 +79,25 @@ internal class OsSettingRestorer(IOsConfigurationProvider osConfigurationProvide
     public async Task SetConnectionTrackingTcpIdleTimeout(TimeSpan? timeout, CancellationToken cancellationToken)
     {
         try {
+            TimeSpan? wholeTimeout = timeout != null ? TimeSpan.FromSeconds((long)timeout.Value.TotalSeconds) : null;
+            if (wholeTimeout != null)
+                ArgumentOutOfRangeException.ThrowIfLessThan(wholeTimeout.Value, TimeSpan.FromSeconds(1), nameof(timeout));
+
             var current = await osConfigurationProvider.GetConnectionTrackingTcpIdleTimeout(cancellationToken).Vhc();
             var originals = await LoadOriginals(cancellationToken).Vhc();
             var original = originals.ConnectionTrackingTcpIdleTimeoutApplied == current
                 ? originals.ConnectionTrackingTcpIdleTimeout ?? current
                 : current;
-            var target = timeout != null ? TimeSpan.FromSeconds((long)timeout.Value.TotalSeconds) : original;
-
-            if (target != original) {
-                originals.ConnectionTrackingTcpIdleTimeout = original;
-                originals.ConnectionTrackingTcpIdleTimeoutApplied = target;
-                await SaveOriginals(originals, cancellationToken).Vhc();
-            }
-
+            var target = wholeTimeout ?? original;
             if (target != current) {
                 VhLogger.Instance.LogInformation(
                     "Updating ConnectionTrackingTcpIdleTimeout. From: {Current}, To: {Target}", current, target);
                 await osConfigurationProvider.SetConnectionTrackingTcpIdleTimeout(target, cancellationToken).Vhc();
             }
 
-            if (target == original && originals.ConnectionTrackingTcpIdleTimeout != null) {
-                originals.ConnectionTrackingTcpIdleTimeout = null;
-                originals.ConnectionTrackingTcpIdleTimeoutApplied = null;
-                await SaveOriginals(originals, cancellationToken).Vhc();
-            }
+            originals.ConnectionTrackingTcpIdleTimeout = target != original ? original : null;
+            originals.ConnectionTrackingTcpIdleTimeoutApplied = target != original ? target : null;
+            await SaveOriginals(originals, cancellationToken).Vhc();
         }
         catch (OperationCanceledException) {
             throw;
@@ -128,11 +107,14 @@ internal class OsSettingRestorer(IOsConfigurationProvider osConfigurationProvide
         }
     }
 
-    // a setting the machine lacks is no failure of the server's
+    // a setting the machine lacks, or a value that is not valid, is no failure of the server's
     private static void LogFailure(string setting, Exception ex)
     {
         if (ex is NotSupportedException)
             VhLogger.Instance.LogInformation("{Setting} is left as it is, as this machine does not support it. {Message}",
+                setting, ex.Message);
+        else if (ex is ArgumentException)
+            VhLogger.Instance.LogWarning("{Setting} is left as it is, as its value is not valid. {Message}",
                 setting, ex.Message);
         else
             VhLogger.Instance.LogWarning(ex, "Could not set {Setting}.", setting);
@@ -149,7 +131,8 @@ internal class OsSettingRestorer(IOsConfigurationProvider osConfigurationProvide
     {
         if (originals is
             { TcpCongestionControl: null, ConnectionTrackingMax: null, ConnectionTrackingTcpIdleTimeout: null }) {
-            File.Delete(_filePath);
+            if (File.Exists(_filePath))
+                File.Delete(_filePath);
             return;
         }
 

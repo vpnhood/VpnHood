@@ -69,6 +69,17 @@ internal class ClientPacketHandler(
     {
         var destinationEndPoint = ipPacket.GetDestinationEndPoint();
 
+        // A TCP connection that the TCP host takes while a domain rule is on is decided once its name is read
+        // (ClientStreamHandler), by the same filters and overrides in the same order: decided here, an IP block
+        // dropped it before the domain rule that includes it was asked, where a QUIC flow's name is asked first, and
+        // the documented design has a domain include go past every IP gate
+        if (ipPacket.Protocol == IpProtocol.Tcp && domainFilteringService.IsEnabled &&
+            (ipPacket.IsV6 ? UseTcpForwardingIpV6 : UseTcpForwardingIpV4)) {
+            IsSecureDnsDetected |= DnsPorts.IsSecureDns(ipPacket.Protocol, destinationEndPoint.Port);
+            clientTcpHost.ProcessOutgoingPacket(ipPacket);
+            return;
+        }
+
         // apply net filter
         if (filterAction == FilterAction.Default && netFilter.IpFilter != null)
             filterAction = netFilter.IpFilter.Process(ipPacket.Protocol, destinationEndPoint);
@@ -77,21 +88,9 @@ internal class ClientPacketHandler(
         if (filterAction == FilterAction.Block)
             throw new NetFilterException("A packet has been dropped by the domain filter.");
 
-        // force by passthrough for ad setting. The packet will be forced to exclude regardless of the domain filter result and net filter result.
-        // PassthroughForAd is enabled, DNS packets should go through the tunnel and ad traffic should not go
-        // through the tunnel, to prevent trigger red flags on ad providers
-        if (ShouldPassthroughForAd(ipPacket))
-            filterAction = FilterAction.Exclude;
-
-        // Keep DNS inside the tunnel (SplitDnsMode): a resolver reachable around the VPN leaks every name the
-        // user looks up and lets the local network answer for them, so DNS overrides any split that excluded
-        // it. Deliberately AFTER the block check — an address the user chose to drop stays dropped — and after
-        // the ad passthrough, so a passthrough exemption can never be undone by a later stage.
-        // No routability check here: a destination the server does not route is the server's to drop — dead
-        // inside the tunnel is a visible failure, and the server may still choose to serve DNS. Either way
-        // the query never travels outside.
-        if (ShouldForceDnsToTunnel(destinationEndPoint))
-            filterAction = FilterAction.Include;
+        // an ad's passthrough, and DNS kept inside, as the stream path has them
+        filterAction = ClientFilterOverrides.Apply(filterAction, destinationEndPoint, passthroughState.PassthroughForAd,
+            _dnsServers, splitDnsMode);
 
         // force by ICMP echo request. The forwarding manager can not handle ICMP, so echo requests are forced
         // through the tunnel even when a gate excluded them.
@@ -183,16 +182,6 @@ internal class ClientPacketHandler(
     }
 
 
-    // Which DNS traffic SplitDnsMode forces through the tunnel. Detection is by destination port — the only
-    // DNS signal available at this level — and protocol-agnostic on purpose: 53 is DNS over both udp and tcp,
-    // 853 is DoT. DoH is undetectable here, on 443 it is indistinguishable from any other https flow.
-    // No LAN exception: whether the local network is captured at all is the device include set's business;
-    // any DNS packet that reaches this handler must be tunneled or dropped, never let around the tunnel.
-    private bool ShouldForceDnsToTunnel(IpEndPointValue destinationEndPoint)
-    {
-        return splitDnsMode is SplitDnsMode.IncludeAll && DnsPorts.IsDnsPort(destinationEndPoint.Port);
-    }
-
     private bool ShouldDropUdpPacket(UdpPacket udpPacket)
     {
         // Always allow DNS packets, even if DropUdp is enabled, to make sure we can resolve the domain and by pass regional ad blockers
@@ -203,20 +192,5 @@ internal class ClientPacketHandler(
             return true;
 
         return DropQuic && udpPacket.DestinationPort is 80 or 443;
-    }
-
-    private bool ShouldPassthroughForAd(IpPacket ipPacket)
-    {
-        if (!passthroughState.PassthroughForAd)
-            return false;
-
-        // Passthrough for ad is enabled, DNS packets should go through the tunnel and ad traffic should not go through the tunnel,
-        // but dns packets should not be treated as ad traffic, to make sure we can resolve the domain and by pass regional ad blockers.
-        // DNS on ANY transport (udp/tcp 53, DoT, DoQ) is exempt, and so is any packet to a configured resolver.
-        var isDnsPacket =
-            DnsPorts.IsDnsPort(ipPacket.GetDestinationEndPoint().Port) ||
-            _dnsServers.Contains(ipPacket.DestinationAddressValue);
-
-        return !isDnsPacket;
     }
 }

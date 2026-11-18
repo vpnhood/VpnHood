@@ -58,6 +58,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     // up the channel lock at once rather than at its connect timeout
     private CancellationTokenSource _networkCts = new();
     private bool _disposed;
+    private int _filterGeneration;
     private ChannelProtocol _channelProtocol;
     private ChannelProtocol _oldChannelProtocol;
     private bool _useTcpForwarding;
@@ -161,6 +162,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             forwardingManager: _forwardingManager,
             netFilter: _netFilter,
             streamForwardingBufferSize: Config.Transport.StreamForwardingBufferSize,
+            dnsServers: Config.DnsConfig.DnsServers,
+            splitDnsMode: options.SplitDnsMode,
             passthroughState: PassthroughState);
 
         // ends the device's TCP connections, for TCP forwarding and for traffic excluded from the VPN
@@ -204,6 +207,14 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // apply config, and again whenever Split Domains is turned on or off while connected
         UpdateConfig();
         _domainFilteringService.IsEnabledChanged += DomainFilteringService_IsEnabledChanged;
+
+        // A rule that changes while connected ends the TCP connections, so the apps' new ones follow it: with a domain
+        // rule on, a TCP connection is decided once, by its name first (ClientPacketHandler), and its packets meet no
+        // IP gate that a new block would stop
+        if (_netFilter.IpFilter != null)
+            _netFilter.IpFilter.Changed += NetFilter_Changed;
+        if (_netFilter.DomainFilter != null)
+            _netFilter.DomainFilter.Changed += NetFilter_Changed;
     }
 
     public async Task Start(CancellationToken cancellationToken)
@@ -413,6 +424,28 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private void DomainFilteringService_IsEnabledChanged(object? sender, EventArgs e)
     {
         UpdateConfig();
+    }
+
+    // The rules' generation: a connection that its stream decided under one does not go out under another
+    // (ClientStreamHandler)
+    internal int FilterGeneration => Volatile.Read(ref _filterGeneration);
+
+    private void NetFilter_Changed(object? sender, EventArgs e)
+    {
+        if (_disposed)
+            return;
+
+        // the generation first, so a connection decided before it and not out yet stops, as the reset below does not
+        // reach it
+        Interlocked.Increment(ref _filterGeneration);
+        VhLogger.Instance.LogInformation("The filter rules have changed, so the TCP connections end, and new ones follow the new rules.");
+        try {
+            DropCurrentConnections();
+        }
+        catch (Exception ex) {
+            // the connections decided by the old rules would go on: the session ends instead
+            _ = DisposeAsync(ex);
+        }
     }
 
     // The host moved to other networks: the tunnel's connections from the old ones are dead, yet an OS may keep
@@ -856,6 +889,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _clientTcpHost.PacketReceived -= ClientTcpHostPacketReceived;
         _forwardingManager.PacketReceived -= Forwarder_PacketReceived;
         _domainFilteringService.IsEnabledChanged -= DomainFilteringService_IsEnabledChanged;
+        if (_netFilter.IpFilter != null)
+            _netFilter.IpFilter.Changed -= NetFilter_Changed;
+        if (_netFilter.DomainFilter != null)
+            _netFilter.DomainFilter.Changed -= NetFilter_Changed;
 
         PassthroughState.PassthroughForAd = false;
 

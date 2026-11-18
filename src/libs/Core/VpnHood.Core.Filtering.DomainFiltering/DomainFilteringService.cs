@@ -24,6 +24,10 @@ public class DomainFilteringService : IDisposable
 {
     private static readonly TimeSpan UdpFlowTimeout = TimeSpan.FromMinutes(2);
 
+    // Long enough for a slow device's ClientHello, whose name a shorter wait would miss, so its connection would pass
+    // the domain rules; short enough for a protocol in which the server speaks first, whose start waits it out
+    private static readonly TimeSpan StreamSniTimeout = TimeSpan.FromSeconds(1);
+
     private readonly IDomainFilter _domainFilter;
     private readonly QuicSniFilteringService _quicSniService; // Quic only, don't try Tcp SNI extraction by packet
     private readonly EventId _sniEventId;
@@ -97,10 +101,15 @@ public class DomainFilteringService : IDisposable
     /// <remarks>
     /// <para>
     /// A flow is known by the packet's source and its destination, each an address and a port: once decided, its
-    /// verdict answers every later packet between them, until a periodic sweep finds the flow unused for two minutes. A
-    /// flow whose first packets are not QUIC gets <see cref="FilterAction.Default"/>. A held packet is the service's
-    /// until a later result releases it: route nothing for a result that needs more, and route the released packets
-    /// before the packet given. A flow forgotten with packets held leaves them undisposed.
+    /// verdict answers every later packet between them, until a periodic sweep finds the flow unused for two minutes,
+    /// or another QUIC connection begins on them, whose name is read anew: an Initial that decrypts with the keys of
+    /// its own connection ID, under another ID. A flow whose first packet is no client Initial of QUIC version 1 or 2
+    /// that decrypts with its own keys, as any UDP but QUIC, gets <see cref="FilterAction.Default"/> at once, and so
+    /// does one whose whole ClientHello holds no name. A QUIC flow whose name is not found within three datagrams, or
+    /// by a datagram that comes after a second, gets <see cref="FilterAction.Block"/>, as a lost or late part would
+    /// otherwise let its name pass the rules; until such a datagram comes, the flow's first packets stay held. A held
+    /// packet is the service's until a later result releases it: route nothing for a result that needs more, and route
+    /// the released packets before the packet given. A flow forgotten with packets held leaves them undisposed.
     /// </para>
     /// <para>
     /// A flow whose name is found counts in <see cref="QuicStat"/>, and is recorded in <see cref="DomainObserver"/>
@@ -154,12 +163,21 @@ public class DomainFilteringService : IDisposable
     /// </returns>
     /// <remarks>
     /// It reads the stream's first bytes, up to the buffer size the service was made with: one read, and, where they
-    /// begin a TLS ClientHello, more reads until its record is in or the stream ends, as a large ClientHello comes in
-    /// pieces. It waits for those bytes with no time limit of its own. A stream with no name in them gets the verdict
-    /// of a null name. A name found counts in <see cref="TcpStat"/>, and is recorded in <see cref="DomainObserver"/>
-    /// when the service tracks names.
+    /// begin a TLS ClientHello, more reads until all the records that hold it are in, as a large ClientHello comes in
+    /// pieces and may take more than one record. The reads have one second in all. A stream that has sent nothing by
+    /// then, as one of a protocol in which the server speaks first (SMTP, FTP, MySQL), gets the verdict of a null name
+    /// with no bytes read, so its start waits that second out. A ClientHello begun and not complete by then, or when
+    /// the stream ends or the buffer is full, fails the call, as its name may be in the part not read. A stream with
+    /// no name in its bytes gets the verdict of a null name. A name found counts in <see cref="TcpStat"/>, and is
+    /// recorded in <see cref="DomainObserver"/> when the service tracks names.
     /// </remarks>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="TimeoutException">
+    /// The stream began a TLS ClientHello and did not complete it within the second, so its name is not known.
+    /// </exception>
+    /// <exception cref="InvalidDataException">
+    /// The stream began a TLS ClientHello that it ended, or that outgrew the buffer, before it was complete.
+    /// </exception>
     public async Task<StreamSniFilterResult> ProcessStream(Stream tlsStream, IPEndPoint remoteEndPoint,
         CancellationToken cancellationToken)
     {
@@ -168,7 +186,8 @@ public class DomainFilteringService : IDisposable
             return StreamSniFilterResult.Passthrough();
 
         // extract SNI
-        var sniData = await StreamSniExtractor.ExtractSni(tlsStream, _sniEventId, _tlsBufferSize, cancellationToken).Vhc();
+        var sniData = await StreamSniExtractor.ExtractSni(tlsStream, _sniEventId, _tlsBufferSize, StreamSniTimeout,
+            cancellationToken).Vhc();
 
         // no SNI
         var res = new StreamSniFilterResult {

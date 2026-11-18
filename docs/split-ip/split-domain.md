@@ -7,7 +7,10 @@ rebuild mechanics) is in [README.md](README.md); the db format is in the
 
 Domains are matched on the **extracted SNI** (TLS ClientHello over TCP, QUIC initial). That makes the
 domain gate inherently partial: traffic that carries no readable domain (plain TCP/UDP, raw-IP
-connections) returns `Default` from the domain pipe and is decided by the IP gates alone.
+connections) returns `Default` from the domain pipe and is decided by the IP gates alone. A TCP connection
+whose app sends nothing in the first second is one of them: a mail, FTP or database client waits for its
+server to speak first, and the server is reached only after the verdict. A ClientHello begun and not
+complete within that second fails the connection rather than pass it unnamed.
 
 ## Sources
 
@@ -49,6 +52,12 @@ Within the db the most specific entry that matches decides, whichever set holds 
 another is an exception to it: `google.com` excluded with `mail.google.com` included sends mail through
 the tunnel and the rest of Google around it. Only between entries of the same domain is the order
 block > exclude > include.
+
+A flow whose name an entry matches takes that verdict whatever the IP gates say, TCP and QUIC alike: an
+include goes through the tunnel past an IP exclude or block, and an exclude goes around it past an IP
+block. The IP gates decide only a flow whose name matches no entry, or that has none. A TCP connection is
+decided once, when its name is read, so a rule that changes while connected ends the open TCP connections,
+and one still being set up does not go out; the apps' new ones follow it (`ClientSession`).
 
 Why the asymmetry: every packet has an IP, so IP gates can be pure vetoes; but a domain is *more
 specific* knowledge than an IP, and an exception to an IP-level exclusion can only be expressed by a

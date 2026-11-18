@@ -40,6 +40,28 @@ internal class QuicSniFilteringService(
         return true;
     }
 
+    // A client that keeps its socket may open another connection to the same server, as on a CDN's address that serves
+    // many names: an Initial that decrypts with the keys of its own connection ID, under another ID than the one the
+    // verdict is for. A long-header packet alone is looked at, so a flow's stream of short ones costs a byte's test,
+    // and an Initial's ID that did not decrypt is kept, so the client's later Initials, under the server's ID, cost a
+    // decryption once
+    protected override bool IsNewFlow(ReadOnlySpan<byte> payload, FlowInfo flowInfo, long nowTicks)
+    {
+        if (payload.Length == 0 || (payload[0] & 0x80) == 0 ||
+            !QuicSniExtractor.TryGetInitialConnectionId(payload, out var connectionId) ||
+            IsSameId(connectionId, flowInfo.ConnectionId) || IsSameId(connectionId, flowInfo.RejectedConnectionId))
+            return false;
+
+        if (QuicSniExtractor.IsAuthenticInitial(payload, nowTicks))
+            return true;
+
+        flowInfo.RejectedConnectionId = connectionId.ToArray();
+        return false;
+    }
+
+    private static bool IsSameId(ReadOnlySpan<byte> connectionId, byte[]? other) =>
+        other != null && connectionId.SequenceEqual(other);
+
     protected override PacketSniResult ExtractSni(
         ReadOnlySpan<byte> payload,
         object? state,
@@ -48,12 +70,15 @@ internal class QuicSniFilteringService(
         var quicState = state as QuicSniState;
         var result = QuicSniExtractor.TryExtractSniFromUdpPayload(payload, quicState, nowTicks);
 
-        if (result.DomainName != null)
-            return PacketSniResult.Found(result.DomainName);
-
         if (result is { NeedMore: true, State: not null })
             return PacketSniResult.Pending(result.State);
 
-        return PacketSniResult.NotFound;
+        return new PacketSniResult {
+            DomainName = result.DomainName,
+            NeedMore = false,
+            State = null,
+            IsIncomplete = result.IsIncomplete,
+            ConnectionId = result.ConnectionId
+        };
     }
 }

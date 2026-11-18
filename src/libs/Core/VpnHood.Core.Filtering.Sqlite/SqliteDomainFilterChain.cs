@@ -102,10 +102,13 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
     /// <summary>Decides what happens to a flow for a domain name, by the databases, then by the next stage.</summary>
     /// <param name="domain">The name, or <see langword="null"/>.</param>
     /// <returns>The first verdict other than <see cref="FilterAction.Default"/>, or <see cref="FilterAction.Default"/>.</returns>
+    /// <exception cref="ObjectDisposedException">The stage is disposed.</exception>
     public FilterAction Process(string? domain)
     {
         _swapLock.EnterReadLock();
         try {
+            // closed: the gates are gone, and Default would let a name they block pass; the lookup's flow is dropped
+            ObjectDisposedException.ThrowIf(_disposed, this);
             var result = _gates?.Process(domain) ?? FilterAction.Default;
             if (result != FilterAction.Default)
                 return result;
@@ -180,10 +183,10 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
 
     // no Changed on teardown: the whole pipe is going away, nothing is left to invalidate.
     // _swapLock is intentionally not disposed: a lookup racing the pipe teardown may still enter
-    // Process (and gets Default); the lock's wait handles are reclaimed by their finalizers
+    // Process (and fails there); the lock's wait handles are reclaimed by their finalizers
     /// <summary>
     /// Closes the databases, without raising <see cref="Changed"/>, and disposes the next stage when this stage was
-    /// made to. A lookup after it gets the next stage's verdict, or <see cref="FilterAction.Default"/>.
+    /// made to. A lookup after it throws <see cref="ObjectDisposedException"/>.
     /// </summary>
     public void Dispose()
     {

@@ -274,10 +274,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // (or SNI logging is forced). Nobody tells the client: it derives the answer from its own pipe
         // (IsEmpty) and re-derives whenever the pipe announces a change — rules appearing or vanishing
         // in a live gate swap toggle extraction with no outside caller.
+        // The read for a TCP connection's name holds a whole TLS record and its header, 16 KB, where a ClientHello that
+        // outgrows it fails its connection: a read of 4 KB, the prefetch's, missed a name past it, and a large
+        // ClientHello passed the domain rules
         _domainFilteringService = new DomainFilteringService(
             NetFilter.DomainFilter,
             sniEventId: GeneralEventId.Sni,
-            tlsBufferSize: TransportDefaults.PrefetchStreamBufferSize);
+            tlsBufferSize: 5 + 16 * 1024);
         var forceLogSni = options.ForceLogSni;
         _domainFilteringService.IsEnabled = forceLogSni || !NetFilter.DomainFilter.IsEmpty;
         NetFilter.DomainFilter.Changed += (_, _) =>

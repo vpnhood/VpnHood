@@ -99,6 +99,7 @@ public sealed class SqliteIpFilterChain : IIpFilter
     // but keeping next OUTSIDE the swap unit means a gate swap never touches it.
     /// <inheritdoc/>
     /// <remarks>The next stage decides first, then the databases, in the manifest's order.</remarks>
+    /// <exception cref="ObjectDisposedException">The stage is disposed.</exception>
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
         var result = _next?.Process(protocol, endPoint) ?? FilterAction.Default;
@@ -107,6 +108,9 @@ public sealed class SqliteIpFilterChain : IIpFilter
 
         _swapLock.EnterReadLock();
         try {
+            // closed: the gates are gone, and Default would let an address they block pass; the lookup's packet is
+            // dropped, its connection closed
+            ObjectDisposedException.ThrowIf(_disposed, this);
             return _gates?.Process(protocol, endPoint) ?? FilterAction.Default;
         }
         finally {
@@ -177,10 +181,11 @@ public sealed class SqliteIpFilterChain : IIpFilter
 
     // no Changed on teardown: the whole pipe is going away, nothing is left to invalidate.
     // _swapLock is intentionally not disposed: a lookup racing the pipe teardown may still enter
-    // Process (and gets Default); the lock's wait handles are reclaimed by their finalizers
+    // Process (and fails there); the lock's wait handles are reclaimed by their finalizers
     /// <summary>
     /// Closes the databases, without raising <see cref="Changed"/>, and disposes the next stage when this stage was
-    /// made to. A lookup after it gets the next stage's verdict, or <see cref="FilterAction.Default"/>.
+    /// made to. A lookup after it gets the next stage's verdict where that is not <see cref="FilterAction.Default"/>,
+    /// and otherwise throws <see cref="ObjectDisposedException"/>.
     /// </summary>
     public void Dispose()
     {

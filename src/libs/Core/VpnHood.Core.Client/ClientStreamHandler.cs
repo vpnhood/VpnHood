@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;
@@ -30,10 +31,13 @@ internal class ClientStreamHandler(
     TimeSpan tcpConnectTimeout,
     NetFilter netFilter,
     TransferBufferSize streamForwardingBufferSize,
+    IReadOnlyList<IPAddress> dnsServers,
+    SplitDnsMode splitDnsMode,
     PassthroughState passthroughState)
 {
     private int _processingCount;
     private readonly ClientHostStat _stat = new();
+    private readonly IpAddressValue[] _dnsServers = dnsServers.Select(x => x.ToValue()).ToArray();
 
     public IClientHostStat Stat => _stat;
 
@@ -44,6 +48,9 @@ internal class ClientStreamHandler(
             // check cancellation
             Interlocked.Increment(ref _processingCount);
             cancellationToken.ThrowIfCancellationRequested();
+
+            // the rules this connection is decided by: a change of them before it goes out stops it
+            var filterGeneration = session.FilterGeneration;
 
             // create a scope for the logger
             VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
@@ -57,12 +64,14 @@ internal class ClientStreamHandler(
                 (streamConnection, filterAction) = await ApplySniFiltering(streamConnection, hostEndPoint, cancellationToken).Vhc();
 
             // Filter by IP if SNI filtering result is default
+            var hostEndPointValue = hostEndPoint.ToValue();
             if (filterAction is FilterAction.Default && netFilter.IpFilter != null)
-                filterAction = netFilter.IpFilter.Process(IpProtocol.Tcp, hostEndPoint.ToValue());
+                filterAction = netFilter.IpFilter.Process(IpProtocol.Tcp, hostEndPointValue);
 
-            // PassthroughForAd overrides filter result to exclude if the host is in ad list
-            if (passthroughState.PassthroughForAd)
-                filterAction = FilterAction.Exclude;
+            // an ad's passthrough, and DNS kept inside, as the packet path has them: this path decides again whatever
+            // the packet path chose for the connection's packets
+            filterAction = ClientFilterOverrides.Apply(filterAction, hostEndPointValue,
+                passthroughState.PassthroughForAd, _dnsServers, splitDnsMode);
 
             switch (filterAction) {
                 case FilterAction.Block:
@@ -71,14 +80,14 @@ internal class ClientStreamHandler(
                 case FilterAction.Exclude:
                     // Create and add to exclude channel
                     VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel, "Exclude a Host from VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
-                    await AddPassthruChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
+                    await AddPassthruChannel(streamConnection, hostEndPoint, filterGeneration, cancellationToken).Vhc();
                     _stat.TcpPassthruCount++;
                     break;
 
                 default: // include or default — tunnel unless a gate vetoed (fail-closed)
                     // Create and add to tunnel channel
                     VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
-                    await AddTunnelChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
+                    await AddTunnelChannel(streamConnection, hostEndPoint, filterGeneration, cancellationToken).Vhc();
                     _stat.TcpTunnelledCount++;
                     break;
             }
@@ -88,7 +97,16 @@ internal class ClientStreamHandler(
         }
     }
 
-    private async Task AddPassthruChannel(IStreamConnection streamConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+    // A connection decided by rules that changed since does not go out: the change ended the connections open then
+    // (ClientSession), and this one, still being set up, would go on by the old rules
+    private void ThrowIfRulesChanged(int filterGeneration)
+    {
+        if (session.FilterGeneration != filterGeneration)
+            throw new NetFilterException("The filter rules changed while the connection was decided.");
+    }
+
+    private async Task AddPassthruChannel(IStreamConnection streamConnection, IPEndPoint hostEndPoint,
+        int filterGeneration, CancellationToken cancellationToken)
     {
         // apply NetMapper
         if (netFilter.IpMapper?.ToHost(IpProtocol.Tcp, hostEndPoint.ToValue(), out var newEndPoint) == true)
@@ -108,6 +126,7 @@ internal class ClientStreamHandler(
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
 
         // connect to host
+        ThrowIfRulesChanged(filterGeneration);
         var tcpClient = socketFactory.CreateTcpClient(hostEndPoint);
         try {
             await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
@@ -131,7 +150,8 @@ internal class ClientStreamHandler(
     }
 
     private async Task AddTunnelChannel(
-        IStreamConnection streamConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+        IStreamConnection streamConnection, IPEndPoint hostEndPoint, int filterGeneration,
+        CancellationToken cancellationToken)
     {
         if (hostEndPoint.IsV6 && !session.Status.IsIpV6SupportedByServer)
             throw new Exception("IPv6 is not supported by server.");
@@ -160,6 +180,7 @@ internal class ClientStreamHandler(
             await trafficMeter.ThrottleSendAsync(initContents.Length, cancellationToken).Vhc();
 
         // read the response
+        ThrowIfRulesChanged(filterGeneration);
         var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
         var requestResult = await session.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
         try {

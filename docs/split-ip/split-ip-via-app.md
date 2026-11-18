@@ -36,7 +36,8 @@ no filter.
 - **exclude** — members bypass the tunnel (`Exclude`). Checked before the include set, so an address in
   both is excluded — the same outcome the old `All ∩ includes − excludes` merge produced.
 - **block** — members are dropped entirely (`Block`). Superior to both other sets, so a blocked address
-  is dropped even if the include set contains it.
+  is dropped even if the include set contains it. Only a flow whose name a split-domain entry matches goes
+  past it, by that entry's verdict ([split-domain](split-domain.md)).
 
 Each table answers "what did the user write", which makes the db directly inspectable, and the build is
 a plain parse-and-insert per file. No inversion rule applies here (unlike

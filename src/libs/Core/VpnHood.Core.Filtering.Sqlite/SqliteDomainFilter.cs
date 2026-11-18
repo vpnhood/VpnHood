@@ -41,7 +41,8 @@ namespace VpnHood.Core.Filtering.Sqlite;
 /// <para>
 /// The database is opened read-only when the stage is made and held until its disposal, so it stays readable while a
 /// manifest write deletes its file; which of its sets have rows is read once then, as it does not change. All
-/// threads' lookups share its one connection, one at a time; a lookup after the disposal finds no member.
+/// threads' lookups share its one connection, one at a time; a lookup after the disposal throws
+/// <see cref="ObjectDisposedException"/>, as an answer of "no member" would let a blocked name pass.
 /// </para>
 /// </remarks>
 public sealed class SqliteDomainFilter : IDomainFilter
@@ -122,8 +123,10 @@ public sealed class SqliteDomainFilter : IDomainFilter
     /// The verdict of the most specific entry that matches the name, or else the next stage's;
     /// <see cref="FilterAction.Default"/> for a null, empty or white-space name, which the next stage is not asked about.
     /// </returns>
+    /// <exception cref="ObjectDisposedException">The stage is disposed.</exception>
     public FilterAction Process(string? domain)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var normalizedDomain = DomainUtils.NormalizeDomain(domain);
         if (normalizedDomain.Length == 0)
             return FilterAction.Default;
@@ -139,10 +142,9 @@ public sealed class SqliteDomainFilter : IDomainFilter
     private FilterAction? FindMostSpecific(string invertedDomain)
     {
         lock (_readerLock) {
-            // teardown race: a lookup that loses the race to Dispose finds no member instead of touching the
-            // disposed connection
-            if (_disposed)
-                return null;
+            // teardown race: a lookup that loses the race to Dispose fails rather than touch the disposed
+            // connection, or find no member, which would let a blocked name pass; its flow is dropped
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
             for (var length = invertedDomain.Length; length > 0; length = invertedDomain.LastIndexOf('.', length - 1)) {
                 var candidate = invertedDomain[..length];

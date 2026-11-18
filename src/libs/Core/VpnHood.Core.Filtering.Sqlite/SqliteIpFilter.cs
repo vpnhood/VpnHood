@@ -37,7 +37,8 @@ namespace VpnHood.Core.Filtering.Sqlite;
 /// <para>
 /// The database is opened read-only when the stage is made and held until its disposal, so it stays readable while a
 /// manifest write deletes its file; which of its sets have rows is read once then, as it does not change. All
-/// threads' lookups share its one connection, one at a time; a lookup after the disposal finds no member.
+/// threads' lookups share its one connection, one at a time; a lookup after the disposal throws
+/// <see cref="ObjectDisposedException"/>, as an answer of "no member" would let a blocked address pass.
 /// </para>
 /// </remarks>
 public sealed class SqliteIpFilter : IIpFilter
@@ -104,8 +105,10 @@ public sealed class SqliteIpFilter : IIpFilter
 
     /// <inheritdoc/>
     /// <remarks>The next stage decides first; see the class's remarks for the order of the sets.</remarks>
+    /// <exception cref="ObjectDisposedException">The stage is disposed.</exception>
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var result = _next?.Process(protocol, endPoint) ?? FilterAction.Default;
         if (result != FilterAction.Default)
             return result;
@@ -129,10 +132,10 @@ public sealed class SqliteIpFilter : IIpFilter
     private bool Contains(FilterAction action, IpAddressValue address)
     {
         lock (_readerLock) {
-            // teardown race: a lookup that loses the race to Dispose answers "not a member" instead of
-            // touching the disposed connection
-            if (_disposed)
-                return false;
+            // teardown race: a lookup that loses the race to Dispose fails rather than touch the disposed
+            // connection, or answer "not a member", which would let a blocked address pass and take an included one
+            // out of the tunnel; its packet is dropped, its connection closed
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
             var reader = _sharedReader;
             if (address.IsV4) {

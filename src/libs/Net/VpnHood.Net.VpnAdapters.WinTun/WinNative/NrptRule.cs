@@ -5,18 +5,19 @@ using Microsoft.Win32;
 namespace VpnHood.Net.VpnAdapters.WinTun.WinNative;
 
 // A rule of Windows' name resolution policy (NRPT) for every name, as Add-DnsClientNrptRule writes it: the DNS client
-// asks only its servers, within a moment of the write. Rules of Group Policy, where there are any, replace every
-// local one.
+// asks only its servers, within a moment of the write. A list of Group Policy, where there is one, replaces every
+// local rule, an empty list too, as a GPO leaves once its rules are removed (seen on Windows 11: the effective policy
+// is empty while the local rule is there).
 [SupportedOSPlatform("windows")]
 internal static class NrptRule
 {
     private const string LocalRulesPath = @"SYSTEM\CurrentControlSet\Services\Dnscache\Parameters\DnsPolicyConfig";
     private const string GroupPolicyRulesPath = @"SOFTWARE\Policies\Microsoft\Windows NT\DNSClient\DnsPolicyConfig";
 
-    public static bool HasGroupPolicyRules {
+    public static bool IsSetByGroupPolicy {
         get {
             using var key = Registry.LocalMachine.OpenSubKey(GroupPolicyRulesPath);
-            return key?.SubKeyCount > 0;
+            return key != null;
         }
     }
 

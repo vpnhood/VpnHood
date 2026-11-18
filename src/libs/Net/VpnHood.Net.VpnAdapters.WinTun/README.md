@@ -43,8 +43,9 @@ await adapter.Start(new VpnAdapterOptions {
   goes on from here: sending packets to the host, and stopping.
 - A start makes the interface and sets its addresses, routes, MTU and metric through Windows' IP Helper API. Its DNS
   servers come with a Name Resolution Policy Table (NRPT) rule that makes them the only ones Windows asks, as
-  Windows otherwise asks every adapter's servers at once; Group Policy's own NRPT rules override it, which the
-  adapter logs.
+  Windows otherwise asks every adapter's servers at once; a narrower local rule, as another VPN's for its own
+  domain, still sends that domain's names to its own servers. An NRPT list of Group Policy overrides the rule, even
+  an empty one, which the adapter logs as a warning.
 - For a server, `UseNat` translates the virtual IPv4 network to the host's address through WinNAT; WinNAT has no
   IPv6. There is no app filter.
 - `WinTunVpnAdapter.BuildGuidFromName` gives the interface's GUID for a name, the same at every start, so a kill

@@ -33,8 +33,9 @@ namespace VpnHood.Net.VpnAdapters.WinTun;
 /// </para>
 /// <para>
 /// Windows asks every adapter's DNS servers at once, whatever the routes, so a start that sets DNS servers also adds a
-/// Name Resolution Policy Table (NRPT) rule that makes the tunnel's servers the only ones; Group Policy's own NRPT
-/// rules override it, which the adapter logs. It has no app filter, and its NAT translates IPv4 only.
+/// Name Resolution Policy Table (NRPT) rule that makes the tunnel's servers the only ones, but for the names of a
+/// narrower local rule, as another VPN's for its own domain; an NRPT list of Group Policy overrides it, even an empty
+/// one, which the adapter logs as a warning. It has no app filter, and its NAT translates IPv4 only.
 /// </para>
 /// </remarks>
 /// <exception cref="ArgumentOutOfRangeException">
@@ -465,11 +466,17 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
     /// <inheritdoc/>
     /// <remarks>
     /// For each IP version that has servers, they replace the interface's own, through the IP Helper API from Windows 10
-    /// 2004, through PowerShell before it. Then an NRPT rule makes them the only servers Windows asks, unless Group
-    /// Policy sets NRPT rules of its own, which is logged: Windows asks every adapter's servers at once, each through
-    /// its own adapter whatever the routes, often a router outside the tunnel. With no servers, the rule is removed,
-    /// and the interface's settings are left as they are.
+    /// 2004, through PowerShell before it. Then an NRPT rule makes them the only servers Windows asks, but for the
+    /// names of a narrower local rule, as another VPN's for its own domain, and unless Group Policy has an NRPT list
+    /// of its own, which replaces every local rule, an empty list too: Windows then asks every
+    /// adapter's servers at once, each through its own adapter whatever the routes, often a router outside the
+    /// tunnel. That is logged as a warning, and the start goes on. With no servers, the rule is removed, and the
+    /// interface's settings are left as they are; under <see cref="VpnAdapterOptions.UseExclusiveDns"/> the start
+    /// fails then. A list that Group Policy sets once the adapter is up is not looked for.
     /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// There are no servers under <see cref="VpnAdapterOptions.UseExclusiveDns"/>.
+    /// </exception>
     /// <exception cref="Win32Exception">Windows refused the servers, or PowerShell could not be started.</exception>
     /// <exception cref="ExternalException">PowerShell's command failed, before Windows 10 2004.</exception>
     /// <exception cref="OperationCanceledException">
@@ -479,6 +486,12 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
     protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
         CancellationToken cancellationToken)
     {
+        // with none of the VPN's servers to ask, Windows goes on asking the other adapters'
+        if (dnsServers.Count == 0 && UseExclusiveDns)
+            throw new InvalidOperationException(
+                "Could not keep DNS inside the VPN: it has no DNS server that this connection can reach. " +
+                "To connect anyway, choose Allow Bypass VPN in the app's Split DNS settings.");
+
         foreach (var addressFamily in new[] { AddressFamily.InterNetwork, AddressFamily.InterNetworkV6 }) {
             var servers = dnsServers.Where(ip => ip.AddressFamily == addressFamily).ToArray();
             if (servers.Length == 0)
@@ -500,10 +513,14 @@ public class WinTunVpnAdapter(WinTunVpnAdapterSettings adapterSettings)
             return;
         }
 
-        if (NrptRule.HasGroupPolicyRules)
+        // Group Policy's NRPT list replaces every local rule, so the adapter's rule does nothing there: Windows goes on
+        // asking the other adapters' servers, each through its own adapter. Said, and the start goes on (owner,
+        // 2026-11-17): a VPN that says what it could not keep inside serves the user better than one that will not
+        // connect.
+        if (NrptRule.IsSetByGroupPolicy)
             VhLogger.Instance.LogWarning(
-                "Group Policy sets DNS rules (NRPT) on this device, so Windows ignores the VPN's, and asks the other " +
-                "adapters' DNS servers too, outside the VPN.");
+                "Group Policy manages the DNS rules (NRPT) of this device, so Windows ignores the VPN's, and asks the " +
+                "other adapters' DNS servers too, outside the VPN.");
 
         NrptRule.Set(_adapterGuid, dnsServers, AdapterName);
     }

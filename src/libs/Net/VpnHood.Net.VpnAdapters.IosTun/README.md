@@ -19,8 +19,9 @@ dotnet add package VpnHood.Net.VpnAdapters.IosTun
 - A start gathers the addresses, routes, DNS servers and MTU, and applies them all at once with
   `SetTunnelNetworkSettings`. iOS hands the packets the device sends in batches, through callbacks; the adapter
   writes in batches of up to 32.
-- When the network seems to have no IPv6, an IPv6 route shorter than /64 brings `::/0` and `2000::/3` into the
-  tunnel, as iOS was seen to hold back AAAA lookups otherwise.
+- When the network seems to have no IPv6, IPv6 routes that take every global address (`2000::/3`) bring `::/0` and
+  `2000::/3` into the tunnel, as iOS was seen to hold back AAAA lookups otherwise. Routes that take a part of them,
+  as a split tunnel's, bring neither, so the split holds.
 - The adapter cannot protect a socket; the extension's own sockets were seen to go around its tunnel on an Apple TV.
   There is no NAT, no metric, and no app filter, which iOS leaves to device management.
 - `GetPrimaryAdapterDnsServers` gives the network's DNS servers, as last read before an open applied the tunnel's

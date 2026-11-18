@@ -156,10 +156,11 @@ public class IosVpnAdapter(
     /// address, or <c>192.0.2.1</c>: iOS refuses settings whose remote address is not an IP address.
     /// </para>
     /// <para>
-    /// When the tunnel has an IPv6 address and an IPv6 route shorter than /64, while the adapter found no IPv6 address
-    /// on the network (<see cref="TunVpnAdapter.IsIpVersionSupported"/>), <c>::/0</c> and <c>2000::/3</c> join the
-    /// routes, as iOS was seen to hold back AAAA lookups otherwise. Routes of /64 or narrower bring neither, so a split
-    /// tunnel stays split, and iOS may then hold back AAAA lookups for them on a network with no IPv6.
+    /// When the tunnel has an IPv6 address and its IPv6 routes take every global address (<c>2000::/3</c>), while the
+    /// adapter found no IPv6 address on the network (<see cref="TunVpnAdapter.IsIpVersionSupported"/>), <c>::/0</c>
+    /// and <c>2000::/3</c> join the routes, as iOS was seen to hold back AAAA lookups otherwise. Routes that take a
+    /// part of the global addresses, as a split tunnel's, bring neither, whatever their lengths, so a split tunnel
+    /// stays split, and iOS may then hold back AAAA lookups on a network with no IPv6.
     /// </para>
     /// </remarks>
     /// <exception cref="NSErrorException">iOS refused the settings.</exception>
@@ -222,30 +223,10 @@ public class IosVpnAdapter(
 
             using (ipv6Settings) {
 
-                // iOS requires a global default IPv6 route (::/0) in IncludedRoutes to convince the
-                // routing engine that general IPv6 internet access is available when the
-                // host physical link is IPv4-only. Without ::/0, iOS throttles or disables AAAA lookups.
-                // So we need to ignore our include list
-                // NOTE: On iOS, when there is no native IPv6, the default route ::/0 alone is not enough to convince the routing stack
-                // to send IPv6 traffic to the tunnel. We must also explicitly include a specific global unicast route (2000::/3).
-                // SPLIT-TUNNEL FIX (device-measured 2026-06-10): only inject the global v6 routes when core
-                // actually asked for BROAD IPv6 coverage (a non-host include route). In route-level split
-                // mode the include list is just host routes (e.g. DNS /128s) — injecting ::/0 there silently
-                // dragged ALL IPv6 traffic (Safari prefers v6) into the tunnel, defeating the split.
-                // KNOWN CONSTRAINT: a /64-or-narrower include does not trigger injection, so on an
-                // IPv4-only link iOS may suppress AAAA and hostname-based connections into that subnet
-                // never try v6 (literal-IP connections still route). Do not "fix" this by loosening the
-                // threshold — that re-breaks the split; if it ever bites, core must signal broad-v6
-                // intent explicitly instead of the adapter inferring it from prefix lengths.
-                var wantsBroadV6 = _ipv6Routes.Any(r => r.PrefixLength < 64);
-                var injectGlobalV6 = !IsIpVersionSupported(IpVersion.IPv6) && wantsBroadV6;
-                IReadOnlyList<IpNetwork> includes = injectGlobalV6
-                    ? new[] { IpNetwork.AllV6, IpNetwork.AllGlobalUnicastV6 }
-                        .Where(inj => !_ipv6Routes.Any(r =>
-                            r.PrefixLength == inj.PrefixLength && r.Prefix.Equals(inj.Prefix)))
-                        .Concat(_ipv6Routes)
-                        .ToArray()
-                    : _ipv6Routes;
+                // with ::/0 and 2000::/3 where the network has no IPv6 and the routes take all the global addresses
+                // anyway, without which iOS holds back AAAA lookups; a split's routes stay as they are
+                var includes = IosTunRoutes.GetIpV6Routes(_ipv6Routes, IsIpVersionSupported(IpVersion.IPv6));
+                var injectGlobalV6 = includes.Count != _ipv6Routes.Count;
 
                 var includedRoutes = includes
                     .Select(r => new NEIPv6Route(r.Prefix.ToString(), r.PrefixLength))

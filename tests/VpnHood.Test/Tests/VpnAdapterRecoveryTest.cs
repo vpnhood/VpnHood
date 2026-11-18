@@ -197,6 +197,28 @@ public class VpnAdapterRecoveryTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_failure_found_in_a_run_that_has_ended_leaves_the_next_run_up()
+    {
+        using var adapter = new TestFaultyVpnAdapter(autoRestart: false);
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+        var firstRunId = adapter.CurrentRunId;
+        Assert.AreNotEqual(0, firstRunId);
+
+        // a look that began in the first run comes to its failure after the owner has stopped it and started it
+        // again: the failure was the first run's, whose host the new start has looked at anew
+        adapter.Stop();
+        await adapter.Start(CreateAdapterOptions(), TestCt);
+        Assert.AreNotEqual(firstRunId, adapter.CurrentRunId);
+        adapter.FailRun(new InvalidOperationException("Test: a failure of the first run."), firstRunId);
+        Assert.IsTrue(adapter.IsStarted);
+
+        // nor one found while no run was up, as in a start that had not yet brought the adapter up
+        adapter.FailRun(new InvalidOperationException("Test: a failure of no run."), runId: 0);
+        Assert.IsTrue(adapter.IsStarted);
+        Assert.AreEqual(2, adapter.StartCount);
+    }
+
+    [TestMethod]
     public async Task Stop_waits_for_the_reader()
     {
         using var adapter = new TestFaultyVpnAdapter(autoRestart: false);

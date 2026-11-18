@@ -30,6 +30,9 @@
 		     pairing is tested off the device -->
 		<Compile Include="..\..\src\libs\Net\VpnHood.Net.Quic.Ios\IosQuicDiagnostics.cs" Link="Quic\IosQuicDiagnostics.cs" />
 		<Compile Include="..\..\src\libs\Net\VpnHood.Net.Quic.Ios\IosQuicEventIds.cs" Link="Quic\IosQuicEventIds.cs" />
+
+		<!-- as is the iOS adapter's choice of its IPv6 routes -->
+		<Compile Include="..\..\src\libs\Net\VpnHood.Net.VpnAdapters.IosTun\IosTunRoutes.cs" Link="Device\IosTunRoutes.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -61,12 +61,22 @@ public class VpnAdapterOptions
     /// <see langword="false"/>.
     /// </summary>
     /// <remarks>
-    /// Only <c>LinuxTunVpnAdapter</c> reads it. On Linux, systemd-resolved sends a name under an interface's own DNS
-    /// domain, as a network's DHCP gives one, to that interface's servers and by that interface, whatever the routes
-    /// say: the network sees those names, and answers them. With this option the adapter takes the DNS domains off
-    /// the other interfaces when it starts, gives them back when it stops, and fails the start where the system
-    /// does not let it. The names under them are then asked of <see cref="DnsServers"/>, which do not know a name
-    /// that only the local network's server knows.
+    /// <para>
+    /// <c>LinuxTunVpnAdapter</c> and <c>WinTunVpnAdapter</c> read it, and fail a start with no
+    /// <see cref="DnsServers"/> under it. On Linux, systemd-resolved sends a name under an interface's own DNS domain,
+    /// as a network's DHCP gives one, to that interface's servers and by that interface, whatever the routes say: the
+    /// network sees those names, and answers them. With this option the adapter takes the DNS domains off the other
+    /// interfaces when it starts, keeps them off while it is up, and gives them back when it stops. The names under
+    /// them are then asked of <see cref="DnsServers"/>, which do not know a name that only the local network's server
+    /// knows. A domain the system does not let it take off, or a watch of the interfaces' DNS settings that the system
+    /// refuses, is logged as a warning, and the run goes on.
+    /// </para>
+    /// <para>
+    /// On Windows, the adapter's NRPT rule makes <see cref="DnsServers"/> the only servers with or without the
+    /// option, but for the names of a narrower local rule, as another VPN's for its own domain, which go to that
+    /// rule's servers. Where Group Policy has an NRPT list of its own, even an empty one, Windows ignores the rule,
+    /// which the adapter logs as a warning.
+    /// </para>
     /// </remarks>
     public bool UseExclusiveDns { get; init; }
 

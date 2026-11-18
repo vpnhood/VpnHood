@@ -28,7 +28,7 @@ public class LinuxTunAdapterAliasTest
         var ruleset = LinuxTunVpnAdapter.CreateDnsRedirectRuleset("VpnHoodClient", ["eth0"],
             [IpNetwork.Parse("192.168.1.20/24")],
             ["192.168.1.1", "10.0.0.2", "8.8.8.8", "127.0.0.53", "fe80::1%2", "not-an-address"],
-            [IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4")]);
+            [IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4")], hasIpV6: true);
 
         // the way in from the local network and this machine's own address stay as they are
         StringAssert.Contains(ruleset, "iifname { \"eth0\" } return\n");
@@ -45,14 +45,14 @@ public class LinuxTunAdapterAliasTest
         var localNetworks = new[] { IpNetwork.Parse("192.168.1.20/24"), IpNetwork.Parse("fd00:1::20/64") };
 
         var v4Only = LinuxTunVpnAdapter.CreateDnsRedirectRuleset("vh", ["eth0"], localNetworks, [],
-            [IPAddress.Parse("8.8.8.8")]);
+            [IPAddress.Parse("8.8.8.8")], hasIpV6: true);
         StringAssert.Contains(v4Only, "ip daddr { 192.168.1.0/24 } udp dport 53 dnat to 8.8.8.8\n");
         StringAssert.Contains(v4Only, "type filter hook forward priority 0;");
         StringAssert.Contains(v4Only, "ip6 daddr { fd00:1::/64 } udp dport 53 reject\n");
         StringAssert.Contains(v4Only, "ip6 daddr { fd00:1::/64 } tcp dport 53 reject with tcp reset\n");
 
         var v6Only = LinuxTunVpnAdapter.CreateDnsRedirectRuleset("vh", ["eth0"], localNetworks, [],
-            [IPAddress.Parse("2001:4860:4860::8888")]);
+            [IPAddress.Parse("2001:4860:4860::8888")], hasIpV6: true);
         StringAssert.Contains(v6Only, "ip daddr { 192.168.1.0/24 } udp dport 53 reject\n");
         StringAssert.Contains(v6Only, "ip6 daddr { fd00:1::20 } return\n");
         StringAssert.Contains(v6Only, "ip6 daddr { fd00:1::/64 } udp dport 53 dnat to 2001:4860:4860::8888\n");
@@ -61,10 +61,24 @@ public class LinuxTunAdapterAliasTest
     [TestMethod]
     public void DnsRedirectAlwaysClearsTheOldTables()
     {
-        var ruleset = LinuxTunVpnAdapter.CreateDnsRedirectRuleset("vh", [], [], [], [IPAddress.Parse("8.8.8.8")]);
+        var ruleset = LinuxTunVpnAdapter.CreateDnsRedirectRuleset("vh", [], [], [], [IPAddress.Parse("8.8.8.8")],
+            hasIpV6: true);
         Assert.AreEqual(
             "table ip vpnhood_dns_vh\ndelete table ip vpnhood_dns_vh\n" +
             "table ip6 vpnhood_dns_vh\ndelete table ip6 vpnhood_dns_vh\n", ruleset);
+    }
+
+    [TestMethod]
+    public void DnsRedirectNamesNoIpV6TableOnASystemWithoutIpV6()
+    {
+        // a kernel without IPv6 may have no ip6 family in nftables, which would fail the whole load, also the
+        // removal; such a system has no IPv6 DNS to keep in
+        var localNetworks = new[] { IpNetwork.Parse("192.168.1.20/24"), IpNetwork.Parse("fd00:1::20/64") };
+        var ruleset = LinuxTunVpnAdapter.CreateDnsRedirectRuleset("vh", ["eth0"], localNetworks, ["fd00:1::1"],
+            [IPAddress.Parse("8.8.8.8"), IPAddress.Parse("2001:4860:4860::8888")], hasIpV6: false);
+
+        StringAssert.Contains(ruleset, "ip daddr { 192.168.1.0/24 } udp dport 53 dnat to 8.8.8.8\n");
+        Assert.DoesNotContain("ip6", ruleset);
     }
 
     [TestMethod]

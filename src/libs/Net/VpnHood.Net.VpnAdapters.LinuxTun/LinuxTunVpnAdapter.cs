@@ -88,16 +88,29 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private IPAddress[]? _dnsRedirectServers;
 
     // While the adapter's servers are the only ones the host may ask (VpnAdapterOptions.UseExclusiveDns), the other
-    // links have no DNS domains (LinuxLinkDomainsKeeper). True from a run's first taking until its giving back. Both
-    // under the lock, so a start that a stop overtook takes none after the stop has given them back.
+    // links have no DNS domains (LinuxLinkDomainsKeeper). True from a run's first taking until its giving back, and
+    // for that time the watcher tells when a link's settings change, as a network may give its link a domain at any
+    // time. The run's keeper, which knows the links the system keeps a domain on. All under the lock, so a start
+    // that a stop overtook takes none after the stop has given them back.
     private readonly Lock _linkDomainsLock = new();
     private bool _isLinkDomainsTaken;
+    private LinuxLinkDomainsKeeper? _linkDomainsKeeper;
+    private LinuxLinkDomainsWatcher? _linkDomainsWatcher;
 
     // Whether AddNat has made the adapter's chains of an IP version, which AdapterRemove removes, and the record
     // with them. A record kept after its removal would take another adapter's chains: one that has the name by
     // the time this one starts again, before the start finds the name taken.
     private bool _isNatAddedV4;
     private bool _isNatAddedV6;
+
+    // The command of a start that runs, or the last that ran. A cancel ends the wait for a command, never the
+    // command, so a canceled start leaves one at work, and the interface's removal waits for it: at most its own
+    // run, with the xtables lock's wait (-w 5) before it for a NAT command. Under the lock a command starts only
+    // while its start is not canceled, and the removal reads the task: a stop cancels the start before it removes,
+    // so no command starts once the removal has looked.
+    private readonly Lock _startCommandLock = new();
+    private Task _startCommandTask = Task.CompletedTask;
+    private static readonly TimeSpan StartCommandWaitTimeout = TimeSpan.FromSeconds(10);
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[MaxPacketLength];
@@ -153,6 +166,13 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     // a client keeps its adapter on a new network, whose addresses the redirect names, and whose link may bring a
     // DNS domain
     private void PrimaryNetwork_Changed(object? sender, EventArgs e)
+    {
+        KeepDnsInside();
+    }
+
+    // What keeps DNS inside the VPN, as the host is now: the redirect, which names the networks and the servers the
+    // host has, and the other links' domains. Never throws.
+    private void KeepDnsInside()
     {
         ApplyDnsRedirect();
         KeepLinkDomainsOff();
@@ -473,11 +493,11 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
         // The alias derived from the app id lets a later start tell this tun from another app's.
         if (_adapterAlias != null)
-            await ExecuteCommandAsync($"ip link set dev {AdapterName} alias {_adapterAlias}", cancellationToken).Vhc();
+            await ExecuteStartCommandAsync($"ip link set dev {AdapterName} alias {_adapterAlias}", cancellationToken).Vhc();
 
         // Bring up the interface
         VhLogger.Instance.LogDebug("Bringing up the TUN...");
-        await ExecuteCommandAsync($"ip link set {AdapterName} up", cancellationToken).Vhc();
+        await ExecuteStartCommandAsync($"ip link set {AdapterName} up", cancellationToken).Vhc();
     }
 
     // NetworkManager adopts a new interface it does not manage as "connected (externally)", and a desktop's
@@ -503,7 +523,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             VhLogger.Instance.LogDebug("Keeping NetworkManager off {AdapterName}...", AdapterName);
             Directory.CreateDirectory(rulesFolder);
             await FileUtils.WriteAllTextAtomicAsync(rulesFile, rule, cancellationToken).Vhc();
-            await ExecuteCommandAsync("udevadm control --reload", cancellationToken).Vhc();
+            await ExecuteStartCommandAsync("udevadm control --reload", cancellationToken).Vhc();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
@@ -526,17 +546,22 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// cannot be given back stays recorded, for the next start to try. A failure is logged, not thrown.
     /// </para>
     /// <para>
-    /// Before the device's descriptor is freed, it waits up to a second for the reader to leave, which the device's
-    /// removal wakes, and up to a second plus twice <see cref="VpnAdapterSettings.MaxPacketSendDelay"/> for a batch
-    /// being sent, then 100 ms more for each that is late; a reader or sender that stops the adapter itself is not
-    /// waited for. When one does not leave in time, the descriptor stays taken until the process exits, which is
-    /// logged as an error.
+    /// First it waits, up to 10 seconds, for the command a canceled start left at work, as a start stops waiting for
+    /// its command at a cancel and the command runs on: an address, a route or a NAT rule it added after the removal
+    /// came onto the interface or into the chains the next start had just made. Before the device's descriptor is
+    /// freed, it waits up to a second for the reader to leave, which the device's removal wakes, and up to a second
+    /// plus twice <see cref="VpnAdapterSettings.MaxPacketSendDelay"/> for a batch being sent, then 100 ms more for
+    /// each that is late; a reader or sender that stops the adapter itself is not waited for. When one does not leave
+    /// in time, the descriptor stays taken until the process exits, which is logged as an error.
     /// </para>
     /// </remarks>
     // Only what this adapter added: a start that was refused the name must not take down the tun,
     // or the DNS entry, of the owner that holds it.
     protected override void AdapterRemove()
     {
+        // what a canceled start's last command does comes before the removal, so it goes with the rest
+        WaitForStartCommand();
+
         // close if open
         AdapterClose();
 
@@ -694,8 +719,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// nat table, with a masquerade of the network's traffic out of that interface, and one in the filter table,
     /// with two forwarding rules between that interface and the tunnel's, the way back for related and established
     /// connections only. POSTROUTING and FORWARD each get a jump to its chain. Each command waits up to 5 seconds
-    /// for the xtables lock another tool may hold. A canceled start's command may still add its rule after the
-    /// cleanup; the next start that uses NAT removes it (see <see cref="AdapterAdd"/>).
+    /// for the xtables lock another tool may hold. A canceled start stops waiting for the command that runs and
+    /// starts none after it; the adapter's removal waits for that command (see <see cref="AdapterRemove"/>).
     /// </remarks>
     /// <exception cref="InvalidOperationException">
     /// The host has no default route of the network's IP version, or a multipath one, or one whose interface has a name
@@ -717,7 +742,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             await KeepRouterAdvertisements(cancellationToken).Vhc();
 
         var forwardingKey = ipNetwork.IsV4 ? "net.ipv4.ip_forward" : "net.ipv6.conf.all.forwarding";
-        await ExecuteCommandAsync($"sysctl -w {forwardingKey}=1", cancellationToken).Vhc();
+        await ExecuteStartCommandAsync($"sysctl -w {forwardingKey}=1", cancellationToken).Vhc();
 
         // recorded before its chains, so a removal finds a half-made set too
         if (ipNetwork.IsV4)
@@ -725,10 +750,9 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         else
             _isNatAddedV6 = true;
 
-        // Cancellable, unlike resolvconf's add: a rule a cancelled start's command adds after the cleanup serves
-        // only the removed tun, and the next start deletes it; uncancelled, -w 5 could hold such a start 35 s.
+        // a start's commands, which a cancel stops waiting for: waited out, -w 5 could hold a canceled start 35 s
         foreach (var command in CreateNatCommands(AdapterName, ipNetwork, natInterfaceName))
-            await ExecuteCommandAsync(command, cancellationToken).Vhc();
+            await ExecuteStartCommandAsync(command, cancellationToken).Vhc();
     }
 
     // As IPv6 forwarding goes on, the kernel drops the default route an interface has from a router advertisement
@@ -835,8 +859,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
-        await ExecuteCommandAsync($"ip addr add {ipNetwork} dev {AdapterName}",
-            cancellationToken).Vhc();
+        await ExecuteStartCommandAsync($"ip addr add {ipNetwork} dev {AdapterName}", cancellationToken).Vhc();
     }
 
     /// <inheritdoc/>
@@ -853,7 +876,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
         if (_metric != null)
             command += $" metric {_metric}";
 
-        await ExecuteCommandAsync(command, cancellationToken).Vhc();
+        await ExecuteStartCommandAsync(command, cancellationToken).Vhc();
     }
 
     /// <inheritdoc/>
@@ -882,7 +905,7 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         var command = $"ip link set dev {AdapterName} mtu {mtu}";
-        await ExecuteCommandAsync(command, cancellationToken).Vhc();
+        await ExecuteStartCommandAsync(command, cancellationToken).Vhc();
     }
 
     private const string ResolvConfPath = "/etc/resolv.conf";
@@ -896,6 +919,11 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private const string LinkDomainsRecordFolder = "/run/vpnhood";
     private const string NetworkdLinksFolder = "/run/systemd/netif/links";
 
+    // where a change of a link's DNS settings is written as it is made (LinuxLinkDomainsWatcher), and how long after
+    // it the links are looked at
+    private static readonly string[] LinkDomainsWatchFolders = ["/run/systemd/resolve", NetworkdLinksFolder];
+    private static readonly TimeSpan LinkDomainsSettleTime = TimeSpan.FromMilliseconds(250);
+
     private const string DnsServersError =
         "Could not set the VPN's DNS servers. Run the app's install command again, which turns on " +
         "systemd-resolved and links /etc/resolv.conf to it.";
@@ -904,8 +932,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
         var command = $"resolvectl dns {AdapterName} {allDns}";
-        await ExecuteCommandAsync(command, cancellationToken).Vhc();
-        await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).Vhc();
+        await ExecuteStartCommandAsync(command, cancellationToken).Vhc();
+        await ExecuteStartCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).Vhc();
     }
 
     // Never cut off: an entry the command made after a stop's cleanup looked would stay, its flag unset, until
@@ -994,13 +1022,16 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// With <see cref="VpnAdapterOptions.UseExclusiveDns"/>, it fails with no servers, and where systemd-resolved
     /// answers the host's lookups it then takes the DNS domains off every other interface, as systemd-resolved sends
     /// a name under an interface's own domain to that interface's servers; another VPN's interface is one of them.
-    /// What it takes off it records under <c>/run/vpnhood</c>, for the giving back. Then it looks again, and fails
-    /// where an interface still has a domain: for one that systemd-networkd manages, systemd 245 and 249 leave it
-    /// there, and 255 and later take it off. After a change of the host's network it does the same again, and a
-    /// failure there stops the adapter, as its I/O errors do; a domain that a network sets later with no such change
-    /// stays until the next start. Two adapters with the option at once are not kept apart: the one that stops
-    /// first gives back what it took, under the other. The apps never have two up: their VPN service holds the
-    /// machine's one tunnel, and an app that loses it drops its adapter, which gives back, before the next app's
+    /// What it takes off it records under <c>/run/vpnhood</c>, for the giving back. Then it looks again, and logs a
+    /// warning where an interface still has a domain, whose names are then asked outside the tunnel: for one that
+    /// systemd-networkd manages, systemd 245 and 249 leave it there, and 255 and later take it off. Such an interface
+    /// is asked again once its domains change. It does the same again after a change of the host's network, and
+    /// within a moment of a change in an interface's DNS settings, as a network may give its interface a domain at
+    /// any time: it watches the folders where systemd-resolved and systemd-networkd write those settings. A watch the
+    /// system refuses, at the start or later, as by its limit of watches, is logged as a warning, and so is a taking
+    /// that fails; the run goes on. Two adapters with the option at once are not kept apart: the one that stops first
+    /// gives back what it took, and the other takes it off again. The apps never have two up: their VPN service holds
+    /// the machine's one tunnel, and an app that loses it drops its adapter, which gives back, before the next app's
     /// comes up.
     /// </para>
     /// <para>
@@ -1008,19 +1039,15 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     /// container's, to the VPN's first server of its IP version when it is for a network of the host's primary
     /// interfaces or a server systemd-resolved knows, or refuses it where the VPN has no server of that version. DNS
     /// that comes in by a primary interface, or is for one of its addresses, is left alone, and the host's own lookups
-    /// never meet the rule. A network change rewrites it; a failure is logged, as only forwarded DNS depends on it.
+    /// never meet the rule. A system with no IPv6 gets the IPv4 part alone. A network change rewrites it, and under
+    /// <see cref="VpnAdapterOptions.UseExclusiveDns"/> so does a change in an interface's DNS settings, by which a
+    /// network may name another server. A rule that cannot be loaded, as without nftables, is logged as a warning, and
+    /// the run goes on.
     /// </para>
     /// </remarks>
     /// <exception cref="InvalidOperationException">
     /// Neither <c>resolvectl</c> nor <c>resolvconf</c> took the servers, or <c>/etc/resolv.conf</c> does not use
-    /// them; or, under <see cref="VpnAdapterOptions.UseExclusiveDns"/>, there are no servers, or another interface
-    /// keeps a DNS domain.
-    /// </exception>
-    /// <exception cref="ExternalException">
-    /// The interfaces' DNS domains could not be listed under <see cref="VpnAdapterOptions.UseExclusiveDns"/>.
-    /// </exception>
-    /// <exception cref="FormatException">
-    /// That list, or the adapter's record of an earlier run, is not written as systemd-resolved writes one.
+    /// them; or there are no servers under <see cref="VpnAdapterOptions.UseExclusiveDns"/>.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
@@ -1083,48 +1110,65 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     }
 
     // Not after a stop, whose giving back has run by then: its token is canceled before, and both are under the lock.
-    // Marked as taken first, so a taking that fails half-way is given back.
+    // Marked as taken first, so a taking that fails half-way is given back, and a later look tries again. The watch
+    // before the taking, so a domain that comes after the taking's own look is seen too.
     private void TakeLinkDomains(CancellationToken cancellationToken)
     {
         lock (_linkDomainsLock) {
             cancellationToken.ThrowIfCancellationRequested();
             _isLinkDomainsTaken = true;
-            CreateLinkDomainsKeeper(AdapterName).Take();
+            _linkDomainsKeeper ??= CreateLinkDomainsKeeper(AdapterName);
+            _linkDomainsWatcher ??= TryCreateLinkDomainsWatcher();
+            TryTakeLinkDomains(_linkDomainsKeeper);
         }
     }
 
-    // A network the adapter moved to may give its link a domain. Never throws: a network change runs it on the OS's
-    // thread. The look may come before the network's own manager has set the domain, and a domain set with no
-    // change of the network is not seen at all, which the option's docs say.
+    // The system may refuse the watch, as when its limit of watches is reached: by an exception here, or by the
+    // watch's own error, which the watcher logs
+    private LinuxLinkDomainsWatcher? TryCreateLinkDomainsWatcher()
+    {
+        try {
+            return new LinuxLinkDomainsWatcher(LinkDomainsWatchFolders, LinkDomainsSettleTime, KeepDnsInside);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not watch the interfaces' DNS settings, so a DNS domain that a network sets later may be " +
+                "looked up outside the VPN.");
+            return null;
+        }
+    }
+
+    // A link may get a domain while the adapter is up: from the network the adapter moved to, or from its own at any
+    // time, as by a DHCP renewal or a router advertisement, which the watcher tells of. Never throws: a network change
+    // runs it on the OS's thread, and the watcher on a pool thread. The look may come before the link's own manager
+    // has set the domain; the watcher then tells of that write too.
     private void KeepLinkDomainsOff()
     {
-        Exception? failure = null;
         lock (_linkDomainsLock) {
-            if (!_isLinkDomainsTaken)
-                return;
-
-            try {
-                CreateLinkDomainsKeeper(AdapterName).Take();
-            }
-            catch (Exception ex) {
-                failure = ex;
-            }
+            if (_isLinkDomainsTaken && _linkDomainsKeeper is { } keeper)
+                TryTakeLinkDomains(keeper);
         }
+    }
 
-        // Outside the lock, which the stop's giving back takes. The run ends by it, as a start ends that cannot take
-        // them: left up, the VPN showed connected while the new network's names were looked up outside it.
-        if (failure == null)
-            return;
-
-        VhLogger.Instance.LogError(failure,
-            "Could not take the DNS domains off the new network's interfaces. Stopping the VPN adapter.");
-        StopOnFailure(failure);
+    // Logged, and the run goes on (owner, 2026-11-17): a VPN that says what it could not keep inside serves the user
+    // better than one that will not connect, or drops. A domain a link keeps sends its names outside the tunnel.
+    private static void TryTakeLinkDomains(LinuxLinkDomainsKeeper keeper)
+    {
+        try {
+            keeper.Take();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not keep the DNS domains off the other interfaces.");
+        }
     }
 
     private void GiveBackLinkDomains()
     {
         lock (_linkDomainsLock) {
             _isLinkDomainsTaken = false;
+            _linkDomainsKeeper = null;
+            _linkDomainsWatcher?.Dispose();
+            _linkDomainsWatcher = null;
             TryGiveBackLinkDomains(AdapterName);
         }
     }
@@ -1193,8 +1237,11 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     // VPN's server. Nothing else changes: a program on this machine never passes prerouting, and what comes in from the
     // local network or is for this machine is no container's way out, so a DNS server here keeps working. By address:
     // prerouting is before the route, and nft's fib, which could look it up, is missing from some kernels.
-    // nft, not iptables, as a client has it from the installer. Only forwarded DNS depends on the rule, so a machine
-    // that cannot load it still connects. Never throws: a network change runs it on the OS's thread.
+    // nft, not iptables, as a client has it from the installer. Loaded whether the host forwards or not: it may begin
+    // to at any time, with no event to tell of it, as Docker does when its daemon starts, and on one interface alone.
+    // A rule that cannot be loaded is logged, and the run goes on, as with a domain a link keeps. Never throws: a
+    // network change, and a change of the network's DNS servers, which the rule names, run it on the OS's thread and
+    // the watcher's.
     private void ApplyDnsRedirect()
     {
         lock (_dnsRedirectLock) {
@@ -1231,17 +1278,19 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             ? GetNameservers(File.ReadAllText(ResolvedServersPath))
             : [];
 
-        return CreateDnsRedirectRuleset(AdapterName, interfaces.Select(x => x.Name), networks, servers, vpnDnsServers);
+        return CreateDnsRedirectRuleset(AdapterName, interfaces.Select(x => x.Name), networks, servers, vpnDnsServers,
+            Socket.OSSupportsIPv6);
     }
 
     // The old tables go in the same load, so no packet meets neither. A table a family, not one inet table, whose NAT
     // needs Linux 5.2. Each network's prefix is this machine's address on it. A server off those networks stays off
     // the tunnel too, as the routes leave out every private range. NAT cannot change a query's family, and the VPN's
     // servers are often IPv4 alone, so a family with none of them is refused instead, in the forward chain, as a NAT
-    // chain cannot: the resolver goes on to its next server at once.
+    // chain cannot: the resolver goes on to its next server at once. A system with no IPv6 gets no ip6 table: its
+    // kernel may have no such family, which would fail the whole load, and it has no IPv6 DNS to keep in.
     internal static string CreateDnsRedirectRuleset(string adapterName, IEnumerable<string> localInterfaces,
         IReadOnlyCollection<IpNetwork> localNetworks, IEnumerable<string> localServers,
-        IReadOnlyCollection<IPAddress> vpnDnsServers)
+        IReadOnlyCollection<IPAddress> vpnDnsServers, bool hasIpV6)
     {
         var interfaces = string.Join(", ", localInterfaces.Select(x => $"\"{x}\""));
         var servers = localServers
@@ -1251,8 +1300,11 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
             .Select(x => new IpNetwork(x))
             .ToArray();
 
-        var builder = new StringBuilder(CreateDnsRedirectRemoval(adapterName));
-        foreach (var addressFamily in new[] { AddressFamily.InterNetwork, AddressFamily.InterNetworkV6 }) {
+        var builder = new StringBuilder(CreateDnsRedirectRemoval(adapterName, hasIpV6));
+        var addressFamilies = hasIpV6
+            ? new[] { AddressFamily.InterNetwork, AddressFamily.InterNetworkV6 }
+            : [AddressFamily.InterNetwork];
+        foreach (var addressFamily in addressFamilies) {
             var ownNetworks = localNetworks.Where(x => x.AddressFamily == addressFamily).ToArray();
             var targets = ownNetworks.Concat(servers.Where(x => x.AddressFamily == addressFamily)).SortAndMerge().ToArray();
             if (targets.Length == 0)
@@ -1284,11 +1336,13 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
 
     private static string GetDnsRedirectTable(string adapterName) => $"vpnhood_dns_{adapterName}";
 
-    // A table is made first, as deleting one that is not there would fail the whole load
-    private static string CreateDnsRedirectRemoval(string adapterName)
+    // A table is made first, as deleting one that is not there would fail the whole load. No ip6 table where the
+    // system has no IPv6, which it cannot have made either: IPv6 comes and goes only with a boot.
+    private static string CreateDnsRedirectRemoval(string adapterName, bool hasIpV6)
     {
         var table = GetDnsRedirectTable(adapterName);
-        return $"table ip {table}\ndelete table ip {table}\ntable ip6 {table}\ndelete table ip6 {table}\n";
+        var removal = $"table ip {table}\ndelete table ip {table}\n";
+        return hasIpV6 ? removal + $"table ip6 {table}\ndelete table ip6 {table}\n" : removal;
     }
 
     private static string LoadNftCommand(string ruleset) => $"printf '%s' '{ruleset}' | nft -f -";
@@ -1308,7 +1362,8 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     {
         VhInvoker.TryInvoke($"remove the DNS redirect of {adapterName}", failureLevel, () =>
             ExecuteCommand(
-                $"if command -v nft >/dev/null; then {LoadNftCommand(CreateDnsRedirectRemoval(adapterName))}; fi"));
+                $"if command -v nft >/dev/null; then " +
+                $"{LoadNftCommand(CreateDnsRedirectRemoval(adapterName, Socket.OSSupportsIPv6))}; fi"));
     }
 
     /// <inheritdoc/>
@@ -1483,6 +1538,40 @@ public class LinuxTunVpnAdapter : TunVpnAdapter
     private static Task<string> ExecuteCommandAsync(string command, CancellationToken cancellationToken)
     {
         return OsUtils.ExecuteShellCommandAsync(command, cancellationToken);
+    }
+
+    // A command of a start, which the adapter's removal waits for: a cancel ends the start's wait for it, never the
+    // command, and one left at work past the removal changed what the next start had just made, an address or a
+    // route on its interface of the same name, a NAT rule in its chain. A start runs its commands one at a time.
+    private Task<string> ExecuteStartCommandAsync(string command, CancellationToken cancellationToken)
+    {
+        Task<string> commandTask;
+        lock (_startCommandLock) {
+            cancellationToken.ThrowIfCancellationRequested();
+            commandTask = ExecuteCommandAsync(command, CancellationToken.None);
+            _startCommandTask = commandTask;
+        }
+
+        return commandTask.WaitAsync(cancellationToken);
+    }
+
+    // The command a canceled start left at work is over before the removal looks, however it ended: one that failed
+    // has told its start, unless the start had stopped listening by then.
+    private void WaitForStartCommand()
+    {
+        Task commandTask;
+        lock (_startCommandLock)
+            commandTask = _startCommandTask;
+
+        try {
+            if (!commandTask.Wait(StartCommandWaitTimeout))
+                VhLogger.Instance.LogError(
+                    "A command of the {AdapterName} TUN adapter's start has not ended in {Timeout} seconds; what it " +
+                    "does may come after the adapter's removal.", AdapterName, StartCommandWaitTimeout.TotalSeconds);
+        }
+        catch (AggregateException ex) {
+            VhLogger.Instance.LogDebug(ex.InnerException, "A command of a canceled start has failed.");
+        }
     }
 
     /// <inheritdoc/>

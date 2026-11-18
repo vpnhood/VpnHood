@@ -1052,6 +1052,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     private IPAddress? DiscoverPrimaryAdapterIpViaProtect(AddressFamily addressFamily, bool protect)
     {
+        if (!IsInSystem(addressFamily))
+            return null;
+
         using var udpClient = new UdpClient(addressFamily);
         if (protect) {
             try {
@@ -1069,8 +1072,18 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     private static IPAddress? DiscoverPrimaryAdapterIp(AddressFamily addressFamily)
     {
+        if (!IsInSystem(addressFamily))
+            return null;
+
         using var udpClient = new UdpClient(addressFamily);
         return DiscoverPrimaryAdapterIp(udpClient);
+    }
+
+    // A system without an IP version, as Linux booted with ipv6.disable=1, refuses a socket of it, which failed
+    // the adapter's making: it has no address of that version to find
+    private static bool IsInSystem(AddressFamily addressFamily)
+    {
+        return addressFamily == AddressFamily.InterNetworkV6 ? Socket.OSSupportsIPv6 : Socket.OSSupportsIPv4;
     }
 
     private static IPAddress? DiscoverPrimaryAdapterIp(UdpClient protectedUdpClient)
@@ -1661,19 +1674,32 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     }
 
     /// <summary>
-    /// Stops the adapter for a failure of its own that it cannot go on with, as its I/O errors do: it then starts
-    /// itself again with <see cref="VpnAdapterSettings.AutoRestart"/>, or raises <see cref="Failed"/>.
+    /// Gets the number that names the run that is up, or 0 when none is: before a start has brought the adapter up,
+    /// and from its stop on. Each run has its own.
+    /// </summary>
+    /// <remarks>
+    /// A platform's adapter reads it before it looks at what the run's options asked for, and hands it to
+    /// <see cref="StopOnFailure"/> when the look fails.
+    /// </remarks>
+    protected int RunId => _readerRunId;
+
+    /// <summary>
+    /// Stops a run for a failure of the adapter's own that it cannot go on with, as its I/O errors do: the adapter
+    /// then starts itself again with <see cref="VpnAdapterSettings.AutoRestart"/>, or raises <see cref="Failed"/>.
     /// </summary>
     /// <param name="ex">The failure, which <see cref="Failed"/> hands its subscribers.</param>
+    /// <param name="runId">The run the failure was found in, by its <see cref="RunId"/>.</param>
     /// <remarks>
-    /// It does nothing when the adapter is not started, or when another call is stopping it. A teardown that fails is
-    /// logged. Never call it from the reader's or the sender's thread, whose stop must not wait for itself.
+    /// It does nothing when that run is no longer the one that is up, as when the owner has stopped the adapter, or
+    /// started it again, since the failure was found; nor for 0, or when another call is stopping the run. A teardown
+    /// that fails is logged. Never call it from the reader's or the sender's thread, whose stop must not wait for
+    /// itself.
     /// </remarks>
     // For what goes wrong after the start, with no caller to throw to: a platform's adapter that finds, on a change of
     // the host's network, that it can no longer keep what the run's options asked for
-    protected void StopOnFailure(Exception ex)
+    protected void StopOnFailure(Exception ex, int runId)
     {
-        if (Stop(throwException: false))
+        if (runId != NoRunId && Stop(throwException: false, runId))
             OnUnrequestedStop(ex);
     }
 

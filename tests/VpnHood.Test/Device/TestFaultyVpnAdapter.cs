@@ -215,10 +215,19 @@ public class TestFaultyVpnAdapter(bool autoRestart, TimeSpan? maxPacketSendDelay
         return IsOpen && !RefuseWrite && base.WritePacket(ipPacket);
     }
 
+    // the run that is up, as a platform's adapter reads it before a look at what the run's options asked for
+    public int CurrentRunId => RunId;
+
     // as a platform's adapter that finds, after its start, that it cannot keep what the run's options asked for
     public void FailRun(Exception ex)
     {
-        StopOnFailure(ex);
+        StopOnFailure(ex, RunId);
+    }
+
+    // as one whose look began in a run and came to its end later
+    public void FailRun(Exception ex, int runId)
+    {
+        StopOnFailure(ex, runId);
     }
 
     public void ReleaseStart()

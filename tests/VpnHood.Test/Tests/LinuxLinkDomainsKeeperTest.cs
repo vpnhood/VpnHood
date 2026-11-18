@@ -57,7 +57,7 @@ public class LinuxLinkDomainsKeeperTest : TestBase
 
         var ex = Assert.ThrowsExactly<InvalidOperationException>(keeper.Take);
         Assert.Contains("ens5", ex.Message);
-        Assert.Contains("Allow Bypass VPN", ex.Message);
+        Assert.Contains("outside the VPN", ex.Message);
         CollectionAssert.AreEqual(new[] { "corp.example" }, managed.Domains);
 
         // what the failed taking took off the other link goes back
@@ -66,6 +66,46 @@ public class LinuxLinkDomainsKeeperTest : TestBase
         CollectionAssert.AreEqual(new[] { "lan" }, eth0.Domains);
         CollectionAssert.AreEqual(new[] { "corp.example" }, managed.Domains);
         Assert.IsFalse(File.Exists(recordPath));
+    }
+
+    [TestMethod]
+    public void A_link_that_kept_its_domains_is_asked_again_only_once_they_change()
+    {
+        // The command again would have the system write the link's settings anew, which the adapter's watch tells of,
+        // and the look that follows would send it again, with no end
+        var resolved = new TestResolvedLinks();
+        var managed = resolved.AddManaged(5, "ens5", ignoresEmptyList: true, "corp.example");
+        var keeper = CreateKeeper(resolved, CreateRecordPath());
+        Assert.ThrowsExactly<InvalidOperationException>(keeper.Take);
+
+        resolved.Commands.Clear();
+        keeper.Take();
+        CollectionAssert.AreEqual(new[] { "resolvectl -- domain" }, resolved.Commands);
+
+        // a link that got another domain since, as from its network, is asked again
+        var eth0 = resolved.Add(2, "eth0", "lan");
+        managed.Domains = ["corp.example", "lab.example"];
+        Assert.ThrowsExactly<InvalidOperationException>(keeper.Take);
+        Assert.Contains("resolvectl -- domain 5 ''", resolved.Commands);
+        Assert.IsEmpty(eth0.Domains);
+    }
+
+    [TestMethod]
+    public void A_link_that_kept_its_domains_is_remembered_when_another_links_command_fails()
+    {
+        // a failure thrown at once skipped the remembering, so the kept link was asked again at every look
+        var resolved = new TestResolvedLinks { FailingLinkIndex = 6 };
+        resolved.AddManaged(5, "ens5", ignoresEmptyList: true, "corp.example");
+        resolved.Add(6, "ens6", "lab.example");
+        var keeper = CreateKeeper(resolved, CreateRecordPath());
+        var ex = Assert.ThrowsExactly<AggregateException>(keeper.Take);
+        Assert.HasCount(2, ex.InnerExceptions);
+
+        // the failed command is tried again, as it wrote nothing; the kept link is not
+        resolved.Commands.Clear();
+        Assert.ThrowsExactly<InvalidOperationException>(keeper.Take);
+        Assert.DoesNotContain("resolvectl -- domain 5 ''", resolved.Commands);
+        Assert.Contains("resolvectl -- domain 6 ''", resolved.Commands);
     }
 
     [TestMethod]

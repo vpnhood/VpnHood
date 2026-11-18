@@ -20,13 +20,24 @@ internal sealed class LinuxLinkDomainsKeeper(
     // ('--help' printed its help, said nothing was wrong, and set no domain)
     private const string ListCommand = "resolvectl -- domain";
 
+    // The links that kept their domains through a taking of this keeper's, as they were. The system keeps them, and
+    // the command again would only have it write their settings anew, which the adapter's watch tells of, and the
+    // look that follows would send it again, with no end. Such a link is asked again once its domains change.
+    private LinuxLinkDomains[] _keptLinks = [];
+
     /// <summary>
-    /// Takes the domains off every other link that has any, recording them first.
+    /// Takes the domains off every other link that has any, recording them first. A link that kept its domains
+    /// through an earlier taking of this keeper's is not asked again while it has the same ones.
     /// </summary>
-    /// <exception cref="InvalidOperationException">A link still has its domains after it.</exception>
+    /// <exception cref="InvalidOperationException">A link still has its domains after it, as its command failed or
+    /// the system kept them.</exception>
+    /// <exception cref="AggregateException">More than one did.</exception>
     public void Take()
     {
-        var links = ListOtherLinks().Where(x => x.Domains.Count > 0)
+        var withDomains = ListOtherLinks().Where(x => x.Domains.Count > 0).ToArray();
+        _keptLinks = _keptLinks.Where(x => withDomains.Any(y => IsSame(x, y))).ToArray();
+        var links = withDomains
+            .Where(x => !_keptLinks.Any(y => IsSame(x, y)))
             .Select(x => x with { IsManagedByNetworkd = isManagedByNetworkd(x.Index) })
             .ToArray();
 
@@ -34,8 +45,12 @@ internal sealed class LinuxLinkDomainsKeeper(
             return;
 
         // Recorded first: a crash from here on leaves the links without their domains, and the record is what the
-        // app's next start gives them back from
+        // app's next start gives them back from. Every link is asked, whatever an earlier one's command did, and the
+        // failures are thrown after the look below: a link the system keeps is remembered then, which a failure
+        // thrown at once would skip, and its command would be sent again at the next look, with no end.
         Record(links);
+        var asked = new List<LinuxLinkDomains>();
+        var failures = new List<Exception>();
         foreach (var link in links) {
             VhLogger.Instance.LogInformation(
                 "Taking the DNS domains off {InterfaceName} while the VPN is up. Domains: {Domains}",
@@ -43,18 +58,32 @@ internal sealed class LinuxLinkDomainsKeeper(
 
             try {
                 executeCommand(SetCommand(link.Index, []));
+                asked.Add(link);
             }
             catch (Exception ex) {
-                throw CreateKeptException(link.Name, ex);
+                failures.Add(CreateKeptException(link.Name, ex));
             }
         }
 
         // Looked at again, not taken on the command's word. For a link that systemd-networkd manages, resolvectl of
         // systemd 245 and 249 hands the empty list on to networkd, to which it means the configured domains: the
-        // command says nothing is wrong and the domain stays (seen on both). From 255 on the domain goes.
-        var kept = ListOtherLinks().FirstOrDefault(x => x.Domains.Count > 0);
-        if (kept != null)
-            throw CreateKeptException(kept.Name, innerException: null);
+        // command says nothing is wrong and the domain stays (seen on both). From 255 on the domain goes. A link
+        // whose domains changed meanwhile is no kept one: the change brings another look. Nor is one whose command
+        // failed, which is asked again at the next look: its failure made the system write nothing.
+        var kept = ListOtherLinks().Where(x => asked.Any(y => IsSame(x, y))).ToArray();
+        _keptLinks = [.. _keptLinks, .. kept];
+        failures.AddRange(kept.Select(x => CreateKeptException(x.Name, innerException: null)));
+        if (failures.Count == 1)
+            throw failures[0];
+
+        if (failures.Count > 1)
+            throw new AggregateException(failures);
+    }
+
+    // the same link, with the same domains in the same order
+    private static bool IsSame(LinuxLinkDomains link, LinuxLinkDomains other)
+    {
+        return link.Index == other.Index && link.Domains.SequenceEqual(other.Domains);
     }
 
     /// <summary>
@@ -130,8 +159,7 @@ internal sealed class LinuxLinkDomainsKeeper(
     {
         var message =
             $"Could not keep DNS inside the VPN: the interface {linkName} has a DNS domain of its own, whose names " +
-            "are looked up by that interface, outside the VPN, and the system does not let the VPN take it off. " +
-            "To connect on this network, choose Allow Bypass VPN in the app's Split DNS settings.";
+            "are looked up by that interface, outside the VPN, and the system does not let the VPN take it off.";
 
         return innerException != null
             ? new InvalidOperationException($"{message}\nresolvectl error: {innerException.Message}", innerException)

@@ -22,15 +22,19 @@ dotnet add package VpnHood.Net.VpnAdapters.LinuxTun
   keep NetworkManager off the interface. Its DNS servers go to
   systemd-resolved, with the routing domain `~.`, which sends them every name no other link has a more specific
   domain for, or else to `resolvconf`; the start fails when `/etc/resolv.conf` would still name another server. While
-  they are set, an nftables rule tries to send them the DNS queries over TCP or UDP port 53 that the host forwards,
-  such as a container's, for the local network or a server systemd-resolved knows.
+  they are set, an nftables rule sends them the DNS queries over TCP or UDP port 53 that the host forwards, such as
+  a container's, for the local network or a server systemd-resolved knows; a rule that cannot be loaded, as without
+  nftables, is logged as a warning.
 - systemd-resolved sends a name under an interface's own DNS domain, as a network's DHCP gives one, to that
   interface's servers, whatever the routes say. With `VpnAdapterOptions.UseExclusiveDns` the adapter takes the DNS
   domains off the other interfaces while it is up and gives them back when it stops, so those names are asked of
-  the VPN's servers too. A start fails where an interface still has a domain after that: for one that
-  systemd-networkd manages, systemd 245 and 249 (Ubuntu 20.04 and 22.04) leave it there, and 255 and later take it
-  off. The adapter does the same again after a change of the host's network, and stops if it fails there; a domain
-  a network sets later without such a change stays until the next start.
+  the VPN's servers too. Where an interface still has a domain after that, it logs a warning and goes on: for one
+  that systemd-networkd manages, systemd 245 and 249 (Ubuntu 20.04 and 22.04) leave it there, and 255 and later
+  take it off. A network may give its interface a domain at any time, as by a DHCP renewal, so while the adapter is
+  up it watches the folders where systemd-resolved and systemd-networkd write the interfaces' DNS settings, and
+  takes a new domain off within a moment, as it does after a change of the host's network; the nftables rule for
+  containers is loaded again then too, as the network may have named another DNS server. A watch the system
+  refuses, or a taking that fails later, is logged as a warning too, and the run goes on.
 - For a server, `UseNat` masquerades each virtual network, IPv4 and IPv6, out of the interface of the default route
   of its IP version, with `iptables` and `ip6tables` rules in chains of the adapter's own (`vpnhood_nat_` and its
   name), and turns on forwarding for the whole host, for the IP versions it translates. For IPv6 it first sets

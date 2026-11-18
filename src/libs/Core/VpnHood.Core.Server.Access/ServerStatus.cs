@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using System.Text.Json.Serialization;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access.Messaging;
 
 namespace VpnHood.Core.Server.Access;
@@ -41,6 +42,13 @@ public class ServerStatus
     /// its network.
     /// </summary>
     public string? TcpCongestionControl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the OS settings the server manages, as it reads them now, and why its last configuration left any of
+    /// them; <see langword="null"/> where the server does not manage its OS.
+    /// </summary>
+    [JsonPropertyName("Os")]
+    public OsStatus? OsStatus { get; set; }
 
     /// <summary>Gets or sets the CPU's use, as the platform reports it, or <see langword="null"/> where not known.</summary>
     public int? CpuUsage { get; set; }

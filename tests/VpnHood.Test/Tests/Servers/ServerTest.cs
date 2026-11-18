@@ -891,6 +891,11 @@ public class ServerTest : TestBase
         Assert.AreEqual(1_048_576, osConfigurationProvider.ConnectionTrackingMax);
         Assert.AreEqual(TimeSpan.FromHours(1), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
         Assert.AreEqual("bbr", accessManager.LastServerStatus?.TcpCongestionControl);
+        var osStatus = accessManager.LastServerStatus?.OsStatus ??
+                       throw new InvalidOperationException("No OS status was sent.");
+        Assert.AreEqual(1_048_576, osStatus.ConnectionTrackingMax);
+        Assert.AreEqual(TimeSpan.FromHours(1), osStatus.ConnectionTrackingTcpIdleTimeout);
+        Assert.IsEmpty(osStatus.Errors);
 
         // the access manager's
         accessManager.ServerConfig.OsOptions.TcpCongestionControl = "reno";
@@ -975,6 +980,10 @@ public class ServerTest : TestBase
         Assert.AreEqual(0, osConfigurationProvider.ChangeCount);
         Assert.AreEqual("cubic", accessManager.LastServerStatus?.TcpCongestionControl);
         CollectionAssert.AreEqual(new[] { "eth0", "eth1" }, accessManager.LastServerInfo?.NetworkInterfaceNames);
+        var osStatus = accessManager.LastServerStatus?.OsStatus ??
+                       throw new InvalidOperationException("No OS status was sent.");
+        Assert.AreEqual(262_144, osStatus.ConnectionTrackingMax);
+        Assert.HasCount(1, osStatus.Errors);
     }
 
     // a wrong value, then 0, as an admin may set by mistake
@@ -994,6 +1003,7 @@ public class ServerTest : TestBase
         Assert.AreEqual("bbr", osConfigurationProvider.TcpCongestionControl);
         Assert.AreEqual(1_048_576, osConfigurationProvider.ConnectionTrackingMax);
         Assert.AreEqual(TimeSpan.FromHours(1), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
+        Assert.HasCount(3, accessManager.LastServerStatus?.OsStatus?.Errors ?? []);
 
         accessManager.ServerConfig.OsOptions.TcpCongestionControl = "*";
         accessManager.ServerConfig.OsOptions.ConnectionTrackingMax = 0;
@@ -1003,6 +1013,7 @@ public class ServerTest : TestBase
         Assert.AreEqual("cubic", osConfigurationProvider.TcpCongestionControl);
         Assert.AreEqual(262_144, osConfigurationProvider.ConnectionTrackingMax);
         Assert.AreEqual(TimeSpan.FromDays(5), osConfigurationProvider.ConnectionTrackingTcpIdleTimeout);
+        Assert.IsEmpty(accessManager.LastServerStatus?.OsStatus?.Errors ?? ["no status"]);
     }
 
     // a server's own settings file may hold a few settings over the access manager's
@@ -1034,6 +1045,13 @@ public class ServerTest : TestBase
         Assert.AreEqual("bbr", osConfigurationProvider.TcpCongestionControl);
         Assert.IsNull(osConfigurationProvider.ConnectionTrackingMax);
         Assert.AreEqual(ServerState.Ready, server.State);
+
+        // the access manager hears which ones, and the max and the timeout as unknown
+        var osStatus = accessManager.LastServerStatus?.OsStatus ??
+                       throw new InvalidOperationException("No OS status was sent.");
+        Assert.AreEqual("bbr", osStatus.TcpCongestionControl);
+        Assert.IsNull(osStatus.ConnectionTrackingMax);
+        Assert.HasCount(2, osStatus.Errors);
     }
 
     [TestMethod]

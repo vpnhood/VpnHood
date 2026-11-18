@@ -60,7 +60,6 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     private readonly ReverseProxyTrust _reverseProxyTrust;
     private readonly UnauthenticatedConnections _unauthenticatedConnections = new();
     internal int UnauthenticatedConnectionCount => _unauthenticatedConnections.Count;
-    private string? _tcpCongestionControl;
     private bool _isRestarted = true;
     private readonly Job _configureAndSendStatusJob;
     private ServerHostEndPointStatus[] _endPointStatuses = [];
@@ -305,11 +304,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             };
 
             // the OS's settings, the listeners' addresses with them before the listeners start
-            if (_osConfigurationService != null) {
+            if (_osConfigurationService != null)
                 await _osConfigurationService.Configure(serverConfig.OsOptions,
                     serverConfig.TcpEndPointsValue.Select(x => x.Address).ToArray(), cancellationToken).Vhc();
-                _tcpCongestionControl = await _osConfigurationService.GetTcpCongestionControl(cancellationToken).Vhc();
-            }
 
             // Reconfigure server host
             await _reverseProxyTrust.Configure(serverConfig.ReverseProxyProvidersValue,
@@ -549,6 +546,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         var swapMemoryInfo = _osConfigurationService != null
             ? await _osConfigurationService.GetSwapMemoryInfo(cancellationToken).Vhc()
             : null;
+        var osStatus = _osConfigurationService != null
+            ? await _osConfigurationService.GetOsStatus(cancellationToken).Vhc()
+            : null;
         var systemInfo = _systemInfoProvider.GetSystemInfo();
         var serverStatus = new ServerStatus {
             SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
@@ -558,7 +558,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             AvailableMemory = systemInfo.AvailableMemory,
             TotalSwapMemory = swapMemoryInfo?.TotalSize,
             AvailableSwapMemory = swapMemoryInfo != null ? swapMemoryInfo.TotalSize - swapMemoryInfo.TotalUsed : null,
-            TcpCongestionControl = _tcpCongestionControl,
+            TcpCongestionControl = osStatus?.TcpCongestionControl,
+            OsStatus = osStatus,
             CpuUsage = systemInfo.CpuUsage,
             UsedMemory = Process.GetCurrentProcess().WorkingSet64,
             TunnelSpeed = new Traffic {

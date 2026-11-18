@@ -1,5 +1,6 @@
 # Latest
 
+* Update: With IncludeLocalNetwork off, a VpnHoodServer leaves only the private and link-local IPv6 networks, fc00::/7 and fe80::/10, out of its users' VPN, as it does for IPv4, where it left out every IPv6 address outside 2000::/3; the rest reaches the server, which blocks what is not public.
 * Fix: On Linux, a VpnHoodServer that translates IPv6 no longer makes its host lose the IPv6 routes it has from router advertisements. Turning on IPv6 forwarding dropped those routes and stopped the host taking advertisements; the server now first sets `accept_ra` to 2 on each interface that takes them, which is one that does not forward yet and has it at 1
 * Fix: A VpnHoodServer whose access manager stops in the middle of an answer gives that call up at its timeout and goes on, where it waited for ever, sent no more status, and stayed lost to the manager until a restart
 * Fix: A VpnHoodServer on a poor link to its access manager no longer shows as lost for a moment each time one status goes unanswered: it gives a status up after 30 seconds, where it waited 100 and sent the next one too late

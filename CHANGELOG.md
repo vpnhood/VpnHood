@@ -1,5 +1,6 @@
 # Latest
 
+* Fix: When your local network stays out of the VPN, only its IPv6 addresses do, as with IPv4, and the kill switch lets no more through. Other IPv6 addresses that are not public, such as those of a carrier's IPv6-to-IPv4 gateway, went around the VPN.
 * Fix: With Split Domains on, DNS lookups no longer stall: about half of them were held back, and an app waited for its own retry
 * Fix: With Split Domains on, a mail, FTP or database app connects after a second, where it waited until it gave up: such an app waits for its server to speak first
 * Fix: A domain you include in Split Domains goes through the VPN even where Split IPs blocks its address, as the include promises, where most of its connections were dropped

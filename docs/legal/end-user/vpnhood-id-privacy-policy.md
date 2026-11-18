@@ -1,6 +1,6 @@
 # VpnHood ID - Privacy Policy
 
-*Effective: 2026-11-16.*
+*Effective: 2026-11-17.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to the **VpnHood ID**: the account you use to sign in to VpnHood's services, and its pages at **id.vpnhood.com**. Each service you sign in to with it has its own policy for what that service does with your data; all of them are listed on our [Legal](https://www.vpnhood.com/legal/) page.
 
@@ -10,7 +10,7 @@ We never sell your data, and the VpnHood ID shows no ads.
 
 - **Your account** — your email address, the name you give (it is optional), and when the account was made. Your password is never stored as you type it: we keep only a scrambled form of it from which it cannot be read back. When you sign up with your email address, the account is made only once you finish from the link we email you.
 - **Sign-in with Google or Apple** — if you choose to sign in with Google or Apple, they tell us your email address, whether they have confirmed it, your name, and an identifier of your account with them, which we keep so that we recognise you the next time. Apple may give us a private relay address in place of your own, which forwards our emails to you. We get nothing else from those accounts, and never your password there. If they have not confirmed your email address, we email you a link to confirm it before you can sign in.
-- **Accounts from MANAGER's earlier sign-in** — if you had a VpnHood! MANAGER account before the VpnHood ID, we may copy it from the sign-in service MANAGER used before, Google Firebase Authentication: your email address, your name, whether your address was confirmed, and your password in the scrambled form Firebase kept, so that you can sign in as before.
+- **Accounts from MANAGER's earlier sign-in** — if you had a VpnHood! MANAGER account before the VpnHood ID, we may copy it from the sign-in service MANAGER used before: your email address, your name, whether your address was confirmed, and your password in the scrambled form that service kept, so that you can sign in as before.
 - **Your device and connection** — your IP address and the details of each request, such as the page and the time, are used for a short while to protect accounts, for example to slow down or stop repeated sign-in attempts. Our service does not store them with your account.
 
 ## Cookies
@@ -26,13 +26,8 @@ The VpnHood ID uses only the cookies it needs to work: one that keeps you signed
 ## Who Receives Your Data
 
 - **The VpnHood services you sign in to.** When you sign in to a service, such as VpnHood! MANAGER, with your VpnHood ID, that service receives the identifier of your account, your email address, whether it has been confirmed, and your name. What it does with them is described in that service's own privacy policy.
-- **Service providers:**
-  - **Google LLC** — sign-in with Google, if you choose it; and delivery of the VpnHood ID's emails, through Google Workspace
-  - **Apple Inc.** — sign-in with Apple, if you choose it
-  - **Cloudflare, Inc.** — delivery and security of the pages, and storage of our encrypted backups
-  - **OVH US LLC** — hosting of our servers and database
-
-They process the data for the purposes described above. Google and Apple handle your sign-in with them under their own policies, and Cloudflare also keeps its own records of requests under its published policy.
+- **Google and Apple**, if you choose to sign in with them: they learn that you sign in to the VpnHood ID, and handle that sign-in under their own policies.
+- **Service providers** that host our servers and database, deliver and protect the pages, deliver the VpnHood ID's emails, and keep our encrypted backups. They process the data only for the purposes described above. A provider that delivers the pages may also keep its own records of requests, under its own policy.
 
 ## Security
 

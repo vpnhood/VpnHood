@@ -1,6 +1,6 @@
 # VpnHood Website - Privacy Policy
 
-*Effective: 2026-10-19.*
+*Effective: 2026-11-17.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to our website, **www.vpnhood.com**. Our apps, our VPN servers and our account website (account.vpnhood.com) have their own policies, listed on our [Legal](https://www.vpnhood.com/legal/) page.
 
@@ -9,8 +9,8 @@ The website has no accounts and no forms, and we never sell your data.
 ## What the Website Collects
 
 - **Analytics** — we use Google Analytics, loaded through Google Tag Manager, to learn how the website is used: the pages you view, the links you follow (such as downloads), how you arrived, and your approximate location, device, browser and language. Google Analytics sets cookies in your browser so it can recognise a returning visit; they hold a random identifier, not your name or contact details. In the European Economic Area, the United Kingdom and Switzerland, Google Analytics runs only after you accept it in the cookie banner.
-- **Delivery and security** — the website is hosted on GitHub Pages and delivered through Cloudflare. Both process your IP address and the details of each request, such as the page and the time, to serve the website and protect it from abuse.
-- **Your country, for a regional notice** — some pages ask Cloudflare which country your IP address belongs to, to decide whether to show a notice meant for visitors from that country. The answer stays in your browser; we do not store it.
+- **Delivery and security** — the providers that host and deliver the website process your IP address and the details of each request, such as the page and the time, to serve the website and protect it from abuse.
+- **Your country, for a regional notice** — some pages ask the provider that delivers the website which country your IP address belongs to, to decide whether to show a notice meant for visitors from that country. The answer stays in your browser; we do not store it.
 - **Your preferences** — the language and colour theme you choose are remembered in your browser's local storage. They stay on your device.
 
 When you write to one of the email addresses on the website, we keep your message and your email address to answer you and to look back on earlier requests.
@@ -24,10 +24,9 @@ Where the cookie banner is shown, you can change your choice at any time under *
 ## Service Providers
 
 - **Google LLC** — Google Analytics and Google Tag Manager
-- **Cloudflare, Inc.** — delivery and security
-- **GitHub, Inc.** — hosting
+- **Providers that host and deliver the website** and protect it from abuse
 
-They process the data for the purposes described above. Cloudflare and GitHub also keep their own records of requests under their published policies.
+They process the data for the purposes described above. The providers that host and deliver the website also keep their own records of requests, under their own policies.
 
 ## Why We Process Data
 

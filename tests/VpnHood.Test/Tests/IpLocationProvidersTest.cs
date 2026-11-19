@@ -168,6 +168,7 @@ public class IpLocationProvidersTest : TestBase
     [DataRow("ip2location.io", "{\"ip\":\"8.8.8.8\",\"country_code\":\"US\",\"region_name\":\"{0}\",\"city_name\":\"{1}\"}")]
     [DataRow("ipinfo.io", "{\"ip\":\"8.8.8.8\",\"country\":\"US\",\"region\":\"{0}\",\"city\":\"{1}\"}")]
     [DataRow("ipapi.co", "{\"ip\":\"8.8.8.8\",\"country_code\":\"US\",\"region\":\"{0}\",\"city\":\"{1}\"}")]
+    [DataRow("internetdata.io", "{\"ip\":\"8.8.8.8\",\"location\":{\"country\":\"US\",\"region\":\"{0}\",\"city\":\"{1}\"}}")]
     public async Task An_online_provider_keeps_the_region_without_a_city_and_the_city_without_a_region(string service,
         string replyFormat)
     {
@@ -193,6 +194,7 @@ public class IpLocationProvidersTest : TestBase
             "ip2location.io" => new IpLocationIoProvider(httpClient, "test", apiKey: null),
             "ipinfo.io" => new IpInfoIoProvider(httpClient, "test", apiKey: null),
             "ipapi.co" => new IpApiCoLocationProvider(httpClient, "test"),
+            "internetdata.io" => new InternetDataProvider(httpClient, "test", apiKey: null),
             _ => throw new ArgumentOutOfRangeException(nameof(service))
         };
 

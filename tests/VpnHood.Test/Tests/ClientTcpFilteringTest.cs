@@ -3,7 +3,9 @@ using System.Net.Sockets;
 using VpnHood.Core.Client;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Test.Extensions;
+using VpnHood.Test.Providers;
 using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
 using SplitDnsMode = VpnHood.Core.Client.Abstractions.SplitDnsMode;
 
@@ -43,6 +45,22 @@ public class ClientTcpFilteringTest : TestBase
 
         public void Dispose()
         {
+        }
+    }
+
+    // The test's socket factory, which blocks an address in the IP gate as the client makes the socket to reach its
+    // host: after the connection was decided, and checked against a change of the rules, before it is connected
+    private sealed class RuleChangingSocketFactory(StaticIpFilter ipFilter, IPEndPoint hostEndPoint, IPAddress address)
+        : TestSocketFactory
+    {
+        private int _isChanged;
+
+        public override TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
+        {
+            if (ipEndPoint.Equals(hostEndPoint) && Interlocked.Exchange(ref _isChanged, 1) == 0)
+                ipFilter.BlockedRanges = new[] { address }.ToOrderedIpRanges();
+
+            return base.CreateTcpClient(ipEndPoint, options);
         }
     }
 
@@ -98,6 +116,98 @@ public class ClientTcpFilteringTest : TestBase
         // A QUIC flow's name is asked before its address, and a domain include goes past every IP gate; a TCP
         // connection's packets met the IP block first, and were dropped before its name was read
         await TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10));
+
+        // through the VPN, as an include promises: both ways reach the test server
+        Assert.IsGreaterThan(0, client.RequiredSession.Status.StreamTunnelledCount);
+        Assert.AreEqual(0, client.RequiredSession.Status.StreamPassthruCount);
+    }
+
+    [TestMethod]
+    public async Task An_IP_block_stops_a_TCP_connection_that_no_domain_entry_names()
+    {
+        // the HTTPS test server's address is blocked, and a domain rule is on that does not name it
+        var serverAddress = TestHelper.TestIps.MapToRemote(IPAddress.Parse(TestHelper.WebServer.LocalEps.HttpsUrl1.Host));
+        await using var server = await TestHelper.CreateServer();
+        var netFilter = CreateNetFilter(
+            new StaticIpFilter(null) { BlockedRanges = new[] { serverAddress }.ToOrderedIpRanges() },
+            new StaticDomainFilter(null) { Blocks = ["a-name-nobody-asks-for.example"] });
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server)), netFilter: netFilter);
+        await client.WaitForState(ClientState.Connected, TestCt);
+
+        // with a domain rule on, the block is met once the connection's name is read, no longer at its packets
+        Assert.IsFalse(await TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(5), throwError: false));
+        Assert.AreEqual(0, client.RequiredSession.Status.StreamTunnelledCount);
+        Assert.AreEqual(0, client.RequiredSession.Status.StreamPassthruCount);
+    }
+
+    [TestMethod]
+    public async Task A_domain_exclude_passes_an_IP_block_on_TCP_as_on_QUIC()
+    {
+        // the HTTPS test server's address is blocked, and its name excluded
+        var serverAddress = TestHelper.TestIps.MapToRemote(IPAddress.Parse(TestHelper.WebServer.LocalEps.HttpsUrl1.Host));
+        await using var server = await TestHelper.CreateServer();
+        var netFilter = CreateNetFilter(
+            new StaticIpFilter(null) { BlockedRanges = new[] { serverAddress }.ToOrderedIpRanges() },
+            new StaticDomainFilter(null) { Excludes = [MockEps.HttpsUrl1.Host] });
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server)), netFilter: netFilter);
+        await client.WaitForState(ClientState.Connected, TestCt);
+
+        // a name's own verdict decides its connection, an exclude as an include: around the VPN, past the IP block
+        await TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(10));
+        Assert.IsGreaterThan(0, client.RequiredSession.Status.StreamPassthruCount);
+        Assert.AreEqual(0, client.RequiredSession.Status.StreamTunnelledCount);
+    }
+
+    [TestMethod]
+    public async Task A_blocked_name_stays_blocked_while_an_ad_shows()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var netFilter = CreateNetFilter(TestHelper.ClientNetFilter.IpFilter,
+            new StaticDomainFilter(null) { Blocks = [MockEps.HttpsUrl1.Host] });
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server)), netFilter: netFilter);
+        await client.WaitForState(ClientState.Connected, TestCt);
+
+        // While an ad shows, its traffic goes around the VPN. The connection's block was taken for an exclude with
+        // the rest, and the blocked name went around too
+        ((ClientSession)client.RequiredSession).PassthroughState.PassthroughForAd = true;
+        Assert.IsFalse(await TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(5), throwError: false));
+        Assert.AreEqual(0, client.RequiredSession.Status.StreamPassthruCount);
+
+        // and a name with no rule goes around, as the ad's does
+        Assert.IsTrue(await TestHelper.Test_Https(MockEps.HttpsUrl2, throwError: false));
+        Assert.IsGreaterThan(0, client.RequiredSession.Status.StreamPassthruCount);
+    }
+
+    [TestMethod]
+    public async Task A_ClientHello_larger_than_4_KB_reaches_its_server_with_a_domain_rule_on()
+    {
+        var localEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(TestHelper.TestIps.LocalNsTestIp);
+        using var listener = new TcpListener(localEndPoint);
+        listener.Start();
+        var remoteEndPoint = new IPEndPoint(TestHelper.TestIps.RemoteNsTestIp, localEndPoint.Port);
+
+        await using var server = await TestHelper.CreateServer();
+        var netFilter = CreateNetFilter(TestHelper.ClientNetFilter.IpFilter,
+            new StaticDomainFilter(null) { Blocks = ["a-name-nobody-asks-for.example"] });
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server)), netFilter: netFilter);
+        await client.WaitForState(ClientState.Connected, TestCt);
+
+        // A ClientHello of 6 KB, as one with large extensions: the client read 4 KB for the name, which the reader
+        // now takes for a ClientHello cut short, and the connection would fail; its read holds a whole TLS record
+        var clientHello = DomainFilteringServiceTest.BuildClientHello("www.allowed.example", paddingLength: 6000);
+        using var ioCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        ioCts.CancelAfter(TimeSpan.FromSeconds(10));
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(remoteEndPoint, ioCts.Token);
+        await tcpClient.GetStream().WriteAsync(clientHello, ioCts.Token);
+        using var accepted = await listener.AcceptTcpClientAsync(ioCts.Token);
+        var received = new byte[clientHello.Length];
+        await accepted.GetStream().ReadExactlyAsync(received, ioCts.Token);
+        CollectionAssert.AreEqual(clientHello, received);
     }
 
     [TestMethod]
@@ -141,6 +251,118 @@ public class ClientTcpFilteringTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_reconfigure_that_changes_no_rule_keeps_the_TCP_connections()
+    {
+        // a server that keeps its connection open
+        var localEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(TestHelper.TestIps.LocalNsTestIp);
+        using var listener = new TcpListener(localEndPoint);
+        listener.Start();
+        var remoteEndPoint = new IPEndPoint(TestHelper.TestIps.RemoteNsTestIp, localEndPoint.Port);
+
+        await using var server = await TestHelper.CreateServer();
+        var netFilter = CreateNetFilter(new StaticIpFilter(null),
+            new StaticDomainFilter(null) { Blocks = ["a-name-nobody-asks-for.example"] });
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server)), netFilter: netFilter);
+        await client.WaitForState(ClientState.Connected, TestCt);
+
+        using var ioCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        ioCts.CancelAfter(TimeSpan.FromSeconds(10));
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(remoteEndPoint, ioCts.Token);
+        await tcpClient.GetStream().WriteAsync(new byte[] { 1 }, ioCts.Token);
+        using var accepted = await listener.AcceptTcpClientAsync(ioCts.Token);
+        await accepted.GetStream().ReadExactlyAsync(new byte[1], ioCts.Token);
+
+        // The app sends every live setting with each reconfigure, as on any setting saved while connected, these
+        // two among them. Set to what they are, they change no rule: the connections were ended all the same
+        client.UnroutedIpMode = client.UnroutedIpMode;
+        client.UnsupportedIpV6Mode = client.UnsupportedIpV6Mode;
+
+        // the connection still carries data both ways
+        await tcpClient.GetStream().WriteAsync(new byte[] { 2 }, ioCts.Token);
+        await accepted.GetStream().ReadExactlyAsync(new byte[1], ioCts.Token);
+        await accepted.GetStream().WriteAsync(new byte[] { 3 }, ioCts.Token);
+        await tcpClient.GetStream().ReadExactlyAsync(new byte[1], ioCts.Token);
+    }
+
+    [TestMethod]
+    public async Task A_rule_changed_with_no_domain_rule_on_ends_no_connection()
+    {
+        // a server that keeps its connection open
+        var localEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(TestHelper.TestIps.LocalNsTestIp);
+        using var listener = new TcpListener(localEndPoint);
+        listener.Start();
+        var remoteEndPoint = new IPEndPoint(TestHelper.TestIps.RemoteNsTestIp, localEndPoint.Port);
+
+        await using var server = await TestHelper.CreateServer();
+        var ipFilter = new StaticIpFilter(null);
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server), useTcpForwarding: true),
+            netFilter: CreateNetFilter(ipFilter));
+        await client.WaitForState(ClientState.Connected, TestCt);
+
+        using var ioCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        ioCts.CancelAfter(TimeSpan.FromSeconds(10));
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(remoteEndPoint, ioCts.Token);
+        await tcpClient.GetStream().WriteAsync(new byte[] { 1 }, ioCts.Token);
+        using var accepted = await listener.AcceptTcpClientAsync(ioCts.Token);
+        await accepted.GetStream().ReadExactlyAsync(new byte[1], ioCts.Token);
+
+        // The user blocks another address. With no domain rule on, each packet of a TCP connection still meets the IP
+        // gates, where a block of its own address would stop it, so nothing needs ending: every connection was ended
+        ipFilter.BlockedRanges = new[] { IPAddress.Parse("192.0.2.1") }.ToOrderedIpRanges();
+
+        await tcpClient.GetStream().WriteAsync(new byte[] { 2 }, ioCts.Token);
+        await accepted.GetStream().ReadExactlyAsync(new byte[1], ioCts.Token);
+        await accepted.GetStream().WriteAsync(new byte[] { 3 }, ioCts.Token);
+        await tcpClient.GetStream().ReadExactlyAsync(new byte[1], ioCts.Token);
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task The_last_domain_rule_that_goes_and_the_first_that_comes_end_the_TCP_connections(bool isLastRule)
+    {
+        // a server that keeps its connection open
+        var localEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(TestHelper.TestIps.LocalNsTestIp);
+        using var listener = new TcpListener(localEndPoint);
+        listener.Start();
+        var remoteEndPoint = new IPEndPoint(TestHelper.TestIps.RemoteNsTestIp, localEndPoint.Port);
+
+        // TCP forwarding is on by the user's setting, so the connections stay with the TCP host either way
+        string[] rules = ["a-name-nobody-asks-for.example"];
+        await using var server = await TestHelper.CreateServer();
+        var domainFilter = new StaticDomainFilter(null) { Blocks = isLastRule ? rules : [] };
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server), useTcpForwarding: true),
+            netFilter: CreateNetFilter(new StaticIpFilter(null), domainFilter));
+        await client.WaitForState(ClientState.Connected, TestCt);
+
+        using var setupCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        setupCts.CancelAfter(TimeSpan.FromSeconds(10));
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(remoteEndPoint, setupCts.Token);
+        await tcpClient.GetStream().WriteAsync(new byte[] { 1 }, setupCts.Token);
+        using var accepted = await listener.AcceptTcpClientAsync(setupCts.Token);
+        await accepted.GetStream().ReadExactlyAsync(new byte[1], setupCts.Token);
+
+        // The user takes the last domain rule away, or adds the first. A connection decided under the last rule went
+        // on by it, as one that an exclude took around the VPN: with no domain rule left, the change ended nothing
+        domainFilter.Blocks = isLastRule ? [] : rules;
+
+        using var readCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        readCts.CancelAfter(TimeSpan.FromSeconds(5));
+        try {
+            Assert.AreEqual(0, await tcpClient.GetStream().ReadAsync(new byte[1], readCts.Token));
+        }
+        catch (IOException) {
+            // ended by a reset
+        }
+    }
+
+    [TestMethod]
     public async Task A_connection_decided_as_the_rules_change_does_not_go_out()
     {
         var localEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(TestHelper.TestIps.LocalNsTestIp);
@@ -169,6 +391,42 @@ public class ClientTcpFilteringTest : TestBase
         await tcpClient.ConnectAsync(remoteEndPoint, setupCts.Token);
         await tcpClient.GetStream().WriteAsync(new byte[] { 1 }, setupCts.Token);
         await Assert.ThrowsAsync<OperationCanceledException>(() => AcceptWithin(listener, TimeSpan.FromSeconds(3)));
+    }
+
+    [TestMethod]
+    public async Task A_connection_whose_host_is_reached_as_the_rules_change_carries_nothing()
+    {
+        var localEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(TestHelper.TestIps.LocalNsTestIp);
+        using var listener = new TcpListener(localEndPoint);
+        listener.Start();
+        var remoteEndPoint = new IPEndPoint(TestHelper.TestIps.RemoteNsTestIp, localEndPoint.Port);
+
+        await using var server = await TestHelper.CreateServer();
+        var ipFilter = new StaticIpFilter(null) {
+            ExcludeRanges = new[] { remoteEndPoint.Address }.ToOrderedIpRanges()
+        };
+        var netFilter = CreateNetFilter(ipFilter,
+            new StaticDomainFilter(null) { Blocks = ["a-name-nobody-asks-for.example"] });
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server)), netFilter: netFilter,
+            socketFactory: new RuleChangingSocketFactory(ipFilter, localEndPoint, remoteEndPoint.Address));
+        await client.WaitForState(ClientState.Connected, TestCt);
+
+        // The app speaks first, so its connection is decided at once, by the old rules, around the VPN. The change
+        // that blocks its address comes as its host is being reached, past the check before it. The host is reached
+        // all the same, and the connection was then joined to it: the byte the app sent, read for its name, left
+        using var ioCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        ioCts.CancelAfter(TimeSpan.FromSeconds(10));
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(remoteEndPoint, ioCts.Token);
+        await tcpClient.GetStream().WriteAsync(new byte[] { 1 }, ioCts.Token);
+        using var accepted = await listener.AcceptTcpClientAsync(ioCts.Token);
+        try {
+            Assert.AreEqual(0, await accepted.GetStream().ReadAsync(new byte[1], ioCts.Token));
+        }
+        catch (IOException) {
+            // ended by a reset
+        }
     }
 
     [TestMethod]

@@ -2,12 +2,14 @@
 
 * Fix: When your local network stays out of the VPN, only its IPv6 addresses do, as with IPv4, and the kill switch lets no more through. Other IPv6 addresses that are not public, such as those of a carrier's IPv6-to-IPv4 gateway, went around the VPN.
 * Fix: With Split Domains on, DNS lookups no longer stall: about half of them were held back, and an app waited for its own retry
-* Fix: With Split Domains on, a mail, FTP or database app connects after a second, where it waited until it gave up: such an app waits for its server to speak first
-* Fix: A domain you include in Split Domains goes through the VPN even where Split IPs blocks its address, as the include promises, where most of its connections were dropped
-* Fix: Split Domains no longer lets a site's HTTP/3 connection through without its rule when the start of it is lost or late; the connection fails instead
-* Update: A change to Split IPs or Split Domains while connected ends the apps' open connections, so they connect again under the new rules
-* Fix: Split Domains no longer gives a site the rule of another site that the browser reached over HTTP/3 at the same address just before, as sites on one content network share an address
-* Fix: With Split DNS on Always use VPN, a DNS lookup over TCP or over TLS no longer goes outside the VPN while an ad shows, or where Split IPs excludes your DNS server
+* Fix: With Split Domains on, an app whose server speaks first, as with SMTP, FTP or MySQL, connects after a second, where it waited until it gave up
+* Fix: A domain you include in Split Domains goes through the VPN even where Split IPs blocks its address, as the include promises, where its connections were dropped, but for HTTP/3 ones
+* Update: A domain you exclude in Split Domains goes around the VPN even where Split IPs blocks its address, as its HTTP/3 connections did
+* Fix: A site blocked in Split Domains is no longer reachable while an ad shows
+* Fix: Split Domains no longer lets a site's HTTP/3 connection through without its rule when the start of it is late or not whole; that start is dropped, and read again when the app sends it again
+* Update: With Split Domains on, a change to Split IPs or Split Domains while connected ends the apps' open TCP connections, so they connect again under the new rules; an HTTP/3 connection keeps its rule until it ends
+* Fix: Split Domains no longer lets a blocked site through, or an included site out of the VPN, when an app reaches it over HTTP/3 from the same port as another site at the same address, as sites on one content network share an address
+* Fix: A DNS lookup over TCP or over TLS no longer goes outside the VPN while an ad shows, nor, with Split DNS on Always use VPN, where Split IPs excludes your DNS server
 * Fix: With Split DNS on Always use VPN, a name under your network's own DNS domain is no longer looked up outside the VPN. A name that only your network's DNS server knows, such as `nas.lan`, no longer resolves while connected; choose Allow Bypass VPN if you need such names. Where the system does not let the app do this, as Ubuntu 20.04 and 22.04 on a network of that kind that systemd-networkd manages, the app still connects, and those names are looked up outside the VPN #linux
 * Fix: The app no longer shows Connected while IPv6 goes outside the VPN: on a computer that has IPv6 but refuses the VPN its IPv6 address, the app does not connect and says why, and it disconnects when such a computer moves to a network with IPv6. A computer with no IPv6 connects as before #windows #linux
 * Fix: With Split DNS on Always use VPN, a DNS domain that your network sets while you are connected, as when it renews your address, no longer sends the names under it outside the VPN: the app takes it off within a moment, where the system lets it #linux

@@ -15,12 +15,15 @@ public readonly struct PacketSniFilterResult
     /// </summary>
     public FilterAction Action { get; }
 
-    /// <summary>Gets the flow's domain name, or <see langword="null"/> when none was found.</summary>
+    /// <summary>
+    /// Gets the domain name the result goes by: that of the connection whose name it found, or else of the connection
+    /// whose verdict the flow took last; <see langword="null"/> when none was found.
+    /// </summary>
     public string? DomainName { get; }
 
     /// <summary>
-    /// Gets a value indicating whether this result is the one in which the flow's name was found and its verdict
-    /// first decided.
+    /// Gets a value indicating whether this result is the one in which a connection's name was found and its verdict
+    /// decided.
     /// </summary>
     public bool IsNewFlow { get; }
 

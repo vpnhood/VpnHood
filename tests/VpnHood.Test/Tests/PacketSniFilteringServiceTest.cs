@@ -105,6 +105,50 @@ public class PacketSniFilteringServiceTest : TestBase
     }
 
     [TestMethod]
+    public void A_ClientHello_in_more_segments_than_the_reader_takes_is_dropped()
+    {
+        // the reader takes three segments, and the name is in the fourth: given up as a flow with no name, the part
+        // held was let through, and the rest with it
+        using var service = CreateTcpService();
+        var clientHello = DomainFilteringServiceTest.BuildClientHello("www.blocked.example");
+        using var first = BuildTcp(clientHello.AsSpan(0, 20));
+        using var second = BuildTcp(clientHello.AsSpan(20, 10));
+        using var third = BuildTcp(clientHello.AsSpan(30, 10));
+        Assert.IsTrue(service.ProcessPacket(first).NeedMore);
+        Assert.IsTrue(service.ProcessPacket(second).NeedMore);
+
+        var result = service.ProcessPacket(third);
+        Assert.AreEqual(FilterAction.Block, result.Action);
+        CollectionAssert.AreEqual(new[] { first, second }, result.Packets.ToArray());
+    }
+
+    [TestMethod]
+    public void The_sweep_removes_a_flow_unused_for_its_time_and_keeps_one_in_use()
+    {
+        using var flowCache = new FlowCacheService(TimeSpan.FromMinutes(2));
+        var destination = new IpEndPointValue(IPAddress.Parse("198.51.100.1"), 443);
+        var usedKey = new FlowKey(new IpEndPointValue(IPAddress.Parse("10.0.0.2"), 50000), destination);
+        var unusedKey = new FlowKey(new IpEndPointValue(IPAddress.Parse("10.0.0.2"), 50001), destination);
+        var nowTicks = TimeSpan.FromHours(1).Ticks;
+        flowCache.Set(usedKey, new FlowInfo { LastSeenTicks = nowTicks - TimeSpan.FromSeconds(30).Ticks });
+        flowCache.Set(unusedKey, new FlowInfo { LastSeenTicks = nowTicks - TimeSpan.FromMinutes(3).Ticks });
+
+        flowCache.RemoveExpired(nowTicks);
+        Assert.IsTrue(flowCache.TryGetValue(usedKey, out _));
+        Assert.IsFalse(flowCache.TryGetValue(unusedKey, out _));
+
+        // Until its next time the sweep costs a comparison, and removes nothing: the flow, unused for its time a
+        // moment later, stays until then
+        var laterTicks = nowTicks + TimeSpan.FromSeconds(1).Ticks;
+        flowCache.Set(unusedKey, new FlowInfo { LastSeenTicks = laterTicks - TimeSpan.FromMinutes(3).Ticks });
+        flowCache.RemoveExpired(laterTicks);
+        Assert.IsTrue(flowCache.TryGetValue(unusedKey, out _));
+
+        flowCache.RemoveExpired(nowTicks + TimeSpan.FromMinutes(1).Ticks);
+        Assert.IsFalse(flowCache.TryGetValue(unusedKey, out _));
+    }
+
+    [TestMethod]
     public void A_ClientHello_that_its_flow_ends_before_it_is_complete_is_dropped()
     {
         // the part held for the rest of the name goes with the end, never as no objection: the name may be in the rest

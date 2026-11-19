@@ -173,6 +173,39 @@ public class SqliteFilterChainTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_lookup_after_the_close_fails_whatever_the_next_stage_would_answer()
+    {
+        // The chain asks its next stage first, and gave that stage's verdict after its own close: the exclude of a
+        // stage the close had disposed sent the address around the tunnel, past gates that were gone
+        var folder = CreateDbFolder("ip-next-closed");
+        var dbPath = await BuildIpDb(folder, "ip-next-closed.1.db", "1.0.0.1");
+        await SplitDbManifest.Write(folder, [dbPath], TestCt);
+        var next = new StaticIpFilter(null) { ExcludeRanges = new[] { IpRange.Parse("2.0.0.2") }.ToOrderedList() };
+        var chain = await SqliteIpFilterChain.Create(next, folder, autoDisposeNextFilter: true, TestCt);
+        Assert.AreEqual(FilterAction.Exclude, chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
+
+        chain.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
+    }
+
+    [TestMethod]
+    public async Task A_lookup_after_the_close_fails_rather_than_take_an_included_address_out_of_the_tunnel()
+    {
+        // a gate with an include set alone sends every address outside it around the tunnel: closed, it found no
+        // member, so an address inside the set went around too
+        var folder = CreateDbFolder("ip-include-closed");
+        var dbPath = Path.Combine(folder, "ip-include-closed.1.db");
+        await new IpRangeListDbBuilder(() => "ip-include-closed",
+            includesFactory: () => new[] { IpRange.Parse("1.0.0.1") }.ToOrderedList()).BuildAsync(dbPath, TestCt);
+        var gate = new SqliteIpFilter(next: null, dbPath);
+        Assert.AreEqual(FilterAction.Default, gate.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
+        Assert.AreEqual(FilterAction.Exclude, gate.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
+
+        gate.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => gate.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
+    }
+
+    [TestMethod]
     public async Task A_name_lookup_after_the_close_fails_rather_than_let_a_blocked_name_pass()
     {
         var folder = CreateDbFolder("domain-lookup-closed");

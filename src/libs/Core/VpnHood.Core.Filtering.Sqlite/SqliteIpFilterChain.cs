@@ -97,21 +97,23 @@ public sealed class SqliteIpFilterChain : IIpFilter
     // the inner filter runs first and its veto wins; the gates only see traffic it passed as Default.
     // Composition-wise this equals chaining the gates directly over next (both consult next first),
     // but keeping next OUTSIDE the swap unit means a gate swap never touches it.
+    // The whole lookup is on the read side of the swap lock, the next stage's part too: the close waits for it, so
+    // none is inside that stage when the close disposes it, and one that comes after the close fails whatever
+    // that stage would answer.
     /// <inheritdoc/>
     /// <remarks>The next stage decides first, then the databases, in the manifest's order.</remarks>
     /// <exception cref="ObjectDisposedException">The stage is disposed.</exception>
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
-        var result = _next?.Process(protocol, endPoint) ?? FilterAction.Default;
-        if (result != FilterAction.Default)
-            return result;
-
         _swapLock.EnterReadLock();
         try {
             // closed: the gates are gone, and Default would let an address they block pass; the lookup's packet is
             // dropped, its connection closed
             ObjectDisposedException.ThrowIf(_disposed, this);
-            return _gates?.Process(protocol, endPoint) ?? FilterAction.Default;
+            var result = _next?.Process(protocol, endPoint) ?? FilterAction.Default;
+            return result != FilterAction.Default
+                ? result
+                : _gates?.Process(protocol, endPoint) ?? FilterAction.Default;
         }
         finally {
             _swapLock.ExitReadLock();
@@ -184,8 +186,8 @@ public sealed class SqliteIpFilterChain : IIpFilter
     // Process (and fails there); the lock's wait handles are reclaimed by their finalizers
     /// <summary>
     /// Closes the databases, without raising <see cref="Changed"/>, and disposes the next stage when this stage was
-    /// made to. A lookup after it gets the next stage's verdict where that is not <see cref="FilterAction.Default"/>,
-    /// and otherwise throws <see cref="ObjectDisposedException"/>.
+    /// made to, once the lookups under way have ended. A lookup after it throws
+    /// <see cref="ObjectDisposedException"/>.
     /// </summary>
     public void Dispose()
     {

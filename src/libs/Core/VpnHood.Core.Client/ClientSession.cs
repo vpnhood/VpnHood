@@ -59,6 +59,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private CancellationTokenSource _networkCts = new();
     private bool _disposed;
     private int _filterGeneration;
+    private readonly Lock _filterLock = new();
+    // whether a domain rule was on when the rules last changed, so the TCP connections open now were decided by name
+    private bool _wasDomainFilterOn;
     private ChannelProtocol _channelProtocol;
     private ChannelProtocol _oldChannelProtocol;
     private bool _useTcpForwarding;
@@ -208,9 +211,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         UpdateConfig();
         _domainFilteringService.IsEnabledChanged += DomainFilteringService_IsEnabledChanged;
 
-        // A rule that changes while connected ends the TCP connections, so the apps' new ones follow it: with a domain
-        // rule on, a TCP connection is decided once, by its name first (ClientPacketHandler), and its packets meet no
-        // IP gate that a new block would stop
+        // A rule that changes while a domain rule is on ends the TCP connections, so the apps' new ones follow it: a
+        // TCP connection is then decided once, by its name first (ClientPacketHandler), and its packets meet no IP
+        // gate that a new block would stop
+        _wasDomainFilterOn = IsDomainFilterOn;
         if (_netFilter.IpFilter != null)
             _netFilter.IpFilter.Changed += NetFilter_Changed;
         if (_netFilter.DomainFilter != null)
@@ -430,14 +434,44 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     // (ClientStreamHandler)
     internal int FilterGeneration => Volatile.Read(ref _filterGeneration);
 
+    // Adds the channel of a connection decided under a generation of the rules, unless they have changed since. A
+    // change takes the same lock before its reset, so the channel is refused, or it is added before the reset, which
+    // then ends it: no channel of the old rules is added after the reset has run
+    internal void AddChannelUnlessRulesChanged(int filterGeneration, Action addChannel)
+    {
+        lock (_filterLock) {
+            if (_filterGeneration != filterGeneration)
+                throw new NetFilterException("The filter rules changed while the connection was decided.");
+
+            addChannel();
+        }
+    }
+
+    // The service's flag follows the domain filter's event as this session does, and it may come second, so the filter
+    // is asked too
+    private bool IsDomainFilterOn => _domainFilteringService.IsEnabled || _netFilter.DomainFilter is { IsEmpty: false };
+
     private void NetFilter_Changed(object? sender, EventArgs e)
     {
         if (_disposed)
             return;
 
-        // the generation first, so a connection decided before it and not out yet stops, as the reset below does not
-        // reach it
-        Interlocked.Increment(ref _filterGeneration);
+        lock (_filterLock) {
+            // With no domain rule on, before the change and after it, nothing needs ending: each packet of a TCP
+            // connection still meets the IP gates, so a new block stops it there. With one on, a connection is
+            // decided once, by its name first, and no gate sees its packets after: so the connections end when the
+            // last domain rule goes too, which decided them, and when the first one comes, which never saw them
+            var wasDomainFilterOn = _wasDomainFilterOn;
+            _wasDomainFilterOn = IsDomainFilterOn;
+            if (!wasDomainFilterOn && !_wasDomainFilterOn)
+                return;
+
+            // The generation first. The reset below ends the connections on the device's side, one still being set
+            // up too, but not what such a one has under way on the other: the connect to its host, or the request to
+            // the server, whose channel the generation then refuses
+            _filterGeneration++;
+        }
+
         VhLogger.Instance.LogInformation("The filter rules have changed, so the TCP connections end, and new ones follow the new rules.");
         try {
             DropCurrentConnections();

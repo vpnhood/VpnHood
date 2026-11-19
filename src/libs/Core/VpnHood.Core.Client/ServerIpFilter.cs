@@ -40,6 +40,8 @@ internal class ServerIpFilter : IIpFilter
     // must not serve verdicts of the old rules. An empty declaration means "no restriction" and is
     // converted to All at the door, so Process never needs an empty special-case and "before the session"
     // and "server routes everything" are one honest state.
+    // A mode or a flag set to what it is raises none: every reconfigure sets the modes again, as on any setting the
+    // user saves, and a change ends the session's TCP connections (ClientSession), which a rule alone may do.
     public IpRangeOrderedList IncludeRanges {
         get;
         set {
@@ -50,7 +52,11 @@ internal class ServerIpFilter : IIpFilter
 
     public SplitUnsupportedIpMode UnroutedIpMode {
         get;
-        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
+        set {
+            if (field == value) return;
+            field = value;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     } = SplitUnsupportedIpMode.Exclude;
 
     // The fate of IPv6 when the server cannot carry the family at all; a v6 miss inside a SUPPORTED
@@ -59,14 +65,22 @@ internal class ServerIpFilter : IIpFilter
     // this mode says Exclude (the app additionally passes the pair resolved).
     public SplitUnsupportedIpMode UnsupportedIpV6Mode {
         get;
-        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
+        set {
+            if (field == value) return;
+            field = value;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     } = SplitUnsupportedIpMode.Block;
 
     // When false, every IPv6 destination is a miss regardless of IncludeRanges (a server that cannot
     // carry the family may still have declared no restriction), judged by UnsupportedIpV6Mode.
     public bool IsIpV6SupportedByServer {
         get;
-        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
+        set {
+            if (field == value) return;
+            field = value;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     } = true;
 
     /// <summary>

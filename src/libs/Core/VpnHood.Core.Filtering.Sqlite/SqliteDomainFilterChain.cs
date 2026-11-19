@@ -105,19 +105,20 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
     /// <exception cref="ObjectDisposedException">The stage is disposed.</exception>
     public FilterAction Process(string? domain)
     {
+        // The whole lookup is on the read side of the swap lock, the next stage's part too: the close waits for it,
+        // so none is inside that stage when the close disposes it
         _swapLock.EnterReadLock();
         try {
             // closed: the gates are gone, and Default would let a name they block pass; the lookup's flow is dropped
             ObjectDisposedException.ThrowIf(_disposed, this);
             var result = _gates?.Process(domain) ?? FilterAction.Default;
-            if (result != FilterAction.Default)
-                return result;
+            return result != FilterAction.Default
+                ? result
+                : _next?.Process(domain) ?? FilterAction.Default;
         }
         finally {
             _swapLock.ExitReadLock();
         }
-
-        return _next?.Process(domain) ?? FilterAction.Default;
     }
 
     /// <inheritdoc/>
@@ -186,7 +187,8 @@ public sealed class SqliteDomainFilterChain : IDomainFilter
     // Process (and fails there); the lock's wait handles are reclaimed by their finalizers
     /// <summary>
     /// Closes the databases, without raising <see cref="Changed"/>, and disposes the next stage when this stage was
-    /// made to. A lookup after it throws <see cref="ObjectDisposedException"/>.
+    /// made to, once the lookups under way have ended. A lookup after it throws
+    /// <see cref="ObjectDisposedException"/>.
     /// </summary>
     public void Dispose()
     {

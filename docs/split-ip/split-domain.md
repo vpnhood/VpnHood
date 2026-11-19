@@ -8,9 +8,11 @@ rebuild mechanics) is in [README.md](README.md); the db format is in the
 Domains are matched on the **extracted SNI** (TLS ClientHello over TCP, QUIC initial). That makes the
 domain gate inherently partial: traffic that carries no readable domain (plain TCP/UDP, raw-IP
 connections) returns `Default` from the domain pipe and is decided by the IP gates alone. A TCP connection
-whose app sends nothing in the first second is one of them: a mail, FTP or database client waits for its
-server to speak first, and the server is reached only after the verdict. A ClientHello begun and not
-complete within that second fails the connection rather than pass it unnamed.
+whose app sends nothing in the first second is one of them: where the server speaks first, as with SMTP,
+FTP or MySQL, the app waits for it, and the server is reached only after the verdict. A ClientHello begun
+and not complete within that second fails the connection rather than pass it unnamed, as does one that is
+not well formed. A name that Encrypted Client Hello hides is not read either: the rules see the outer
+name, the provider's.
 
 ## Sources
 
@@ -56,8 +58,19 @@ block > exclude > include.
 A flow whose name an entry matches takes that verdict whatever the IP gates say, TCP and QUIC alike: an
 include goes through the tunnel past an IP exclude or block, and an exclude goes around it past an IP
 block. The IP gates decide only a flow whose name matches no entry, or that has none. A TCP connection is
-decided once, when its name is read, so a rule that changes while connected ends the open TCP connections,
-and one still being set up does not go out; the apps' new ones follow it (`ClientSession`).
+decided once, when its name is read, so a rule that changes while connected, IP or domain, ends the open
+TCP connections, and one still being set up is not joined to its host or to the tunnel; the apps' new ones
+follow it (`ClientSession`). So does the change that takes the last domain rule away.
+
+A QUIC flow is the packets between two addresses and ports, and a client that keeps one socket may run
+several connections on it to one server address, as to a CDN's, at once or one after another. Each has
+its name read from its first packets. A blocked one is dropped there and never gets past them, so the
+others go on. Past the first packets the connections of a flow are not told apart, so the flow goes by
+the most protective of their verdicts: include, then no entry, then exclude. None leaves the tunnel by
+another's exclude, at the price of an excluded name that is not excluded while it shares a flow with one
+that is not. A connection's first packets still go by its own verdict, so the IP gates judge a name with
+no entry there, whatever the flow's verdict. Where they send it another way than the flow goes, as an IP
+exclude does under an included flow, that connection may fail: its later packets follow the flow.
 
 Why the asymmetry: every packet has an IP, so IP gates can be pure vetoes; but a domain is *more
 specific* knowledge than an IP, and an exception to an IP-level exclusion can only be expressed by a

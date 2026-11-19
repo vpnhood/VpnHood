@@ -112,9 +112,9 @@ internal class ClientStreamHandler(
         if (netFilter.IpMapper?.ToHost(IpProtocol.Tcp, hostEndPoint.ToValue(), out var newEndPoint) == true)
             hostEndPoint = newEndPoint.ToIPEndPoint();
 
-        // check IPv6 support
+        // check IPv6 support: dropped as its packets are, no fault to log as one
         if (hostEndPoint.IsV6 && !session.Status.IsIpV6SupportedByClient)
-            throw new Exception("IPv6 is not supported by client.");
+            throw new NetFilterException("IPv6 is not supported by client.");
 
         //log
         VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
@@ -133,9 +133,12 @@ internal class ClientStreamHandler(
             var hostConnection = new TcpStreamConnection(tcpClient, connectionId: streamConnection.ConnectionId, connectionName: "host", isServer: false);
 
             try {
-                // create and add the channel
-                var channel = new StreamForwardingChannel(hostConnection.ToString(), streamConnection, hostConnection, streamForwardingBufferSize);
-                forwardingManager.AddChannel(channel, disposeOnFail: true);
+                // create and add the channel, unless the rules changed while the host was reached: the bytes read
+                // for the name would leave with it
+                session.AddChannelUnlessRulesChanged(filterGeneration, () => {
+                    var channel = new StreamForwardingChannel(hostConnection.ToString(), streamConnection, hostConnection, streamForwardingBufferSize);
+                    forwardingManager.AddChannel(channel, disposeOnFail: true);
+                });
             }
             catch {
                 await hostConnection.DisposeAsync().Vhc();
@@ -153,8 +156,10 @@ internal class ClientStreamHandler(
         IStreamConnection streamConnection, IPEndPoint hostEndPoint, int filterGeneration,
         CancellationToken cancellationToken)
     {
+        // dropped as its packets are, no fault to log as one: with a domain rule on, an included name's connection
+        // comes here past the IP gates, which dropped its packets before
         if (hostEndPoint.IsV6 && !session.Status.IsIpV6SupportedByServer)
-            throw new Exception("IPv6 is not supported by server.");
+            throw new NetFilterException("IPv6 is not supported by server.");
 
         //log
         VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
@@ -190,9 +195,11 @@ internal class ClientStreamHandler(
             if (initContents.Length > 0)
                 trafficMeter.OnSent(initContents.Length);
 
-            // add the stream forwarding channel
-            var channel = new StreamForwardingChannel(forwardingConnection.ToString()!, streamConnection, forwardingConnection, streamForwardingBufferSize, trafficMeter);
-            tunnel.AddChannel(channel, disposeIfFailed: true);
+            // add the stream forwarding channel, unless the rules changed while the request was answered
+            session.AddChannelUnlessRulesChanged(filterGeneration, () => {
+                var channel = new StreamForwardingChannel(forwardingConnection.ToString()!, streamConnection, forwardingConnection, streamForwardingBufferSize, trafficMeter);
+                tunnel.AddChannel(channel, disposeIfFailed: true);
+            });
         }
         catch {
             // not waited for: the close may wait for the peer, and the app's connection would stay open meanwhile
@@ -224,9 +231,16 @@ internal class ClientStreamHandler(
     private async Task<(IStreamConnection Connection, FilterAction filterAction)> ApplySniFiltering(
         IStreamConnection streamConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
-        // Filter by SNI (it log by its own observer, no need to log here)
-        var filterResult = await domainFilterService.ProcessStream(
-            streamConnection.Stream, hostEndPoint, cancellationToken).Vhc();
+        // Filter by SNI (it log by its own observer, no need to log here). A name that cannot be read drops the
+        // connection as a rule's block does: the filter's outcome, no fault to log as one
+        StreamSniFilterResult filterResult;
+        try {
+            filterResult = await domainFilterService.ProcessStream(
+                streamConnection.Stream, hostEndPoint, cancellationToken).Vhc();
+        }
+        catch (Exception ex) when (ex is TimeoutException or InvalidDataException) {
+            throw new NetFilterException(ex.Message, ex);
+        }
 
         // update connection stream with ReadBufferedStream to pre-append the read data
         if (filterResult.ReadData.Length > 0)

@@ -8,6 +8,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
@@ -72,6 +73,14 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
             // The "host" endpoint is the original TCP destination captured by the stack.
             var hostEndPoint = tcpClient.LocalEndPoint;
             await streamHandler.ProcessConnection(connection, hostEndPoint, cancellationToken).Vhc();
+        }
+        catch (NetFilterException ex) {
+            // Dropped by the rules, as a packet is, which no line but a trace tells: no fault of the session's. With
+            // a domain rule on, every TCP connection that an IP rule blocks ends here, where its packets were dropped
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
+                "A TCP connection has been dropped by the filter. HostEp: {HostEp}, Reason: {Reason}",
+                VhLogger.Format(connection.LocalEndPoint), ex.Message);
+            await connection.DisposeAsync().Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Stream, ex, "Could not process a tcp stream request.");

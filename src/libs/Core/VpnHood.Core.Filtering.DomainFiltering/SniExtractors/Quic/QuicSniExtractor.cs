@@ -31,8 +31,19 @@ internal static class QuicSniExtractor
     private const uint V2Version = 0x6b3343cf;
 
     // The time a ClientHello has for all its Initials, as a TCP connection has for its name (DomainFilteringService):
-    // long enough for most clients' first resend of a lost datagram
+    // a client sends them together, so a second is far more than they take
     private static readonly long NameTimeoutTicks = TimeSpan.FromSeconds(1).Ticks;
+
+    // The datagrams a ClientHello may take: as many as one of 16 KB does, the most a TCP connection's may be
+    // (VpnHoodClient). A flow that runs out of them is dropped, so a count below what a real ClientHello takes, as
+    // one with a post-quantum key share and a large session ticket, would drop every connection that sends one
+    private const int NameDatagramBudget = 16;
+
+    // the shortest datagram a client may send an Initial in (RFC 9000, 14.1)
+    private const int MinInitialDatagramLength = 1200;
+
+    // the type of a ClientHello, a handshake message's first byte
+    private const byte ClientHelloType = 0x01;
 
     private static readonly QuicSniResult NotFoundResult = new() { DomainName = null, NeedMore = false, State = null };
 
@@ -41,12 +52,12 @@ internal static class QuicSniExtractor
     /// Pass back the returned State on the next packet for this flow if Outcome==NeedMore.
     /// </summary>
     /// <remarks>
-    /// A flow's first datagram must hold a client Initial of QUIC version 1 or 2 that decrypts with the keys of its
-    /// own destination connection ID, or the flow is no QUIC that can be read, and is given up at once: a header check
-    /// alone passed half of all DNS queries, which were held for a name they never hold. A flow that decrypted is
-    /// QUIC: its ClientHello not complete within three datagrams, or by a datagram that comes after a second, is
-    /// incomplete, which fails its flow closed; a whole ClientHello with no name is given up at once. A result that
-    /// comes of a decrypted Initial gives its connection ID, which the decryption proved.
+    /// A read's first datagram must hold a client Initial of QUIC version 1 or 2 that decrypts with the keys of its
+    /// own destination connection ID, or it begins no QUIC connection that can be read, and is given up at once: a
+    /// header check alone passed half of all DNS queries, which were held for a name they never hold. One that
+    /// decrypted begins a connection: its ClientHello not complete within sixteen datagrams, or by a datagram that
+    /// comes after a second, is incomplete, which fails it closed; a whole ClientHello with no name is given up at
+    /// once. A result that comes of a decrypted Initial gives its connection ID, which the decryption proved.
     /// </remarks>
     public static QuicSniResult TryExtractSniFromUdpPayload(
         ReadOnlySpan<byte> udpPayload,
@@ -65,7 +76,7 @@ internal static class QuicSniExtractor
         }
 
         // budget / timeout
-        if (state.PacketBudget <= 0 || nowTicks > state.DeadlineTicks)
+        if (IsOver(state, nowTicks))
             return Incomplete(state);
 
         var (sawAnyInitial, decrypted) = CollectInitials(udpPayload, state);
@@ -75,27 +86,28 @@ internal static class QuicSniExtractor
         if (sawAnyInitial)
             state.PacketBudget--;
 
-        // assemble contiguous CRYPTO stream starting at offset 0 and try to parse SNI
+        // The connection's handshake, from its first byte. Once a ClientHello is whole, its name is read: one with no
+        // name, as to an address, is given up at once. One that is not well formed, or a handshake that begins with
+        // no ClientHello, has a name that is not known, and fails as one not complete does
         var assembled = AssembleContiguousFromZero(state.Segments, state.MaxBytes);
-        if (assembled.Length != 0) {
-            var sni = TryParseSniFromClientHelloPartial(assembled);
-            if (sni != null)
-                return new QuicSniResult { DomainName = sni, NeedMore = false, State = null, ConnectionId = state.Dcid };
-
-            // all of it is in, with no name, as a ClientHello to an address, or it is no ClientHello
-            if (assembled[0] != 1 || IsWholeHandshakeMessage(assembled))
-                return new QuicSniResult { DomainName = null, NeedMore = false, State = null, ConnectionId = state.Dcid };
-        }
+        if (assembled.Length != 0 && (assembled[0] != ClientHelloType || IsWholeHandshakeMessage(assembled)))
+            return TlsClientHelloParser.TryGetServerName(assembled, out var serverName)
+                ? new QuicSniResult { DomainName = serverName, NeedMore = false, State = null, ConnectionId = state.Dcid }
+                : Incomplete(state);
 
         // still need more?
-        if (state.PacketBudget <= 0 || nowTicks > state.DeadlineTicks)
+        if (IsOver(state, nowTicks))
             return Incomplete(state);
 
         return new QuicSniResult { DomainName = null, NeedMore = true, State = state };
     }
 
-    // A state lives only once an Initial decrypted, so its flow is QUIC: a name not found in time fails it closed,
-    // whether a ClientHello began or not
+    /// <summary>Gets whether a read can take no more: its datagrams or its time are out.</summary>
+    public static bool IsOver(QuicSniState state, long nowTicks) =>
+        state.PacketBudget <= 0 || nowTicks > state.DeadlineTicks;
+
+    // A state lives only once an Initial decrypted, so it is a QUIC connection's: a name not found in time fails it
+    // closed, whether a ClientHello began or not
     private static QuicSniResult Incomplete(QuicSniState state) =>
         new() { DomainName = null, NeedMore = false, State = null, IsIncomplete = true, ConnectionId = state.Dcid };
 
@@ -104,7 +116,7 @@ internal static class QuicSniExtractor
         var state = new QuicSniState {
             IsV2 = isV2,
             Dcid = [.. dcid],
-            PacketBudget = 3,
+            PacketBudget = NameDatagramBudget,
             DeadlineTicks = nowTicks + NameTimeoutTicks,
             MaxBytes = 64 * 1024
         };
@@ -135,13 +147,6 @@ internal static class QuicSniExtractor
             var pktIsV2 = version == V2Version;
             var isInitialPkt = pktIsV2 ? typeBits == 0b01 : typeBits == 0b00;
 
-            // ensure secrets match the actual packet (first time)
-            if (!state.SecretsReady) {
-                state.IsV2 = pktIsV2;
-                state.Dcid = [.. dcidHdr];
-                DeriveInitialSecrets(state);
-            }
-
             // only decrypt client Initials whose DCID matches
             if (isInitialPkt && DcidEquals(dcidHdr, state.Dcid)) {
                 sawAnyInitial = true;
@@ -161,16 +166,6 @@ internal static class QuicSniExtractor
         buf.Length >= 4 && 4 + ((buf[1] << 16) | (buf[2] << 8) | buf[3]) <= buf.Length;
 
     /// <summary>
-    /// Gets the destination connection ID of a datagram whose first packet has the header of a client Initial of QUIC
-    /// version 1 or 2, by its header alone, which no decryption has proved.
-    /// </summary>
-    /// <returns><see langword="true"/> if the header is such an Initial's.</returns>
-    public static bool TryGetInitialConnectionId(ReadOnlySpan<byte> udpPayload, out ReadOnlySpan<byte> connectionId)
-    {
-        return LooksLikeInitial(udpPayload, out _, out connectionId);
-    }
-
-    /// <summary>
     /// Gets whether a datagram holds a client Initial that decrypts with the keys of its own destination connection ID,
     /// as a connection's first Initials do.
     /// </summary>
@@ -188,15 +183,31 @@ internal static class QuicSniExtractor
         return CollectInitials(udpPayload, state).Decrypted;
     }
 
+    /// <summary>
+    /// Gets whether a datagram's first packet is a long-header packet of QUIC version 1 or 2, of any type, to the given
+    /// destination connection ID, as a connection's first Initials and its 0-RTT packets are.
+    /// </summary>
+    public static bool IsOfConnection(ReadOnlySpan<byte> udpPayload, ReadOnlySpan<byte> connectionId)
+    {
+        const int connectionIdOffset = 6;
+        if (udpPayload.Length < connectionIdOffset + connectionId.Length || (udpPayload[0] & 0x80) == 0)
+            return false;
+
+        var version = BinaryPrimitives.ReadUInt32BigEndian(udpPayload.Slice(1, 4));
+        return version is V1Version or V2Version && udpPayload[5] == connectionId.Length &&
+               udpPayload.Slice(connectionIdOffset, connectionId.Length).SequenceEqual(connectionId);
+    }
+
     // ---------- Fast checks & header parsing ----------
 
     // The header of a client Initial of version 1 or 2, the only ones whose keys the reader makes, with a connection
-    // ID no longer than version 1 allows: checked before any key is made, as most UDP is no QUIC
+    // ID no longer than version 1 allows, in a datagram as long as a client must make each one that carries an
+    // Initial, which a server drops when shorter: checked before any key is made, as most UDP is no QUIC
     private static bool LooksLikeInitial(ReadOnlySpan<byte> udp, out bool isV2, out ReadOnlySpan<byte> dcid)
     {
         isV2 = false;
         dcid = default;
-        if (udp.Length < 7) return false;
+        if (udp.Length < MinInitialDatagramLength) return false;
         if ((udp[0] & 0x80) == 0) return false; // long header
         var ver = BinaryPrimitives.ReadUInt32BigEndian(udp.Slice(1, 4));
         if (ver is not (V1Version or V2Version)) return false;
@@ -217,13 +228,14 @@ internal static class QuicSniExtractor
         p += scidLen;
         if (udp.Length < p) return false;
 
-        // Initial has token; verify length field is present & fits in datagram
-        if (!TryReadVarInt(udp, ref p, out var tokenLen)) return false;
+        // Initial has token; verify length field is present & fits in datagram. Each length is checked against what is
+        // left before it is narrowed: one past the datagram's end made a position before its start, and the next read
+        // threw
+        if (!TryReadVarInt(udp, ref p, out var tokenLen) || tokenLen > (ulong)(udp.Length - p)) return false;
         p += (int)tokenLen;
         if (!TryReadVarInt(udp, ref p, out var len)) return false;
 
-        var totalBytes = p + (int)len; // header up to PN + Length
-        return totalBytes <= udp.Length;
+        return len <= (ulong)(udp.Length - p); // header up to PN + Length
     }
 
     private static bool IsLongHeader(ReadOnlySpan<byte> b, int off)
@@ -263,20 +275,18 @@ internal static class QuicSniExtractor
         p += scidLen;
         if (b.Length < p) return false;
 
-        // only Initial has a token
+        // only Initial has a token; each length is checked against what is left before it is narrowed
         var isInitial = version == V2Version ? typeBits == 0b01 : typeBits == 0b00;
         if (isInitial) {
-            if (!TryReadVarInt(b, ref p, out var tokenLen)) return false;
+            if (!TryReadVarInt(b, ref p, out var tokenLen) || tokenLen > (ulong)(b.Length - p)) return false;
             p += (int)tokenLen;
         }
 
-        if (!TryReadVarInt(b, ref p, out lengthField)) return false;
+        if (!TryReadVarInt(b, ref p, out lengthField) || lengthField > (ulong)(b.Length - p)) return false;
 
         pnOffset = p;
         headerLenUpToPn = pnOffset - off;
         totalPacketBytes = headerLenUpToPn + (int)lengthField;
-
-        if (totalPacketBytes < 0 || off + totalPacketBytes > b.Length) return false;
         return true;
     }
 
@@ -295,7 +305,6 @@ internal static class QuicSniExtractor
         st.Key = HkdfExpandLabel(initialSecret, labelKey, 16);
         st.Iv = HkdfExpandLabel(initialSecret, labelIv, 12);
         st.Hp = HkdfExpandLabel(initialSecret, labelHp, 16);
-        st.SecretsReady = true;
     }
 
     // whether the packet decrypted, which its AEAD tag proves it a client Initial of the state's connection ID
@@ -476,80 +485,6 @@ internal static class QuicSniExtractor
         }
 
         return result;
-    }
-
-    private static string? TryParseSniFromClientHelloPartial(ReadOnlySpan<byte> buf)
-    {
-        // TLS Handshake (QUIC carries raw handshake; no TLS record layer)
-        if (buf.Length < 4 || buf[0] != 1) return null; // client_hello
-        var total = (buf[1] << 16) | (buf[2] << 8) | buf[3];
-        var end = 4 + total;
-        if (end > buf.Length) return null; // need more
-
-        var p = 4;
-
-        // legacy_version + random
-        if (p + 2 + 32 > buf.Length) return null;
-        p += 2 + 32;
-
-        // session_id
-        if (p + 1 > buf.Length) return null;
-        int sidLen = buf[p++];
-        if (p + sidLen > buf.Length) return null;
-        p += sidLen;
-
-        // cipher_suites
-        if (p + 2 > buf.Length) return null;
-        var csLen = (buf[p] << 8) | buf[p + 1];
-        p += 2;
-        if (p + csLen > buf.Length) return null;
-        p += csLen;
-
-        // compression_methods
-        if (p + 1 > buf.Length) return null;
-        int compLen = buf[p++];
-        if (p + compLen > buf.Length) return null;
-        p += compLen;
-
-        // extensions
-        if (p + 2 > buf.Length) return null;
-        var extTotal = (buf[p] << 8) | buf[p + 1];
-        p += 2;
-        var extEnd = p + extTotal;
-        if (extEnd > buf.Length) return null;
-
-        while (p + 4 <= extEnd) {
-            var extType = (buf[p] << 8) | buf[p + 1];
-            p += 2;
-            var extLen = (buf[p] << 8) | buf[p + 1];
-            p += 2;
-            if (p + extLen > extEnd) return null;
-
-            if (extType == 0x0000) // server_name
-            {
-                var q = p;
-                if (q + 2 > p + extLen) return null;
-                var listLen = (buf[q] << 8) | buf[q + 1];
-                q += 2;
-                if (q + listLen > p + extLen) return null;
-
-                while (q + 3 <= p + extLen) {
-                    var nameType = buf[q++]; // 0 = host_name
-                    var nameLen = (buf[q] << 8) | buf[q + 1];
-                    q += 2;
-                    if (q + nameLen > p + extLen) return null;
-                    if (nameType == 0)
-                        return Encoding.ASCII.GetString(buf.Slice(q, nameLen));
-                    q += nameLen;
-                }
-
-                return null;
-            }
-
-            p += extLen;
-        }
-
-        return null;
     }
 
     private static bool TryReadVarInt(ReadOnlySpan<byte> buf, ref int p, out ulong v)

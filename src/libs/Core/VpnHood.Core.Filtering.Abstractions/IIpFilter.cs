@@ -22,6 +22,10 @@ public interface IIpFilter : IDisposable
     /// stage's event as its own, so the event reaches the outermost stage; a stage whose verdicts never change never
     /// raises it.
     /// </summary>
+    /// <remarks>
+    /// The caches above drop their verdicts at each raise, and the client, while a domain filter is on, ends its open
+    /// TCP connections, so that new ones follow the rules: raise it for a change, not at each reconfigure.
+    /// </remarks>
     event EventHandler? Changed;
 
     /// <summary>

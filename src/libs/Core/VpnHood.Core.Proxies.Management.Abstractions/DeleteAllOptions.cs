@@ -1,8 +1,7 @@
 namespace VpnHood.Core.Proxies.Management.Abstractions;
 
 /// <summary>
-/// Selects the endpoints <see cref="IProxyEndPointStore.DeleteAll"/> deletes. The defaults delete them all, but an
-/// enabled endpoint whose last success and last failure are at the same moment, which is in no group.
+/// Selects the endpoints <see cref="IProxyEndPointStore.DeleteAll"/> deletes. The defaults delete them all.
 /// </summary>
 /// <remarks>
 /// Each option deletes its endpoints whatever the others say: a disabled endpoint whose last use succeeded goes with
@@ -16,7 +15,9 @@ public class DeleteAllOptions
     /// <summary>Gets a value indicating whether endpoints whose last use failed are deleted.</summary>
     public bool DeleteFailed { get; init; } = true;
 
-    /// <summary>Gets a value indicating whether endpoints never used are deleted.</summary>
+    /// <summary>
+    /// Gets a value indicating whether endpoints with no last use, as those never used, are deleted.
+    /// </summary>
     public bool DeleteUnknown { get; init; } = true;
 
     /// <summary>Gets a value indicating whether disabled endpoints are deleted.</summary>

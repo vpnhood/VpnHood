@@ -67,21 +67,30 @@ internal class ClientSessionBuilder(
             config.Version, VpnHoodClientConfig.MinProtocolVersion, VpnHoodClientConfig.MaxProtocolVersion,
             VhLogger.FormatId(config.ClientId));
 
-        if (proxyConnector is { IsEnabled: true }) {
+        var connectedServer = await connectedServerFile.Read(linkedCts.Token).Vhc();
+        // Checked against a server they are for, the last one connected or one of the access key's, as the device
+        // reaches no one else through them, with the VPN's own check of its certificate. Their failure ends nothing
+        // here: that server may be down where another is not, and the connections to each server check the proxies
+        // against it again. A key whose servers are known only by name is left to those checks, as is its lookup
+        var checkEndPoint = connectedServer?.TcpEndPoint ??
+                            (serverFinder.CustomServerEndpoints.Count > 0
+                                ? serverFinder.CustomServerEndpoints
+                                : token.ServerToken.HostEndPoints ?? []).Shuffle().FirstOrDefault();
+
+        if (proxyConnector is { IsEnabled: true } && checkEndPoint != null) {
             setState(ClientState.ValidatingProxies);
-            await proxyConnector.CheckServers(socketFactory, linkedCts.Token).Vhc();
+            var certificateHash = connectedServer?.CertificateHash ?? token.ServerToken.CertificateHash;
+            await proxyConnector.CheckServers(socketFactory, checkEndPoint,
+                connectedServer?.HostName ?? token.ServerToken.HostName,
+                (_, certificate, chain, errors) =>
+                    ConnectorService.IsServerCertificateValid(certificateHash, certificate, chain, errors),
+                linkedCts.Token).Vhc();
 
-            var status = proxyConnector.Status;
             VhLogger.Instance.LogInformation("Proxy servers succeeded: {Count}",
-                status.SucceededServerCount);
-
-            if (!status.IsAnySucceeded)
-                throw new UnreachableProxyServerException();
+                proxyConnector.Status.SucceededServerCount);
         }
 
         setState(ClientState.FindingReachableServer);
-
-        var connectedServer = await connectedServerFile.Read(linkedCts.Token).Vhc();
         var vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], connectedServer,
             linkedCts.Token).Vhc();
         var allowRedirect = !serverFinder.CustomServerEndpoints.Any();
@@ -185,11 +194,16 @@ internal class ClientSessionBuilder(
             var sessionId = helloResponse.SessionId;
             var sessionKey = helloResponse.SessionKey;
 
-            var hostUdpEndPoint = helloResponse is { UdpPort: > 0, ProtocolVersion: >= UdpDatagram.MinProtocolVersion }
-                ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.UdpPort.Value)
+            // With proxies, the tunnel goes through them alone: UDP and QUIC would go to the server straight, around
+            // them, so the session takes neither, as with a server that offers none. By the connector, not by whether it
+            // has a proxy at this moment: a managed list may fill while the session runs
+            var isProxied = proxyConnector != null;
+            var hostUdpEndPoint = !isProxied && ChannelProtocolValidator.IsUdpChannelOffered(helloResponse) &&
+                                  helloResponse.UdpPort is { } udpPort
+                ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, udpPort)
                 : null;
 
-            var hostQuicEndPoint = helloResponse.QuicPort > 0
+            var hostQuicEndPoint = !isProxied && helloResponse.QuicPort > 0
                 ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.QuicPort.Value)
                 : null;
 
@@ -238,7 +252,9 @@ internal class ClientSessionBuilder(
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
             if (hostUdpEndPoint is null)
-                VhLogger.Instance.LogWarning("The server does not support UDP channel.");
+                VhLogger.Instance.LogWarning(isProxied
+                    ? "The session takes no UDP channel: its connections go through proxies."
+                    : "The server does not support UDP channel.");
 
             ClientHelper.ValidateTcpSupport(helloResponse, config);
 
@@ -265,8 +281,9 @@ internal class ClientSessionBuilder(
                 IsQuicPacketSupported = helloResponse.IsQuicPacketSupported,
                 IsUdpPacketSupported = helloResponse.IsUdpPacketSupported,
                 IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.QuicClientFactory?.IsSupported == true,
-                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse,
-                    socketFactory.QuicClientFactory?.IsSupported == true),
+                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(
+                    isUdpChannelSupported: hostUdpEndPoint != null,
+                    isQuicChannelSupported: hostQuicEndPoint != null && socketFactory.QuicClientFactory?.IsSupported == true),
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)
                     : null

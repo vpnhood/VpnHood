@@ -165,8 +165,8 @@ public class ProxyEndPointServiceTest : TestAppBase
         var updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(10, updatedNodes);
         Assert.HasCount(0, updatedNodes.Where(x => x.EndPoint.Id == added[2].EndPoint.Id));
-        Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == updatedNode.EndPoint.Id).EndPoint.Url,
-            updatedNode.EndPoint.Url);
+        Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == updatedNode.EndPoint.Id).EndPoint.Host,
+            updatedNode.EndPoint.Host);
     }
 
     [TestMethod]
@@ -252,8 +252,8 @@ public class ProxyEndPointServiceTest : TestAppBase
         updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(11, updatedNodes);
         Assert.HasCount(0, updatedNodes.Where(x => x.EndPoint.Id == added[2].EndPoint.Id));
-        Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == newNodeInfo.EndPoint.Id).EndPoint.Url,
-            newNodeInfo.EndPoint.Url);
+        Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == newNodeInfo.EndPoint.Id).EndPoint.Host,
+            newNodeInfo.EndPoint.Host);
 
         // check infos
         var updatedAppNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
@@ -290,7 +290,7 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         var deviceProxy = dom.App.Services.ProxyEndPointService.GetDeviceProxy();
         Assert.IsNotNull(deviceProxy);
-        Assert.AreEqual(deviceUiProvider.DeviceProxySettings.ProxyUrl.Host, new Uri(deviceProxy.EndPoint.Url).Host);
+        Assert.AreEqual(deviceUiProvider.DeviceProxySettings.ProxyUrl.Host, deviceProxy.EndPoint.Host);
         Assert.IsFalse(dom.App.State.IsProxyEndPointActive);
 
         // set proxy options to use device proxy; it travels as a single inline proxy, not via the store

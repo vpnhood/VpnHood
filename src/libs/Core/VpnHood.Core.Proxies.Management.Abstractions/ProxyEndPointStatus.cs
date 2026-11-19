@@ -45,19 +45,21 @@ public class ProxyEndPointStatus
     public bool IsLastUsedSucceeded =>
         LastSucceeded != null && (LastFailed is null || LastSucceeded > LastFailed);
 
-    /// <summary>Gets a value indicating whether the endpoint's last use failed.</summary>
+    /// <summary>
+    /// Gets a value indicating whether the endpoint's last use failed: a failure at the same moment as its last success
+    /// too, as the store keeps the times to the millisecond.
+    /// </summary>
     [JsonIgnore]
     public bool IsLastUsedFailed =>
-        LastFailed != null && (LastSucceeded is null || LastFailed > LastSucceeded);
+        LastFailed != null && (LastSucceeded is null || LastFailed >= LastSucceeded);
 
     /// <summary>
-    /// Gets <see cref="LastSucceeded"/> when it is later than <see cref="LastFailed"/>, and otherwise
-    /// <see cref="LastFailed"/>, which is <see langword="null"/> while the endpoint has never failed, whatever it
-    /// succeeded.
+    /// Gets the later of <see cref="LastSucceeded"/> and <see cref="LastFailed"/>, or <see langword="null"/> while the
+    /// endpoint has not been used.
     /// </summary>
     [JsonIgnore]
     public DateTime? LastUsed =>
-        LastSucceeded > LastFailed ? LastSucceeded : LastFailed;
+        LastFailed is null || LastSucceeded > LastFailed ? LastSucceeded : LastFailed;
 
     /// <summary>Gets a value indicating whether the endpoint has been used.</summary>
     [JsonIgnore]

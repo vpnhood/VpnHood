@@ -468,19 +468,25 @@ internal class ConnectorService : IAsyncDisposable
     private bool UserCertificateValidationCallback(object sender, X509Certificate? certificate, X509Chain? chain,
         SslPolicyErrors sslPolicyErrors)
     {
+        return IsServerCertificateValid(VpnEndPoint.CertificateHash, certificate, chain, sslPolicyErrors);
+    }
+
+    // The VPN server's certificate: one the system trusts, the one whose hash its access key holds, or one whose chain's
+    // only fault is a Let's Encrypt root this system lacks; a name that doesn't match still fails
+    internal static bool IsServerCertificateValid(ReadOnlySpan<byte> certificateHash, X509Certificate? certificate,
+        X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+    {
         if (certificate == null)
             return false;
 
         if (sslPolicyErrors == SslPolicyErrors.None)
             return true;
 
-        if (VpnEndPoint.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true)
+        if (!certificateHash.IsEmpty && certificateHash.SequenceEqual(certificate.GetCertHash()))
             return true;
 
-        // a chain whose only fault is a root this system lacks; a name that doesn't match still fails
-        var ret = sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors && chain != null &&
-                  LetsEncryptRoots.IsChainTrusted(certificate, chain);
-        return ret;
+        return sslPolicyErrors == SslPolicyErrors.RemoteCertificateChainErrors && chain != null &&
+               LetsEncryptRoots.IsChainTrusted(certificate, chain);
     }
 
     private void QuicConnectionFactory_PanicRecycled(object? sender, EventArgs e)

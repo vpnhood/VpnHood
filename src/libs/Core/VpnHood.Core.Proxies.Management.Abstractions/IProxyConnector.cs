@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Net.Toolkit.Monitoring;
@@ -31,29 +32,48 @@ public interface IProxyConnector : IAsyncDisposable
     /// Connects to an endpoint through a proxy.
     /// </summary>
     /// <param name="socketFactory">The factory of the sockets to the proxies: the caller's, which keeps them out of the tunnel.</param>
-    /// <param name="ipEndPoint">The endpoint to reach through the proxy.</param>
+    /// <param name="ipEndPoint">The endpoint to reach through the proxy: the VPN server's.</param>
+    /// <param name="hostName">
+    /// The name the endpoint's TLS takes, as the connection's own does, for a check of the proxies on the way, or
+    /// <see langword="null"/> for none.
+    /// </param>
+    /// <param name="serverCertificateValidation">
+    /// The check of the endpoint's certificate in such a check, the connection's own, or <see langword="null"/> to take
+    /// any certificate.
+    /// </param>
     /// <param name="onAttempt">Called after each proxy the connector tried, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>
-    /// A task whose result is the connection, through the proxy, which the caller owns. Its stream is the raw TCP one,
-    /// not an HTTPS proxy's TLS tunnel.
+    /// A task whose result is the connection, through the proxy, which the caller owns: its stream carries the
+    /// destination's bytes, through an HTTPS proxy's TLS session too.
     /// </returns>
-    Task<TcpClient> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint, Action? onAttempt,
+    Task<ProxyConnection> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint, string? hostName,
+        RemoteCertificateValidationCallback? serverCertificateValidation, Action? onAttempt,
         CancellationToken cancellationToken);
 
     /// <summary>
     /// Records a failure of a connection <see cref="ConnectAsync"/> made, after it was made, as in a TLS handshake
     /// over it, against the proxy that made it.
     /// </summary>
-    /// <param name="tcpClient">The connection.</param>
+    /// <param name="tcpClient">The connection's socket, <see cref="ProxyConnection.TcpClient"/>.</param>
     /// <param name="ex">The failure.</param>
     void RecordFailed(TcpClient tcpClient, Exception ex);
 
-    /// <summary>Checks the endpoints, where the connector has a list to check, and records what it finds.</summary>
+    /// <summary>
+    /// Checks the endpoints, where the connector has a list to check, by connecting through each to an endpoint, the
+    /// VPN server's, as the VPN would; and records what it finds. The device reaches no one else through them.
+    /// </summary>
     /// <param name="socketFactory">The factory of the sockets to the proxies, which keeps them out of the tunnel.</param>
+    /// <param name="ipEndPoint">The endpoint to reach through each proxy: the VPN server's.</param>
+    /// <param name="hostName">The name the endpoint's TLS takes, as the VPN's own connection does, or <see langword="null"/>.</param>
+    /// <param name="serverCertificateValidation">
+    /// The check of the endpoint's certificate, the VPN connection's own, or <see langword="null"/> to take any
+    /// certificate.
+    /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    Task CheckServers(ISocketFactory socketFactory, CancellationToken cancellationToken);
+    Task CheckServers(ISocketFactory socketFactory, IPEndPoint ipEndPoint, string? hostName,
+        RemoteCertificateValidationCallback? serverCertificateValidation, CancellationToken cancellationToken);
 
     /// <summary>Takes new options.</summary>
     /// <param name="proxyOptions">The options.</param>

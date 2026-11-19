@@ -1,3 +1,5 @@
+using System.Collections;
+using Microsoft.Data.Sqlite;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Sqlite;
 
@@ -269,11 +271,10 @@ public class ProxyEndPointStoreTest : TestBase
             }
         ], keepExistingStatus: false);
 
-        // merge a new list: the good one (duplicate) + two new endpoints. The legacy merge keeps the
-        // duplicate as a list slot before the cap is applied, so cap 4 admits both new endpoints
-        // while the bad row still falls off the end.
+        // merge a new list: the good one (duplicate) + two new endpoints. The duplicate is the stored endpoint, one
+        // slot, so cap 3 admits both new endpoints while the bad row falls off the end.
         var newEndPoints = new[] { CreateEndPoint(1), CreateEndPoint(3), CreateEndPoint(4) };
-        await store.Merge(newEndPoints, maxItemCount: 4, maxPenalty: 50, removeDuplicateIps: false, cancellationToken: TestCt);
+        await store.Merge(newEndPoints, maxItemCount: 3, maxPenalty: 50, removeDuplicateIps: false, cancellationToken: TestCt);
 
         var records = await store.List(TestCt);
         Assert.HasCount(3, records);
@@ -364,6 +365,224 @@ public class ProxyEndPointStoreTest : TestBase
             await Upsert(store, [new ProxyEndPointRecord { EndPoint = CreateEndPoint(2) }]);
             Assert.AreEqual(1, await store.Count(TestCt));
         }
+    }
+
+    [TestMethod]
+    public async Task A_first_open_that_finds_the_file_locked_keeps_the_list()
+    {
+        var dbPath = NewDbPath();
+        using (var store = new ProxyEndPointStore(dbPath))
+            await Upsert(store, [new ProxyEndPointRecord { EndPoint = CreateEndPoint(1) }]);
+
+        // The first open of another store, which the app and the VPN service each make, failed for the other process's
+        // lock, as for any failure: the file was deleted and made again, empty, where the system let it be deleted
+        using var secondStore = new ProxyEndPointStore(dbPath);
+        await using (var holder = new SqliteConnection($"Data Source={dbPath};Pooling=False")) {
+            await holder.OpenAsync(TestCt);
+            await using (var command = holder.CreateCommand()) {
+                command.CommandText = "PRAGMA locking_mode=EXCLUSIVE; BEGIN EXCLUSIVE;";
+                await command.ExecuteNonQueryAsync(TestCt);
+            }
+
+            var ex = await Assert.ThrowsExactlyAsync<SqliteException>(() => secondStore.Count(TestCt));
+            Assert.AreEqual(5, ex.SqliteErrorCode, "SQLITE_BUSY");
+        }
+
+        Assert.AreEqual(1, await secondStore.Count(TestCt));
+    }
+
+    [TestMethod]
+    public async Task An_endpoint_whose_success_and_failure_came_at_once_is_a_failed_one()
+    {
+        // it was in no group: listed in none, and left by a deletion of every group
+        using var store = new ProxyEndPointStore(NewDbPath());
+        var time = DateTime.UtcNow;
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = CreateEndPoint(1),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, FailedCount = 1, LastSucceeded = time, LastFailed = time }
+            }
+        ], keepExistingStatus: false);
+
+        var failed = await store.List(new ProxyEndPointStoreListParams {
+            IncludeSucceeded = false, IncludeFailed = true, IncludeUnknown = false, RecordCount = 10
+        }, TestCt);
+
+        Assert.AreEqual(1, failed.TotalCount);
+
+        await store.DeleteAll(new DeleteAllOptions(), TestCt);
+        Assert.AreEqual(0, await store.Count(TestCt));
+    }
+
+    [TestMethod]
+    public async Task A_merge_of_an_endpoint_equal_to_a_stored_one_keeps_both_within_the_limit()
+    {
+        // the downloaded copy counted toward the limit as another endpoint, and pushed a stored one out: stored ones
+        // never used come after the new ones
+        using var store = new ProxyEndPointStore(NewDbPath());
+        await Upsert(store, [
+            new ProxyEndPointRecord { EndPoint = CreateEndPoint(1) },
+            new ProxyEndPointRecord { EndPoint = CreateEndPoint(2) }
+        ]);
+
+        await store.Merge([CreateEndPoint(1)], maxItemCount: 2, maxPenalty: null, removeDuplicateIps: false, TestCt);
+        Assert.AreEqual(2, await store.Count(TestCt));
+    }
+
+    // an endpoint with credentials
+    private static ProxyEndPoint CreateEndPoint(int index, string username, string password)
+    {
+        var endPoint = CreateEndPoint(index);
+        endPoint.Username = username;
+        endPoint.Password = password;
+        return endPoint;
+    }
+
+    [TestMethod]
+    public async Task A_merge_keeps_the_stored_credentials_where_the_list_gives_none()
+    {
+        // the downloaded copy, with none, took the stored one's place, and its nulls were written over the stored pair
+        var dbPath = NewDbPath();
+        using (var store = new ProxyEndPointStore(dbPath)) {
+            await Upsert(store, [new ProxyEndPointRecord { EndPoint = CreateEndPoint(1, "user", "secret") }]);
+            await store.Merge([CreateEndPoint(1)], maxItemCount: null, maxPenalty: null, removeDuplicateIps: false, TestCt);
+        }
+
+        using (var store = new ProxyEndPointStore(dbPath)) {
+            var record = await store.Get(CreateEndPoint(1).Id, TestCt);
+            Assert.IsNotNull(record);
+            Assert.AreEqual("user", record.EndPoint.Username);
+            Assert.AreEqual("secret", record.EndPoint.Password);
+        }
+    }
+
+    [TestMethod]
+    public async Task A_merge_takes_the_lists_credentials_for_a_stored_endpoint_that_succeeded()
+    {
+        // the copy that brought them went as a duplicate of the stored endpoint before they were read
+        using var store = new ProxyEndPointStore(NewDbPath());
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = CreateEndPoint(1, "user", "old"),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ], keepExistingStatus: false);
+
+        await store.Merge([CreateEndPoint(1, "user", "new")], maxItemCount: null, maxPenalty: null,
+            removeDuplicateIps: true, TestCt);
+
+        var record = await store.Get(CreateEndPoint(1).Id, TestCt);
+        Assert.IsNotNull(record);
+        Assert.AreEqual("new", record.EndPoint.Password);
+    }
+
+    [TestMethod]
+    public async Task The_defaults_of_DeleteAll_delete_an_endpoint_with_counts_and_no_times()
+    {
+        // it was in none of the three groups, so no list showed it and the defaults left it
+        using var store = new ProxyEndPointStore(NewDbPath());
+        await Upsert(store, [
+            new ProxyEndPointRecord { EndPoint = CreateEndPoint(1), Status = new ProxyEndPointStatus { SucceededCount = 1 } }
+        ], keepExistingStatus: false);
+
+        var unknown = await store.List(new ProxyEndPointStoreListParams {
+            IncludeSucceeded = false, IncludeFailed = false, IncludeUnknown = true, RecordCount = 10
+        }, TestCt);
+
+        Assert.AreEqual(1, unknown.TotalCount);
+
+        await store.DeleteAll(new DeleteAllOptions(), TestCt);
+        Assert.AreEqual(0, await store.Count(TestCt));
+    }
+
+    [TestMethod]
+    public async Task A_merge_holds_the_write_lock_from_its_read_to_its_end()
+    {
+        // it read the list before its transaction, so another process's merge between them went past the item limit
+        var dbPath = NewDbPath();
+        using var store = new ProxyEndPointStore(dbPath);
+        await Upsert(store, [new ProxyEndPointRecord { EndPoint = CreateEndPoint(1) }]);
+
+        // the new endpoints are read after the stored ones: their reading holds the merge there, on a thread of its own
+        var newEndPoints = new HoldingList([CreateEndPoint(2)]);
+        var mergeTask = Task.Run(() => store.Merge(newEndPoints, maxItemCount: 1, maxPenalty: null,
+            removeDuplicateIps: false, TestCt), TestCt);
+
+        await newEndPoints.Reached.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+
+        // another process's write finds the file locked
+        await using (var other = new SqliteConnection($"Data Source={dbPath};Pooling=False;Default Timeout=1")) {
+            await other.OpenAsync(TestCt);
+            await using var command = other.CreateCommand();
+            command.CommandText = "INSERT OR REPLACE INTO meta (key, value) VALUES ('test', 'other process')";
+            var ex = await Assert.ThrowsExactlyAsync<SqliteException>(() => command.ExecuteNonQueryAsync(TestCt));
+            Assert.AreEqual(5, ex.SqliteErrorCode, "SQLITE_BUSY");
+        }
+
+        newEndPoints.Release();
+        await mergeTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(1, await store.Count(TestCt));
+    }
+
+    // a list whose first reading waits for the test's release
+    private sealed class HoldingList(IReadOnlyList<ProxyEndPoint> items) : IReadOnlyList<ProxyEndPoint>
+    {
+        private readonly TaskCompletionSource _reached = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ManualResetEventSlim _released = new();
+        public Task Reached => _reached.Task;
+        public void Release() => _released.Set();
+        public int Count => items.Count;
+
+        public ProxyEndPoint this[int index] {
+            get {
+                Hold();
+                return items[index];
+            }
+        }
+
+        public IEnumerator<ProxyEndPoint> GetEnumerator()
+        {
+            Hold();
+            return items.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        private void Hold()
+        {
+            _reached.TrySetResult();
+            if (!_released.Wait(TimeSpan.FromSeconds(30)))
+                throw new TimeoutException("The test did not release the list.");
+        }
+    }
+
+    [TestMethod]
+    public async Task A_status_write_never_enables_an_endpoint_and_may_disable_one()
+    {
+        // the connector's copy, enabled, enabled again an endpoint the user had disabled meanwhile
+        using var store = new ProxyEndPointStore(NewDbPath());
+        var disabled = CreateEndPoint(1);
+        disabled.IsEnabled = false;
+        await Upsert(store, [
+            new ProxyEndPointRecord { EndPoint = disabled },
+            new ProxyEndPointRecord { EndPoint = CreateEndPoint(2) }
+        ]);
+
+        var enabledCopy = CreateEndPoint(1);
+        var disabledCopy = CreateEndPoint(2);
+        disabledCopy.IsEnabled = false;
+        await store.UpdateStatuses([
+            new ProxyEndPointInfo { EndPoint = enabledCopy, Status = new ProxyEndPointStatus() },
+            new ProxyEndPointInfo { EndPoint = disabledCopy, Status = new ProxyEndPointStatus() }
+        ], TestCt);
+
+        var stored = await store.Get(disabled.Id, TestCt);
+        Assert.IsNotNull(stored);
+        Assert.IsFalse(stored.EndPoint.IsEnabled);
+
+        var storedCopy = await store.Get(disabledCopy.Id, TestCt);
+        Assert.IsNotNull(storedCopy);
+        Assert.IsFalse(storedCopy.EndPoint.IsEnabled);
     }
 
     [TestMethod]

@@ -10,6 +10,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.Test" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Core.Proxies.Management.Abstractions\VpnHood.Core.Proxies.Management.Abstractions.csproj" />
 	</ItemGroup>
 

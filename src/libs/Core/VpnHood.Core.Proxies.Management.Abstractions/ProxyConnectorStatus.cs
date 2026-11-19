@@ -6,8 +6,9 @@
 public class ProxyConnectorStatus
 {
     /// <summary>
-    /// Gets a value indicating whether any endpoint has no error recorded: one that succeeded last, or one never
-    /// used. The client gives up on its proxies while it is <see langword="false"/>.
+    /// Gets a value indicating whether any enabled endpoint worked as a proxy at its last use: it connected, or it
+    /// answered that the server it was asked for could not be reached. The client tells a failed connect by it: with
+    /// none, its proxies were the cause, rather than its servers.
     /// </summary>
     public required bool IsAnySucceeded { get; init; }
 

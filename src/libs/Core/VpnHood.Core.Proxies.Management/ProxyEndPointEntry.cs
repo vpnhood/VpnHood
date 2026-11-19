@@ -15,6 +15,52 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
     /// <summary>Set when the status or enabled state changed since the last store flush.</summary>
     public bool IsDirty { get; set; }
 
+    // whether it worked as a proxy at its last use: it connected, or it answered that the server could not be reached
+    public bool IsLastUsedAnswered {
+        get {
+            lock (_lock)
+                return Status.IsLastUsedSucceeded || _isLastFailureServerUnreachable;
+        }
+    }
+
+    private bool _isLastFailureServerUnreachable;
+
+    // A copy of the endpoint and its status as they are, for a flush to write, which clears the flag: a change made
+    // during the write marks the entry again, and the copy is never one half-way through a change
+    public ProxyEndPointInfo TakeForFlush()
+    {
+        lock (_lock) {
+            IsDirty = false;
+            return new ProxyEndPointInfo {
+                EndPoint = new ProxyEndPoint {
+                    Protocol = EndPoint.Protocol,
+                    Host = EndPoint.Host,
+                    Port = EndPoint.Port,
+                    Username = EndPoint.Username,
+                    Password = EndPoint.Password,
+                    IsEnabled = EndPoint.IsEnabled
+                },
+                Status = new ProxyEndPointStatus {
+                    Penalty = Status.Penalty,
+                    SucceededCount = Status.SucceededCount,
+                    FailedCount = Status.FailedCount,
+                    Latency = Status.Latency,
+                    LastSucceeded = Status.LastSucceeded,
+                    LastFailed = Status.LastFailed,
+                    ErrorMessage = Status.ErrorMessage,
+                    QueuePosition = Status.QueuePosition
+                }
+            };
+        }
+    }
+
+    // a success taken back, as one whose connection failed after its connect
+    public void TakeBackSuccess()
+    {
+        lock (_lock)
+            Status.SucceededCount--;
+    }
+
     public long GetSortValue(long currentRequestCount)
     {
         lock (_lock) {
@@ -33,8 +79,9 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             IsDirty = true;
             Status.SucceededCount++;
             Status.Latency = latency;
-            Status.LastSucceeded = FastDateTime.UtcNow;
+            Status.LastSucceeded = DateTime.UtcNow; // once per connection: a coarse second made a success and a failure tie
             Status.ErrorMessage = null;
+            _isLastFailureServerUnreachable = false;
 
             var isSlow = fastestLatency != null && latency > GetSlowThreshold(fastestLatency.Value);
             if (isSlow) {
@@ -67,8 +114,9 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             Status.Penalty++;
             Status.Penalty++;
             Status.FailedCount++;
-            Status.LastFailed = FastDateTime.UtcNow;
+            Status.LastFailed = DateTime.UtcNow;
             Status.ErrorMessage = exception?.Message;
+            _isLastFailureServerUnreachable = exception != null && ProxyFailures.IsServerUnreachable(exception);
             UpdatePosition(currentQueuePos);
 
             VhLogger.Instance.LogDebug(

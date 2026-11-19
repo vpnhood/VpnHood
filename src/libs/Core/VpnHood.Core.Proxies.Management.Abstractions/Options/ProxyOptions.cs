@@ -25,7 +25,8 @@ public class ProxyOptions
 
     /// <summary>
     /// Gets a value indicating whether a managed connector's check of a proxy also completes a TLS handshake through
-    /// it with <c>one.one.one.one</c>, whose certificate the system must trust. The default is <see langword="true"/>.
+    /// it with the VPN server it checks against, whatever its certificate, so a proxy that opens the tunnel and passes
+    /// nothing fails. The default is <see langword="true"/>.
     /// </summary>
     public bool VerifyTls { get; init; } = true;
 }

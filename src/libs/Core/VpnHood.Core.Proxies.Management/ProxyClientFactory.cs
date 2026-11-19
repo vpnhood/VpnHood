@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Net.Proxies;
 using VpnHood.Net.Proxies.HttpProxyClients;
@@ -42,8 +43,9 @@ internal static class ProxyClientFactory
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the client.</returns>
     /// <remarks>
-    /// A SOCKS4 client takes the user name alone. An HTTPS client accepts any certificate of the proxy, and names the
-    /// endpoint's host in its TLS handshake.
+    /// A SOCKS4 client takes the user name alone. An HTTPS client names the endpoint's host in its TLS handshake, and
+    /// takes only a certificate the system trusts for that name: the credentials go in that session, and the server
+    /// the tunnel is for with them.
     /// </remarks>
     /// <exception cref="NotSupportedException">The endpoint's protocol is not one of <see cref="ProxyProtocol"/>'s.</exception>
     public static async Task<IProxyClient> CreateProxyClient(ProxyEndPoint proxyEndPoint,
@@ -66,11 +68,27 @@ internal static class ProxyClientFactory
                 ProxyEndPoint = serverEp,
                 Username = proxyEndPoint.Username,
                 Password = proxyEndPoint.Password,
-                AllowInvalidCertificates = true,
-                ProxyHost = proxyEndPoint.Host,
+                AllowInvalidCertificates = false,
+                ProxyHost = proxyEndPoint.Host.Trim('[', ']'), // an IPv6 address, as a URL's host has it
                 UseTls = proxyEndPoint.Protocol == ProxyProtocol.Https
             }),
             _ => throw new NotSupportedException($"Proxy type {proxyEndPoint.Protocol} is not supported.")
         };
+    }
+
+    /// <summary>Gets the connection a proxy client made, with the stream that carries the destination's bytes.</summary>
+    /// <param name="proxyClient">The proxy client that made it.</param>
+    /// <param name="tcpClient">Its socket.</param>
+    /// <returns>
+    /// The connection: over an HTTPS proxy, its stream is the TLS session with the proxy, which the socket's own stream
+    /// passes by.
+    /// </returns>
+    public static ProxyConnection GetConnection(IProxyClient proxyClient, TcpClient tcpClient)
+    {
+        var stream = proxyClient is HttpProxyClient httpProxyClient
+            ? httpProxyClient.GetStream(tcpClient)
+            : tcpClient.GetStream();
+
+        return new ProxyConnection(tcpClient, stream);
     }
 }

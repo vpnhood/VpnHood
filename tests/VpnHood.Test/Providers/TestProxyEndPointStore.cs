@@ -8,6 +8,9 @@ public class TestProxyEndPointStore(IProxyEndPointStore store) : IProxyEndPointS
 {
     private readonly TaskCompletionSource _updatesReleased = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public volatile bool HoldUpdates; // updates from now on wait for ReleaseUpdates
+    public volatile bool HoldAfterUpdates; // updates from now on wait for ReleaseUpdates after their write
+    private int _holdNextUpdate;
+    public void HoldNextUpdate() => Volatile.Write(ref _holdNextUpdate, 1); // the next update alone waits
     public volatile bool FailUpdates; // updates from now on throw
     public int HeldUpdateCount;
     public bool IsDisposed { get; private set; }
@@ -19,12 +22,17 @@ public class TestProxyEndPointStore(IProxyEndPointStore store) : IProxyEndPointS
         if (FailUpdates)
             throw new IOException("Test: the store could not be written.");
 
-        if (HoldUpdates) {
+        if (HoldUpdates || Interlocked.Exchange(ref _holdNextUpdate, 0) == 1) {
             Interlocked.Increment(ref HeldUpdateCount);
             await _updatesReleased.Task.WaitAsync(cancellationToken);
         }
 
         await store.UpdateStatuses(infos, cancellationToken);
+
+        if (HoldAfterUpdates) {
+            Interlocked.Increment(ref HeldUpdateCount);
+            await _updatesReleased.Task.WaitAsync(cancellationToken);
+        }
     }
 
     public Task<IReadOnlyList<ProxyEndPointRecord>> List(CancellationToken cancellationToken) => store.List(cancellationToken);

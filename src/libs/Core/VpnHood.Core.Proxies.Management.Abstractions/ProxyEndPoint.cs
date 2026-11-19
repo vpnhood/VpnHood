@@ -42,17 +42,18 @@ public class ProxyEndPoint
     public string? Password { get; set; }
 
     /// <summary>
-    /// Gets the endpoint's URL, credentials included, as <c>socks5://user:password@host:1080/?enabled=1</c>. The
-    /// query is there only for an enabled endpoint.
+    /// Gets the endpoint's URL, credentials included, as <c>socks5://user:password@host:1080</c>, which
+    /// <see cref="ProxyEndPointParser.FromUrl"/> reads back: a disabled endpoint's has <c>?enabled=0</c>, as a URL with
+    /// no such query is read as enabled.
     /// </summary>
     public Uri Url =>
         new UriBuilder {
             Scheme = Protocol.ToString().ToLower(),
             Host = Host,
             Port = Port,
-            UserName = Username,
-            Password = Password,
-            Query = IsEnabled ? "enabled=1" : null
+            UserName = Username is null ? null : Uri.EscapeDataString(Username),
+            Password = Password is null ? null : Uri.EscapeDataString(Password),
+            Query = IsEnabled ? null : "enabled=0"
         }.Uri;
 
     /// <summary>Builds the endpoint's URL with its scheme, host and port alone.</summary>

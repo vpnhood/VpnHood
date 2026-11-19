@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
@@ -20,6 +21,7 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
 {
     private readonly ProxySessionStatus _sessionStatus = new();
     private ProxyEndPoint _proxyEndPoint = proxyEndPoint; // mutable to support UpdateOptions
+    private bool _isLastFailureServerUnreachable;
 
     /// <inheritdoc/>
     /// <value>Always <see langword="true"/>.</value>
@@ -34,14 +36,17 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
     public ProgressStatus? Progress => null;
 
     /// <inheritdoc/>
-    /// <remarks>It counts the one proxy by the outcome of its last connection.</remarks>
+    /// <remarks>
+    /// It counts the one proxy by the outcome of its last connection, which worked as a proxy where it connected or
+    /// answered that the server could not be reached.
+    /// </remarks>
     public ProxyConnectorStatus Status {
         get {
             lock (_sessionStatus)
                 return new ProxyConnectorStatus {
                     AutoUpdate = false,
                     SessionStatus = _sessionStatus,
-                    IsAnySucceeded = _sessionStatus.ErrorMessage is null,
+                    IsAnySucceeded = _sessionStatus.IsLastUsedSucceeded || _isLastFailureServerUnreachable,
                     SucceededServerCount = _sessionStatus.IsLastUsedSucceeded ? 1 : 0,
                     FailedServerCount = _sessionStatus.IsLastUsedFailed ? 1 : 0,
                     UnknownServerCount = _sessionStatus.HasUsed ? 0 : 1,
@@ -69,8 +74,9 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
     /// The proxy's protocol, a SOCKS5 proxy's authentication method, or its reply's address type is not supported.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
-    public async Task<TcpClient> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint,
-        Action? onAttempt, CancellationToken cancellationToken)
+    public async Task<ProxyConnection> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint,
+        string? hostName, RemoteCertificateValidationCallback? serverCertificateValidation, Action? onAttempt,
+        CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(
             "Connecting via a {ProxyType} proxy server {ProxyServer}...",
@@ -85,7 +91,7 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
 
             RecordSuccess(TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount));
             onAttempt?.Invoke();
-            return tcpClient;
+            return ProxyClientFactory.GetConnection(proxyClient, tcpClient);
         }
         catch (Exception ex) {
             // let's not assume bad server if caller cancelled the operation
@@ -110,9 +116,10 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
     {
         lock (_sessionStatus) {
             _sessionStatus.SucceededCount++;
-            _sessionStatus.LastSucceeded = FastDateTime.UtcNow;
+            _sessionStatus.LastSucceeded = DateTime.UtcNow; // once per connection: the coarse second made ties
             _sessionStatus.Latency = latency;
             _sessionStatus.ErrorMessage = null;
+            _isLastFailureServerUnreachable = false;
         }
     }
 
@@ -120,26 +127,45 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
     {
         lock (_sessionStatus) {
             _sessionStatus.FailedCount++;
-            _sessionStatus.LastFailed = FastDateTime.UtcNow;
+            _sessionStatus.LastFailed = DateTime.UtcNow;
             _sessionStatus.Latency = null;
             _sessionStatus.ErrorMessage = ex.Message;
+            _isLastFailureServerUnreachable = ProxyFailures.IsServerUnreachable(ex);
         }
     }
 
     /// <inheritdoc/>
     /// <remarks>It does nothing: a connection's failure tells.</remarks>
-    public Task CheckServers(ISocketFactory socketFactory, CancellationToken cancellationToken)
+    public Task CheckServers(ISocketFactory socketFactory, IPEndPoint ipEndPoint, string? hostName,
+        RemoteCertificateValidationCallback? serverCertificateValidation, CancellationToken cancellationToken)
     {
         // a single proxy is used as-is; failures surface on connect
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    /// <remarks>It takes the options' proxy, when they give one.</remarks>
+    /// <remarks>
+    /// It takes the options' proxy, when they give one; another proxy than the one before starts with no outcome, as the
+    /// one before's counted for it.
+    /// </remarks>
     public Task UpdateOptions(ProxyOptions proxyOptions, CancellationToken cancellationToken)
     {
-        if (proxyOptions.ProxyEndPoint != null)
-            _proxyEndPoint = proxyOptions.ProxyEndPoint;
+        if (proxyOptions.ProxyEndPoint is not { } proxyEndPoint)
+            return Task.CompletedTask;
+
+        lock (_sessionStatus) {
+            if (proxyEndPoint.Id != _proxyEndPoint.Id) {
+                _sessionStatus.SucceededCount = 0;
+                _sessionStatus.FailedCount = 0;
+                _sessionStatus.LastSucceeded = null;
+                _sessionStatus.LastFailed = null;
+                _sessionStatus.Latency = null;
+                _sessionStatus.ErrorMessage = null;
+                _isLastFailureServerUnreachable = false;
+            }
+
+            _proxyEndPoint = proxyEndPoint;
+        }
 
         return Task.CompletedTask;
     }

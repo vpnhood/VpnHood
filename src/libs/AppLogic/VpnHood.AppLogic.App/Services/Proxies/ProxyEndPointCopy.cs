@@ -43,7 +43,7 @@ public class ProxyEndPointCopy(Storage storage)
         storage.Write(FileName, JsonSerializer.Serialize(items, JsonOptions));
     }
 
-    // the endpoint's own fields, as it has them: its Url leaves a disabled one's flag out
+    // the endpoint's own fields, as it has them
     private sealed record Item(
         ProxyProtocol Protocol,
         string Host,

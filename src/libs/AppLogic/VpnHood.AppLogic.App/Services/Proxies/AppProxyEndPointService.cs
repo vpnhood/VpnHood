@@ -325,20 +325,32 @@ public class AppProxyEndPointService(
 
     private Task<IProxyEndPointStore> GetStore(CancellationToken cancellationToken)
     {
-        lock (_storeLock)
-            _storeTask ??= OpenStore();
+        Task<IProxyEndPointStore> storeTask;
+        lock (_storeLock) {
+            // a failed open is not kept: the next caller opens again, once the other process's lock is gone
+            if (_storeTask is { IsFaulted: true } or { IsCanceled: true })
+                _storeTask = null;
 
-        return _storeTask.WaitAsync(cancellationToken);
+            storeTask = _storeTask ??= OpenStore();
+        }
+
+        return storeTask.WaitAsync(cancellationToken);
     }
 
     // one open for every caller, so no caller's token ends it
     private async Task<IProxyEndPointStore> OpenStore()
     {
         var store = new ProxyEndPointStore(dbPath);
-        if (endPointCopy != null)
-            await RestoreCopy(store, endPointCopy, CancellationToken.None).Vhc();
+        try {
+            if (endPointCopy != null)
+                await RestoreCopy(store, endPointCopy, CancellationToken.None).Vhc();
 
-        return store;
+            return store;
+        }
+        catch {
+            store.Dispose();
+            throw;
+        }
     }
 
     // An empty db beside a copy is one the platform deleted while the app was closed: the proxies the

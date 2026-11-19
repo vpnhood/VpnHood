@@ -15,15 +15,14 @@ namespace VpnHood.Core.Proxies.Management.Sqlite;
 /// <param name="dbPath">The file's path; its folder is made if missing.</param>
 /// <remarks>
 /// <para>
-/// Each operation opens its own connection and closes it when it ends, so no lock on the file outlives it, but for a
-/// connection whose setup fails after its open, which is left to the GC: iOS kills a suspended process that holds a
-/// lock on a file of its app group. The file is in write-ahead-log mode, and each
+/// Each operation opens its own connection and closes it when it ends, so no lock on the file outlives it: iOS kills a
+/// suspended process that holds a lock on a file of its app group. The file is in write-ahead-log mode, and each
 /// command waits up to 5 seconds for another process's lock. Within a store, operations run one at a time.
 /// </para>
 /// <para>
-/// The first operation makes the file and its tables. When its first open or check of the file fails for any reason,
-/// a lock or a cancellation included, or finds another schema version, the file is deleted and made again, empty.
-/// Passwords are stored as given, unencrypted.
+/// The first operation makes the file and its tables. Where the file is no SQLite database, is damaged or has another
+/// schema version, it is deleted and made again, empty; any other failure of that first open, as another process's
+/// lock or a cancellation, is thrown, and the next operation tries again. Passwords are stored as given, unencrypted.
 /// </para>
 /// </remarks>
 public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
@@ -48,9 +47,16 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
     {
         SqliteHelper.EnsureInitialized();
         var connection = new SqliteConnection($"Data Source={dbPath};Pooling=False;Default Timeout=5");
-        await connection.OpenAsync(cancellationToken).Vhc();
-        await SqliteHelper.ExecuteAsync(connection, "PRAGMA busy_timeout=5000;", cancellationToken).Vhc();
-        return connection;
+        try {
+            await connection.OpenAsync(cancellationToken).Vhc();
+            await SqliteHelper.ExecuteAsync(connection, "PRAGMA busy_timeout=5000;", cancellationToken).Vhc();
+            return connection;
+        }
+        catch {
+            // no lock on the file outlives a failed open, as iOS ends a suspended process that holds one
+            await connection.DisposeAsync().Vhc();
+            throw;
+        }
     }
 
     // one-time (per store instance): create the folder and verify/create the schema; an unusable
@@ -65,9 +71,12 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             await using var connection = await OpenConnection(cancellationToken).Vhc();
             await EnsureSchema(connection, cancellationToken).Vhc();
         }
-        catch (Exception ex) {
+        catch (SqliteException ex) when (ex.SqliteErrorCode is SqliteNotADb or SqliteCorrupt) {
+            // no database of this store, or one beyond repair: the list goes, as there is none to keep. A lock, held
+            // by the other process, or a cancellation is no such thing, and is thrown with the list kept
             VhLogger.Instance.LogWarning(ex,
-                "Could not open the proxy endpoint db. Recreating... DbPath: {DbPath}", dbPath);
+                "The proxy endpoint db is not usable. Recreating... DbPath: {DbPath}", dbPath);
+
             Recreate();
 
             await using var connection = await OpenConnection(cancellationToken).Vhc();
@@ -76,6 +85,9 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
 
         _schemaVerified = true;
     }
+
+    private const int SqliteCorrupt = 11;
+    private const int SqliteNotADb = 26;
 
     private void Recreate()
     {
@@ -90,19 +102,17 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
     private static async Task EnsureSchema(SqliteConnection connection, CancellationToken cancellationToken)
     {
         await SqliteHelper.ExecuteAsync(connection, $"PRAGMA journal_mode={JournalMode};", cancellationToken).Vhc();
+        if (await HasSchema(connection, transaction: null, cancellationToken).Vhc())
+            return;
 
-        // verify schema version; an empty db has no meta table yet
-        var hasMeta = await SqliteHelper.ExecuteScalarAsync(connection,
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meta'", cancellationToken).Vhc() is long and > 0;
-        if (hasMeta) {
-            var version = await SqliteHelper.ExecuteScalarAsync(connection,
-                "SELECT value FROM meta WHERE key='schema_version'", cancellationToken).Vhc() as string;
-            if (version == SchemaVersion.ToString())
-                return; // schema is current
-            throw new SqliteException($"Unsupported proxy endpoint db schema version: {version}.", 26 /*SQLITE_NOTADB*/);
-        }
+        // The tables and their version are made in one write transaction, which looks again first: another process's
+        // first open at the same moment finds both or neither, where it found the tables without their version and
+        // deleted the file
+        await using var transaction = BeginWriteTransaction(connection);
+        if (await HasSchema(connection, transaction, cancellationToken).Vhc())
+            return;
 
-        await SqliteHelper.ExecuteAsync(connection,
+        await SqliteHelper.ExecuteAsync(connection, transaction,
             """
             CREATE TABLE IF NOT EXISTS endpoints (
                 id              TEXT PRIMARY KEY,
@@ -124,9 +134,37 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             );
             CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
             """, cancellationToken).Vhc();
-        await SqliteHelper.ExecuteAsync(connection,
+
+        await SqliteHelper.ExecuteAsync(connection, transaction,
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', @version)",
             cancellationToken, ("@version", SchemaVersion.ToString())).Vhc();
+
+        await transaction.CommitAsync(cancellationToken).Vhc();
+    }
+
+    // A write transaction from its start, BEGIN IMMEDIATE, said outright: what it reads stays as read until it ends, as
+    // no other process writes between its read and its first write
+    private static SqliteTransaction BeginWriteTransaction(SqliteConnection connection) =>
+        connection.BeginTransaction(System.Data.IsolationLevel.Serializable, deferred: false);
+
+    // whether the file has this store's tables, false for one with none yet; another version, which a file whose tables
+    // came with no version has too, throws as no database of this store
+    private static async Task<bool> HasSchema(SqliteConnection connection, SqliteTransaction? transaction,
+        CancellationToken cancellationToken)
+    {
+        var hasMeta = await SqliteHelper.ExecuteScalarAsync(connection, transaction,
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='meta'", cancellationToken).Vhc() is long and > 0;
+
+        if (!hasMeta)
+            return false;
+
+        var version = await SqliteHelper.ExecuteScalarAsync(connection, transaction,
+            "SELECT value FROM meta WHERE key='schema_version'", cancellationToken).Vhc() as string;
+
+        if (version == SchemaVersion.ToString())
+            return true;
+
+        throw new SqliteException($"Unsupported proxy endpoint db schema version: {version}.", SqliteNotADb);
     }
 
     /// <inheritdoc/>
@@ -168,14 +206,16 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
         await using var connection = await OpenDb(cancellationToken).Vhc();
-        return await ReadAll(connection, cancellationToken).Vhc();
+        return await ReadAll(connection, transaction: null, cancellationToken).Vhc();
     }
 
-    // shared by List/Merge/DeleteAll; the caller holds _lock and owns the connection
+    // shared by List/Merge/DeleteAll; the caller holds _lock and owns the connection, and its transaction where it has
+    // one, which the read must join
     private static async Task<List<ProxyEndPointRecord>> ReadAll(SqliteConnection connection,
-        CancellationToken cancellationToken)
+        SqliteTransaction? transaction, CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = "SELECT * FROM endpoints";
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).Vhc();
         var records = new List<ProxyEndPointRecord>();
@@ -186,8 +226,8 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Endpoints of equal state and quality come in the order they were added. An endpoint used whose last success and
-    /// last failure are at the same moment is in none of the groups, and is never listed.
+    /// Endpoints of equal state and quality come in the order they were added. An endpoint whose last success and last
+    /// failure are at the same moment is a failed one, and one with neither is an unknown one.
     /// </remarks>
     public async Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options,
         CancellationToken cancellationToken)
@@ -209,12 +249,14 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             parameters.Add(("@search", $"%{escaped}%"));
         }
 
-        // category filters mirror IsLastUsedSucceeded / IsLastUsedFailed / !HasUsed
+        // category filters mirror IsLastUsedSucceeded / IsLastUsedFailed / neither, so each endpoint is in one, one
+        // with counts and no times too
         const string succeededSql =
             "(last_succeeded IS NOT NULL AND (last_failed IS NULL OR last_succeeded > last_failed))";
         const string failedSql =
-            "(last_failed IS NOT NULL AND (last_succeeded IS NULL OR last_failed > last_succeeded))";
-        const string unusedSql = "(succeeded_count = 0 AND failed_count = 0)";
+            "(last_failed IS NOT NULL AND (last_succeeded IS NULL OR last_failed >= last_succeeded))";
+
+        const string unusedSql = "(last_succeeded IS NULL AND last_failed IS NULL)";
 
         var categories = new List<string>();
         if (options.IncludeSucceeded)
@@ -321,7 +363,10 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
     }
 
     /// <inheritdoc/>
-    /// <remarks>It writes the statuses in one transaction.</remarks>
+    /// <remarks>
+    /// It writes the statuses in one transaction. An endpoint's enabled state is taken only from enabled to disabled:
+    /// one the user disabled meanwhile stays so.
+    /// </remarks>
     public async Task UpdateStatuses(IReadOnlyList<ProxyEndPointInfo> infos, CancellationToken cancellationToken)
     {
         if (infos.Count == 0)
@@ -336,11 +381,12 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             command.CommandText =
                 """
                 UPDATE endpoints SET
-                    is_enabled=@isEnabled, penalty=@penalty, succeeded_count=@succeededCount,
+                    is_enabled=MIN(is_enabled, @isEnabled), penalty=@penalty, succeeded_count=@succeededCount,
                     failed_count=@failedCount, latency_ms=@latencyMs, last_succeeded=@lastSucceeded,
                     last_failed=@lastFailed, error_message=@errorMessage, queue_position=@queuePosition
                 WHERE id=@id
                 """;
+
             command.Parameters.AddWithValue("@id", info.EndPoint.Id);
             command.Parameters.AddWithValue("@isEnabled", info.EndPoint.IsEnabled ? 1 : 0);
             AddStatusParameters(command, info.Status);
@@ -378,23 +424,26 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
     }
 
     /// <inheritdoc/>
+    /// <remarks>It reads and deletes in one write transaction, so another process's change comes before or after.</remarks>
     public async Task DeleteAll(DeleteAllOptions options, CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
         await using var connection = await OpenDb(cancellationToken).Vhc();
+        await using var transaction = BeginWriteTransaction(connection);
 
         // keep the exact category semantics of the old app-side filter chain
-        var allRecords = await ReadAll(connection, cancellationToken).Vhc();
+        var allRecords = await ReadAll(connection, transaction, cancellationToken).Vhc();
         var keep = allRecords.AsEnumerable();
 
+        // the groups of the list: each endpoint is in one, so the defaults delete them all
         if (options.DeleteSucceeded)
-            keep = keep.Where(x => x.Status is not { HasUsed: true, IsLastUsedSucceeded: true });
+            keep = keep.Where(x => !x.Status.IsLastUsedSucceeded);
 
         if (options.DeleteFailed)
-            keep = keep.Where(x => x.Status is not { HasUsed: true, IsLastUsedFailed: true });
+            keep = keep.Where(x => !x.Status.IsLastUsedFailed);
 
         if (options.DeleteUnknown)
-            keep = keep.Where(x => x.Status.HasUsed);
+            keep = keep.Where(x => x.Status.IsLastUsedSucceeded || x.Status.IsLastUsedFailed);
 
         if (options.DeleteDisabled)
             keep = keep.Where(x => x.EndPoint.IsEnabled);
@@ -405,7 +454,6 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             .Where(id => !keepIds.Contains(id))
             .ToArray();
 
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
         await DeleteCore(connection, transaction, deleteIds, cancellationToken).Vhc();
         await transaction.CommitAsync(cancellationToken).Vhc();
     }
@@ -451,15 +499,19 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
     }
 
     /// <inheritdoc/>
-    /// <remarks>It reads the stored endpoints before its transaction, which then makes the changes.</remarks>
+    /// <remarks>
+    /// It reads the stored endpoints and makes the changes in one write transaction, so two merges at once, from two
+    /// processes, come one after the other, and the list keeps to the item limit.
+    /// </remarks>
     public async Task Merge(IReadOnlyList<ProxyEndPoint> newEndPoints, int? maxItemCount, int? maxPenalty,
         bool removeDuplicateIps, CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
         await using var connection = await OpenDb(cancellationToken).Vhc();
+        await using var transaction = BeginWriteTransaction(connection);
 
         // the standard priority merge works on the full current list; ~1000 rows max
-        var currentRecords = await ReadAll(connection, cancellationToken).Vhc();
+        var currentRecords = await ReadAll(connection, transaction, cancellationToken).Vhc();
         var currentInfos = currentRecords.Select(x => x.ToInfo()).ToArray();
         var mergedEndPoints = ProxyEndPointUpdater.Merge(
             currentInfos, newEndPoints as ProxyEndPoint[] ?? [.. newEndPoints],
@@ -475,7 +527,6 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
             .Select(x => new ProxyEndPointRecord { EndPoint = x })
             .ToArray();
 
-        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
         await DeleteCore(connection, transaction, prunedIds, cancellationToken).Vhc();
 
         // existing rows keep their status and enabled state; new rows start fresh

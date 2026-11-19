@@ -85,7 +85,7 @@ The app's API gives the step as `AppConnectionState`; the words are the ones Vpn
 | Initializing | `Initializing` | The app gets ready, and the VPN service starts |
 | The system's dialog | `WaitingForVpnPermission` | The system asks the person to allow the VPN |
 | Diagnosing | `Diagnosing` | A connect the person asked to diagnose: the app checks the network and the servers first |
-| Validating proxies | `ValidatingProxies` | The engine checks the proxies it connects through, where the app uses them |
+| Validating proxies | `ValidatingProxies` | The engine checks the proxies it connects through against a server of the access key, where the app uses them and the key gives a server's address |
 | Finding network | `FindingReachableServer` | The engine looks for a server of the access key that answers |
 | Finding best server | `FindingBestServer` | After a redirect: the engine looks for the first of the given servers that answers |
 | Connecting | `Connecting` | The hello, and the session's start |

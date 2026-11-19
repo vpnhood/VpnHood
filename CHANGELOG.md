@@ -1,5 +1,13 @@
 # Latest
 
+* Fix: With proxies on, the whole tunnel goes through them, over TCP, whatever the Tunnel protocol setting, where with UDP or QUIC it went straight to the server, around the proxies
+* Fix: HTTPS proxies work, where the tunnel went around the proxy's own encryption and failed. An HTTPS proxy needs a certificate your device trusts for the proxy's name or address, as your proxy user name and password go inside that connection; a self-signed one works only once your device trusts it. An HTTPS proxy the app turned off before stays off until you turn it on
+* Update: The app checks your proxies by reaching your VPN server through them, and no one else, where it reached Cloudflare through each; a proxy that shows a certificate of its own for your server fails the check. A proxy whose check fails stays on, where a failed secure handshake, or an HTTP proxy's refusal of your server's port, turned it off for good
+* Fix: When none of your proxies works, the app says so, where a proxy that was turned off or never tried, or one that refused its user name and password, made it blame the server; when your server is down behind proxies that work, the app says the server cannot be reached
+* Fix: A proxy you turn off while connected stays off, where the VPN could turn it on again
+* Fix: Your proxy list is no longer emptied when the app opens it while the VPN is busy with it, nor when the app and the VPN make it at the same moment
+* Fix: An update of the proxy list from its URL keeps a proxy you have once, where it kept it twice and pushed others out of the list, and keeps its user name and password where the list gives none
+* Improve: The proxy list takes more: addresses parted from their ports by a space, as `1.2.3.4 8080`, with the protocol's name before or after them, as tables give it, IPv6 addresses, `socks://` addresses, read as SOCKS5, and URLs with a query. `http://host:80` keeps port 80, where it became 8080, and the user name and password in an address are kept. In the form for one proxy, a password with characters such as `/`, `#` or `?` works
 * Fix: When your local network stays out of the VPN, only its IPv6 addresses do, as with IPv4, and the kill switch lets no more through. Other IPv6 addresses that are not public, such as those of a carrier's IPv6-to-IPv4 gateway, went around the VPN.
 * Fix: With Split Domains on, DNS lookups no longer stall: about half of them were held back, and an app waited for its own retry
 * Fix: With Split Domains on, an app whose server speaks first, as with SMTP, FTP or MySQL, connects after a second, where it waited until it gave up

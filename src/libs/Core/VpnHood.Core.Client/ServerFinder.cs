@@ -409,9 +409,10 @@ internal class ServerFinder(
                 ? true
                 : throw new SessionException(errorCode);
         }
-        catch (UnauthorizedAccessException) {
+        catch (RequestAuthorizationException) {
             // ServerCheck returns 401 even for a valid proof; it establishes reachability only.
             // If a saved server refuses the hello, the client's close clears it for the next connect.
+            // A proxy's refusal of its credentials, an UnauthorizedAccessException too, is no answer of the server.
             return true;
         }
         catch (OperationCanceledException ex) {

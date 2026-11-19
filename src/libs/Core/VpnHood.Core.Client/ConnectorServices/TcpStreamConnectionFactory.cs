@@ -26,16 +26,24 @@ internal class TcpStreamConnectionFactory(
         var tcpEndPoint = vpnEndPoint.TcpEndPoint;
 
         TcpClient? tcpClient = null;
+        Stream? stream = null;
         try {
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
-            if (proxyConnector is { IsEnabled: true })
+            if (proxyConnector is { IsEnabled: true }) {
                 // The proxy connector creates the socket internally, so the packet-channel kernel-buffer
                 // override cannot reach it; proxied packet channels keep the factory-default buffer and
-                // whatever throughput ceiling comes with it.
-                tcpClient = await proxyConnector
-                    .ConnectAsync(socketFactory, tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
+                // whatever throughput ceiling comes with it. Its stream is the one to the server, an HTTPS proxy's
+                // TLS session too, which the socket's own stream would pass by
+                var proxyConnection = await proxyConnector
+                    .ConnectAsync(socketFactory, tcpEndPoint, vpnEndPoint.HostName, certificateValidationCallback,
+                        onConnectAttempt, cancellationToken)
+                    .Vhc();
+
+                tcpClient = proxyConnection.TcpClient;
+                stream = proxyConnection.Stream;
+            }
             else {
                 // Packet mode multiplexes every inner TCP flow over this one outer connection, so its
                 // sizing is decided here rather than inherited from the factory default, which exists to
@@ -48,23 +56,28 @@ internal class TcpStreamConnectionFactory(
                     : null;
                 tcpClient = socketFactory.CreateTcpClient(tcpEndPoint, socketOptions);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
+                stream = tcpClient.GetStream();
             }
 
-            return await AuthenticateTls(connectionId, tcpClient, cancellationToken).Vhc();
+            return await AuthenticateTls(connectionId, tcpClient, stream, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             if (proxyConnector is { IsEnabled: true } && tcpClient != null)
                 proxyConnector.RecordFailed(tcpClient, ex);
 
+            stream?.Dispose();
             tcpClient?.Dispose();
             throw;
         }
     }
 
-    private async Task<IStreamConnection> AuthenticateTls(string connectionId, TcpClient tcpClient,
+    private async Task<IStreamConnection> AuthenticateTls(string connectionId, TcpClient tcpClient, Stream stream,
         CancellationToken cancellationToken)
     {
-        var sslStream = new SslStream(tcpClient.GetStream(), true, certificateValidationCallback);
+        // An HTTPS proxy's TLS session under it is closed with it: the socket's own stream stays for the socket's close
+        var sslStream = new SslStream(stream, leaveInnerStreamOpen: stream is NetworkStream,
+            certificateValidationCallback);
+
         try {
             var hostName = vpnEndPoint.HostName;
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "TLS Authenticating... HostName: {HostName}",

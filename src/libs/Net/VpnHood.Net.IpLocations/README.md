@@ -14,8 +14,9 @@ dotnet add package VpnHood.Net.IpLocations
 - `IIpLocationProvider` finds where an address is (`GetLocation`) and where the device is
   (`GetCurrentLocation`); `ICurrentIpLocationProvider` only the latter. `IIpRangeLocationProvider` also gives each
   country's IP ranges, from a local database.
-- Online providers: `IpApiCoLocationProvider`, `IpInfoIoProvider`, `IpLocationIoProvider`, and
-  `CloudflareLocationProvider` for the current location's country. They take your `HttpClient` and User-Agent.
+- Online providers: `IpApiCoLocationProvider`, `IpInfoIoProvider`, `IpLocationIoProvider`,
+  `InternetDataProvider`, and `CloudflareLocationProvider` for the current location's country. They take your
+  `HttpClient` and User-Agent.
 - Local providers give the country only: `LocalIpLocationProvider` holds ranges in memory;
   `LocalIpRangeLocationProvider` reads a zip of country ranges, a country at a time. `Ip2LocationDbParser` builds
   both from IP2Location's LITE DB1 database. `VpnHood.Net.IpLocations.Providers.SqliteProvider` keeps the ranges

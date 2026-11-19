@@ -72,9 +72,15 @@ internal class ClientPacketHandler(
         // A TCP connection that the TCP host takes while a domain rule is on is decided once its name is read
         // (ClientStreamHandler), by the same filters and overrides in the same order: decided here, an IP block
         // dropped it before the domain rule that includes it was asked, where a QUIC flow's name is asked first, and
-        // the documented design has a domain include go past every IP gate
+        // the documented design has a domain include go past every IP gate.
+        // IPv6 that the server or the device's own network does not carry stays with the IP filter below, as before a
+        // domain rule: where it cannot go the way its verdict says, into the tunnel or around it, its packets are
+        // dropped, so its connection is never made and the app goes on to IPv4. Made by the TCP host and ended once
+        // its name was read, it would be an error to any app that tries no other address once a connection is made
         if (ipPacket.Protocol == IpProtocol.Tcp && domainFilteringService.IsEnabled &&
-            (ipPacket.IsV6 ? UseTcpForwardingIpV6 : UseTcpForwardingIpV4)) {
+            (ipPacket.IsV6
+                ? UseTcpForwardingIpV6 && IsIpV6SupportedByServer && IsIpV6SupportedByClient
+                : UseTcpForwardingIpV4)) {
             IsSecureDnsDetected |= DnsPorts.IsSecureDns(ipPacket.Protocol, destinationEndPoint.Port);
             clientTcpHost.ProcessOutgoingPacket(ipPacket);
             return;
@@ -86,7 +92,7 @@ internal class ClientPacketHandler(
 
         // block
         if (filterAction == FilterAction.Block)
-            throw new NetFilterException("A packet has been dropped by the domain filter.");
+            throw new NetFilterException("A packet has been dropped by the filter.");
 
         // an ad's passthrough, and DNS kept inside, as the stream path has them
         filterAction = ClientFilterOverrides.Apply(filterAction, destinationEndPoint, passthroughState.PassthroughForAd,

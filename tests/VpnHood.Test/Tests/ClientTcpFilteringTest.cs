@@ -1,13 +1,22 @@
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
+using VpnHood.Core.Common.Configuration;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.DomainFiltering;
+using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Exceptions;
+using VpnHood.Core.Tunneling.Forwarding;
+using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Net.Packets;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
 using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
 using SplitDnsMode = VpnHood.Core.Client.Abstractions.SplitDnsMode;
+using SplitUnsupportedIpMode = VpnHood.Core.Client.Abstractions.SplitUnsupportedIpMode;
 
 namespace VpnHood.Test.Tests;
 
@@ -61,6 +70,31 @@ public class ClientTcpFilteringTest : TestBase
                 ipFilter.BlockedRanges = new[] { address }.ToOrderedIpRanges();
 
             return base.CreateTcpClient(ipEndPoint, options);
+        }
+    }
+
+    // a TCP host that only keeps the packets it is given
+    private sealed class RecordingTcpHost : IClientTcpHost
+    {
+        public List<IpPacket> Packets { get; } = [];
+
+        public event EventHandler<IpPacket>? PacketReceived {
+            add { }
+            remove { }
+        }
+
+        public void ProcessOutgoingPacket(IpPacket ipPacket) => Packets.Add(ipPacket);
+
+        public void DropCurrentConnections()
+        {
+        }
+
+        public void Start()
+        {
+        }
+
+        public void Dispose()
+        {
         }
     }
 
@@ -427,6 +461,73 @@ public class ClientTcpFilteringTest : TestBase
         catch (IOException) {
             // ended by a reset
         }
+    }
+
+    [TestMethod]
+    // the server carries no IPv6: its side blocks the family, or sends it around the VPN
+    [DataRow(false, true, SplitUnsupportedIpMode.Block, false, typeof(NetFilterException))]
+    [DataRow(false, true, SplitUnsupportedIpMode.Exclude, false, null)]
+    // the device's own network carries none, and a split sends the address around the VPN
+    [DataRow(true, false, SplitUnsupportedIpMode.Block, true, typeof(PacketDropException))]
+    // both carry it: the TCP host takes the connection for its name, whatever the IP filter says
+    [DataRow(true, true, SplitUnsupportedIpMode.Block, true, null)]
+    public void IPv6_TCP_meets_the_IP_filter_before_the_TCP_host_where_an_end_carries_none(
+        bool isIpV6SupportedByServer, bool isIpV6SupportedByClient, SplitUnsupportedIpMode unsupportedIpV6Mode,
+        bool isExcludedByIp, Type? expectedException)
+    {
+        // a domain rule is on
+        var address = IPAddress.Parse("2001:db8::1");
+        using var domainFilteringService = new DomainFilteringService(
+            new StaticDomainFilter(null) { Blocks = ["a-name-nobody-asks-for.example"] }, new EventId(),
+            tlsBufferSize: 4096) { IsEnabled = true };
+        using var netFilter = new NetFilter {
+            IpFilter = new ServerIpFilter(new StaticIpFilter(null) {
+                ExcludeRanges = isExcludedByIp ? new[] { address }.ToOrderedIpRanges() : IpRangeOrderedList.Empty
+            }) {
+                IsIpV6SupportedByServer = isIpV6SupportedByServer,
+                UnsupportedIpV6Mode = unsupportedIpV6Mode
+            }
+        };
+        using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
+        using var forwardingManager = new ForwardingManager(new BindingSocketFactory(new TestSocketFactory()),
+            new ForwardingManagerOptions {
+                IsPingSupported = false,
+                PacketForwarderCallbacks = null,
+                UdpTimeout = TransportDefaults.UdpTimeout,
+                IcmpTimeout = TransportDefaults.IcmpTimeout,
+                MaxUdpClientCount = TransportDefaults.MaxUdpClientCount,
+                MaxPingClientCount = TransportDefaults.MaxPingClientCount,
+                PacketQueueCapacity = TransportDefaults.PacketForwardingQueueCapacity,
+                UdpBufferSize = null,
+                LogScope = null
+            });
+        using var tcpHost = new RecordingTcpHost();
+        var packetHandler = new ClientPacketHandler(tunnel, tcpHost, domainFilteringService, netFilter,
+            forwardingManager, dnsServers: [], isIpV6SupportedByServer, SplitDnsMode.DefaultRoute,
+            new PassthroughState()) {
+            UseTcpForwardingIpV4 = true,
+            UseTcpForwardingIpV6 = true,
+            IsIpV6SupportedByClient = isIpV6SupportedByClient
+        };
+
+        // The first packet of an IPv6 connection. Where it cannot go the way its verdict says, it is dropped, so the
+        // connection is never made and the app goes on to IPv4: with a domain rule on, the TCP host made the
+        // connection for its name, and ended it once the name was read. Where it can, the TCP host takes it
+        using var ipV6Packet = PacketBuilder.BuildTcp(IPAddress.Parse("fd00::2"), address,
+            sourcePort: 50000, destinationPort: 443, options: [], payload: []);
+        if (expectedException == null)
+            packetHandler.ProcessOutgoingPacket(ipV6Packet);
+        else
+            Assert.AreEqual(expectedException,
+                Assert.Throws<Exception>(() => packetHandler.ProcessOutgoingPacket(ipV6Packet)).GetType());
+
+        Assert.HasCount(expectedException == null ? 1 : 0, tcpHost.Packets);
+
+        // IPv4 goes to the TCP host for its name
+        using var ipV4Packet = PacketBuilder.BuildTcp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("198.51.100.1"),
+            sourcePort: 50000, destinationPort: 443, options: [], payload: []);
+        packetHandler.ProcessOutgoingPacket(ipV4Packet);
+        Assert.AreSame(ipV4Packet, tcpHost.Packets[^1]);
     }
 
     [TestMethod]

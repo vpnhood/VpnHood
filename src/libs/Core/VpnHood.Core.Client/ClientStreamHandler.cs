@@ -156,8 +156,8 @@ internal class ClientStreamHandler(
         IStreamConnection streamConnection, IPEndPoint hostEndPoint, int filterGeneration,
         CancellationToken cancellationToken)
     {
-        // dropped as its packets are, no fault to log as one: with a domain rule on, an included name's connection
-        // comes here past the IP gates, which dropped its packets before
+        // dropped as its packets are, no fault to log as one: a name that the rules include comes here where the IP
+        // gates send its address around the tunnel, as the TCP host takes such a connection
         if (hostEndPoint.IsV6 && !session.Status.IsIpV6SupportedByServer)
             throw new NetFilterException("IPv6 is not supported by server.");
 

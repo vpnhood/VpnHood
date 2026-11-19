@@ -60,7 +60,10 @@ include goes through the tunnel past an IP exclude or block, and an exclude goes
 block. The IP gates decide only a flow whose name matches no entry, or that has none. A TCP connection is
 decided once, when its name is read, so a rule that changes while connected, IP or domain, ends the open
 TCP connections, and one still being set up is not joined to its host or to the tunnel; the apps' new ones
-follow it (`ClientSession`). So does the change that takes the last domain rule away.
+follow it (`ClientSession`). So does the change that takes the last domain rule away. IPv6 that the server
+or the device's own network does not carry is apart: its TCP packets meet the IP gates first, as with no
+domain rule on, so a connection that cannot go the way its verdict says, into the tunnel or around it, is
+never made, and the app goes on to IPv4 (`ClientPacketHandler`).
 
 A QUIC flow is the packets between two addresses and ports, and a client that keeps one socket may run
 several connections on it to one server address, as to a CDN's, at once or one after another. Each has

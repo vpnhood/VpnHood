@@ -98,6 +98,27 @@ public class ClientTcpFilteringTest : TestBase
         }
     }
 
+    // an IP filter stage that counts what it is asked
+    private sealed class CountingIpFilter(IIpFilter nextFilter) : IIpFilter
+    {
+        public int LookupCount { get; private set; }
+
+        public event EventHandler? Changed {
+            add => nextFilter.Changed += value;
+            remove => nextFilter.Changed -= value;
+        }
+
+        public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
+        {
+            LookupCount++;
+            return nextFilter.Process(protocol, endPoint);
+        }
+
+        public Task Reconfigure(CancellationToken cancellationToken) => nextFilter.Reconfigure(cancellationToken);
+        public bool IsEmpty => nextFilter.IsEmpty;
+        public void Dispose() => nextFilter.Dispose();
+    }
+
     private async Task<TcpClient> AcceptWithin(TcpListener listener, TimeSpan timeout)
     {
         using var acceptCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
@@ -465,29 +486,34 @@ public class ClientTcpFilteringTest : TestBase
 
     [TestMethod]
     // the server carries no IPv6: its side blocks the family, or sends it around the VPN
-    [DataRow(false, true, SplitUnsupportedIpMode.Block, false, typeof(NetFilterException))]
-    [DataRow(false, true, SplitUnsupportedIpMode.Exclude, false, null)]
-    // the device's own network carries none, and a split sends the address around the VPN
-    [DataRow(true, false, SplitUnsupportedIpMode.Block, true, typeof(PacketDropException))]
-    // both carry it: the TCP host takes the connection for its name, whatever the IP filter says
-    [DataRow(true, true, SplitUnsupportedIpMode.Block, true, null)]
+    [DataRow(false, true, SplitUnsupportedIpMode.Block, FilterAction.Default, typeof(NetFilterException))]
+    [DataRow(false, true, SplitUnsupportedIpMode.Exclude, FilterAction.Default, null)]
+    // the device's own network carries none: an address that a split sends around the VPN cannot go, one that it
+    // blocks is dropped whatever a domain rule would say of its name, and the rest goes on to the TCP host
+    [DataRow(true, false, SplitUnsupportedIpMode.Block, FilterAction.Exclude, typeof(PacketDropException))]
+    [DataRow(true, false, SplitUnsupportedIpMode.Block, FilterAction.Block, typeof(NetFilterException))]
+    [DataRow(true, false, SplitUnsupportedIpMode.Block, FilterAction.Default, null)]
+    // both carry it: the TCP host takes the connection for its name, and the IP filter, whose block would drop the
+    // packet, is not asked
+    [DataRow(true, true, SplitUnsupportedIpMode.Block, FilterAction.Block, null)]
     public void IPv6_TCP_meets_the_IP_filter_before_the_TCP_host_where_an_end_carries_none(
         bool isIpV6SupportedByServer, bool isIpV6SupportedByClient, SplitUnsupportedIpMode unsupportedIpV6Mode,
-        bool isExcludedByIp, Type? expectedException)
+        FilterAction ipVerdict, Type? expectedException)
     {
-        // a domain rule is on
+        // a domain rule is on, and the user's IP rules exclude the address, block it, or say nothing of it
         var address = IPAddress.Parse("2001:db8::1");
+        var addressRanges = new[] { address }.ToOrderedIpRanges();
         using var domainFilteringService = new DomainFilteringService(
             new StaticDomainFilter(null) { Blocks = ["a-name-nobody-asks-for.example"] }, new EventId(),
             tlsBufferSize: 4096) { IsEnabled = true };
-        using var netFilter = new NetFilter {
-            IpFilter = new ServerIpFilter(new StaticIpFilter(null) {
-                ExcludeRanges = isExcludedByIp ? new[] { address }.ToOrderedIpRanges() : IpRangeOrderedList.Empty
-            }) {
-                IsIpV6SupportedByServer = isIpV6SupportedByServer,
-                UnsupportedIpV6Mode = unsupportedIpV6Mode
-            }
-        };
+        var ipFilter = new CountingIpFilter(new ServerIpFilter(new StaticIpFilter(null) {
+            ExcludeRanges = ipVerdict == FilterAction.Exclude ? addressRanges : IpRangeOrderedList.Empty,
+            BlockedRanges = ipVerdict == FilterAction.Block ? addressRanges : IpRangeOrderedList.Empty
+        }) {
+            IsIpV6SupportedByServer = isIpV6SupportedByServer,
+            UnsupportedIpV6Mode = unsupportedIpV6Mode
+        });
+        using var netFilter = new NetFilter { IpFilter = ipFilter };
         using var tunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         using var forwardingManager = new ForwardingManager(new BindingSocketFactory(new TestSocketFactory()),
             new ForwardingManagerOptions {
@@ -510,9 +536,9 @@ public class ClientTcpFilteringTest : TestBase
             IsIpV6SupportedByClient = isIpV6SupportedByClient
         };
 
-        // The first packet of an IPv6 connection. Where it cannot go the way its verdict says, it is dropped, so the
-        // connection is never made and the app goes on to IPv4: with a domain rule on, the TCP host made the
-        // connection for its name, and ended it once the name was read. Where it can, the TCP host takes it
+        // The first packet of an IPv6 connection. Where it cannot go the way the IP rules say, it is dropped, so the
+        // connection is never made, and an app that tries its addresses as it connects goes on to IPv4: with a
+        // domain rule on, the TCP host made the connection for its name, and ended it once the name was read
         using var ipV6Packet = PacketBuilder.BuildTcp(IPAddress.Parse("fd00::2"), address,
             sourcePort: 50000, destinationPort: 443, options: [], payload: []);
         if (expectedException == null)
@@ -522,12 +548,16 @@ public class ClientTcpFilteringTest : TestBase
                 Assert.Throws<Exception>(() => packetHandler.ProcessOutgoingPacket(ipV6Packet)).GetType());
 
         Assert.HasCount(expectedException == null ? 1 : 0, tcpHost.Packets);
+        Assert.AreEqual(isIpV6SupportedByServer && isIpV6SupportedByClient ? 0 : 1, ipFilter.LookupCount,
+            "the IP filter is asked first only where an end does not carry the family");
 
-        // IPv4 goes to the TCP host for its name
+        // IPv4 goes to the TCP host for its name, and the IP filter is not asked
+        var lookupCount = ipFilter.LookupCount;
         using var ipV4Packet = PacketBuilder.BuildTcp(IPAddress.Parse("10.0.0.2"), IPAddress.Parse("198.51.100.1"),
             sourcePort: 50000, destinationPort: 443, options: [], payload: []);
         packetHandler.ProcessOutgoingPacket(ipV4Packet);
         Assert.AreSame(ipV4Packet, tcpHost.Packets[^1]);
+        Assert.AreEqual(lookupCount, ipFilter.LookupCount);
     }
 
     [TestMethod]

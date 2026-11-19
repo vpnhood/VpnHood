@@ -74,9 +74,10 @@ internal class ClientPacketHandler(
         // dropped it before the domain rule that includes it was asked, where a QUIC flow's name is asked first, and
         // the documented design has a domain include go past every IP gate.
         // IPv6 that the server or the device's own network does not carry stays with the IP filter below, as before a
-        // domain rule: where it cannot go the way its verdict says, into the tunnel or around it, its packets are
-        // dropped, so its connection is never made and the app goes on to IPv4. Made by the TCP host and ended once
-        // its name was read, it would be an error to any app that tries no other address once a connection is made
+        // domain rule: where it cannot go the way the filter says, into the tunnel or around it, its packets are
+        // dropped, so its connection is never made, and an app that tries its addresses as it connects goes on to
+        // IPv4. Made by the TCP host and ended once its name was read, it would be an error to any app that tries no
+        // other address once a connection is made. The price is that a name's verdict passes no IP rule there
         if (ipPacket.Protocol == IpProtocol.Tcp && domainFilteringService.IsEnabled &&
             (ipPacket.IsV6
                 ? UseTcpForwardingIpV6 && IsIpV6SupportedByServer && IsIpV6SupportedByClient

@@ -60,10 +60,16 @@ include goes through the tunnel past an IP exclude or block, and an exclude goes
 block. The IP gates decide only a flow whose name matches no entry, or that has none. A TCP connection is
 decided once, when its name is read, so a rule that changes while connected, IP or domain, ends the open
 TCP connections, and one still being set up is not joined to its host or to the tunnel; the apps' new ones
-follow it (`ClientSession`). So does the change that takes the last domain rule away. IPv6 that the server
-or the device's own network does not carry is apart: its TCP packets meet the IP gates first, as with no
-domain rule on, so a connection that cannot go the way its verdict says, into the tunnel or around it, is
-never made, and the app goes on to IPv4 (`ClientPacketHandler`).
+follow it (`ClientSession`). So does the change that takes the last domain rule away.
+
+Reading a TCP connection's name first has a price: the connection is made on the device before it is
+decided, so one that the IP gates block is ended once its name is read, where its packets were dropped
+before a domain rule was on. An app that tries its addresses only as it connects then fails where one of a
+name's address families alone is blocked, or is not routed by the server while what it does not route is
+blocked. IPv6 that the server or the device's own network does not carry is kept from that: its TCP
+packets meet the IP gates first, as with no domain rule on, so a connection that cannot go the way they
+say, into the tunnel or around it, is never made, and such an app goes on to IPv4 (`ClientPacketHandler`).
+A name's verdict passes no IP gate there, as it does over IPv4 and over QUIC.
 
 A QUIC flow is the packets between two addresses and ports, and a client that keeps one socket may run
 several connections on it to one server address, as to a CDN's, at once or one after another. Each has

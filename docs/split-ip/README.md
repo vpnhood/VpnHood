@@ -118,12 +118,12 @@ immutable; what changes is which files are current:
    rules (`ClientSession`): a TCP connection is then decided once, when its name is read, and its
    packets meet no gate after, but for IPv6 that the server or the device's own network does not carry
    ([split-domain.md](split-domain.md)). The change that takes the last domain rule away ends them
-   too, as does the one that brings the first. With no domain rule on, before the change and after it, nothing is
-   ended: each TCP packet is asked of the IP gates, so a new block stops a connection there, and one
-   that the client already carries as a stream stays on the side of the tunnel it was opened on. A
-   QUIC flow keeps its verdict until it has gone unused for two minutes, so a changed domain rule
-   reaches its open connections only then; a new connection on it has its name read by the new
-   rules, which decide its first packets, and its verdict then joins the flow's
+   too, as does the one that brings the first. With no domain rule on, before the change and after it,
+   nothing is ended: each TCP packet is asked of the IP gates, so a new block stops a connection
+   there, and one that the client already carries as a stream stays on the side of the tunnel it was
+   opened on. A QUIC flow keeps its verdict until it has gone unused for two minutes, so a changed
+   domain rule reaches its open connections only then; a new connection on it has its name read by
+   the new rules, which decide its first packets, and its verdict then joins the flow's
    ([split-domain.md](split-domain.md)). A flow that no domain entry named is asked of the IP gates at
    each packet, so a changed IP rule reaches it at once. New lookups see the new rules. A reconfigure
    that changes no rule ends nothing: a split stage whose databases are the same swaps nothing, and

@@ -10,14 +10,18 @@ public static class HttpUtils
     internal const string HttpRequestKey = "HTTP_REQUEST";
     internal const int MaxHeaderSize = 128 * 1024; // 128 KB
 
-    /// <summary>Reads an HTTP header off a stream, up to and with the blank line that ends it.</summary>
+    /// <summary>
+    /// Reads an HTTP header off a stream, up to and with the blank line that ends it: <c>CR LF CR LF</c>, the bytes
+    /// after it left in the stream.
+    /// </summary>
     /// <param name="stream">The stream.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <param name="maxLength">The longest header it takes, in bytes. The default is 128 KB.</param>
     /// <returns>
     /// A task whose result is the header, at its start: empty where the stream ended before anything came.
     /// </returns>
-    /// <exception cref="Exception">The stream ended inside the header, or the header is longer than allowed.</exception>
+    /// <exception cref="EndOfStreamException">The stream ended inside the header.</exception>
+    /// <exception cref="Exception">The header is longer than allowed.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     internal static async Task<MemoryStream> ReadHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = MaxHeaderSize)
@@ -25,20 +29,18 @@ public static class HttpUtils
         // read header
         var memStream = new MemoryStream(1024);
         try {
+            // a byte at a time, so nothing past the header is taken; the last four read, to find its end
+            const uint headerEnd = ('\r' << 24) | ('\n' << 16) | ('\r' << 8) | '\n';
             var readBuffer = new byte[1];
-            var lfCounter = 0;
-            while (lfCounter < 4) {
+            var lastBytes = 0u;
+            while (lastBytes != headerEnd) {
                 var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken).Vhc();
                 if (bytesRead == 0)
                     return memStream.Length == 0
                         ? memStream // connection has been closed gracefully before sending anything
-                        : throw new Exception("HttpStream has been closed unexpectedly.");
+                        : throw new EndOfStreamException("The stream ended inside an HTTP header.");
 
-                if (readBuffer[0] == '\r' || readBuffer[0] == '\n')
-                    lfCounter++;
-                else
-                    lfCounter = 0;
-
+                lastBytes = (lastBytes << 8) | readBuffer[0];
                 await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken).Vhc();
 
                 if (memStream.Length > maxLength)
@@ -59,10 +61,8 @@ public static class HttpUtils
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <param name="maxLength">The longest header it takes, in bytes. The default is 128 KB.</param>
     /// <returns>A task whose result is the response.</returns>
-    /// <exception cref="Exception">
-    /// The stream ended, before the header or inside it; the header is longer than allowed; or it is not an HTTP
-    /// response's.
-    /// </exception>
+    /// <exception cref="EndOfStreamException">The stream ended, before the header or inside it.</exception>
+    /// <exception cref="Exception">The header is longer than allowed, or it is not an HTTP response's.</exception>
     /// <exception cref="FormatException">The status code is not a number.</exception>
     /// <exception cref="OverflowException">The status code is out of an integer's range.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -70,6 +70,11 @@ public static class HttpUtils
         int maxLength = MaxHeaderSize)
     {
         using var headerStream = await ReadHeadersAsync(stream, cancellationToken, maxLength).Vhc();
+
+        // a connection closed before its answer, which no version of the app would read: no advice to update
+        if (headerStream.Length == 0)
+            throw new EndOfStreamException("The connection was closed before an HTTP response came.");
+
         using var reader = new StreamReader(headerStream, Encoding.UTF8);
         var firstLine = await reader.ReadLineAsync(cancellationToken).Vhc() ?? string.Empty; // it may return null
 
@@ -123,11 +128,6 @@ public static class HttpUtils
                 headers[headerField] = headerValue;
             }
         }
-
-        // ignore start padding
-        var paddingStart = headers.GetValueOrDefault("X-StartPadding");
-        if (int.TryParse(paddingStart, out var paddingLength) && paddingLength > 0) 
-            await stream.CopyToAsync(Stream.Null, paddingLength, cancellationToken).Vhc();
 
         return headers;
     }

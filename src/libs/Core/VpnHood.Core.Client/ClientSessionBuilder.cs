@@ -41,6 +41,9 @@ internal class ClientSessionBuilder(
     NetFilter netFilter,
     ServerIpFilter serverIpFilter,
     ChannelProtocol channelProtocol,
+    bool useTcpForwarding,
+    bool dropUdp,
+    bool dropQuic,
     Action<ClientState> setState)
 {
     public async Task<ClientSession> Build(
@@ -57,7 +60,7 @@ internal class ClientSessionBuilder(
             "DropUdp: {DropUdp}, VpnProtocol: {VpnProtocol}, " +
             "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
             "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
-            config.DropUdp, channelProtocol, config.IncludeLocalNetwork, workerThreads, completionPortThreads,
+            dropUdp, channelProtocol, config.IncludeLocalNetwork, workerThreads, completionPortThreads,
             vpnAdapter.IsIpVersionSupported(IpVersion.IPv6), Process.GetCurrentProcess().Id);
 
         VhLogger.Instance.LogInformation(
@@ -219,10 +222,9 @@ internal class ClientSessionBuilder(
             // so the server's own word rejects a home-LAN resolver, no client-side LAN heuristic involved)
             // and the fate of what it does not route — per family: a v4-only server leaves every IPv6
             // destination to UnsupportedIpV6Mode regardless of its declared ranges. From here one Process
-            // call answers for the whole session: client gates first, then the server's ranges.
+            // call answers for the whole session: client gates first, then the server's ranges. The modes are the
+            // client's own, from its options or set since (VpnHoodClient)
             serverIpFilter.IncludeRanges = serverIncludeIpRanges;
-            serverIpFilter.UnroutedIpMode = config.UnroutedIpMode;
-            serverIpFilter.UnsupportedIpV6Mode = config.UnsupportedIpV6Mode;
             serverIpFilter.IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             var dnsConfig = ClientHelper.GetDnsServers(
@@ -238,8 +240,8 @@ internal class ClientSessionBuilder(
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
                 clientIncludeIpRanges: config.IncludeIpRangesByDevice.ToOrderedList(),
                 serverIncludeIpRanges: serverIncludeIpRangesByDevice,
-                unroutedIpMode: config.UnroutedIpMode,
-                unsupportedIpV6Mode: config.UnsupportedIpV6Mode,
+                unroutedIpMode: serverIpFilter.UnroutedIpMode,
+                unsupportedIpV6Mode: serverIpFilter.UnsupportedIpV6Mode,
                 isIpV6SupportedByServer: helloResponse.IsIpV6Supported,
                 includeLocalNetwork: config.IncludeLocalNetwork,
                 hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address,
@@ -256,7 +258,7 @@ internal class ClientSessionBuilder(
                     ? "The session takes no UDP channel: its connections go through proxies."
                     : "The server does not support UDP channel.");
 
-            ClientHelper.ValidateTcpSupport(helloResponse, config);
+            ClientHelper.ValidateTcpSupport(helloResponse, useTcpForwarding);
 
             var sessionInfo = new SessionInfo {
                 SessionId = helloResponse.SessionId.ToString(),
@@ -355,9 +357,9 @@ internal class ClientSessionBuilder(
                     NetFilter = netFilter,
                     ChannelProtocol = channelProtocol,
                     SplitDnsMode = config.SplitDnsMode,
-                    DropQuic = config.DropQuic,
-                    DropUdp = config.DropUdp,
-                    UseTcpForwarding = config.UseTcpForwarding,
+                    DropQuic = dropQuic,
+                    DropUdp = dropUdp,
+                    UseTcpForwarding = useTcpForwarding,
                     ServerAddressCheck = CreateServerAddressCheck(vpnEndPoint)
                 },
                 config: new ClientSessionConfig {

@@ -208,8 +208,8 @@ public sealed class TcpStreamConnection : IStreamConnection
 
     /// <inheritdoc/>
     /// <remarks>
-    /// It closes the stream gracefully, then the TCP client, which a failure of the stream's close skips; a second call
-    /// waits for the first one's end.
+    /// It closes the stream gracefully, then the TCP client; a failed close of the stream is logged, and the client
+    /// closes all the same. A second call waits for the first one's end.
     /// </remarks>
     public async ValueTask DisposeAsync()
     {
@@ -219,7 +219,8 @@ public sealed class TcpStreamConnection : IStreamConnection
         if (_disposed)
             return;
 
-        await Stream.DisposeAsync().Vhc();
+        // the socket goes whatever the stream's close does, or a failed one left the connection open to its peer
+        await Stream.TryDisposeAsync().Vhc();
         Dispose();
     }
 }

@@ -17,12 +17,10 @@ internal class PingForwarder()
             Blocking = false,
             QueueCapacity = 1
         })
-        , ITimeoutItem
 {
     private readonly Ping _ping = new();
     public void Cancel() => _ping.SendAsyncCancel();
     public TimeSpan PingTimeout { get; set; } = TransportDefaults.PingTimeout;
-    public DateTime LastUsedTime { get; set; }
     public new bool IsDisposed => base.IsDisposed;
 
     protected override ValueTask SendPacketAsync(IpPacket ipPacket)

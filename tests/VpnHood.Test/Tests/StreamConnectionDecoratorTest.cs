@@ -22,6 +22,45 @@ public class StreamConnectionDecoratorTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_failed_graceful_close_of_its_stream_still_closes_the_inner_connection_with_no_reuse()
+    {
+        var inner = new TestStreamConnection(new MemoryStream());
+        var connection = new StreamConnectionDecorator(inner, new CloseRecordingStream { FailAsyncClose = true });
+
+        // its own stream's close failed, and the inner connection was left open, to be reused
+        await connection.DisposeAsync();
+        Assert.IsTrue(inner.IsDisposed);
+        Assert.IsTrue(inner.IsReusePrevented);
+    }
+
+    [TestMethod]
+    public void A_failed_quick_close_of_its_stream_still_closes_the_inner_connection_with_no_reuse()
+    {
+        var inner = new TestStreamConnection(new MemoryStream());
+        var connection = new StreamConnectionDecorator(inner, new CloseRecordingStream { FailSyncClose = true });
+
+        connection.Dispose();
+        Assert.IsTrue(inner.IsDisposed);
+        Assert.IsTrue(inner.IsReusePrevented);
+    }
+
+    [TestMethod]
+    public async Task A_graceful_close_closes_its_stream_once_before_the_inner_connections_release()
+    {
+        // after its async close and the inner connection's release, it closed the stream again: a failure there barred
+        // the reuse of a connection handed on already
+        var inner = new TestStreamConnection(new MemoryStream());
+        var stream = new CloseRecordingStream { FailSyncClose = true };
+        var connection = new StreamConnectionDecorator(inner, stream);
+
+        await connection.DisposeAsync();
+        Assert.IsTrue(stream.AsyncClosed);
+        Assert.IsFalse(stream.SyncClosed);
+        Assert.IsFalse(inner.IsReusePrevented);
+        Assert.IsTrue(inner.IsDisposed);
+    }
+
+    [TestMethod]
     public async Task A_second_graceful_close_waits_for_the_first_ones_end()
     {
         var innerStream = new CloseRecordingStream { HoldAsyncClose = true };

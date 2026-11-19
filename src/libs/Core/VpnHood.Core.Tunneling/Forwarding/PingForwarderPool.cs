@@ -18,7 +18,6 @@ internal class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderP
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
     private readonly int _maxClientCount;
     private readonly Job _cleanupJob;
-    public DateTime LastUsedTime { get; set; }
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
 
@@ -39,11 +38,10 @@ internal class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderP
         }
     }
 
-    private PingForwarder GetFreePingForwarder(out bool isNew)
+    // the caller holds the lock of the list
+    private PingForwarder GetFreePingForwarder()
     {
-        lock (_pingForwarders) {
-            isNew = false;
-
+        {
             var pingForwarder = _pingForwarders.FirstOrDefault(x => !x.IsSending);
             if (pingForwarder != null)
                 return pingForwarder;
@@ -52,7 +50,6 @@ internal class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderP
                 pingForwarder = new PingForwarder();
                 pingForwarder.PacketReceived += PingForwarder_PacketReceived;
                 _pingForwarders.Add(pingForwarder);
-                isNew = true;
                 return pingForwarder;
             }
 
@@ -79,29 +76,50 @@ internal class PingForwarderPool : PassthroughPacketTransport, IPacketForwarderP
 
         var destinationEndPoint = new IpEndPointValue(ipPacket.DestinationAddressValue, 0);
 
-        // add the endpoint
-        _remoteEndPoints.GetOrAdd(destinationEndPoint, static _ => new TimeoutItem<bool>(true),
-            out var isNewRemoteEndPoint);
-        if (isNewRemoteEndPoint)
+        // A new destination is checked before it is remembered: remembered first, one the check refused, as the server's
+        // net-scan check does by a throw, passed unchecked with the next packet
+        var isNewRemoteEndPoint = !_remoteEndPoints.TryGetValue(destinationEndPoint, out _);
+        if (isNewRemoteEndPoint) {
             _packetForwarderCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint);
+            _remoteEndPoints.GetOrAdd(destinationEndPoint, static _ => new TimeoutItem<bool>(true),
+                out isNewRemoteEndPoint);
 
-        // raise new endpoint event before the packet goes: once handed on, it is the forwarder's, which may have sent and
-        // disposed it already
-        var pingForwarder = GetFreePingForwarder(out var isNewLocalEndPoint);
-        if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetForwarderCallbacks?.OnConnectionEstablished(ipPacket.Protocol,
-                new IpEndPointValue(ipPacket.SourceAddressValue, 0), destinationEndPoint,
-                isNewLocalEndPoint, isNewRemoteEndPoint);
+            // before the hand-off, while the packet is still the caller's: a throw after it had its caller dispose a
+            // packet the worker reads. A ping has no socket of its own, so no local endpoint to report
+            if (isNewRemoteEndPoint)
+                _packetForwarderCallbacks?.OnConnectionEstablished(ipPacket.Protocol, localEndPoint: null,
+                    destinationEndPoint, isNewLocalEndPoint: false, isNewRemoteEndPoint: true);
+        }
 
-        // send to a ping forwarder
-        pingForwarder.SendPacketQueued(ipPacket);
+        // handed on under the lock that picks the worker, which the sweep and the close take too: a worker picked is not
+        // swept before it has the packet, and none is made after the close, which disposes those it finds
+        lock (_pingForwarders) {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            GetFreePingForwarder().SendPacketQueued(ipPacket);
+        }
+    }
+
+    // A worker is swept once it has gone unused for its time, by its own record of when it last sent or received, and
+    // never while it has a ping to send or to wait for
+    internal void Cleanup(DateTime now)
+    {
+        lock (_pingForwarders) {
+            for (var i = _pingForwarders.Count - 1; i >= 0; i--) {
+                var forwarder = _pingForwarders[i];
+                if (!forwarder.IsDisposed &&
+                    (forwarder.IsSending || now - forwarder.PacketStat.LastActivityTime <= _workerTimeout))
+                    continue;
+
+                forwarder.PacketReceived -= PingForwarder_PacketReceived;
+                forwarder.Dispose();
+                _pingForwarders.RemoveAt(i);
+            }
+        }
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
-        lock (_pingForwarders)
-            TimeoutItemUtil.CleanupTimeoutList(_pingForwarders, _workerTimeout);
-
+        Cleanup(FastDateTime.UtcNow);
         return default;
     }
 

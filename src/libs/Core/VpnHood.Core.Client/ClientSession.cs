@@ -406,13 +406,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         if (_dropUdp && !dropUdp)
             VhLogger.Instance.LogWarning("DropUdp is changed to {DropUdp} because client can not use TcpForwarding.", dropUdp);
 
-        // update handlers
+        // update handlers. The requested drops stay as asked: a time without TCP forwarding turns them off only for
+        // that time
         _packetHandler.UseTcpForwardingIpV4 = useTcpForwardingIpV4;
         _packetHandler.UseTcpForwardingIpV6 = useTcpForwardingIpV6;
         _packetHandler.DropQuic = dropQuic;
         _packetHandler.DropUdp = dropUdp;
-        _dropQuic = dropQuic;
-        _dropUdp = dropUdp;
 
         // update ipv6 support
         var isIpV6Supported = _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6);

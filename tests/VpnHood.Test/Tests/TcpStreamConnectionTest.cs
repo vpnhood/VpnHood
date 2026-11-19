@@ -25,6 +25,22 @@ public class TcpStreamConnectionTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_failed_close_of_the_stream_still_closes_the_socket()
+    {
+        using var client = new TcpClient();
+        using var peer = await Connect(client);
+        var stream = new CloseRecordingStream { FailAsyncClose = true };
+        var connection = new TcpStreamConnection(client, stream, connectionName: "test", isServer: false);
+
+        // the stream's close failed, and the socket stayed open to its peer
+        await connection.DisposeAsync();
+        var read = await peer.GetStream().ReadAsync(new byte[1], TestCt).AsTask()
+            .WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+
+        Assert.AreEqual(0, read);
+    }
+
+    [TestMethod]
     public async Task A_quick_close_during_a_held_graceful_close_closes_the_socket()
     {
         using var client = new TcpClient();

@@ -270,16 +270,16 @@ internal static class ClientHelper
     }
 
     // throws where the client and the server share no way for TCP; warns where the server overrides the TCP forwarding switch
-    public static void ValidateTcpSupport(HelloResponse helloResponse, VpnHoodClientConfig config)
+    public static void ValidateTcpSupport(HelloResponse helloResponse, bool useTcpForwarding)
     {
         if (helloResponse is { IsTcpPacketIpV4Supported: false, IsTcpForwardingSupported: false })
             throw new NotSupportedException(
                 "The server does not support any protocol to support TCP. Please contact support.");
 
-        if (!helloResponse.IsTcpPacketIpV4Supported && !config.UseTcpForwarding)
+        if (!helloResponse.IsTcpPacketIpV4Supported && !useTcpForwarding)
             VhLogger.Instance.LogWarning("TCP forwarding turned on because the server does not support TCP packets.");
 
-        if (!helloResponse.IsTcpForwardingSupported && config.UseTcpForwarding)
+        if (!helloResponse.IsTcpForwardingSupported && useTcpForwarding)
             VhLogger.Instance.LogWarning("TCP forwarding turned off because the server does not support it.");
     }
 

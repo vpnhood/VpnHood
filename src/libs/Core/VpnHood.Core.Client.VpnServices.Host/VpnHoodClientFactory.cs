@@ -35,7 +35,7 @@ public class VpnHoodClientFactory
     /// <exception cref="InvalidDataException">The access key's JSON is <c>null</c>.</exception>
     /// <exception cref="OverflowException">A duration in the access key is out of range.</exception>
     /// <exception cref="InvalidOperationException">The access key has no farm secret.</exception>
-    /// <exception cref="ArgumentNullException">
+    /// <exception cref="ArgumentOutOfRangeException">
     /// The options' longest packet channel life, where finite, is below their shortest.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>

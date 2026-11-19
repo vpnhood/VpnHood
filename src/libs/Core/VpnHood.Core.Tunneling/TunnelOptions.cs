@@ -6,7 +6,7 @@ namespace VpnHood.Core.Tunneling;
 public class TunnelOptions
 {
     /// <summary>Gets the most packet channels the tunnel holds at once.</summary>
-    public required int MaxPacketChannelCount { get; init; } = 8;
+    public required int MaxPacketChannelCount { get; init; }
 
     /// <summary>Gets the largest packet the tunnel's other end takes, as the packet is.</summary>
     public required int Mtu { get; init; }

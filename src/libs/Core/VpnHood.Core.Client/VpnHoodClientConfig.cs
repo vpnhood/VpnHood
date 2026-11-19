@@ -98,18 +98,6 @@ public class VpnHoodClientConfig
     public required SplitDnsMode SplitDnsMode { get; init; }
 
     /// <summary>
-    /// Gets what happens to a destination the server does not route, at the connect
-    /// (<see cref="ClientOptions.UnroutedIpMode"/>).
-    /// </summary>
-    public required SplitUnsupportedIpMode UnroutedIpMode { get; init; }
-
-    /// <summary>
-    /// Gets what happens to IPv6 where the server carries none, at the connect
-    /// (<see cref="ClientOptions.UnsupportedIpV6Mode"/>).
-    /// </summary>
-    public required SplitUnsupportedIpMode UnsupportedIpV6Mode { get; init; }
-
-    /// <summary>
     /// Gets the name the VPN adapter gives its session, or <see langword="null"/> (<see cref="ClientOptions.SessionName"/>).
     /// </summary>
     public required string? SessionName { get; init; }
@@ -134,22 +122,4 @@ public class VpnHoodClientConfig
     /// debug data has <c>/disable-WebSocket</c>.
     /// </summary>
     public required bool UseWebSocket { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the client prefers to forward TCP connections, at the connect
-    /// (<see cref="ClientOptions.UseTcpForwarding"/>).
-    /// </summary>
-    public required bool UseTcpForwarding { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the client was asked to drop the UDP bound for the tunnel, at the connect
-    /// (<see cref="ClientOptions.DropUdp"/>); the session works out what is in effect.
-    /// </summary>
-    public required bool DropUdp { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the client was asked to drop the QUIC bound for the tunnel, at the connect
-    /// (<see cref="ClientOptions.DropQuic"/>); the session works out what is in effect.
-    /// </summary>
-    public required bool DropQuic { get; init; }
 }

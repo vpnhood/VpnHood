@@ -20,7 +20,8 @@ public interface ISessionAdHandler : IDisposable
     /// its TCP connections and forwarded ones, so the new ones follow the splits again.
     /// </remarks>
     /// <exception cref="OperationCanceledException">
-    /// <paramref name="cancellationToken"/> was canceled, or the handler or its session was disposed.
+    /// <paramref name="cancellationToken"/> was canceled; the caller that started the wait this one joined canceled it,
+    /// which ends it for every caller; or the handler or its session was disposed.
     /// </exception>
     /// <exception cref="Exception">The ad failed: the error <see cref="SetAdFailed"/> gave.</exception>
     Task WaitForAd(CancellationToken cancellationToken);

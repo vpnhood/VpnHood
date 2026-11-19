@@ -156,23 +156,44 @@ public class ForwardingManager : PassthroughPacketTransport
 
     /// <summary>Takes a stream forwarding channel and starts it; the manager disposes it at its own end.</summary>
     /// <param name="channel">The channel.</param>
-    /// <param name="disposeOnFail"><see langword="true"/> to dispose the channel where it cannot be taken.</param>
-    /// <exception cref="ObjectDisposedException">The manager is disposed.</exception>
+    /// <param name="disposeOnFail">
+    /// <see langword="true"/> to dispose the channel where it cannot be taken; a channel started already is left as it
+    /// is, as it may be the manager's own from an earlier add.
+    /// </param>
+    /// <exception cref="ObjectDisposedException">The manager is disposed, or the channel is.</exception>
     /// <exception cref="InvalidOperationException">The channel is already started.</exception>
     public void AddChannel(StreamForwardingChannel channel, bool disposeOnFail)
     {
+        // one that runs already, as one added twice, is neither the manager's to take again nor to close
+        if (channel.State == PacketChannelState.Connected)
+            throw new InvalidOperationException("The channel is already started.");
+
         try {
             // under the lock of the close's sweep: the channel joins before the sweep, which closes it, or is refused
             lock (_streamForwardingChannels) {
                 ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
+
+                // one another add holds, at the same moment, is that add's: listed twice, its traffic was summed twice
+                if (_streamForwardingChannels.Contains(channel))
+                    throw new InvalidOperationException("The channel is already added.");
+
                 _streamForwardingChannels.Add(channel);
             }
 
-            channel.Start();
+            // listed only while it runs: a channel whose start fails, as one that two adds started at once, is not
+            // counted, nor its traffic summed twice
+            try {
+                channel.Start();
+            }
+            catch {
+                lock (_streamForwardingChannels)
+                    _streamForwardingChannels.Remove(channel);
+                throw;
+            }
         }
         catch {
             // in practice an add fails only at the manager's end, which gives its channels the quick close too
-            if (disposeOnFail)
+            if (disposeOnFail && channel.State != PacketChannelState.Connected)
                 channel.Dispose();
             throw;
         }

@@ -104,9 +104,17 @@ internal class ChannelManager : IDisposable
             throw new Exception("the channel already exists in the collection.");
 
         // start before adding so if exception occurs, it won't be added to the collection
-        //should not be called in lock; its behaviour is unexpected
+        //should not be called in lock; its behaviour is unexpected. The receiver goes on first, as a channel may hand
+        // on its first packet as it starts, and comes off where the start fails: a channel has one receiver, which a
+        // tunnel that refused it would otherwise keep
         channel.PacketReceived += _channelPacketReceived;
-        channel.Start();
+        try {
+            channel.Start();
+        }
+        catch {
+            channel.PacketReceived -= _channelPacketReceived;
+            throw;
+        }
 
         // add to channel list
         lock (_channelListLock) {

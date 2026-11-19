@@ -17,16 +17,11 @@ public class TrafficMeter : IDisposable
     private readonly TrafficMeterItem _received;
     private bool _disposed;
 
-    /// <summary>
-    /// The interval used to calculate the current speed.
-    /// </summary>
-    internal TimeSpan SpeedInterval { get; init; } = TimeSpan.FromSeconds(2);
-
     /// <summary>Initializes a new instance of the <see cref="TrafficMeter"/> class, with no limit.</summary>
     public TrafficMeter()
     {
-        _sent = new TrafficMeterItem { SpeedInterval = SpeedInterval };
-        _received = new TrafficMeterItem { SpeedInterval = SpeedInterval };
+        _sent = new TrafficMeterItem();
+        _received = new TrafficMeterItem();
     }
 
     /// <summary>

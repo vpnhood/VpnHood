@@ -14,7 +14,19 @@ public sealed class TestStreamConnection(Stream stream) : IStreamConnection
     public IPEndPoint LocalEndPoint { get; } = new(IPAddress.Loopback, 1);
     public IPEndPoint RemoteEndPoint { get; } = new(IPAddress.Loopback, 2);
     public bool RequireHttpResponse { get; set; }
-    public void PreventReuse() { }
-    public void Dispose() => stream.Dispose();
-    public ValueTask DisposeAsync() => stream.DisposeAsync();
+    public bool IsReusePrevented { get; private set; }
+    public bool IsDisposed { get; private set; }
+    public void PreventReuse() => IsReusePrevented = true;
+
+    public void Dispose()
+    {
+        IsDisposed = true;
+        stream.Dispose();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        IsDisposed = true;
+        return stream.DisposeAsync();
+    }
 }

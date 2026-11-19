@@ -11,8 +11,9 @@ namespace VpnHood.Net.Quic.MsQuic;
 /// Represents a QUIC client on MsQuic, through .NET's <see cref="QuicConnection"/>, for Windows and Linux.
 /// </summary>
 /// <remarks>
-/// Its connections use TLS 1.3 only, the "h3" ALPN token and no certificate revocation check, and abort streams and
-/// close with error code 0 unless told otherwise.
+/// Its connections use TLS 1.3 only, the "h3" ALPN token and no certificate revocation check, download a certificate
+/// for the server's chain only where <see cref="QuicClientConnectOptions.AllowCertificateDownloads"/> lets them, and
+/// abort streams and close with error code 0 unless told otherwise.
 /// </remarks>
 public sealed class MsQuicClient : IQuicClient
 {
@@ -31,7 +32,11 @@ public sealed class MsQuicClient : IQuicClient
             DefaultCloseErrorCode = 0,
             MaxInboundBidirectionalStreams = options.MaxInboundBidirectionalStreams,
             ClientAuthenticationOptions = new SslClientAuthenticationOptions {
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                // a policy's own revocation mode, online by default, replaces CertificateRevocationCheckMode
+                CertificateChainPolicy = new X509ChainPolicy {
+                    RevocationMode = X509RevocationMode.NoCheck,
+                    DisableCertificateDownloads = !options.AllowCertificateDownloads
+                },
                 ApplicationProtocols = [SslApplicationProtocol.Http3],
                 RemoteCertificateValidationCallback = options.CertificateValidationCallback,
                 EnabledSslProtocols = SslProtocols.Tls13,

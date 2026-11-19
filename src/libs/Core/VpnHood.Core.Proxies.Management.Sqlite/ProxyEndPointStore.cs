@@ -489,13 +489,19 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
         await using var connection = await OpenDb(cancellationToken).Vhc();
-        await SqliteHelper.ExecuteAsync(connection,
+
+        // one transaction: a failed write leaves the statuses as they were, never half reset
+        await using var transaction = BeginWriteTransaction(connection);
+        await SqliteHelper.ExecuteAsync(connection, transaction,
             """
             UPDATE endpoints SET penalty=0, succeeded_count=0, failed_count=0, latency_ms=NULL,
                 last_succeeded=NULL, last_failed=NULL, error_message=NULL, queue_position=0
             """, cancellationToken).Vhc();
-        await SqliteHelper.ExecuteAsync(connection,
+
+        await SqliteHelper.ExecuteAsync(connection, transaction,
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('queue_position', '0')", cancellationToken).Vhc();
+
+        await transaction.CommitAsync(cancellationToken).Vhc();
     }
 
     /// <inheritdoc/>

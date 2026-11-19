@@ -135,6 +135,10 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
     }
 
     /// <inheritdoc/>
+    /// <remarks>It returns at once: the one proxy is always there.</remarks>
+    public Task<bool> WaitForEndPoints(CancellationToken cancellationToken) => Task.FromResult(true);
+
+    /// <inheritdoc/>
     /// <remarks>It does nothing: a connection's failure tells.</remarks>
     public Task CheckServers(ISocketFactory socketFactory, IPEndPoint ipEndPoint, string? hostName,
         RemoteCertificateValidationCallback? serverCertificateValidation, CancellationToken cancellationToken)

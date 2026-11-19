@@ -11,7 +11,10 @@ internal static partial class ProxyEndPointExtractor
     /// </summary>
     /// <param name="text">Raw text that may contain proxy information.</param>
     /// <param name="defaultScheme">Scheme to use when none can be determined (default "http").</param>
-    /// <param name="preferHttpsWhenPort443">If true and no scheme present but port == 443, use https.</param>
+    /// <param name="preferHttpsWhenPort443">
+    /// If true and no scheme present but port == 443, use https; an IP address with no user name takes http whatever the
+    /// scheme.
+    /// </param>
     /// <returns>Parsed Uri object or null if no valid proxy found.</returns>
     public static Uri? Extract(
         string text,
@@ -205,7 +208,7 @@ internal static partial class ProxyEndPointExtractor
     private static Uri BuildUri(string scheme, string host, int port, string? userInfo = null, string? query = null)
     {
         var ub = new UriBuilder {
-            Scheme = scheme.ToLowerInvariant(),
+            Scheme = IsHttpsAtIpAddress(scheme, host, userInfo) ? "http" : scheme.ToLowerInvariant(),
             Host = host,
             Port = port,
             Query = string.IsNullOrEmpty(query) ? null : query.TrimStart('?')
@@ -221,6 +224,13 @@ internal static partial class ProxyEndPointExtractor
 
         return ub.Uri;
     }
+
+    // An HTTPS proxy at an IP address with no user name is read as HTTP, a written https:// too: such a proxy almost
+    // never has a certificate the device trusts for its address, and lists write HTTPS for an HTTP proxy that carries
+    // HTTPS. One with a user name stays HTTPS, so its password never travels in the clear
+    private static bool IsHttpsAtIpAddress(string scheme, string host, string? userInfo) =>
+        scheme.Equals("https", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(userInfo) &&
+        Uri.CheckHostName(host.Trim('[', ']')) is UriHostNameType.IPv4 or UriHostNameType.IPv6;
 
     // Complete URL pattern: scheme://[user:pass@]host[:port][/][?query]
     [GeneratedRegex(

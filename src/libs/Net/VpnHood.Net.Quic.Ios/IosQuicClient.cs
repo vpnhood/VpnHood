@@ -18,6 +18,8 @@ namespace VpnHood.Net.Quic.Ios;
 /// <see cref="QuicClientConnectOptions.CertificateValidationCallback"/> decides. The callback gets the server's leaf
 /// certificate, no chain, and either no error or <see cref="System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors"/>
 /// when the system does not trust it; a callback that throws rejects the certificate. The client pins nothing itself.
+/// Where <see cref="QuicClientConnectOptions.AllowCertificateDownloads"/> is <see langword="false"/>, the trust fetches
+/// nothing from the network.
 /// </remarks>
 /// <param name="initialMaxStreamDataBidirectionalLocal">The initial QUIC flow-control credit, in bytes, each stream this
 /// client opens advertises, or <see langword="null"/> for Network.framework's default.</param>
@@ -96,8 +98,7 @@ public sealed class IosQuicClient(
                     quic.InitialMaxData = initialMaxData.Value;
 
                 using var secProtocolOptions = quic.SecProtocolOptions;
-                IosQuicTls.Configure(secProtocolOptions, options.TargetHost,
-                    options.CertificateValidationCallback, dispatchQueue);
+                IosQuicTls.Configure(secProtocolOptions, options, dispatchQueue);
             });
 
             connectionGroup = new NWConnectionGroup(multiplexGroup, parameters);

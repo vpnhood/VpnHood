@@ -117,7 +117,7 @@ public class AppState
     /// <summary>Gets the protocol of the session's channel, or, while idle, the settings' one.</summary>
     public required ChannelProtocol ChannelProtocol { get; init; }
 
-    /// <summary>Gets a value indicating whether the settings' proxy mode has a proxy to use: the device's proxy where it has one, or the person's list where it is not empty.</summary>
+    /// <summary>Gets a value indicating whether the settings' proxy mode puts the VPN behind a proxy: the device's proxy where it has one, or the person's list whatever it holds, as the VPN then connects through it or not at all.</summary>
     public required bool IsProxyEndPointActive { get; init; }
 
     /// <summary>Gets a value indicating whether the app has a promotion to show: its image is saved, the remote settings' promotion is on, and the current VPN profile is not premium; never in China.</summary>

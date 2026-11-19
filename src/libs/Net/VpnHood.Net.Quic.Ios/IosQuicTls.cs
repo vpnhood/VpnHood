@@ -1,6 +1,7 @@
 using System.Net.Security;
 using CoreFoundation;
 using Security;
+using VpnHood.Net.Quic.Abstractions;
 
 namespace VpnHood.Net.Quic.Ios;
 
@@ -16,21 +17,17 @@ namespace VpnHood.Net.Quic.Ios;
 /// </remarks>
 internal static class IosQuicTls
 {
-    public static void Configure(
-        SecProtocolOptions secOptions,
-        string targetHost,
-        RemoteCertificateValidationCallback certificateValidationCallback,
-        DispatchQueue queue)
+    public static void Configure(SecProtocolOptions secOptions, QuicClientConnectOptions options, DispatchQueue queue)
     {
         // Match the desktop client: TLS 1.3 only, SNI = the VpnHood host name, peer auth required.
-        secOptions.SetTlsServerName(targetHost);
+        secOptions.SetTlsServerName(options.TargetHost);
         secOptions.SetTlsMinVersion(TlsProtocolVersion.Tls13);
         secOptions.SetPeerAuthenticationRequired(true);
 
         secOptions.SetVerifyBlock((_, trust, complete) => {
             bool isValid;
             try {
-                isValid = Validate(trust, certificateValidationCallback);
+                isValid = Validate(trust, options);
             }
             catch {
                 isValid = false;
@@ -39,9 +36,13 @@ internal static class IosQuicTls
         }, queue);
     }
 
-    private static bool Validate(SecTrust2 secTrust2, RemoteCertificateValidationCallback callback)
+    private static bool Validate(SecTrust2 secTrust2, QuicClientConnectOptions options)
     {
         using var trust = secTrust2.Trust;
+
+        // before the chain's read, which may evaluate the trust
+        if (!options.AllowCertificateDownloads)
+            trust.NetworkFetchAllowed = false;
 
         // Leaf (server) certificate is at index 0 of the evaluated chain (iOS 15+ API).
         var certificates = trust.GetCertificateChain();
@@ -58,7 +59,8 @@ internal static class IosQuicTls
                 ? SslPolicyErrors.None
                 : SslPolicyErrors.RemoteCertificateChainErrors;
 
-            return callback(sender: secTrust2, certificate: leaf, chain: null, sslPolicyErrors: policyErrors);
+            return options.CertificateValidationCallback(sender: secTrust2, certificate: leaf, chain: null,
+                sslPolicyErrors: policyErrors);
         }
         finally {
             foreach (var certificate in certificates)

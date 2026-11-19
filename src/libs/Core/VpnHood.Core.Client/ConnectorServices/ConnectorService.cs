@@ -69,8 +69,9 @@ internal class ConnectorService : IAsyncDisposable
     public int ProtocolVersion { get; private set; } = RequestProof.ProtocolVersion;
     public bool IsLegacyProtocol => ProtocolVersion < RequestProof.ProtocolVersion;
     public VpnEndPoint VpnEndPoint { get; init; }
-    // its connections reach the server through a user's proxy, which a managed connector may turn on or off
-    public bool IsProxyEnabled => _proxyConnector is { IsEnabled: true };
+    // its connections reach the server through a user's proxies, a managed list with no endpoint yet too, whose
+    // connections wait for its first download or fail
+    public bool IsProxyEnabled => _proxyConnector != null;
     public TimeSpan RequestTimeout { get; set; }
     public bool UseQuic { get; set; }
     public ClientInitialStreamPadding InitialPadding { get; } = new();

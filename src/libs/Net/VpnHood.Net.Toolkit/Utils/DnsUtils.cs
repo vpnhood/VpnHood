@@ -3,7 +3,10 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Sockets;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
@@ -63,6 +66,45 @@ public static class DnsUtils
             .Where(x => !IPAddress.IsLoopback(x))
             .Distinct()
             .ToArray();
+    }
+
+    /// <summary>
+    /// Looks up a host's IPv4 addresses from the network's resolvers (<see cref="GetNetworkDnsServers"/>), asked in turn
+    /// over UDP clients a socket factory makes, as <see cref="GetHostEntry(string, IPEndPoint, UdpClient, TimeSpan, CancellationToken)"/>
+    /// does, until one answers with an address: a process whose own traffic alone a firewall lets out gets an answer
+    /// that the system's resolver, asking from a process of its own, cannot.
+    /// </summary>
+    /// <param name="host">The host name.</param>
+    /// <param name="socketFactory">The factory of the UDP clients.</param>
+    /// <param name="timeoutPerResolver">How long each resolver may take.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the host's addresses, as the first resolver that had any gave them.</returns>
+    /// <exception cref="InvalidOperationException">No resolver answered with an address, or the network has none.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    public static async Task<IReadOnlyList<IPAddress>> GetHostAddressesByNetworkResolvers(string host,
+        ISocketFactory socketFactory, TimeSpan timeoutPerResolver, CancellationToken cancellationToken)
+    {
+        var dnsServers = GetNetworkDnsServers();
+        foreach (var dnsServer in dnsServers) {
+            try {
+                using var udpClient = socketFactory.CreateUdpClient(dnsServer.AddressFamily);
+                var hostEntry = await GetHostEntry(host, new IPEndPoint(dnsServer, 53), udpClient, timeoutPerResolver,
+                    cancellationToken).Vhc();
+
+                if (hostEntry.AddressList.Length > 0)
+                    return hostEntry.AddressList;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                throw;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "A network's resolver could not resolve a name. DnsServer: {DnsServer}",
+                    VhLogger.Format(dnsServer));
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"The network's resolvers could not resolve the name. DnsServers: {dnsServers.Count}");
     }
 
     /// <summary>

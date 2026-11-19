@@ -1,5 +1,6 @@
 using System.Text;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
@@ -7,16 +8,6 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class HttpUtilsTest : TestBase
 {
-    // a stream that gives one byte at a time, as a network may
-    private sealed class TrickleStream(byte[] data) : MemoryStream(data)
-    {
-        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
-            base.ReadAsync(buffer[..Math.Min(1, buffer.Length)], cancellationToken);
-
-        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
-            base.ReadAsync(buffer, offset, Math.Min(1, count), cancellationToken);
-    }
-
     [TestMethod]
     public async Task A_header_ends_at_its_blank_line_alone()
     {

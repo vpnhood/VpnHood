@@ -243,6 +243,40 @@ public class ProxyEndPointStoreTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_reset_whose_second_write_fails_leaves_every_status_as_it_was()
+    {
+        // its two writes went one at a time, so a failure of the second left the statuses reset and the queue's position
+        // as it was
+        var dbPath = NewDbPath();
+        using var store = new ProxyEndPointStore(dbPath);
+        var endPoint = CreateEndPoint(1);
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = endPoint,
+                Status = new ProxyEndPointStatus { SucceededCount = 5, LastSucceeded = DateTime.UtcNow }
+            }
+        ], keepExistingStatus: false);
+
+        // the second write, of the queue's position, fails
+        await using (var other = new SqliteConnection($"Data Source={dbPath};Pooling=False")) {
+            await other.OpenAsync(TestCt);
+            await using var command = other.CreateCommand();
+            command.CommandText = """
+                CREATE TRIGGER fail_queue_position_reset BEFORE INSERT ON meta WHEN NEW.key = 'queue_position'
+                BEGIN SELECT RAISE(ABORT, 'Test: the write failed.'); END
+                """;
+
+            await command.ExecuteNonQueryAsync(TestCt);
+        }
+
+        await Assert.ThrowsAsync<SqliteException>(() => store.ResetStatuses(TestCt));
+
+        var record = await store.Get(endPoint.Id, TestCt);
+        Assert.IsNotNull(record);
+        Assert.AreEqual(5, record.Status.SucceededCount, "The failed reset left the statuses reset.");
+    }
+
+    [TestMethod]
     public async Task QueuePosition_meta_roundtrip()
     {
         using var store = new ProxyEndPointStore(NewDbPath());

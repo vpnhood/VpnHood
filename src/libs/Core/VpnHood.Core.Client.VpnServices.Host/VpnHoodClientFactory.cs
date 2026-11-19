@@ -120,6 +120,9 @@ public class VpnHoodClientFactory
             ProxyMode.Managed => await ManagedProxyConnector.Create(
                 proxyOptions: proxyOptions,
                 store: new ProxyEndPointStore(VpnServiceFolders.GetProxyStoreFilePath(clientParams.DataFolder)),
+                // under the kill switch alone, as the server search asks the network's resolvers there alone: its block
+                // lets only the VPN's own traffic out, so the list's first download goes over the VPN's sockets
+                socketFactory: serviceOptions.ClientOptions.UseKillSwitch ? clientParams.SocketFactory : null,
                 serverCheckTimeout: serviceOptions.ClientOptions.Transport.ServerQueryTimeout,
                 cancellationToken: cancellationToken).Vhc(),
             _ => null

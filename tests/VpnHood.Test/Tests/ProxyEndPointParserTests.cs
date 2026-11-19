@@ -146,8 +146,9 @@ public class ProxyEndPointParserTests
             new Uri("http://139.59.1.14:80/"),
             ProxyEndPointParser.ExtractFromText("139.59.1.14 80 IN India anonymous no no 13 secs ago"));
 
+        // an HTTP proxy, as lists mean an IP address on 443
         Assert.AreEqual(
-            new Uri("https://139.59.1.14:443/"),
+            new Uri("http://139.59.1.14:443/"),
             ProxyEndPointParser.ExtractFromText("139.59.1.14 443 IN India anonymous no no 13 secs ago"));
 
         Assert.AreEqual(
@@ -241,6 +242,31 @@ public class ProxyEndPointParserTests
         CollectionAssert.AreEquivalent(stored.Select(x => x.EndPoint.Id).ToArray(), merged.Select(x => x.Id).ToArray());
     }
 
+    // An HTTPS entry the old check turned off stays off, and the list's next update brings its address back as an HTTP
+    // proxy, a row of its own, as a list's bare IP address on 443 now reads
+    [TestMethod]
+    public void A_turned_off_HTTPS_entry_stays_off_beside_the_HTTP_one_its_list_now_gives()
+    {
+        var stored = new[] {
+            new ProxyEndPointInfo {
+                EndPoint = new ProxyEndPoint {
+                    Protocol = ProxyProtocol.Https, Host = "1.2.3.4", Port = 443, IsEnabled = false
+                },
+                Status = new ProxyEndPointStatus { ErrorMessage = "Verification of TLS connection failed." }
+            }
+        };
+
+        var downloaded = ProxyEndPointParser.ExtractFromContent("1.2.3.4:443")
+            .Select(ProxyEndPointParser.FromUrl)
+            .ToArray();
+
+        var merged = ProxyEndPointUpdater.Merge(stored, downloaded, maxItemCount: 10, maxPenalty: null);
+
+        Assert.HasCount(2, merged);
+        Assert.IsFalse(merged.Single(x => x.Protocol == ProxyProtocol.Https).IsEnabled);
+        Assert.IsTrue(merged.Single(x => x.Protocol == ProxyProtocol.Http).IsEnabled);
+    }
+
     [TestMethod]
     public void A_list_of_addresses_and_ports_parted_by_spaces_is_read()
     {
@@ -328,10 +354,35 @@ public class ProxyEndPointParserTests
     [TestMethod]
     public void Port_443_goes_to_the_default_scheme_where_HTTPS_is_not_preferred()
     {
-        // the choice changed nothing
-        Assert.AreEqual(new Uri("http://1.2.3.4:443/"),
-            ProxyEndPointParser.ExtractFromText("1.2.3.4:443", preferHttpsWhenPort443: false));
-        Assert.AreEqual(new Uri("https://1.2.3.4:443/"), ProxyEndPointParser.ExtractFromText("1.2.3.4:443"));
+        // the choice changed nothing; a host name, as an IP address on 443 is an HTTP proxy either way
+        Assert.AreEqual(new Uri("http://proxy.example:443/"),
+            ProxyEndPointParser.ExtractFromText("proxy.example:443", preferHttpsWhenPort443: false));
+        Assert.AreEqual(new Uri("https://proxy.example:443/"), ProxyEndPointParser.ExtractFromText("proxy.example:443"));
+    }
+
+    // An HTTPS proxy needs a certificate the device trusts for its address, which one at an IP address almost never
+    // has, and lists write HTTPS for an HTTP proxy that carries HTTPS: such entries were HTTPS proxies that always failed
+    [TestMethod]
+    public void A_lists_HTTPS_entry_at_an_IP_address_with_no_user_name_is_an_HTTP_proxy()
+    {
+        var urls = ProxyEndPointParser.ExtractFromContent(
+            "https://1.2.3.4:8080\n" + // written, as the list the website suggests has it
+            "5.6.7.8:443\n" + // guessed from the port
+            "9.9.9.9 3128 HTTPS\n" + // a table's protocol column
+            "[2001:db8::1]:443\n" +
+            "https://user:pass@1.2.3.4:443\n" + // its password goes inside the proxy's TLS alone
+            "proxy.example:443\n" + // a name may have a certificate
+            "https://proxy.example:8443");
+
+        CollectionAssert.AreEqual(new[] {
+            "http://1.2.3.4:8080/",
+            "http://5.6.7.8:443/",
+            "http://9.9.9.9:3128/",
+            "http://[2001:db8::1]:443/",
+            "https://user:pass@1.2.3.4/",
+            "https://proxy.example/",
+            "https://proxy.example:8443/"
+        }, urls.Select(x => x.AbsoluteUri).ToArray());
     }
 
     [TestMethod]

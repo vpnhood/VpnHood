@@ -25,4 +25,13 @@ public sealed class QuicClientConnectOptions
     /// <c>System.Net.Quic.QuicConnectionOptions.MaxInboundBidirectionalStreams</c>.
     /// </summary>
     public int MaxInboundBidirectionalStreams { get; init; } = 100;
+
+    /// <summary>
+    /// Gets a value indicating whether the client may download a certificate for the server's chain, such as an issuer
+    /// the server did not send. The default, <see langword="true"/>, leaves the downloads to the platform; with
+    /// <see langword="false"/>, the client builds the chain from the certificates the server sent and those the device
+    /// holds, as with <see cref="System.Security.Cryptography.X509Certificates.X509ChainPolicy.DisableCertificateDownloads"/>,
+    /// and on Apple's platforms with the trust's network fetch off (<c>SecTrust.NetworkFetchAllowed</c>).
+    /// </summary>
+    public bool AllowCertificateDownloads { get; init; } = true;
 }

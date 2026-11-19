@@ -2,6 +2,7 @@ using VpnHood.Net.Toolkit.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Net.Toolkit.Extensions;
@@ -31,7 +32,9 @@ internal class TcpStreamConnectionFactory(
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
-            if (proxyConnector is { IsEnabled: true }) {
+            // Through the proxy connector whenever there is one, a managed list with no endpoint yet too, which waits for
+            // its first download or fails: never straight to the server once the user's proxies are on
+            if (proxyConnector != null) {
                 // The proxy connector creates the socket internally, so the packet-channel kernel-buffer
                 // override cannot reach it; proxied packet channels keep the factory-default buffer and
                 // whatever throughput ceiling comes with it. Its stream is the one to the server, an HTTPS proxy's
@@ -62,7 +65,7 @@ internal class TcpStreamConnectionFactory(
             return await AuthenticateTls(connectionId, tcpClient, stream, cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            if (proxyConnector is { IsEnabled: true } && tcpClient != null)
+            if (proxyConnector != null && tcpClient != null)
                 proxyConnector.RecordFailed(tcpClient, ex);
 
             stream?.Dispose();
@@ -88,7 +91,14 @@ internal class TcpStreamConnectionFactory(
                 EnabledSslProtocols = SslProtocols.None, // auto
                 // http/1.1 alone, as an HTTP library offers it: a hello without ALPN stands out, and a reverse proxy
                 // would take an h2 offer, which the tunnel does not speak. .NET drops it on Android below 10.
-                ApplicationProtocols = [SslApplicationProtocol.Http11]
+                ApplicationProtocols = [SslApplicationProtocol.Http11],
+                // No certificate is downloaded for the server's chain: a certificate that someone on the way shows, a
+                // proxy too, can name any address, which the device would fetch outside the tunnel. Our server sends
+                // its chain itself
+                CertificateChainPolicy = new X509ChainPolicy {
+                    DisableCertificateDownloads = true,
+                    RevocationMode = X509RevocationMode.NoCheck
+                }
             }, cancellationToken).Vhc();
 
             var tcpConnection = new TcpStreamConnection(tcpClient, sslStream,

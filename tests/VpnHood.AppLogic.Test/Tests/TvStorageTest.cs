@@ -1,5 +1,7 @@
 using VpnHood.AppLogic.Api.Proxies;
+using VpnHood.AppLogic.Api.Settings;
 using VpnHood.AppLogic.App.Services.Proxies;
+using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.AppLogic.Test.Providers;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Net.Toolkit.Generics;
@@ -122,6 +124,35 @@ public class TvStorageTest : TestAppBase
             Assert.IsFalse(endPoints.Single(x => x.EndPoint.Host == "192.0.2.2").EndPoint.IsEnabled,
                 "A proxy the person turned off comes back on.");
         }
+    }
+
+    // The connect's options, the first thing to touch the store after tvOS deleted it: they open it, which brings the
+    // person's proxies back, before the VPN reads it. A connect whose options left the store shut found it empty
+    [TestMethod]
+    public async Task The_connects_proxy_options_bring_the_persons_proxies_back_before_the_VPN_reads_them()
+    {
+        var root = Path.Combine(TestAppHelper.WorkingPath, "tv_" + Guid.CreateVersion7());
+        var appOptions = TestAppHelper.CreateAppOptions(storagePath: Path.Combine(root, "app"),
+            storageProvider: new TestKeyValueStorageProvider(root));
+
+        appOptions.IsVpnServiceDataPurgeable = true;
+        await using (var app = TestAppHelper.CreateClientApp(appOptions)) {
+            await app.Services.ProxyEndPointService.Add(
+                new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "192.0.2.1", Port = 1080 }, TestCt);
+        }
+
+        var device = new TestDevice(TestAppHelper, _ => new TestNullVpnAdapter());
+        var storeFilePath = VpnServiceFolders.GetProxyStoreFilePath(device.VpnServiceDataFolder);
+        Directory.Delete(Path.GetDirectoryName(storeFilePath) ??
+                         throw new InvalidOperationException("The proxies' database has no folder."), recursive: true);
+
+        await using var tvApp = TestAppHelper.CreateClientApp(appOptions, device);
+        tvApp.UserSettings.ProxySettings.Mode = AppProxyMode.Manual;
+        await tvApp.Services.ProxyEndPointService.GetProxyOptions(TestCt);
+
+        using var vpnStore = new ProxyEndPointStore(storeFilePath);
+        var records = await vpnStore.List(TestCt);
+        Assert.AreEqual("192.0.2.1", records.Single().EndPoint.Host);
     }
 
     private Task<ListResult<AppProxyEndPointInfo>> ListProxies(AppProxyEndPointService proxyEndPointService)

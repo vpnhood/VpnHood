@@ -13,7 +13,11 @@ namespace VpnHood.Core.Proxies.Management.Abstractions;
 /// </summary>
 public interface IProxyConnector : IAsyncDisposable
 {
-    /// <summary>Gets a value indicating whether the connector has a proxy to connect through.</summary>
+    /// <summary>Gets a value indicating whether the connector has any proxy endpoint, in use or turned off.</summary>
+    /// <remarks>
+    /// It never tells a caller to connect directly: a connector with none to use still takes every connection, which then
+    /// waits for a list's first download (<see cref="WaitForEndPoints"/>) or fails.
+    /// </remarks>
     bool IsEnabled { get; }
 
     /// <summary>
@@ -27,6 +31,17 @@ public interface IProxyConnector : IAsyncDisposable
 
     /// <summary>Gets the connector's state, made at each read.</summary>
     ProxyConnectorStatus Status { get; }
+
+    /// <summary>
+    /// Waits until the connector has an endpoint to connect through: a managed list with no enabled endpoint waits for
+    /// its first download from its URL. It returns at once where there is one, or where none can come, as for a list with
+    /// no URL. A caller waits here under its own time, before connections whose own may be shorter.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is whether there is an endpoint to connect through: without one, no connection can be made.
+    /// </returns>
+    Task<bool> WaitForEndPoints(CancellationToken cancellationToken);
 
     /// <summary>
     /// Connects to an endpoint through a proxy.
@@ -60,8 +75,9 @@ public interface IProxyConnector : IAsyncDisposable
     void RecordFailed(TcpClient tcpClient, Exception ex);
 
     /// <summary>
-    /// Checks the endpoints, where the connector has a list to check, by connecting through each to an endpoint, the
-    /// VPN server's, as the VPN would; and records what it finds. The device reaches no one else through them.
+    /// Checks the endpoints before a connect, where the connector has a list to check: it connects through them to an
+    /// endpoint, the VPN server's, as the VPN would, and records what it finds. The connect waits for the first that
+    /// passes alone, and the check may go on behind it through the rest. The device reaches no one else through them.
     /// </summary>
     /// <param name="socketFactory">The factory of the sockets to the proxies, which keeps them out of the tunnel.</param>
     /// <param name="ipEndPoint">The endpoint to reach through each proxy: the VPN server's.</param>
@@ -71,7 +87,7 @@ public interface IProxyConnector : IAsyncDisposable
     /// certificate.
     /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <returns>A task that ends at the first endpoint that passes, or at the check's end where none does.</returns>
     Task CheckServers(ISocketFactory socketFactory, IPEndPoint ipEndPoint, string? hostName,
         RemoteCertificateValidationCallback? serverCertificateValidation, CancellationToken cancellationToken);
 

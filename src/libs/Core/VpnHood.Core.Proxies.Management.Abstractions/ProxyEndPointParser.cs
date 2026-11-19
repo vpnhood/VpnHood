@@ -172,6 +172,12 @@ public static class ProxyEndPointParser
     /// <paramref name="defaultScheme"/>. The default is <see langword="true"/>.
     /// </param>
     /// <returns>The address as a URL, its query kept, or <see langword="null"/> when none is found.</returns>
+    /// <remarks>
+    /// An HTTPS address at an IP address with no user name comes back as HTTP, a written <c>https://</c> too: such a
+    /// proxy almost never has a certificate the device trusts for its address, which an HTTPS proxy needs, and lists
+    /// write HTTPS for an HTTP proxy that carries HTTPS. One with a user name stays HTTPS, so its password never travels
+    /// in the clear.
+    /// </remarks>
     public static Uri? ExtractFromText(string text,
         string defaultScheme = "http",
         bool preferHttpsWhenPort443 = true)
@@ -184,7 +190,7 @@ public static class ProxyEndPointParser
     /// ends, commas, quotes, braces and parentheses, and each piece into words at white space, a word that is a port
     /// alone joining the address before it, as in <c>1.2.3.4 8080</c>, and a protocol's name alone the address after
     /// it, as in <c>SOCKS4 1.2.3.4 8080</c>, or, where none came before, the address before it, as tables give it:
-    /// <c>1.2.3.4 8080 SOCKS4</c>.
+    /// <c>1.2.3.4 8080 SOCKS4</c>. An HTTPS address at an IP address with no user name comes back as HTTP, as there.
     /// </summary>
     /// <param name="content">The text.</param>
     /// <param name="defaultScheme">The scheme when nothing tells the protocol. The default is <c>http</c>.</param>

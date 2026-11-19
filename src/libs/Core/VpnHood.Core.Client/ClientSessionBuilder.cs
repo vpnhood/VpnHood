@@ -80,17 +80,29 @@ internal class ClientSessionBuilder(
                                 ? serverFinder.CustomServerEndpoints
                                 : token.ServerToken.HostEndPoints ?? []).Shuffle().FirstOrDefault();
 
-        if (proxyConnector is { IsEnabled: true } && checkEndPoint != null) {
+        if (proxyConnector != null) {
             setState(ClientState.ValidatingProxies);
-            var certificateHash = connectedServer?.CertificateHash ?? token.ServerToken.CertificateHash;
-            await proxyConnector.CheckServers(socketFactory, checkEndPoint,
-                connectedServer?.HostName ?? token.ServerToken.HostName,
-                (_, certificate, chain, errors) =>
-                    ConnectorService.IsServerCertificateValid(certificateHash, certificate, chain, errors),
-                linkedCts.Token).Vhc();
 
-            VhLogger.Instance.LogInformation("Proxy servers succeeded: {Count}",
-                proxyConnector.Status.SucceededServerCount);
+            // A managed list with no enabled endpoint waits here for its first download, under the connect's own time:
+            // the server search's probes each give up at theirs, and the close of a failed connect ends the download.
+            // With none to use after it, no connection can be made, and the connect ends before any server lookup
+            if (!await proxyConnector.WaitForEndPoints(linkedCts.Token).Vhc())
+                throw new UnreachableProxyServerException();
+
+            // Checked here, a list that has only just come too, under the connect's own time and until a proxy passes,
+            // the rest behind the connect: the search's first probe would check them otherwise, within its own few
+            // seconds, which a slow proxy takes whole
+            if (checkEndPoint != null) {
+                var certificateHash = connectedServer?.CertificateHash ?? token.ServerToken.CertificateHash;
+                await proxyConnector.CheckServers(socketFactory, checkEndPoint,
+                    connectedServer?.HostName ?? token.ServerToken.HostName,
+                    (_, certificate, chain, errors) =>
+                        ConnectorService.IsServerCertificateValid(certificateHash, certificate, chain, errors),
+                    linkedCts.Token).Vhc();
+
+                VhLogger.Instance.LogInformation("Proxy servers succeeded: {Count}",
+                    proxyConnector.Status.SucceededServerCount);
+            }
         }
 
         setState(ClientState.FindingReachableServer);

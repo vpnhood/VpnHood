@@ -14,6 +14,12 @@ public sealed class TestSocks5Proxy(IPEndPoint? standIn = null) : IDisposable
 
     public ConcurrentQueue<IPEndPoint> Destinations { get; } = new();
 
+    // how long it takes to answer each request, as a proxy far away does
+    public TimeSpan ConnectDelay { get; init; }
+
+    // what each request's answer waits for besides, or null
+    public Task? ReplyGate { get; init; }
+
     public IPEndPoint EndPoint => (IPEndPoint)_listener.LocalEndpoint;
 
     public TestSocks5Proxy Start()
@@ -61,6 +67,9 @@ public sealed class TestSocks5Proxy(IPEndPoint? standIn = null) : IDisposable
             var port = await ReadBytes(stream, 2, cancellationToken);
             var destination = new IPEndPoint(new IPAddress(addressBytes.Span), (port.Span[0] << 8) | port.Span[1]);
             Destinations.Enqueue(destination);
+            await Task.Delay(ConnectDelay, cancellationToken);
+            if (ReplyGate != null)
+                await ReplyGate.WaitAsync(cancellationToken);
 
             var hostEndPoint = IPAddress.IsLoopback(destination.Address) ? destination : standIn;
             if (hostEndPoint is null) {

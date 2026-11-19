@@ -123,7 +123,10 @@ internal class QuicStreamConnectionItem(
         var options = new QuicClientConnectOptions {
             RemoteEndPoint = quicEndPoint,
             TargetHost = vpnEndPoint.HostName,
-            CertificateValidationCallback = certificateValidationCallback
+            CertificateValidationCallback = certificateValidationCallback,
+            // a certificate that someone on the way shows can name any address, which the device would fetch outside
+            // the tunnel. Our server sends its chain itself
+            AllowCertificateDownloads = false
         };
 
         return quicClient.ConnectAsync(options, cancellationToken);

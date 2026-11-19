@@ -4,6 +4,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Channels;
 using VpnHood.AppLogic.Api.WebHost.Helpers;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions.Exceptions;
@@ -56,7 +57,7 @@ public class ManagedProxyConnectorTest : TestBase
     [TestMethod]
     public async Task IsEnabled_False_When_No_Servers()
     {
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore(), serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
         Assert.IsFalse(mgr.IsEnabled);
     }
 
@@ -66,7 +67,7 @@ public class ManagedProxyConnectorTest : TestBase
         var store = await CreateStore(
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 });
 
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null, serverCheckTimeout: null, TestCt);
         Assert.IsTrue(mgr.IsEnabled);
     }
 
@@ -74,7 +75,7 @@ public class ManagedProxyConnectorTest : TestBase
     public async Task ConnectAsync_With_No_Servers_Throws_NetworkUnreachable()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore(), serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
         var target = new IPEndPoint(IPAddress.Loopback, 443);
 
         var ex = await Assert.ThrowsExactlyAsync<SocketException>(async () =>
@@ -92,7 +93,7 @@ public class ManagedProxyConnectorTest : TestBase
             new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "127.0.0.1", Port = 8080 },
             new ProxyEndPoint { Protocol = ProxyProtocol.Https, Host = "127.0.0.1", Port = 8443 });
 
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null, serverCheckTimeout: null, TestCt);
 
         Assert.IsTrue(mgr.IsEnabled);
         Assert.HasCount(4, mgr.GetEndPointInfos());
@@ -145,14 +146,15 @@ public class ManagedProxyConnectorTest : TestBase
                 Port = endPoint2.Port
             });
 
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null, serverCheckTimeout: null, TestCt);
         await mgr.CheckServers(socketFactory, new IPEndPoint(IPAddress.Loopback, 443), hostName: null, serverCertificateValidation: null, TestCt);
 
         // All servers that are no SOCKS4 proxy should be marked as inactive
         Assert.IsTrue(mgr.GetEndPointInfos().All(status => !status.EndPoint.IsEnabled));
     }
 
-    // a connector whose one proxy has a status its store has not saved yet: a connect through it succeeded
+    // A connector whose one proxy has a status its store has not saved yet: a connect through it succeeded. The proxy
+    // succeeded last, so the connect checks nothing, and no check behind it saves the status first
     private async Task<(ManagedProxyConnector Connector, TestProxyEndPointStore Store)> CreateConnectorWithUnsavedStatus()
     {
         using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
@@ -162,12 +164,16 @@ public class ManagedProxyConnectorTest : TestBase
         using var target = new TcpListener(IPAddress.Loopback, 0);
         target.Start();
 
-        var store = new TestProxyEndPointStore(await CreateStore(new ProxyEndPoint {
-            Protocol = ProxyProtocol.Socks5,
-            Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
-            Port = socks5ProxyServer.ListenerEndPoint.Port
-        }));
-        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store, serverCheckTimeout: null, TestCt);
+        var innerStore = await CreateStore();
+        await Upsert(innerStore, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(socks5ProxyServer.ListenerEndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+
+        var store = new TestProxyEndPointStore(innerStore);
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store, socketFactory: null, serverCheckTimeout: null, TestCt);
         using var connection = await connector.ConnectAsync(new TestSocketFactory(),
             (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
 
@@ -228,7 +234,7 @@ public class ManagedProxyConnectorTest : TestBase
             }
         ]);
         var connector = await ManagedProxyConnector.Create(new ProxyOptions(), wrapStore?.Invoke(store) ?? store,
-            serverCheckTimeout, TestCt);
+            socketFactory: null, serverCheckTimeout, TestCt);
 
         var connection = await connector.ConnectAsync(new TestSocketFactory(),
             (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
@@ -274,6 +280,441 @@ public class ManagedProxyConnectorTest : TestBase
         connector.RecordFailed(tcpClient, new OperationCanceledException());
 
         Assert.AreEqual(isPastCheckTime ? failedCount + 1 : failedCount, status.FailedCount);
+    }
+
+    // A reset of the statuses after the connect: the connection's failure took its success back from the reset count,
+    // which went below zero
+    [TestMethod]
+    public async Task A_failure_after_a_reset_of_the_statuses_takes_no_count_below_zero()
+    {
+        var connection = await ConnectThroughProxy();
+        await using var connector = connection.Connector;
+        using var tcpClient = connection.TcpClient;
+
+        await connector.UpdateOptions(new ProxyOptions { ResetStates = true }, TestCt);
+        connector.RecordFailed(tcpClient, new AuthenticationException("The TLS handshake failed."));
+
+        var status = connector.GetEndPointInfos().Single().Status;
+        Assert.AreEqual(0, status.SucceededCount);
+        Assert.AreEqual(1, status.FailedCount);
+    }
+
+    // A reset of the statuses that the store failed to make dropped the statuses not saved yet all the same, as the
+    // reload read the store, and counted as made, so a connection's failure after it took no success back. A failed
+    // reset now changes nothing: the statuses are saved, and the success is taken back
+    [TestMethod]
+    public async Task A_reset_the_store_failed_changes_nothing()
+    {
+        TestProxyEndPointStore? store = null;
+        var connection = await ConnectThroughProxy(wrapStore: x => store = new TestProxyEndPointStore(x));
+        await using var connector = connection.Connector;
+        using var tcpClient = connection.TcpClient;
+        Assert.IsNotNull(store);
+        var succeededCount = connector.GetEndPointInfos().Single().Status.SucceededCount;
+
+        store.FailResets = true;
+        await connector.UpdateOptions(new ProxyOptions { ResetStates = true }, TestCt);
+        var status = connector.GetEndPointInfos().Single().Status;
+        Assert.AreEqual(succeededCount, status.SucceededCount, "The failed reset dropped the connection's success.");
+
+        connector.RecordFailed(tcpClient, new AuthenticationException("The TLS handshake failed."));
+        Assert.AreEqual(succeededCount - 1, status.SucceededCount);
+        Assert.AreEqual(1, status.FailedCount);
+    }
+
+    // A connection's failure after a reset of the statuses took its success back from the count of the connections
+    // made since, which the reset had dropped already
+    [TestMethod]
+    public async Task A_failure_after_a_reset_takes_back_no_later_connections_success()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var proxyOptions = new ProxyOptions { VerifyTls = false };
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        using var connection = await connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await connector.UpdateOptions(new ProxyOptions { VerifyTls = false, ResetStates = true }, TestCt);
+        using var laterConnection = await connector.ConnectAsync(new TestSocketFactory(),
+            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        // the later connection checked, and a pass of the check behind it would land between the read and the assert
+        await AssertEqualsWait(true, () => connector.Progress is null, "The check behind the connection did not end.");
+        var status = connector.GetEndPointInfos().Single().Status;
+        var succeededCount = status.SucceededCount;
+        connector.RecordFailed(connection.TcpClient, new AuthenticationException("The TLS handshake failed."));
+
+        Assert.AreEqual(succeededCount, status.SucceededCount);
+        Assert.AreEqual(1, status.FailedCount);
+    }
+
+    // A connection whose dial ended while a reset's reload was under way read the reset count before the reload's end,
+    // which counted the reset, and put its success on an entry the reload made: its failure after then took nothing back,
+    // and the proxy kept a success it never had. The count now comes from the entry that takes the success
+    [TestMethod]
+    public async Task A_failure_takes_back_the_success_its_connection_put_on_an_entry_a_reset_made()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var proxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        var innerStore = await CreateStore();
+        await Upsert(innerStore, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+
+        var store = new TestProxyEndPointStore(innerStore);
+        await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store,
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => proxy.Destinations.Count, "The connection did not reach the proxy.");
+
+        // the reset's reload holds after it made the entries anew, while the connection's dial ends
+        store.HoldQueuePositionReads = true;
+        var updating = connector.UpdateOptions(new ProxyOptions { VerifyTls = false, ResetStates = true }, TestCt);
+        try {
+            await AssertEqualsWait(1, () => Volatile.Read(ref store.HeldQueuePositionReadCount),
+                "The reset's reload did not start.");
+
+            release.TrySetResult();
+            using var connection = await connecting;
+            store.ReleaseQueuePositionReads();
+            await updating;
+
+            var status = connector.GetEndPointInfos().Single().Status;
+            Assert.AreEqual(1, status.SucceededCount, "The connection's success is not on the entry the reset made.");
+            connector.RecordFailed(connection.TcpClient, new AuthenticationException("The TLS handshake failed."));
+            Assert.AreEqual(0, status.SucceededCount, "The failure left its connection's success in place.");
+            Assert.AreEqual(1, status.FailedCount);
+        }
+        finally {
+            store.ReleaseQueuePositionReads();
+            release.TrySetResult();
+        }
+    }
+
+    // A connection whose dial ended while a reset's reload read the store put its success on an entry the reload then
+    // replaced with a clean one: its failure after took back the success of a later connection, on that new entry
+    [TestMethod]
+    public async Task A_failure_after_a_reset_takes_back_no_success_a_later_connection_put_on_the_new_entry()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var proxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        var innerStore = await CreateStore();
+        await Upsert(innerStore, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+
+        var store = new TestProxyEndPointStore(innerStore);
+        await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store,
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        var targetEndPoint = (IPEndPoint)target.LocalEndpoint;
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), targetEndPoint, hostName: null,
+            serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => proxy.Destinations.Count, "The connection did not reach the proxy.");
+
+        // the reset's reload holds at its read of the store, while the connection's dial ends
+        store.HoldLists = true;
+        var updating = connector.UpdateOptions(new ProxyOptions { VerifyTls = false, ResetStates = true }, TestCt);
+        try {
+            await AssertEqualsWait(1, () => Volatile.Read(ref store.HeldListCount), "The reset's reload did not start.");
+            release.TrySetResult();
+            using var connection = await connecting;
+            store.HoldLists = false;
+            store.ReleaseLists();
+            await updating;
+
+            // a later connection's success, on the entry the reset made
+            using var laterConnection = await connector.ConnectAsync(new TestSocketFactory(), targetEndPoint,
+                hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+            await AssertEqualsWait(true, () => connector.Progress is null, "The later connection's check did not end.");
+            var status = connector.GetEndPointInfos().Single().Status;
+            var succeededCount = status.SucceededCount;
+            var failedCount = status.FailedCount;
+            Assert.IsGreaterThan(0, succeededCount, "The later connection's success is not on the new entry.");
+
+            connector.RecordFailed(connection.TcpClient, new AuthenticationException("The TLS handshake failed."));
+            Assert.AreEqual(succeededCount, status.SucceededCount, "The failure took back the later connection's success.");
+            Assert.AreEqual(failedCount + 1, status.FailedCount, "The failure was not recorded.");
+        }
+        finally {
+            store.ReleaseLists();
+            release.TrySetResult();
+        }
+    }
+
+    // A reset of the statuses dropped what was not saved yet, an endpoint a duplicate's success had turned off among
+    // it, which the store's older state then turned back on. What is not saved goes to the store before the reset now,
+    // and the reset keeps the enabled states
+    [TestMethod]
+    public async Task A_reset_keeps_a_duplicate_turned_off_before_it_was_saved()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var duplicateProxy = new TestSocks5Proxy().Start();
+
+        // both succeeded last, the first first in turn; both on this machine's address, so a success turns the other off
+        var store = await CreateStore();
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            },
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(duplicateProxy.EndPoint),
+                Status = new ProxyEndPointStatus {
+                    SucceededCount = 1, LastSucceeded = DateTime.UtcNow, QueuePosition = 100
+                }
+            }
+        ]);
+
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = true }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, store, socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
+        using var connection = await connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        var duplicateId = ToProxyEndPoint(duplicateProxy.EndPoint).Id;
+        Assert.IsFalse(connector.GetEndPointInfos().Single(x => x.EndPoint.Id == duplicateId).EndPoint.IsEnabled,
+            "The connection's success did not turn its duplicate off.");
+
+        // not saved yet, as the reset comes
+        using (var storeBefore = await CreateStore())
+            Assert.IsTrue((await storeBefore.Get(duplicateId, TestCt))?.EndPoint.IsEnabled,
+                "The duplicate's turning off was saved before the reset.");
+
+        await connector.UpdateOptions(new ProxyOptions {
+            VerifyTls = false,
+            ResetStates = true,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = true }
+        }, TestCt);
+
+        Assert.IsFalse(connector.GetEndPointInfos().Single(x => x.EndPoint.Id == duplicateId).EndPoint.IsEnabled,
+            "The reset turned the duplicate back on.");
+
+        using var savedStore = await CreateStore();
+        var saved = await savedStore.Get(duplicateId, TestCt);
+        Assert.IsNotNull(saved);
+        Assert.IsFalse(saved.EndPoint.IsEnabled, "The store has the duplicate on.");
+    }
+
+    // The app resets the shared store before it asks the connector to: the connector first wrote the counts it held
+    // and had not saved, and a close or a failure before its own reset left them over the app's. Its own reset comes
+    // first now, and no count held is written back
+    [TestMethod]
+    public async Task A_reset_writes_no_count_it_held_over_the_apps_reset()
+    {
+        TestProxyEndPointStore? store = null;
+        var connection = await ConnectThroughProxy(wrapStore: x => store = new TestProxyEndPointStore(x));
+        await using var connector = connection.Connector;
+        using var tcpClient = connection.TcpClient;
+        Assert.IsNotNull(store);
+
+        // the app's reset of the shared store, while the connector holds the connection's success unsaved
+        using (var appStore = await CreateStore())
+            await appStore.ResetStatuses(TestCt);
+
+        store.HoldResets = true;
+        var updating = connector.UpdateOptions(new ProxyOptions { ResetStates = true }, TestCt);
+        try {
+            await AssertEqualsWait(1, () => Volatile.Read(ref store.HeldResetCount), "The connector's reset did not start.");
+            using var savedStore = await CreateStore();
+            var saved = (await savedStore.List(TestCt)).Single();
+            Assert.AreEqual(0, saved.Status.SucceededCount, "The connector wrote its counts over the app's reset.");
+        }
+        finally {
+            store.ReleaseResets();
+        }
+
+        await updating;
+    }
+
+    // A reset whose reload had made the entries anew, and failed at its last read, put fresh ones in their place: a
+    // connection's success on one, with the reset's count, went with them, and its failure after would take back a later
+    // connection's. The entries the reload made stay now
+    [TestMethod]
+    public async Task A_reset_whose_reload_fails_after_it_made_the_entries_keeps_them()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var proxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        var innerStore = await CreateStore();
+        await Upsert(innerStore, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+
+        var store = new TestProxyEndPointStore(innerStore);
+        await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store,
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => proxy.Destinations.Count, "The connection did not reach the proxy.");
+
+        // the reset's reload holds at its last read, after it made the entries, and fails there
+        store.HoldQueuePositionReads = true;
+        using var updateCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var updating = connector.UpdateOptions(new ProxyOptions { VerifyTls = false, ResetStates = true },
+            updateCts.Token);
+
+        try {
+            await AssertEqualsWait(1, () => Volatile.Read(ref store.HeldQueuePositionReadCount),
+                "The reset's reload did not start.");
+
+            release.TrySetResult();
+            using var connection = await connecting;
+            await updateCts.CancelAsync();
+            await Assert.ThrowsAsync<OperationCanceledException>(() => updating);
+
+            var status = connector.GetEndPointInfos().Single().Status;
+            Assert.AreEqual(1, status.SucceededCount, "The entry the reload made, with the connection's success, went.");
+            connector.RecordFailed(connection.TcpClient, new AuthenticationException("The TLS handshake failed."));
+            Assert.AreEqual(0, status.SucceededCount);
+        }
+        finally {
+            store.ReleaseQueuePositionReads();
+            release.TrySetResult();
+        }
+    }
+
+    // A reset that changed no endpoint left every one unrated, and the check of what a reload brings took them all: a
+    // check of the whole list nobody asked for, beside the session, whose failures a reset's test then counted
+    [TestMethod]
+    public async Task A_reset_starts_no_check_of_the_endpoints_it_left_as_they_were()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var proxyOptions = new ProxyOptions { VerifyTls = false };
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        // a pass: the server the checks behind the session take
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay,
+            "The check before the connect did not end.");
+
+        var dialCount = proxy.Destinations.Count;
+        await connector.UpdateOptions(new ProxyOptions { VerifyTls = false, ResetStates = true }, TestCt);
+
+        // to the end of any check the reset started
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay, "A check after the reset did not end.");
+        await AssertEqualsWait(true, () => connector.Progress is null, "A check after the reset did not end.");
+        Assert.AreEqual(dialCount, proxy.Destinations.Count, "A check after the reset dialed an endpoint it left on.");
+    }
+
+    // A reset the store made, whose reload after it failed, left the old statuses held, and the next save wrote those
+    // that had changed back over the reset. The held ones are now cleared with the store's
+    [TestMethod]
+    public async Task A_reset_whose_reload_fails_writes_no_old_status_back()
+    {
+        TestProxyEndPointStore? store = null;
+        var connection = await ConnectThroughProxy(wrapStore: x => store = new TestProxyEndPointStore(x));
+        await using var connector = connection.Connector;
+        using var tcpClient = connection.TcpClient;
+        Assert.IsNotNull(store);
+
+        store.FailLists = true;
+        await Assert.ThrowsAsync<IOException>(() =>
+            connector.UpdateOptions(new ProxyOptions { ResetStates = true }, TestCt));
+
+        Assert.AreEqual(0, connector.GetEndPointInfos().Single().Status.SucceededCount,
+            "The held status was not cleared with the store's.");
+
+        store.FailLists = false;
+        await connector.Flush(TestCt);
+        using var savedStore = await CreateStore();
+        var saved = (await savedStore.List(TestCt)).Single();
+        Assert.AreEqual(0, saved.Status.SucceededCount, "The save wrote an old status back over the reset.");
+    }
+
+    // A reload during a connection's connect made new entries, and the connection's success went onto the old one,
+    // which nothing saves or reads any more
+    [TestMethod]
+    public async Task A_connections_outcome_lands_on_the_entry_a_reload_made_during_its_connect()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var proxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        var store = await CreateStore();
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+
+        var proxyOptions = new ProxyOptions { VerifyTls = false };
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, store, socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => proxy.Destinations.Count, "The connection did not reach the proxy.");
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        release.TrySetResult();
+        using var connection = await connecting;
+
+        Assert.AreEqual(2, connector.GetEndPointInfos().Single().Status.SucceededCount,
+            "The connection's success went onto an entry the reload had replaced.");
+    }
+
+    // After the close, a flush wrote a status changed since to the closed store, and a check dialed the proxies. A flush
+    // then saves nothing, as the VPN service's last status update flushes too, and a check is refused
+    [TestMethod]
+    public async Task A_closed_connector_saves_nothing_more_and_refuses_a_check()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var store = new TestProxyEndPointStore(await CreateStore(ToProxyEndPoint(proxy.EndPoint)));
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store,
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        using var connection = await connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await connector.DisposeAsync();
+
+        // a failure reported after the close changes a status, which a write would now carry to the closed store
+        connector.RecordFailed(connection.TcpClient, new AuthenticationException("The TLS handshake failed."));
+        store.FailUpdates = true;
+        await connector.Flush(TestCt);
+
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => connector.CheckServers(new TestSocketFactory(),
+            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, TestCt));
     }
 
     [TestMethod]
@@ -348,7 +789,7 @@ public class ManagedProxyConnectorTest : TestBase
 
         using var proxy = new TestSocks5Proxy().Start();
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = true },
-            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), serverCheckTimeout: null, TestCt);
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
 
         var vpnServerEndPoint = (IPEndPoint)vpnServer.LocalEndpoint;
         await connector.CheckServers(new TestSocketFactory(), vpnServerEndPoint, "vpn.example", serverCertificateValidation: null, TestCt);
@@ -387,7 +828,7 @@ public class ManagedProxyConnectorTest : TestBase
 
         using var proxy = new TestSocks5Proxy(standIn: (IPEndPoint)vpnServer.LocalEndpoint).Start();
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = true },
-            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), serverCheckTimeout: null, TestCt);
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
 
         await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)vpnServer.LocalEndpoint, hostName: null, serverCertificateValidation: null,
             TestCt);
@@ -411,7 +852,7 @@ public class ManagedProxyConnectorTest : TestBase
             await CreateStore(
                 ToProxyEndPoint(refusingEndPoint),
                 ToProxyEndPoint(new IPEndPoint(IPAddress.Loopback, 1), isEnabled: false)),
-            serverCheckTimeout: null, TestCt);
+            socketFactory: null, serverCheckTimeout: null, TestCt);
 
         Assert.IsFalse(connector.Status.IsAnySucceeded, "None was used.");
 
@@ -443,40 +884,1063 @@ public class ManagedProxyConnectorTest : TestBase
     }
 
     [TestMethod]
-    public async Task A_canceled_check_keeps_what_it_found_and_closes_its_sockets()
+    public async Task The_check_before_a_connect_ends_its_wait_at_its_first_pass_and_the_close_stops_the_rest()
     {
-        // what the ended checks found was recorded after the run, which a cancellation left before it, and before the
-        // sockets were closed
+        // The connect waited for every proxy's check, then for the first pass with the rest stopped and unrated. It
+        // now goes on at the first pass, here the answering proxy's, while the silent proxy's check goes on; the close
+        // stops that one, waits for it, and saves what the check found, with no failure for the check it stopped and
+        // every socket closed
         using var target = new TcpListener(IPAddress.Loopback, 0);
         target.Start();
-        using var proxy = new TestSocks5Proxy(standIn: (IPEndPoint)target.LocalEndpoint).Start();
+        var silentCheckStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var proxy = new TestSocks5Proxy(standIn: (IPEndPoint)target.LocalEndpoint) {
+            ReplyGate = silentCheckStarted.Task
+        }.Start();
+
         using var silentProxy = new TcpListener(IPAddress.Loopback, 0); // it takes a connection and answers nothing
         silentProxy.Start();
         var silentEndPoint = (IPEndPoint)silentProxy.LocalEndpoint;
 
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false },
             await CreateStore(ToProxyEndPoint(proxy.EndPoint), ToProxyEndPoint(silentEndPoint)),
-            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
 
-        using var checkCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         var socketFactory = new RecordingSocketFactory();
         var checkTask = connector.CheckServers(socketFactory, (IPEndPoint)target.LocalEndpoint,
-            hostName: null, serverCertificateValidation: null, checkCts.Token);
+            hostName: null, serverCertificateValidation: null, TestCt);
 
-        using var checkedConnection = await target.AcceptTcpClientAsync(TestCt);
-        await AssertEqualsWait(1, () => connector.Progress?.Completed ?? 0, "The answering proxy's check should end.");
-        await checkCts.CancelAsync();
-        await Assert.ThrowsAsync<OperationCanceledException>(() => checkTask);
+        using var silentAttempt = await silentProxy.AcceptTcpClientAsync(TestCt);
+        silentCheckStarted.TrySetResult();
+        await checkTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
 
-        var infos = connector.GetEndPointInfos();
-        Assert.AreEqual(1, infos.Single(x => x.EndPoint.Port == proxy.EndPoint.Port).Status.SucceededCount);
-        Assert.AreEqual(0, infos.Single(x => x.EndPoint.Port == silentEndPoint.Port).Status.FailedCount,
-            "A cancellation is no failure.");
-
-        // every client the check made is closed, the one whose check ended too
+        var proxyId = ToProxyEndPoint(proxy.EndPoint).Id;
+        Assert.AreEqual(1, connector.GetEndPointInfos().Single(x => x.EndPoint.Id == proxyId).Status.SucceededCount);
         Assert.HasCount(2, socketFactory.TcpClients);
+        Assert.IsNotNull(connector.Progress, "The silent proxy's check should still be under way.");
+
+        await connector.DisposeAsync();
+
+        Assert.AreEqual(0, connector.GetEndPointInfos().Single(x => x.EndPoint.Port == silentEndPoint.Port)
+            .Status.FailedCount, "A check the close stopped is no failure.");
+
         foreach (var tcpClient in socketFactory.TcpClients)
             Assert.ThrowsExactly<ObjectDisposedException>(() => tcpClient.GetStream());
+
+        using var savedStore = await CreateStore();
+        var saved = await savedStore.Get(proxyId, TestCt);
+        Assert.IsNotNull(saved);
+        Assert.AreEqual(1, saved.Status.SucceededCount);
+    }
+
+    // The connect's check ended at its first pass, so a proxy whose check that pass stopped stayed unrated, and the
+    // connections took the one that passed alone. The rest is now checked behind the connect, and the connections take
+    // every proxy that passed, each in its turn
+    [TestMethod]
+    public async Task The_check_before_a_connect_rates_the_rest_behind_it_for_the_connections_that_follow()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var fastProxy = new TestSocks5Proxy().Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var heldProxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+
+        // both on this machine's address, which the rule of one endpoint per address would leave to one
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(fastProxy.EndPoint), ToProxyEndPoint(heldProxy.EndPoint)),
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        var targetEndPoint = (IPEndPoint)target.LocalEndpoint;
+        await connector.CheckServers(new TestSocketFactory(), targetEndPoint, hostName: null,
+            serverCertificateValidation: null, TestCt).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+
+        var heldStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == heldProxy.EndPoint.Port).Status;
+        Assert.IsFalse(heldStatus.HasUsed, "The connect should go on before the held proxy answers.");
+        await AssertEqualsWait(1, () => heldProxy.Destinations.Count, "The held proxy's check did not start.");
+
+        release.TrySetResult();
+        await AssertEqualsWait(true, () => heldStatus.IsLastUsedSucceeded, "The held proxy's check did not go on.");
+
+        for (var i = 0; i < 6; i++) {
+            using var connection = await connector.ConnectAsync(new TestSocketFactory(), targetEndPoint,
+                hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+        }
+
+        // each taken, whatever penalty the held proxy's wait earned it, and each connection dialed once
+        Assert.IsGreaterThan(1, heldProxy.Destinations.Count, "The connections should take the held proxy too.");
+        Assert.IsGreaterThan(1, fastProxy.Destinations.Count);
+        Assert.AreEqual(8, heldProxy.Destinations.Count + fastProxy.Destinations.Count);
+    }
+
+    // A check the next one replaced went on through the list beside it, against a server that may be no longer the
+    // connect's: the next one stops it
+    [TestMethod]
+    public async Task The_next_check_before_a_connect_stops_the_last_ones_rest()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var silentProxy = new TcpListener(IPAddress.Loopback, 0); // it takes a connection and answers nothing
+        silentProxy.Start();
+
+        await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false },
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint), ToProxyEndPoint((IPEndPoint)silentProxy.LocalEndpoint)),
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        // the first check's socket, open until the next check
+        using var firstSilentAttempt = await silentProxy.AcceptTcpClientAsync(TestCt);
+        var firstSilentClose = ReadUntilPeerClose(firstSilentAttempt);
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestCt);
+        Assert.IsFalse(firstSilentClose.IsCompleted, "The first check's silent proxy should still be under check.");
+
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await firstSilentClose.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+    }
+
+    // A call whose token was canceled already put its own check in place of the one under way, which it stopped, and
+    // then stopped its own: the rest went unrated. It now starts nothing, and stops nothing
+    [TestMethod]
+    public async Task A_check_canceled_before_its_call_stops_no_check_under_way()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var heldProxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+
+        await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false },
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint), ToProxyEndPoint(heldProxy.EndPoint)),
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await AssertEqualsWait(1, () => heldProxy.Destinations.Count, "The held proxy's check did not start.");
+        var socketFactory = new RecordingSocketFactory();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => connector.CheckServers(socketFactory,
+            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null,
+            new CancellationToken(canceled: true)));
+
+        Assert.IsEmpty(socketFactory.TcpClients, "The canceled call dialed.");
+
+        // the check under way goes on to its end, and records what it finds
+        release.TrySetResult();
+        var heldStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == heldProxy.EndPoint.Port).Status;
+        await AssertEqualsWait(true, () => heldStatus.IsLastUsedSucceeded,
+            "The canceled call stopped the check under way.");
+    }
+
+    // what the peer sends until its close, which ends the task; a reset is a close too
+    private async Task ReadUntilPeerClose(TcpClient client)
+    {
+        var stream = client.GetStream();
+        var buffer = new byte[256];
+        try {
+            while (await stream.ReadAsync(buffer, TestCt) > 0) {
+                // what the peer sent before its close
+            }
+        }
+        catch (IOException) {
+            // a reset
+        }
+    }
+
+    // The close left a check before a connect running, on the sockets of a client that was closing, until the check's
+    // time ran out. It now stops the check, which records nothing it stopped, and the connect's wait ends with the close
+    [TestMethod]
+    public async Task The_close_ends_a_check_before_a_connect_that_has_no_pass_yet()
+    {
+        using var silentProxy = new TcpListener(IPAddress.Loopback, 0); // it takes a connection and answers nothing
+        silentProxy.Start();
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false },
+            await CreateStore(ToProxyEndPoint((IPEndPoint)silentProxy.LocalEndpoint)), socketFactory: null,
+            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        var checkTask = connector.CheckServers(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443),
+            hostName: null, serverCertificateValidation: null, TestCt);
+
+        using var silentAttempt = await silentProxy.AcceptTcpClientAsync(TestCt);
+        await connector.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() =>
+            checkTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
+
+        Assert.AreEqual(0, connector.GetEndPointInfos().Single().Status.FailedCount);
+    }
+
+    // The close left a connection's own check running, on the sockets of a client that was closing, past its save. It
+    // now stops every check, which records nothing it stopped, and waits for them before its save
+    [TestMethod]
+    public async Task The_close_stops_a_connections_own_check()
+    {
+        using var silentProxy = new TcpListener(IPAddress.Loopback, 0); // it takes a connection and answers nothing
+        silentProxy.Start();
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false },
+            await CreateStore(ToProxyEndPoint((IPEndPoint)silentProxy.LocalEndpoint)), socketFactory: null,
+            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443),
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        using var silentAttempt = await silentProxy.AcceptTcpClientAsync(TestCt);
+        var silentClose = ReadUntilPeerClose(silentAttempt);
+        await connector.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+
+        await silentClose.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() =>
+            connecting.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
+
+        Assert.AreEqual(0, connector.GetEndPointInfos().Single().Status.FailedCount);
+    }
+
+    // A connection through a proxy that succeeded last checks nothing, and the close left its dial running: it then
+    // handed out a connection the closed connector made after its save. The close now stops the dial, which records
+    // nothing
+    [TestMethod]
+    public async Task The_close_stops_a_connections_dial_which_hands_out_nothing()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var proxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        var store = await CreateStore();
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store,
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => proxy.Destinations.Count, "The connection did not reach the proxy.");
+        try {
+            await connector.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+
+            // the dial ends with the close, while the proxy still holds its answer
+            await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() =>
+                connecting.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
+        }
+        finally {
+            release.TrySetResult();
+        }
+
+        Assert.AreEqual(1, connector.GetEndPointInfos().Single().Status.SucceededCount,
+            "The dial the close stopped was recorded.");
+    }
+
+    // Two connections at once, each through one of two endpoints of a host: the first's success turned the second off,
+    // and the second's then turned the first off, so none of the host's was left. A success turns off the others only
+    // where its own endpoint is still on
+    [TestMethod]
+    public async Task Two_connections_through_duplicates_at_once_leave_one_of_them_on()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var targetEndPoint = (IPEndPoint)target.LocalEndpoint;
+        var firstRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var firstProxy = new TestSocks5Proxy { ReplyGate = firstRelease.Task }.Start();
+        using var secondProxy = new TestSocks5Proxy { ReplyGate = secondRelease.Task }.Start();
+
+        // both succeeded last, on this machine's address; the second off, so the first connection takes the first
+        var store = await CreateStore();
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(firstProxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            },
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(secondProxy.EndPoint, isEnabled: false),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = true }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, store, socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
+        try {
+            var firstConnecting = connector.ConnectAsync(new TestSocketFactory(), targetEndPoint, hostName: null,
+                serverCertificateValidation: null, onAttempt: null, TestCt);
+
+            await AssertEqualsWait(1, () => firstProxy.Destinations.Count, "The first connection did not dial.");
+
+            // the second on and the first off, so the second connection takes the second; then both on, as both dial
+            using var appStore = await CreateStore();
+            await Upsert(appStore, [
+                new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(firstProxy.EndPoint, isEnabled: false) },
+                new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(secondProxy.EndPoint) }
+            ]);
+
+            await connector.UpdateOptions(proxyOptions, TestCt);
+            var secondConnecting = connector.ConnectAsync(new TestSocketFactory(), targetEndPoint, hostName: null,
+                serverCertificateValidation: null, onAttempt: null, TestCt);
+
+            await AssertEqualsWait(1, () => secondProxy.Destinations.Count, "The second connection did not dial.");
+            await Upsert(appStore, [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(firstProxy.EndPoint) }]);
+            await connector.UpdateOptions(proxyOptions, TestCt);
+
+            firstRelease.TrySetResult();
+            using var firstConnection = await firstConnecting;
+            secondRelease.TrySetResult();
+            using var secondConnection = await secondConnecting;
+
+            Assert.AreEqual(1, connector.GetEndPointInfos().Count(x => x.EndPoint.IsEnabled),
+                "Not one endpoint of the host was left on.");
+        }
+        finally {
+            firstRelease.TrySetResult();
+            secondRelease.TrySetResult();
+        }
+    }
+
+    // A proxy the user turned off while its check ran still counted as the check's pass, and let the connect go on with
+    // no proxy it could take. Its pass is now recorded alone
+    [TestMethod]
+    public async Task A_proxy_turned_off_during_its_check_lets_no_connect_go_on()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var heldProxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        using var silentProxy = new TcpListener(IPAddress.Loopback, 0); // it takes a connection and answers nothing
+        silentProxy.Start();
+        var proxyOptions = new ProxyOptions { VerifyTls = false };
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(heldProxy.EndPoint),
+                ToProxyEndPoint((IPEndPoint)silentProxy.LocalEndpoint)),
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        var checkTask = connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, TestCt);
+
+        // the user turns the held proxy off while its check waits for its answer
+        await AssertEqualsWait(1, () => heldProxy.Destinations.Count, "The held proxy's check did not start.");
+        using var appStore = await CreateStore();
+        await Upsert(appStore, [
+            new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(heldProxy.EndPoint, isEnabled: false) }
+        ]);
+
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        release.TrySetResult();
+
+        var heldStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == heldProxy.EndPoint.Port).Status;
+        await AssertEqualsWait(true, () => heldStatus.IsLastUsedSucceeded, "The held proxy's pass was not recorded.");
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestCt);
+        Assert.IsFalse(checkTask.IsCompleted, "The connect went on at the pass of a proxy turned off.");
+    }
+
+    // A connection limited to the endpoints that succeeded lately, as the server search's probes are, took its list
+    // once: where those all failed, it failed, though the check behind the connect had passed another meanwhile. It now
+    // tries those before it fails. Both are on this machine's address: with one endpoint per address, the one it then
+    // takes turns off the first, which its retry left on, as it looked for duplicates among the retry's alone
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_connection_tries_an_endpoint_that_passed_after_it_took_its_list(bool removeDuplicateIps)
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var targetEndPoint = (IPEndPoint)target.LocalEndpoint;
+        var firstProxy = new TestSocks5Proxy().Start();
+        var firstEndPoint = firstProxy.EndPoint;
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var heldProxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = removeDuplicateIps }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(firstEndPoint), ToProxyEndPoint(heldProxy.EndPoint)),
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), targetEndPoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        // the proxy that passed goes down, and the held one passes while the connection dials the first
+        firstProxy.Dispose();
+        connector.UseRecentSucceeded = true;
+        var heldStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == heldProxy.EndPoint.Port).Status;
+        var socketFactory = new DialHookSocketFactory(endPoint => {
+            if (endPoint.Port != firstEndPoint.Port)
+                return;
+
+            release.TrySetResult();
+            SpinWait.SpinUntil(() => heldStatus.IsLastUsedSucceeded, TimeSpan.FromSeconds(10));
+        });
+
+        using var connection = await connector.ConnectAsync(socketFactory, targetEndPoint, hostName: null,
+            serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        Assert.AreEqual(heldProxy.EndPoint, connection.TcpClient.Client.RemoteEndPoint);
+        Assert.AreEqual(!removeDuplicateIps,
+            connector.GetEndPointInfos().Single(x => x.EndPoint.Port == firstEndPoint.Port).EndPoint.IsEnabled,
+            "The duplicate of the endpoint the connection took is not as the rule of one endpoint per address has it.");
+    }
+
+    // A connection dialed every endpoint of the list it took, one the user turned off meanwhile too
+    [TestMethod]
+    public async Task A_connection_skips_an_endpoint_turned_off_after_it_took_its_list()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var silentProxy = new SilentProxy().Start();
+        using var proxy = new TestSocks5Proxy().Start();
+
+        // both succeeded last, the silent one first in turn
+        var store = await CreateStore();
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(silentProxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            },
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                Status = new ProxyEndPointStatus {
+                    SucceededCount = 1, LastSucceeded = DateTime.UtcNow, QueuePosition = 100
+                }
+            }
+        ]);
+
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, store, socketFactory: null,
+            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        // the user turns the second off while the connection dials the first, which then fails
+        using var silentConnection = await silentProxy.TakeConnection(TestCt);
+        using var appStore = await CreateStore();
+        await Upsert(appStore, [
+            new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(proxy.EndPoint, isEnabled: false) }
+        ]);
+
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        silentConnection.Dispose();
+
+        await Assert.ThrowsExactlyAsync<SocketException>(() => connecting.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+        Assert.IsEmpty(proxy.Destinations, "The connection dialed an endpoint turned off.");
+    }
+
+    // the system's sockets, with a call before each TCP client it makes, given the endpoint the client is for
+    private sealed class DialHookSocketFactory(Action<IPEndPoint> onCreate) : TestSocketFactory
+    {
+        public override TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
+        {
+            onCreate(ipEndPoint);
+            return base.CreateTcpClient(ipEndPoint, options);
+        }
+    }
+
+    // After every proxy failed, as on a change of network, a connection checked until one passed, and the session then
+    // ran on that one alone: nothing checked the others again until the next connect. The rest is now checked behind
+    // that pass
+    [TestMethod]
+    public async Task A_connections_own_check_rates_the_rest_behind_its_pass()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var firstProxy = new TestSocks5Proxy().Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var heldProxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+
+        // both failed last, as after a change of network
+        var store = await CreateStore();
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(firstProxy.EndPoint),
+                Status = new ProxyEndPointStatus { FailedCount = 1, LastFailed = DateTime.UtcNow }
+            },
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(heldProxy.EndPoint),
+                Status = new ProxyEndPointStatus { FailedCount = 1, LastFailed = DateTime.UtcNow }
+            }
+        ]);
+
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, store, socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
+        using var connection = await connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        Assert.AreEqual(firstProxy.EndPoint, connection.TcpClient.Client.RemoteEndPoint);
+        release.TrySetResult();
+        var heldStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == heldProxy.EndPoint.Port).Status;
+        await AssertEqualsWait(true, () => heldStatus.IsLastUsedSucceeded, "The rest was not checked behind the pass.");
+    }
+
+    // A list's first download during the check before a connect brought endpoints neither check took: the run had
+    // taken its list, and a job's first download checks nothing. The run now goes on over those never rated
+    [TestMethod]
+    public async Task The_check_before_a_connect_rates_the_endpoints_a_reload_brought_during_it()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var heldProxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        using var newProxy = new TestSocks5Proxy().Start();
+        var proxyOptions = new ProxyOptions { VerifyTls = false };
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint), ToProxyEndPoint(heldProxy.EndPoint)),
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        // the app adds an endpoint while the held proxy's check keeps the run going
+        using var appStore = await CreateStore(ToProxyEndPoint(newProxy.EndPoint));
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        release.TrySetResult();
+
+        var newStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == newProxy.EndPoint.Port).Status;
+        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded,
+            "The endpoint the reload brought was not checked.");
+    }
+
+    // A list's first download that came once the check before the connect had ended brought endpoints no check took:
+    // the job's first download checks nothing, and the run was over. Those never rated now get a check of their own
+    [TestMethod]
+    public async Task A_first_download_after_the_check_before_the_connect_ended_has_its_endpoints_checked()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var newProxy = new TestSocks5Proxy().Start();
+        using var listServer = new ListServer($"socks5://127.0.0.1:{newProxy.EndPoint.Port}", isHeld: true, TestCt);
+
+        // both on this machine's address, which the rule of one endpoint per address would leave to the stored one
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions {
+                Url = listServer.Url, Interval = TimeSpan.FromHours(1), RemoveDuplicateIps = false
+            }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay,
+            "The check before the connect did not end.");
+
+        listServer.Release();
+        await AssertEqualsWait(true, () => connector.GetEndPointInfos()
+                .Any(x => x.EndPoint.Port == newProxy.EndPoint.Port && x.Status.IsLastUsedSucceeded),
+            "The endpoint the download brought was not checked.");
+    }
+
+    // An endpoint the app added once the check before the connect had ended stayed unrated beside a healthy proxy,
+    // which carried the connections: nothing checked it. It is now checked behind the session
+    [TestMethod]
+    public async Task An_endpoint_the_app_adds_after_the_check_before_the_connect_ended_is_checked()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var newProxy = new TestSocks5Proxy().Start();
+
+        // both on this machine's address, which the rule of one endpoint per address would leave to one
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay,
+            "The check before the connect did not end.");
+
+        using var appStore = await CreateStore(ToProxyEndPoint(newProxy.EndPoint));
+        await connector.UpdateOptions(proxyOptions, TestCt);
+
+        var newStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == newProxy.EndPoint.Port).Status;
+        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded, "The endpoint the app added was not checked.");
+    }
+
+    // The checks behind the session took the server of the last call, which a server search's probe of a server that is
+    // down could be: every proxy they checked was rated failed. They take the last server a proxy reached now
+    [TestMethod]
+    public async Task The_checks_behind_the_session_take_the_last_server_a_proxy_reached()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+
+        // a server that is down: a port that takes no connection, held so no listener of the test takes it
+        using var downSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        downSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+        var downEndPoint = downSocket.LocalEndPoint as IPEndPoint ??
+                           throw new InvalidOperationException("The bound socket has no endpoint.");
+
+        using var proxy = new TestSocks5Proxy().Start();
+        using var newProxy = new TestSocks5Proxy().Start();
+
+        // both on this machine's address, which the rule of one endpoint per address would leave to one
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay,
+            "The check before the connect did not end.");
+
+        // a probe of a server that is down, through the proxy that passed
+        await Assert.ThrowsExactlyAsync<SocketException>(() => connector.ConnectAsync(new TestSocketFactory(),
+            downEndPoint, hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt));
+
+        // the app adds an endpoint, which a check behind the session takes
+        using var appStore = await CreateStore(ToProxyEndPoint(newProxy.EndPoint));
+        await connector.UpdateOptions(proxyOptions, TestCt);
+
+        var newStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == newProxy.EndPoint.Port).Status;
+        await AssertEqualsWait(true, () => newStatus.HasUsed, "The endpoint the app added was not checked.");
+        Assert.IsTrue(newStatus.IsLastUsedSucceeded, "The check took the probe's server, which is down.");
+    }
+
+    // A session whose connections never checked, as with a key known by name alone and a proxy that worked last, had no
+    // server for the checks behind it: an endpoint the app added stayed unrated. Where no check passed, the server of a
+    // connection that reached it serves
+    [TestMethod]
+    public async Task With_no_check_passed_the_checks_behind_the_session_take_a_connections_server()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var newProxy = new TestSocks5Proxy().Start();
+
+        // both on this machine's address, which the rule of one endpoint per address would leave to one
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+        };
+
+        var store = await CreateStore();
+        await Upsert(store, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }
+        ]);
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, store, socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
+        // a connection through the proxy that worked last, with no check
+        using var connection = await connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        using var appStore = await CreateStore(ToProxyEndPoint(newProxy.EndPoint));
+        await connector.UpdateOptions(proxyOptions, TestCt);
+
+        var newStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == newProxy.EndPoint.Port).Status;
+        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded, "The endpoint the app added was not checked.");
+    }
+
+    // A connection that waited for a list's download checked its proxy, and so did a check the download started behind
+    // the session, beside it: the proxy was dialed a third time for the connection. Where a connection waits for the
+    // list, it checks what the list brings alone
+    [TestMethod]
+    public async Task A_download_a_connection_waits_for_starts_no_check_beside_it()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var targetEndPoint = (IPEndPoint)target.LocalEndpoint;
+
+        // the connection's server, apart from the check's, so a check behind the session shows in what the proxy was asked
+        using var connectionTarget = new TcpListener(IPAddress.Loopback, 0);
+        connectionTarget.Start();
+        var connectionTargetEndPoint = (IPEndPoint)connectionTarget.LocalEndpoint;
+        using var storedProxy = new TestSocks5Proxy().Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var listServer = new ListServer($"socks5://127.0.0.1:{proxy.EndPoint.Port}", isHeld: true, TestCt);
+
+        // a list with no interval downloads nothing while an endpoint is enabled; both on this machine's address
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { Url = listServer.Url, RemoveDuplicateIps = false }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(storedProxy.EndPoint)), socketFactory: null, serverCheckTimeout: null,
+            TestCt);
+
+        // a pass: the server the checks behind the session take
+        await connector.CheckServers(new TestSocketFactory(), targetEndPoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay,
+            "The check before the connect did not end.");
+
+        // the user turns the endpoint off: the list downloads again, and a connection waits for it
+        using var appStore = await CreateStore();
+        await Upsert(appStore, [
+            new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(storedProxy.EndPoint, isEnabled: false) }
+        ]);
+
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        await AssertEqualsWait(1, () => listServer.DownloadCount, "The list was not downloaded again.");
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), connectionTargetEndPoint, hostName: null,
+            serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => connector.EndPointWaiterCount, "The connection did not wait for the list.");
+        listServer.Release();
+        using var connection = await connecting;
+
+        // the connection's own check and its dial, both to its server, once every check ended
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay, "A check behind the session did not end.");
+        await AssertEqualsWait(true, () => connector.Progress is null, "A check did not end.");
+        Assert.AreEqual(2, proxy.Destinations.Count, "The proxy was not asked twice.");
+        Assert.IsTrue(proxy.Destinations.All(x => x.Equals(connectionTargetEndPoint)),
+            "A check beside the connection dialed its proxy.");
+    }
+
+    // With every endpoint off, the app turned one back on and added another: the check of what a reload brings took
+    // nothing, as the list had none on before, though no connection waited for it, and the one added stayed unrated
+    // beside the one that worked. Only a connection that waits for the list leaves them to its own check
+    [TestMethod]
+    public async Task Endpoints_the_app_turns_on_and_adds_with_the_rest_off_are_checked()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var newProxy = new TestSocks5Proxy().Start();
+
+        // both on this machine's address, which the rule of one endpoint per address would leave to one
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay,
+            "The check before the connect did not end.");
+
+        // every endpoint off, then the one back on and another added
+        using var appStore = await CreateStore();
+        await Upsert(appStore, [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(proxy.EndPoint, isEnabled: false) }]);
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        await Upsert(appStore, [
+            new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(proxy.EndPoint) },
+            new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(newProxy.EndPoint) }
+        ]);
+
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        var newStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == newProxy.EndPoint.Port).Status;
+        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded, "The endpoint the app added was not checked.");
+    }
+
+    // The check before a connect began with the endpoints never used, as Unknown comes first in the quality's order:
+    // with 50 or more of them silent ahead of a proxy known to work, the connect waited out a silent one's whole time.
+    // Those that succeeded last now come first
+    [TestMethod]
+    public async Task The_check_before_a_connect_tries_a_proxy_that_succeeded_last_before_those_never_used()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var silentProxies = Enumerable.Range(0, 60).Select(_ => new TcpListener(IPAddress.Loopback, 0)).ToArray();
+        try {
+            foreach (var silentProxy in silentProxies)
+                silentProxy.Start();
+
+            var store = await CreateStore(silentProxies
+                .Select(x => ToProxyEndPoint((IPEndPoint)x.LocalEndpoint))
+                .ToArray());
+
+            await Upsert(store, [
+                new ProxyEndPointRecord {
+                    EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                    Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+                }
+            ]);
+
+            await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false },
+                store, socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+            await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+                serverCertificateValidation: null, TestCt).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+
+            Assert.AreEqual(1, proxy.Destinations.Count, "The check went on at the stored success, with no check of it.");
+        }
+        finally {
+            foreach (var silentProxy in silentProxies)
+                silentProxy.Dispose();
+        }
+    }
+
+    // On iOS and tvOS the check behind a connect dialed 50 at a time beside the session, whose own connects go 3 at a
+    // time there, as each handshake costs memory an extension has little of. Once a pass came, it now dials as few at
+    // once as its width beside the session lets: here one, where the run's own width is two; and one whose check ends
+    // gives its place to the next
+    [TestMethod]
+    public async Task The_check_behind_a_connect_dials_as_few_at_once_as_its_width_lets()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var silentProxies = Enumerable.Range(0, 3).Select(_ => new SilentProxy().Start()).ToArray();
+        try {
+            await using var connector =
+                await CreateConnectorCheckingBehindItsPass((IPEndPoint)target.LocalEndpoint, silentProxies);
+
+            await Task.Delay(TimeSpan.FromSeconds(1), TestCt);
+            Assert.AreEqual(1, silentProxies.Sum(x => x.ConnectionCount), "The check dialed more than one at once.");
+
+            var dialed = silentProxies.Single(x => x.ConnectionCount == 1);
+            (await dialed.TakeConnection(TestCt)).Dispose();
+            await AssertEqualsWait(2, () => silentProxies.Sum(x => x.ConnectionCount),
+                "A check that ended gave its place to no other.");
+        }
+        finally {
+            foreach (var silentProxy in silentProxies)
+                silentProxy.Dispose();
+        }
+    }
+
+    // A check that waited for its place behind the connect held the endpoint it took before the wait, and dialed it
+    // after, however long that was, though the user had turned it off meanwhile
+    [TestMethod]
+    public async Task A_check_waiting_for_its_place_skips_an_endpoint_turned_off_meanwhile()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var silentProxies = Enumerable.Range(0, 3).Select(_ => new SilentProxy().Start()).ToArray();
+        try {
+            await using var connector =
+                await CreateConnectorCheckingBehindItsPass((IPEndPoint)target.LocalEndpoint, silentProxies);
+
+            // the user turns the others off while one waits for the dialed one's place, which its failure then frees
+            var dialed = silentProxies.Single(x => x.ConnectionCount == 1);
+            using var appStore = await CreateStore();
+            await Upsert(appStore, silentProxies
+                .Where(x => x != dialed)
+                .Select(x => new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(x.EndPoint, isEnabled: false) })
+                .ToArray());
+
+            await connector.UpdateOptions(new ProxyOptions { VerifyTls = false }, TestCt);
+            (await dialed.TakeConnection(TestCt)).Dispose();
+
+            // to its end: a dial of an endpoint turned off would hold it for its check's time
+            await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay,
+                "The check did not end: it dialed an endpoint turned off while it waited for its place.");
+
+            Assert.AreEqual(1, silentProxies.Sum(x => x.ConnectionCount),
+                "A check dialed an endpoint turned off while it waited for its place.");
+        }
+        finally {
+            foreach (var silentProxy in silentProxies)
+                silentProxy.Dispose();
+        }
+    }
+
+    // A connector whose check before a connect passed at two answering proxies, which took the run's two places at once,
+    // and goes on through the silent ones behind the connect, one at a time, the first of them dialed: its width is
+    // two, and one beside the session
+    private async Task<ManagedProxyConnector> CreateConnectorCheckingBehindItsPass(IPEndPoint targetEndPoint,
+        IReadOnlyList<SilentProxy> silentProxies)
+    {
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var proxy1 = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        using var proxy2 = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+
+        // the two answering proxies succeeded last, so they take the run's two places first; the silent ones failed
+        var store = await CreateStore();
+        await Upsert(store, [
+            .. new[] { proxy1.EndPoint, proxy2.EndPoint }.Select(x => new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(x),
+                Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
+            }),
+            .. silentProxies.Select(x => new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(x.EndPoint),
+                Status = new ProxyEndPointStatus { FailedCount = 1, LastFailed = DateTime.UtcNow }
+            })
+        ]);
+
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store,
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        try {
+            connector.CheckWidth = 2;
+            connector.CheckWidthBehindConnect = 1;
+            var checkTask = connector.CheckServers(new TestSocketFactory(), targetEndPoint, hostName: null,
+                serverCertificateValidation: null, TestCt);
+
+            await AssertEqualsWait(2, () => proxy1.Destinations.Count + proxy2.Destinations.Count,
+                "The check dialed fewer at once than its width before its first pass.");
+
+            release.TrySetResult();
+            await checkTask;
+            await AssertEqualsWait(1, () => silentProxies.Sum(x => x.ConnectionCount),
+                "No silent proxy's check started.");
+
+            // both passes recorded: the other place's worker has taken its next endpoint, and waits for a place
+            await AssertEqualsWait(true, () => connector.Progress?.Completed >= 2, "The two passes were not recorded.");
+            return connector;
+        }
+        catch {
+            await connector.DisposeAsync();
+            throw;
+        }
+    }
+
+    // After every proxy failed, as on a change of network, a connection checked until one passed, and the check of the
+    // rest behind it went 50 at a time beside the session, the proxy that passed first among them, beside the
+    // connection's own dial. It now takes what the connection's check left, as few at once as its width beside the
+    // session lets: here one, where a check a connection waits for dials two
+    [TestMethod]
+    public async Task The_check_behind_a_connections_own_check_takes_what_it_left_one_at_a_time()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var proxy = new TestSocks5Proxy { ReplyGate = release.Task }.Start();
+        var silentProxies = Enumerable.Range(0, 3).Select(_ => new SilentProxy().Start()).ToArray();
+        try {
+            // all failed last, the answering one first in turn
+            var store = await CreateStore();
+            await Upsert(store, [
+                new ProxyEndPointRecord {
+                    EndPoint = ToProxyEndPoint(proxy.EndPoint),
+                    Status = new ProxyEndPointStatus { FailedCount = 1, LastFailed = DateTime.UtcNow.AddMinutes(-1) }
+                },
+                .. silentProxies.Select(x => new ProxyEndPointRecord {
+                    EndPoint = ToProxyEndPoint(x.EndPoint),
+                    Status = new ProxyEndPointStatus { FailedCount = 1, LastFailed = DateTime.UtcNow }
+                })
+            ]);
+
+            var proxyOptions = new ProxyOptions {
+                VerifyTls = false,
+                AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+            };
+
+            await using var connector = await ManagedProxyConnector.Create(proxyOptions, store, socketFactory: null,
+                serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+            connector.CheckWidth = 2;
+            connector.CheckWidthBehindConnect = 1;
+            var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+                hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+            // the connection's check dials the answering proxy and a silent one at once, and passes at the first
+            await AssertEqualsWait(1, () => silentProxies.Sum(x => x.ConnectionCount),
+                "The connection's check dialed no silent proxy beside the answering one.");
+
+            release.TrySetResult();
+            using var connection = await connecting;
+
+            // the check behind the connection dials one more
+            await AssertEqualsWait(2, () => silentProxies.Sum(x => x.ConnectionCount),
+                "The rest was not checked behind the connection's pass.");
+
+            await Task.Delay(TimeSpan.FromSeconds(1), TestCt);
+            Assert.AreEqual(2, silentProxies.Sum(x => x.ConnectionCount),
+                "The check behind the connection dialed more than one at once.");
+
+            Assert.AreEqual(2, proxy.Destinations.Count,
+                "The check behind the connection dialed the proxy that passed, beside the connection.");
+        }
+        finally {
+            foreach (var silentProxy in silentProxies)
+                silentProxy.Dispose();
+        }
+    }
+
+    // A proxy that takes each connection and answers nothing, as one that hangs. It holds them for the test, which can
+    // close one to fail its dial at once
+    private sealed class SilentProxy : IDisposable
+    {
+        private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
+        private readonly CancellationTokenSource _cts = new();
+        private readonly Channel<TcpClient> _accepted = Channel.CreateUnbounded<TcpClient>();
+        private readonly ConcurrentQueue<TcpClient> _connections = new();
+        private Task _accepting = Task.CompletedTask;
+
+        public IPEndPoint EndPoint => (IPEndPoint)_listener.LocalEndpoint;
+        public int ConnectionCount => _connections.Count;
+
+        public SilentProxy Start()
+        {
+            _listener.Start();
+            _accepting = Accept(_cts.Token);
+            return this;
+        }
+
+        private async Task Accept(CancellationToken cancellationToken)
+        {
+            try {
+                while (true) {
+                    var connection = await _listener.AcceptTcpClientAsync(cancellationToken);
+                    _connections.Enqueue(connection);
+                    _accepted.Writer.TryWrite(connection);
+                }
+            }
+            catch (Exception) when (cancellationToken.IsCancellationRequested) {
+                // the proxy's close
+            }
+        }
+
+        // the connections it took, each once, in turn
+        public ValueTask<TcpClient> TakeConnection(CancellationToken cancellationToken) =>
+            _accepted.Reader.ReadAsync(cancellationToken);
+
+        // after its accept loop's end, which its token ends, so no connection it takes at the close is left open
+        public void Dispose()
+        {
+            _cts.Cancel();
+            _accepting.GetAwaiter().GetResult();
+            _listener.Stop();
+            _accepted.Writer.TryComplete();
+            foreach (var connection in _connections)
+                connection.Dispose();
+
+            _cts.Dispose();
+        }
     }
 
     // the system's sockets, each TCP client it makes kept for the test to look at
@@ -495,7 +1959,8 @@ public class ManagedProxyConnectorTest : TestBase
     [TestMethod]
     public async Task A_canceled_check_keeps_the_failures_that_came_before_its_cancellation()
     {
-        // a canceled run recorded no failure at all
+        // a canceled run recorded no failure at all. A connect canceled before a pass takes its check with it, which
+        // otherwise goes on behind the connect
         using var closedPort = new TcpListener(IPAddress.Loopback, 0);
         closedPort.Start();
         var refusingEndPoint = (IPEndPoint)closedPort.LocalEndpoint;
@@ -506,7 +1971,7 @@ public class ManagedProxyConnectorTest : TestBase
 
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false },
             await CreateStore(ToProxyEndPoint(refusingEndPoint), ToProxyEndPoint(silentEndPoint)),
-            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
 
         using var checkCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         var checkTask = connector.CheckServers(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443),
@@ -517,6 +1982,7 @@ public class ManagedProxyConnectorTest : TestBase
 
         await checkCts.CancelAsync();
         await Assert.ThrowsAsync<OperationCanceledException>(() => checkTask);
+        await AssertEqualsWait(true, () => connector.Progress is null, "The canceled connect's check went on.");
 
         var infos = connector.GetEndPointInfos();
         Assert.AreEqual(1, infos.Single(x => x.EndPoint.Port == refusingEndPoint.Port).Status.FailedCount);
@@ -537,7 +2003,7 @@ public class ManagedProxyConnectorTest : TestBase
             }
         ]);
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store,
-            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
 
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         var connectTask = connector.ConnectAsync(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443),
@@ -578,7 +2044,7 @@ public class ManagedProxyConnectorTest : TestBase
             }
         ]);
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store,
-            serverCheckTimeout: null, TestCt);
+            socketFactory: null, serverCheckTimeout: null, TestCt);
 
         var ex = await Assert.ThrowsExactlyAsync<SocketException>(() => connector.ConnectAsync(new TestSocketFactory(),
             (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null,
@@ -682,7 +2148,7 @@ public class ManagedProxyConnectorTest : TestBase
             }
         ]);
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store,
-            serverCheckTimeout: null, TestCt);
+            socketFactory: null, serverCheckTimeout: null, TestCt);
 
         using var connection = await connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
             hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
@@ -793,6 +2259,8 @@ public class ManagedProxyConnectorTest : TestBase
 
         public void RecordFailed(TcpClient tcpClient, Exception ex) { }
 
+        public Task<bool> WaitForEndPoints(CancellationToken cancellationToken) => Task.FromResult(true);
+
         public Task CheckServers(ISocketFactory socketFactory, IPEndPoint ipEndPoint, string? hostName,
             RemoteCertificateValidationCallback? serverCertificateValidation, CancellationToken cancellationToken) =>
             Task.CompletedTask;
@@ -898,6 +2366,8 @@ public class ManagedProxyConnectorTest : TestBase
         }
 
         public void RecordFailed(TcpClient tcpClient, Exception ex) { }
+
+        public Task<bool> WaitForEndPoints(CancellationToken cancellationToken) => Task.FromResult(true);
 
         public Task CheckServers(ISocketFactory socketFactory, IPEndPoint ipEndPoint, string? hostName,
             RemoteCertificateValidationCallback? serverCertificateValidation, CancellationToken cancellationToken) =>
@@ -1011,7 +2481,7 @@ public class ManagedProxyConnectorTest : TestBase
                 Protocol = ProxyProtocol.Http,
                 Host = IPAddress.Loopback.ToString(),
                 Port = ((IPEndPoint)proxyListener.LocalEndpoint).Port
-            }), serverCheckTimeout: null, TestCt);
+            }), socketFactory: null, serverCheckTimeout: null, TestCt);
 
         await connector.CheckServers(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443),
             hostName: null, serverCertificateValidation: null, TestCt);
@@ -1049,7 +2519,7 @@ public class ManagedProxyConnectorTest : TestBase
 
         using var proxy = new TestSocks5Proxy().Start();
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = true },
-            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), serverCheckTimeout: null, TestCt);
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
 
         var serverHash = serverCertificate.GetCertHash();
         await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)vpnServer.LocalEndpoint, "vpn.example",
@@ -1076,7 +2546,7 @@ public class ManagedProxyConnectorTest : TestBase
 
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = true },
             await CreateStore(ToProxyEndPoint(proxy.EndPoint), ToProxyEndPoint((IPEndPoint)silentProxy.LocalEndpoint)),
-            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
 
         using var downCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         var downConnect = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)downServer.LocalEndpoint,
@@ -1141,13 +2611,13 @@ public class ManagedProxyConnectorTest : TestBase
         server.Start();
 
         // first manager records a successful check and flushes on dispose
-        var mgr = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(proxyEndPoint), serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(proxyEndPoint), socketFactory: null, serverCheckTimeout: null, TestCt);
         await mgr.CheckServers(socketFactory, (IPEndPoint)server.LocalEndpoint, hostName: null, serverCertificateValidation: null, TestCt);
         Assert.IsTrue(mgr.GetEndPointInfos().Single().Status.SucceededCount >= 1);
         await mgr.DisposeAsync();
 
         // a new manager over the same db restores the statuses
-        var mgr2 = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(), serverCheckTimeout: null, TestCt);
+        var mgr2 = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
         var restored = mgr2.GetEndPointInfos().Single();
         Assert.AreEqual(proxyEndPoint.Id, restored.EndPoint.Id);
         Assert.IsTrue(restored.Status.SucceededCount >= 1);
@@ -1155,36 +2625,40 @@ public class ManagedProxyConnectorTest : TestBase
         await mgr2.DisposeAsync();
     }
 
+    // Each protocol on its own: with both in one list, the connect goes on at the first to pass, and the session's few
+    // connections may take that one alone
     [TestMethod]
-    public async Task Connect_via_proxy()
+    [DataRow(ProxyProtocol.Socks5)]
+    [DataRow(ProxyProtocol.Http)]
+    public async Task Connect_via_proxy(ProxyProtocol protocol)
     {
-        // create a local SOCKS5 proxy using Socks5ProxyServer
+        // a local proxy of the protocol
         using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
             ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
         });
-        socks5ProxyServer.Start();
 
-        // create a local HTTP proxy using HttpProxyServer
         using var httpProxyServer = new HttpProxyServer(new HttpProxyServerOptions {
             ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
         });
-        httpProxyServer.Start();
+
+        IPEndPoint proxyEndPoint;
+        if (protocol == ProxyProtocol.Socks5) {
+            socks5ProxyServer.Start();
+            proxyEndPoint = socks5ProxyServer.ListenerEndPoint;
+        }
+        else {
+            httpProxyServer.Start();
+            proxyEndPoint = httpProxyServer.ListenerEndPoint;
+        }
 
         // seed the shared endpoint store the client will open
         using (var store = new ProxyEndPointStore(ClientStoreDbPath)) {
             await Upsert(store, [
                 new ProxyEndPointRecord {
                     EndPoint = new ProxyEndPoint {
-                        Protocol = ProxyProtocol.Socks5,
-                        Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
-                        Port = socks5ProxyServer.ListenerEndPoint.Port
-                    }
-                },
-                new ProxyEndPointRecord {
-                    EndPoint = new ProxyEndPoint {
-                        Protocol = ProxyProtocol.Http,
-                        Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
-                        Port = httpProxyServer.ListenerEndPoint.Port
+                        Protocol = protocol,
+                        Host = proxyEndPoint.Address.ToString(),
+                        Port = proxyEndPoint.Port
                     }
                 }
             ]);
@@ -1192,15 +2666,18 @@ public class ManagedProxyConnectorTest : TestBase
 
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.AllowChannelReuse = false; // make sure not reuse connections
+        var socketFactory = new EndPointRecordingSocketFactory();
         var clientServerDom = await ClientServerDom.Create(TestHelper, clientOptions,
-            proxyOptions: new ProxyOptions { Mode = ProxyMode.Managed });
+            proxyOptions: new ProxyOptions { Mode = ProxyMode.Managed }, clientSocketFactory: socketFactory);
 
         await TestHelper.Test_Https();
 
+        // Connections through the proxy, which the server search's probe makes too, and none straight to the server,
+        // the session's own included
         var mgr = clientServerDom.Client.ProxyConnector as ManagedProxyConnector;
         Assert.IsNotNull(mgr);
-        var proxyEndPointInfos = mgr.GetEndPointInfos();
-        Assert.IsTrue(proxyEndPointInfos.All(x => x.Status.SucceededCount >= 1));
+        Assert.IsGreaterThan(0, mgr.Status.SessionStatus.SucceededCount, "No connection went through the proxy.");
+        AssertNoDialTo(clientServerDom.Token, socketFactory);
     }
 
     [TestMethod]
@@ -1241,10 +2718,7 @@ public class ManagedProxyConnectorTest : TestBase
     {
         // a list server on a free port, counting each path's downloads
         var downloads = new ConcurrentDictionary<string, int>();
-        var portFinder = new TcpListener(IPAddress.Loopback, 0);
-        portFinder.Start();
-        var port = ((IPEndPoint)portFinder.LocalEndpoint).Port;
-        portFinder.Stop();
+        var port = GetFreePort();
         var webServer = new WebserverLite(new WebserverSettings(IPAddress.Loopback.ToString(), port), async ctx => {
             downloads.AddOrUpdate(ctx.Request.Url.RawWithoutQuery, 1, (_, count) => count + 1);
             await ctx.Response.Send("socks5://127.0.0.1:1080");
@@ -1252,7 +2726,8 @@ public class ManagedProxyConnectorTest : TestBase
         _ = webServer.StartAsync(TestCt);
         try {
             await using var connector =
-                await ManagedProxyConnector.Create(CreateAutoUpdateOptions(port, "/a"), await CreateStore(), serverCheckTimeout: null, TestCt);
+                await ManagedProxyConnector.Create(CreateAutoUpdateOptions(port, "/a"), await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+
             await AssertEqualsWait(1, () => downloads.GetValueOrDefault("/a"), "the first download");
 
             // the same options again: no download
@@ -1269,7 +2744,561 @@ public class ManagedProxyConnectorTest : TestBase
         }
     }
 
-    // nine seconds: under the slow job runner's ten, so the fast one's two-second beat starts the job
+    // A list with no endpoint yet, before its first download: the VPN went straight to its server, around the proxies
+    // the user had turned on. A connection now waits for the list, held back here, and goes through its proxy; one
+    // whose caller gives up meanwhile ends with its cancellation
+    [TestMethod]
+    public async Task A_connection_to_a_list_with_no_endpoint_yet_waits_for_its_first_download()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var targetEndPoint = (IPEndPoint)target.LocalEndpoint;
+        using var proxy = new TestSocks5Proxy().Start();
+        using var listServer = new ListServer($"socks5://{proxy.EndPoint}", isHeld: true, TestCt);
+
+        // an hour between downloads: the first one at once all the same, not at the job runner's next check
+        await using var connector = await ManagedProxyConnector.Create(CreateListOptions(listServer.Url,
+            TimeSpan.FromHours(1)), await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        Assert.IsFalse(connector.IsEnabled, "The list has an endpoint before its download.");
+        using var givingUpCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var givingUp = connector.ConnectAsync(new TestSocketFactory(), targetEndPoint, hostName: null,
+            serverCertificateValidation: null, onAttempt: null, givingUpCts.Token);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), targetEndPoint, hostName: null,
+            serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => listServer.DownloadCount, "The list's first download did not start at once.");
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt);
+        Assert.IsFalse(connecting.IsCompleted, "A connection went on before the list came.");
+
+        await givingUpCts.CancelAsync();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => givingUp);
+
+        listServer.Release();
+        using var connection = await connecting;
+        Assert.AreEqual(proxy.EndPoint, connection.TcpClient.Client.RemoteEndPoint,
+            "The connection went around the list's proxy.");
+    }
+
+    // The wait was the server search's own probe's, five seconds by default, so a list that came later never carried a
+    // session, and the failed connect's close ended its download. The connect now waits for it under its own time: the
+    // clock here starts once the client waits, at the proxies' step, or at the search's, where the old code waited
+    [TestMethod]
+    public async Task A_list_that_comes_after_the_servers_probe_time_still_carries_the_session()
+    {
+        using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
+            ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
+        });
+
+        socks5ProxyServer.Start();
+        using var listServer = new ListServer($"socks5://{socks5ProxyServer.ListenerEndPoint}", isHeld: true, TestCt);
+        await using var server = await TestHelper.CreateServer();
+        var clientOptions = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
+        clientOptions.Transport.ServerQueryTimeout = TimeSpan.FromSeconds(3);
+        await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: new TestNullVpnAdapter(),
+            autoConnect: false, proxyOptions: CreateManagedListOptions(listServer.Url));
+
+        var connecting = client.Connect(TestCt);
+        await AssertEqualsWait(true, () => client.State is ClientState.ValidatingProxies or
+            ClientState.FindingReachableServer, "The client did not come to its wait.");
+
+        await AssertEqualsWait(1, () => listServer.DownloadCount, "The list's first download did not start.");
+        await Task.Delay(TimeSpan.FromSeconds(4), TestCt);
+        listServer.Release();
+        await connecting;
+
+        Assert.AreEqual(ClientState.Connected, client.State);
+        Assert.IsNotNull(client.ProxyConnector);
+        Assert.IsGreaterThan(0, client.ProxyConnector.Status.SessionStatus.SucceededCount,
+            "The session went around the list's proxy.");
+    }
+
+    // A list that had only just come was left to the server search's first probe to check, within the probe's own few
+    // seconds, which a slow proxy's check and then its connection took whole: the connect said that the server could
+    // not be reached. It is now checked before the search, under the connect's own time, until a proxy passes; a
+    // silent one beside it, whose check goes on behind the connect, is no reason for the search to check again
+    [TestMethod]
+    public async Task A_slow_proxy_of_a_list_that_has_only_just_come_still_carries_the_session()
+    {
+        using var proxy = new TestSocks5Proxy { ConnectDelay = TimeSpan.FromSeconds(3) }.Start();
+        using var silentProxy = new TcpListener(IPAddress.Loopback, 0); // it takes a connection and answers nothing
+        silentProxy.Start();
+        using var listServer = new ListServer($"socks5://{proxy.EndPoint}\nsocks5://{silentProxy.LocalEndpoint}",
+            isHeld: true, TestCt);
+
+        await using var server = await TestHelper.CreateServer();
+        var clientOptions = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
+        clientOptions.Transport.ServerQueryTimeout = TimeSpan.FromSeconds(6);
+        clientOptions.Transport.TcpConnectTimeout = TimeSpan.FromSeconds(10); // the tests' 3 s is the proxy's own time
+        await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: new TestNullVpnAdapter(),
+            autoConnect: false, proxyOptions: CreateManagedListOptions(listServer.Url));
+
+        // the list comes once the client waits for it, so the client never finds one at its start
+        var connecting = client.Connect(TestCt);
+        await AssertEqualsWait(ClientState.ValidatingProxies, () => client.State);
+        await AssertEqualsWait(1, () => listServer.DownloadCount, "The list's first download did not start.");
+        listServer.Release();
+        await connecting;
+
+        Assert.AreEqual(ClientState.Connected, client.State);
+        Assert.IsNotNull(client.ProxyConnector);
+        Assert.IsGreaterThan(0, client.ProxyConnector.Status.SessionStatus.SucceededCount,
+            "The session went around the list's proxy.");
+    }
+
+    // A pass ends a check, so a proxy whose check a pass stopped stayed unrated, first in turn, and every connection
+    // checked the list again before its own connect: each one reached the server twice through the fast proxy, once for
+    // the check. A connection now checks only where none it may take succeeded last. The slow proxy never answers, so
+    // the fast one passes first whatever the timing
+    [TestMethod]
+    public async Task A_connection_checks_nothing_while_a_proxy_it_may_take_succeeded_last()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var fastRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var fastProxy = new TestSocks5Proxy { ReplyGate = fastRelease.Task }.Start();
+        var neverReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var slowProxy = new TestSocks5Proxy { ReplyGate = neverReleased.Task }.Start();
+
+        // both on this machine's address, which the rule of one endpoint per address would leave to the fast one
+        var proxyOptions = new ProxyOptions {
+            VerifyTls = false,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { RemoveDuplicateIps = false }
+        };
+
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(fastProxy.EndPoint), ToProxyEndPoint(slowProxy.EndPoint)),
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        // the first connection's check passes at the fast proxy once it dialed the slow one too
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => slowProxy.Destinations.Count, "The first connection's check missed the slow one.");
+        fastRelease.TrySetResult();
+        using (await connecting) {
+            // the first connection
+        }
+
+        for (var i = 0; i < 9; i++) {
+            using var connection = await connector.ConnectAsync(new TestSocketFactory(),
+                (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null,
+                TestCt);
+        }
+
+        // The first connection's check, then the ten connections. The check of the rest behind its pass takes the slow
+        // proxy alone, whose check that pass stopped: it dialed the fast one too, beside the connection's own dial
+        await AssertEqualsWait(2, () => slowProxy.Destinations.Count, "The rest was not checked behind the pass.");
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestCt);
+        Assert.AreEqual(11, fastProxy.Destinations.Count, "Connections or the check behind them dialed it again.");
+    }
+
+    // A list whose download brings no proxy: the connect says that no proxy can be reached, and dials nothing else
+    [TestMethod]
+    public async Task A_list_that_brings_no_proxy_ends_the_connect_with_no_proxy_reached()
+    {
+        using var listServer = new ListServer("no proxy here", isHeld: false, TestCt);
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var socketFactory = new EndPointRecordingSocketFactory();
+        await Assert.ThrowsExactlyAsync<UnreachableProxyServerException>(() => TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(token), vpnAdapter: new TestNullVpnAdapter(),
+            proxyOptions: CreateManagedListOptions(listServer.Url), socketFactory: socketFactory));
+
+        Assert.AreEqual(1, listServer.DownloadCount);
+        AssertNoDialTo(token, socketFactory);
+    }
+
+    // A key known by name alone, with a list that brings no proxy: the connect went on to look the server's name up,
+    // and its failed lookup said that the server could not be found. It now says that no proxy can be reached
+    [TestMethod]
+    public async Task A_key_known_by_name_alone_with_no_proxy_to_use_ends_with_no_proxy_reached()
+    {
+        using var listServer = new ListServer("no proxy here", isHeld: false, TestCt);
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        token.ServerToken.HostName = "proxied-server.invalid";
+        token.ServerToken.IsValidHostName = true;
+        token.ServerToken.HostEndPoints = null;
+
+        await Assert.ThrowsExactlyAsync<UnreachableProxyServerException>(() => TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(token), vpnAdapter: new TestNullVpnAdapter(),
+            proxyOptions: CreateManagedListOptions(listServer.Url)));
+    }
+
+    // A list's reload during a check made new entries, and the check's outcomes went onto the old ones, which nothing
+    // saves or reads any more: they now go onto the entries the connector holds
+    [TestMethod]
+    public async Task A_checks_outcomes_land_on_the_entries_a_reload_made_during_it()
+    {
+        using var certificate = CertificateUtil.CreateSelfSigned();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var serving = ServeTlsOnceReleased(target, certificate, release.Task, TestCt);
+        var proxyOptions = new ProxyOptions { VerifyTls = true };
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null,
+            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        var checking = connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
+        await AssertEqualsWait(1, () => proxy.Destinations.Count, "The check did not reach the server.");
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        release.TrySetResult();
+        await checking;
+        await using var serverStream = await serving;
+
+        Assert.AreEqual(1, connector.GetEndPointInfos().Single().Status.SucceededCount,
+            "The check's success went onto an entry the reload had replaced.");
+    }
+
+    // a TLS server that holds its first connection's handshake until released
+    private static async Task<SslStream> ServeTlsOnceReleased(TcpListener server, X509Certificate2 certificate,
+        Task release, CancellationToken cancellationToken)
+    {
+        var client = await server.AcceptTcpClientAsync(cancellationToken);
+        await release.WaitAsync(cancellationToken);
+        var sslStream = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+        await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions {
+            ServerCertificate = certificate
+        }, cancellationToken);
+
+        return sslStream;
+    }
+
+    // With the update interval "never", the app's default, nothing downloaded the list, and a connection to it, empty,
+    // failed every time. Its first download now comes all the same, as the app leaves it to the connector
+    [TestMethod]
+    public async Task A_list_with_no_update_interval_still_has_its_first_download()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var listServer = new ListServer($"socks5://{proxy.EndPoint}", isHeld: false, TestCt);
+        await using var connector = await ManagedProxyConnector.Create(CreateListOptions(listServer.Url, interval: null),
+            await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        using var connection = await connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        Assert.AreEqual(proxy.EndPoint, connection.TcpClient.Client.RemoteEndPoint);
+        Assert.AreEqual(1, listServer.DownloadCount);
+    }
+
+    // A list whose endpoints are all turned off has none to use either: it waits for its download as an empty one does,
+    // where it failed at once
+    [TestMethod]
+    public async Task A_list_with_every_endpoint_turned_off_waits_for_its_first_download()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var listServer = new ListServer($"socks5://{proxy.EndPoint}", isHeld: true, TestCt);
+        await using var connector = await ManagedProxyConnector.Create(
+            CreateListOptions(listServer.Url, TimeSpan.FromHours(1)),
+            await CreateStore(ToProxyEndPoint(new IPEndPoint(IPAddress.Loopback, 1), isEnabled: false)),
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => listServer.DownloadCount);
+        Assert.IsFalse(connecting.IsCompleted, "The connection failed before the list came.");
+        listServer.Release();
+        using var connection = await connecting;
+        Assert.AreEqual(proxy.EndPoint, connection.TcpClient.Client.RemoteEndPoint);
+    }
+
+    // New options during the wait: the old download's end let the waiting connections into the empty list, which then
+    // failed while the new one was coming. They now wait for the new one
+    [TestMethod]
+    public async Task A_connection_waiting_for_a_list_follows_its_replacement()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var oldListServer = new ListServer("never sent", isHeld: true, TestCt);
+        using var newListServer = new ListServer($"socks5://{proxy.EndPoint}", isHeld: true, TestCt);
+        await using var connector = await ManagedProxyConnector.Create(
+            CreateListOptions(oldListServer.Url, TimeSpan.FromHours(1)), await CreateStore(), socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => oldListServer.DownloadCount);
+        await connector.UpdateOptions(CreateListOptions(newListServer.Url, TimeSpan.FromHours(1)), TestCt);
+        await AssertEqualsWait(1, () => newListServer.DownloadCount);
+        Assert.IsFalse(connecting.IsCompleted, "The connection failed before the new list came.");
+
+        newListServer.Release();
+        using var connection = await connecting;
+        Assert.AreEqual(proxy.EndPoint, connection.TcpClient.Client.RemoteEndPoint);
+    }
+
+    // A connection waiting for the list goes on with an endpoint the app adds meanwhile, with the options it sends then
+    [TestMethod]
+    public async Task A_connection_waiting_for_the_list_takes_an_endpoint_the_app_adds()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var listServer = new ListServer("never sent", isHeld: true, TestCt);
+        var proxyOptions = CreateListOptions(listServer.Url, TimeSpan.FromHours(1));
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(),
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => listServer.DownloadCount);
+        using var appStore = await CreateStore(ToProxyEndPoint(proxy.EndPoint));
+        await connector.UpdateOptions(proxyOptions, TestCt);
+
+        using var connection = await connecting.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(proxy.EndPoint, connection.TcpClient.Client.RemoteEndPoint);
+    }
+
+    // A reload that brought an enabled endpoint marked the list's download as done, so a connection made after the
+    // endpoint was turned off again failed at once, while the list was still coming. A reload now only wakes the
+    // waiting connections, which look again; and the endpoint's going off started the download still coming again,
+    // which the gate's one release then let through a second time
+    [TestMethod]
+    public async Task A_connection_still_waits_for_the_list_after_an_endpoint_came_and_went()
+    {
+        using var target = new TcpListener(IPAddress.Loopback, 0);
+        target.Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var listServer = new ListServer($"socks5://{proxy.EndPoint}", isHeld: true, TestCt);
+        var proxyOptions = CreateListOptions(listServer.Url, TimeSpan.FromHours(1));
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(),
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await AssertEqualsWait(1, () => listServer.DownloadCount);
+
+        // the app adds an endpoint, then turns it off, and sends its options each time
+        var appEndPoint = new IPEndPoint(IPAddress.Loopback, 1);
+        using var appStore = await CreateStore(ToProxyEndPoint(appEndPoint));
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        await Upsert(appStore, [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(appEndPoint, isEnabled: false) }]);
+        await connector.UpdateOptions(proxyOptions, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt);
+        Assert.IsFalse(connecting.IsCompleted, "The connection ended before the list came.");
+        listServer.Release();
+        using var connection = await connecting;
+        Assert.AreEqual(proxy.EndPoint, connection.TcpClient.Client.RemoteEndPoint);
+        Assert.AreEqual(1, listServer.DownloadCount, "The download still coming was started again.");
+    }
+
+    // A list with no update interval whose last enabled endpoint the app turns off has nothing to use: it downloads the
+    // list once, as at its start, where it did nothing
+    [TestMethod]
+    public async Task A_list_with_no_interval_whose_last_endpoint_goes_off_downloads_again()
+    {
+        using var listServer = new ListServer("socks5://127.0.0.1:1080", isHeld: false, TestCt);
+        var proxyOptions = CreateListOptions(listServer.Url, interval: null);
+        var storedEndPoint = new IPEndPoint(IPAddress.Loopback, 1);
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions,
+            await CreateStore(ToProxyEndPoint(storedEndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestCt);
+        Assert.AreEqual(0, listServer.DownloadCount, "A list with an endpoint to use and no interval was downloaded.");
+
+        using var appStore = await CreateStore();
+        await Upsert(appStore, [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(storedEndPoint, isEnabled: false) }]);
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        await AssertEqualsWait(1, () => listServer.DownloadCount, "The list was not downloaded again.");
+    }
+
+    // A list with no update interval downloaded once, at its start: once the user turned off the endpoint it brought,
+    // nothing was left to use, and the one download, done, kept any other from starting
+    [TestMethod]
+    public async Task A_list_with_no_interval_downloads_again_when_its_downloaded_endpoint_goes_off()
+    {
+        using var listServer = new ListServer("socks5://127.0.0.1:1080", isHeld: false, TestCt);
+        var proxyOptions = CreateListOptions(listServer.Url, interval: null);
+        await using var connector = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(),
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await AssertEqualsWait(true, () => connector.IsEnabled, "The list did not come.");
+        using var appStore = await CreateStore();
+        await Upsert(appStore, [
+            new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(new IPEndPoint(IPAddress.Loopback, 1080), isEnabled: false)
+            }
+        ]);
+
+        await connector.UpdateOptions(proxyOptions, TestCt);
+        await AssertEqualsWait(2, () => listServer.DownloadCount, "The list was not downloaded again.");
+    }
+
+    [TestMethod]
+    public async Task The_close_ends_a_connection_waiting_for_the_list()
+    {
+        using var listServer = new ListServer("never sent", isHeld: true, TestCt);
+        var connector = await ManagedProxyConnector.Create(CreateListOptions(listServer.Url, TimeSpan.FromHours(1)),
+            await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        var connecting = connector.ConnectAsync(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443),
+            hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        await AssertEqualsWait(1, () => listServer.DownloadCount);
+        await connector.DisposeAsync();
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => connecting);
+    }
+
+    // Under the kill switch's block, which lets only the VPN's own traffic out, a download over the system's sockets
+    // and resolver could not reach the list: it now goes over the VPN's socket factory
+    [TestMethod]
+    public async Task The_lists_download_goes_over_the_VPNs_socket_factory()
+    {
+        using var listServer = new ListServer("socks5://127.0.0.1:1080", isHeld: false, TestCt);
+        var socketFactory = new EndPointRecordingSocketFactory();
+        await using var connector = await ManagedProxyConnector.Create(CreateListOptions(listServer.Url,
+            TimeSpan.FromHours(1)), await CreateStore(), socketFactory, serverCheckTimeout: null, TestCt);
+
+        await connector.WaitForEndPoints(TestCt);
+
+        Assert.IsTrue(connector.IsEnabled, "The list did not come.");
+        Assert.Contains(new IPEndPoint(IPAddress.Loopback, listServer.Port), socketFactory.EndPoints,
+            "The download went around the socket factory.");
+    }
+
+    // The update's later downloads come once the tunnel is up, and go the platform's way, not over the VPN's sockets
+    [TestMethod]
+    public async Task The_lists_later_downloads_leave_the_VPNs_socket_factory_alone()
+    {
+        using var listServer = new ListServer("socks5://127.0.0.1:1080", isHeld: false, TestCt);
+        var socketFactory = new EndPointRecordingSocketFactory();
+        await using var connector = await ManagedProxyConnector.Create(CreateListOptions(listServer.Url,
+            TimeSpan.FromSeconds(1)), await CreateStore(), socketFactory, serverCheckTimeout: null, TestCt);
+
+        await AssertEqualsWait(true, () => listServer.DownloadCount >= 2, "The list was not downloaded again.",
+            timeout: 15000);
+
+        Assert.AreEqual(1, socketFactory.EndPoints.Count(x => x.Port == listServer.Port),
+            "A later download went over the socket factory.");
+    }
+
+    // The VPN's sockets, kept since the connector's start for its first download, served a list whose URL the app's
+    // options gave once the session was up, and its download went around the tunnel: they serve the update the
+    // connector starts with alone
+    [TestMethod]
+    public async Task A_list_the_options_bring_later_leaves_the_VPNs_socket_factory_alone()
+    {
+        using var listServer = new ListServer("socks5://127.0.0.1:1080", isHeld: false, TestCt);
+        var socketFactory = new EndPointRecordingSocketFactory();
+        await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false },
+            await CreateStore(ToProxyEndPoint(new IPEndPoint(IPAddress.Loopback, 1081))), socketFactory,
+            serverCheckTimeout: null, TestCt);
+
+        await connector.UpdateOptions(CreateListOptions(listServer.Url, TimeSpan.FromHours(1)), TestCt);
+        await AssertEqualsWait(1, () => listServer.DownloadCount);
+        Assert.IsEmpty(socketFactory.EndPoints, "The download went over the socket factory.");
+    }
+
+    // With the user's proxies on and none in the list, the VPN connected straight to the server; it now says that no
+    // proxy can be reached, and dials nothing
+    [TestMethod]
+    public async Task With_proxies_on_and_none_in_the_list_the_VPN_never_goes_straight_to_the_server()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var socketFactory = new EndPointRecordingSocketFactory();
+        await Assert.ThrowsExactlyAsync<UnreachableProxyServerException>(() => TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(token), vpnAdapter: new TestNullVpnAdapter(),
+            proxyOptions: new ProxyOptions { Mode = ProxyMode.Managed }, socketFactory: socketFactory));
+
+        AssertNoDialTo(token, socketFactory);
+    }
+
+    // no TCP connection made to any of the key's server endpoints, as a connection around the proxies would be
+    private static void AssertNoDialTo(Token token, EndPointRecordingSocketFactory socketFactory)
+    {
+        var serverEndPoints = token.ServerToken.HostEndPoints ?? [];
+        Assert.IsNotEmpty(serverEndPoints);
+        Assert.IsFalse(socketFactory.EndPoints.Any(serverEndPoints.Contains), "The VPN went straight to its server.");
+    }
+
+    private static ProxyOptions CreateListOptions(Uri url, TimeSpan? interval)
+    {
+        return new ProxyOptions {
+            VerifyTls = false, // the targets speak no TLS
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { Url = url, Interval = interval }
+        };
+    }
+
+    // the client's managed list, from the URL alone, with an hour between downloads
+    private static ProxyOptions CreateManagedListOptions(Uri url)
+    {
+        return new ProxyOptions {
+            Mode = ProxyMode.Managed,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions { Url = url, Interval = TimeSpan.FromHours(1) }
+        };
+    }
+
+    private sealed class EndPointRecordingSocketFactory : TestSocketFactory
+    {
+        public ConcurrentQueue<IPEndPoint> EndPoints { get; } = new();
+
+        public override TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
+        {
+            EndPoints.Enqueue(ipEndPoint);
+            return base.CreateTcpClient(ipEndPoint, options);
+        }
+    }
+
+    // A list's URL on this machine: it answers with its content, at once or once released, and counts the downloads
+    private sealed class ListServer : IDisposable
+    {
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly WebserverLite _webServer;
+        private int _downloadCount;
+
+        public int Port { get; } = GetFreePort();
+
+        public ListServer(string content, bool isHeld, CancellationToken cancellationToken)
+        {
+            if (!isHeld)
+                _release.TrySetResult();
+
+            _webServer = new WebserverLite(new WebserverSettings(IPAddress.Loopback.ToString(), Port), async ctx => {
+                Interlocked.Increment(ref _downloadCount);
+                await _release.Task.WaitAsync(cancellationToken);
+                await ctx.Response.Send(content);
+            });
+
+            _ = _webServer.StartAsync(cancellationToken);
+        }
+
+        public Uri Url => new($"http://127.0.0.1:{Port}/list");
+        public int DownloadCount => Volatile.Read(ref _downloadCount);
+        public void Release() => _release.TrySetResult();
+
+        // a download still held ends with the server
+        public void Dispose()
+        {
+            _release.TrySetCanceled();
+            _webServer.TryStop();
+        }
+    }
+
+    private static int GetFreePort()
+    {
+        using var portFinder = new TcpListener(IPAddress.Loopback, 0);
+        portFinder.Start();
+        return ((IPEndPoint)portFinder.LocalEndpoint).Port;
+    }
+
+    // nine seconds between downloads, the first one at once
     private static ProxyOptions CreateAutoUpdateOptions(int port, string path)
     {
         return new ProxyOptions {

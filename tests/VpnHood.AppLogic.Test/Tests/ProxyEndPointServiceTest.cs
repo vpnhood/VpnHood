@@ -308,6 +308,20 @@ public class ProxyEndPointServiceTest : TestAppBase
         Assert.IsNull(proxyOptions.ProxyEndPoint);
     }
 
+    // Manual proxies with none in the list and no URL to download one: the app asked for no proxy, and the VPN went
+    // straight to its server
+    [TestMethod]
+    public async Task Manual_proxies_with_none_listed_still_take_the_proxy_connector()
+    {
+        await using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
+        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Manual;
+        dom.App.UserSettings.ProxySettings.AutoUpdateOptions.Url = null;
+
+        var proxyOptions = await dom.App.Services.ProxyEndPointService.GetProxyOptions(TestCt);
+        Assert.AreEqual(ProxyMode.Managed, proxyOptions.Mode);
+        Assert.IsTrue(dom.App.State.IsProxyEndPointActive, "The main screen shows no proxies in use.");
+    }
+
     [TestMethod]
     public async Task Connect()
     {
@@ -445,8 +459,8 @@ public class ProxyEndPointServiceTest : TestAppBase
         endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(0, endPointInfos);
 
-        // verify proxy is not active after deletion
-        Assert.IsFalse(dom.App.State.IsProxyEndPointActive);
+        // Manual proxies stay on with none listed: the VPN connects through the list or not at all
+        Assert.IsTrue(dom.App.State.IsProxyEndPointActive);
     }
 
     [TestMethod]

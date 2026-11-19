@@ -363,6 +363,7 @@ public class TestHelper : IDisposable
             ProxyMode.Managed => await ManagedProxyConnector.Create(
                 proxyOptions: proxyOptions,
                 store: new ProxyEndPointStore(Path.Combine(WorkingPath, "ClientCore", "proxies", "proxies.db")),
+                socketFactory: new TestSocketFactory(),
                 serverCheckTimeout: clientOptions.Transport.ServerQueryTimeout,
                 cancellationToken: TestCt),
             _ => null

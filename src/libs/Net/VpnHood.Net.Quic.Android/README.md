@@ -75,8 +75,10 @@ In `PEER_CERTIFICATE_RECEIVED` we then work out what `SslStream` would hand its 
 1. Build `X509Certificate2` from the leaf DER.
 2. Add the intermediates from the event's **`Chain`** buffer to `X509Chain.ChainPolicy.ExtraStore`
    (otherwise the chain never builds → false `RemoteCertificateChainErrors`).
-3. Compute `SslPolicyErrors`: `chain.Build(cert)` → `RemoteCertificateChainErrors`;
-   `cert.MatchesHostname(TargetHost)` → `RemoteCertificateNameMismatch`.
+3. Compute `SslPolicyErrors`: `chain.Build(cert)` → `RemoteCertificateChainErrors`, with the chain's
+   `DisableCertificateDownloads` set where the connect options' `AllowCertificateDownloads` is `false` (VpnHood's
+   client sets it so, as a certificate that someone on the way shows can name any address for a missing issuer, which
+   the device would fetch outside the tunnel); `cert.MatchesHostname(TargetHost)` → `RemoteCertificateNameMismatch`.
 4. Call the caller's `CertificateValidationCallback`, whose answer decides; the library pins nothing
    itself (VpnHood's client accepts `errors == None`, or its server's pinned hash). Return
    `QUIC_STATUS_SUCCESS` / `QUIC_STATUS_BAD_CERTIFICATE`.

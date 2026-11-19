@@ -174,8 +174,8 @@ internal class ServerFinder(
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: false), CancellationToken.None);
 
-        // throw specific exception for proxy server issues
-        if (proxyConnector is { IsEnabled: true, Status.IsAnySucceeded: false })
+        // no proxy worked, where a managed list with no endpoint has none to work
+        if (proxyConnector is { Status.IsAnySucceeded: false })
             throw new UnreachableProxyServerException();
 
         throw new UnreachableServerException();
@@ -217,8 +217,8 @@ internal class ServerFinder(
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: true), CancellationToken.None);
 
-        // throw specific exception for proxy server issues
-        if (proxyConnector is { IsEnabled: true, Status.IsAnySucceeded: false })
+        // no proxy worked, where a managed list with no endpoint has none to work
+        if (proxyConnector is { Status.IsAnySucceeded: false })
             throw new UnreachableProxyServerException();
 
         // throw unreachable server location exception

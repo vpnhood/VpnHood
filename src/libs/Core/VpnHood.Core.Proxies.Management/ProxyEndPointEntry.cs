@@ -15,6 +15,9 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
     /// <summary>Set when the status or enabled state changed since the last store flush.</summary>
     public bool IsDirty { get; set; }
 
+    // the resets of the statuses before its load: a success it took is dropped by any reset after it
+    public long StatusResetCount { get; init; }
+
     // whether it worked as a proxy at its last use: it connected, or it answered that the server could not be reached
     public bool IsLastUsedAnswered {
         get {
@@ -32,14 +35,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
         lock (_lock) {
             IsDirty = false;
             return new ProxyEndPointInfo {
-                EndPoint = new ProxyEndPoint {
-                    Protocol = EndPoint.Protocol,
-                    Host = EndPoint.Host,
-                    Port = EndPoint.Port,
-                    Username = EndPoint.Username,
-                    Password = EndPoint.Password,
-                    IsEnabled = EndPoint.IsEnabled
-                },
+                EndPoint = CopyEndPoint(),
                 Status = new ProxyEndPointStatus {
                     Penalty = Status.Penalty,
                     SucceededCount = Status.SucceededCount,
@@ -54,11 +50,39 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
         }
     }
 
-    // a success taken back, as one whose connection failed after its connect
+    // A copy of the endpoint as it is, with a status as a reset of the statuses leaves it, for a flush to write, which
+    // clears the flag: what a reset keeps, the enabled state, without the counts it cleared
+    public ProxyEndPointInfo TakeEnabledStateForReset()
+    {
+        lock (_lock) {
+            IsDirty = false;
+            return new ProxyEndPointInfo { EndPoint = CopyEndPoint(), Status = new ProxyEndPointStatus() };
+        }
+    }
+
+    // A copy of the endpoint as it is, with its enabled state
+    public ProxyEndPoint CopyEndPoint()
+    {
+        lock (_lock) {
+            return new ProxyEndPoint {
+                Protocol = EndPoint.Protocol,
+                Host = EndPoint.Host,
+                Port = EndPoint.Port,
+                Username = EndPoint.Username,
+                Password = EndPoint.Password,
+                IsEnabled = EndPoint.IsEnabled
+            };
+        }
+    }
+
+    // a success taken back, as one whose connection failed after its connect; none below zero, as a reset of the
+    // statuses since the connect took it already
     public void TakeBackSuccess()
     {
-        lock (_lock)
-            Status.SucceededCount--;
+        lock (_lock) {
+            if (Status.SucceededCount > 0)
+                Status.SucceededCount--;
+        }
     }
 
     public long GetSortValue(long currentRequestCount)

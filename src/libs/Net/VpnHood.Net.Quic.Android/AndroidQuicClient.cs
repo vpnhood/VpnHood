@@ -18,9 +18,10 @@ namespace VpnHood.Net.Quic.Android;
 /// MsQuic does the TLS handshake with its own OpenSSL and leaves the server's certificate to
 /// <see cref="QuicClientConnectOptions.CertificateValidationCallback"/>, whose answer decides. The callback gets the
 /// certificate, the chain built with the intermediates the server sent, and the errors found: a chain that does not
-/// build, or a name that does not match <see cref="QuicClientConnectOptions.TargetHost"/>. The client pins nothing
-/// itself. It applies <see cref="QuicClientConnectOptions.MaxInboundBidirectionalStreams"/> up to 65535, the most
-/// MsQuic takes.
+/// build, or a name that does not match <see cref="QuicClientConnectOptions.TargetHost"/>. The chain is built with no
+/// revocation check, and with downloads only where <see cref="QuicClientConnectOptions.AllowCertificateDownloads"/>
+/// lets them. The client pins nothing itself. It applies
+/// <see cref="QuicClientConnectOptions.MaxInboundBidirectionalStreams"/> up to 65535, the most MsQuic takes.
 /// </remarks>
 public sealed class AndroidQuicClient : IQuicClient
 {
@@ -102,8 +103,10 @@ public sealed class AndroidQuicClient : IQuicClient
 
             var state = new AndroidQuicConnectionState {
                 CertificateValidationCallback = options.CertificateValidationCallback,
-                TargetHost = options.TargetHost
+                TargetHost = options.TargetHost,
+                AllowCertificateDownloads = options.AllowCertificateDownloads
             };
+
             gch = GCHandle.Alloc(state);
 
             ThrowIfFailure(table->ConnectionOpen(registration,

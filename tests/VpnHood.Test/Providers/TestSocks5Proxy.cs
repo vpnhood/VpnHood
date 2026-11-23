@@ -1,18 +1,32 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 namespace VpnHood.Test.Providers;
 
-// A SOCKS5 proxy with no authentication that records the destination of each connection asked of it. It relays to this
-// machine alone, so a test of code that sends a check elsewhere reaches no one off it: a destination elsewhere goes to
-// the stand-in, a server of the test's that plays it, or, with none, gets a success, bytes that are no TLS, and a close
+// A SOCKS5 proxy, with no authentication unless given credentials, that records the destination of each connection
+// asked of it, and counts the connections it takes. It relays to this machine alone, so a test of code that sends a
+// check elsewhere reaches no one off it: a destination elsewhere goes to the stand-in, a server of the test's that plays
+// it, or, with none, gets a success, bytes that are no TLS, and a close
 public sealed class TestSocks5Proxy(IPEndPoint? standIn = null) : IDisposable
 {
     private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
     private readonly CancellationTokenSource _cts = new();
+    private int _connectionCount;
+    private int _bareCloseCount;
 
     public ConcurrentQueue<IPEndPoint> Destinations { get; } = new();
+
+    // the connections it took, a dial that asks nothing too
+    public int ConnectionCount => Volatile.Read(ref _connectionCount);
+
+    // the connections closed before they asked anything, as a dial alone is
+    public int BareCloseCount => Volatile.Read(ref _bareCloseCount);
+
+    // the user name and password it asks for, or null for no authentication
+    public string? Username { get; init; }
+    public string? Password { get; init; }
 
     // how long it takes to answer each request, as a proxy far away does
     public TimeSpan ConnectDelay { get; init; }
@@ -40,6 +54,7 @@ public sealed class TestSocks5Proxy(IPEndPoint? standIn = null) : IDisposable
                 return; // the proxy's close
             }
 
+            Interlocked.Increment(ref _connectionCount);
             _ = Serve(client, cancellationToken);
         }
     }
@@ -50,10 +65,21 @@ public sealed class TestSocks5Proxy(IPEndPoint? standIn = null) : IDisposable
         try {
             var stream = client.GetStream();
 
-            // the greeting: the version and the methods, answered with no authentication
-            var greeting = await ReadBytes(stream, 2, cancellationToken);
-            await ReadBytes(stream, greeting.Span[1], cancellationToken);
-            await stream.WriteAsync(new byte[] { 5, 0 }, cancellationToken);
+            // the greeting: the version and the methods, answered with no authentication, or with a user name and
+            // password where it asks for them, which a client that gives other ones is refused; a close before it is
+            // counted
+            var version = new byte[1];
+            if (await stream.ReadAsync(version, cancellationToken) == 0) {
+                Interlocked.Increment(ref _bareCloseCount);
+                return;
+            }
+
+            var methodCount = await ReadBytes(stream, 1, cancellationToken);
+            var methods = await ReadBytes(stream, methodCount.Span[0], cancellationToken);
+            if (Username is null)
+                await stream.WriteAsync(new byte[] { 5, 0 }, cancellationToken);
+            else if (!await Authenticate(stream, methods, cancellationToken))
+                return;
 
             // the request: the version, the command, a reserved byte, the address's type, the address and the port
             var request = await ReadBytes(stream, 4, cancellationToken);
@@ -97,6 +123,28 @@ public sealed class TestSocks5Proxy(IPEndPoint? standIn = null) : IDisposable
                                        ObjectDisposedException or EndOfStreamException) {
             // the client's close or the proxy's ends a connection; the test reads what it recorded
         }
+    }
+
+    // the username and password exchange of RFC 1929: its version, then each of the two after its length
+    private async Task<bool> Authenticate(Stream stream, ReadOnlyMemory<byte> methods,
+        CancellationToken cancellationToken)
+    {
+        if (!methods.Span.Contains((byte)2)) {
+            await stream.WriteAsync(new byte[] { 5, 0xFF }, cancellationToken);
+            return false;
+        }
+
+        await stream.WriteAsync(new byte[] { 5, 2 }, cancellationToken);
+        await ReadBytes(stream, 1, cancellationToken);
+        var usernameLength = await ReadBytes(stream, 1, cancellationToken);
+        var username = await ReadBytes(stream, usernameLength.Span[0], cancellationToken);
+        var passwordLength = await ReadBytes(stream, 1, cancellationToken);
+        var password = await ReadBytes(stream, passwordLength.Span[0], cancellationToken);
+        var isValid = Encoding.UTF8.GetString(username.Span) == Username &&
+                      Encoding.UTF8.GetString(password.Span) == (Password ?? "");
+
+        await stream.WriteAsync(new byte[] { 1, (byte)(isValid ? 0 : 1) }, cancellationToken);
+        return isValid;
     }
 
     private static async Task<ReadOnlyMemory<byte>> ReadBytes(Stream stream, int count,

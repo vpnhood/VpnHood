@@ -52,8 +52,19 @@ internal static class ProxyClientFactory
         CancellationToken cancellationToken)
     {
         var serverIp = await GetIpAddress(proxyEndPoint.Host, cancellationToken).Vhc();
-        var serverEp = new IPEndPoint(serverIp, proxyEndPoint.Port);
+        return CreateProxyClient(proxyEndPoint, new IPEndPoint(serverIp, proxyEndPoint.Port));
+    }
 
+    /// <summary>
+    /// Creates the client of a proxy endpoint's protocol, for an address of its host already resolved, and the endpoint's
+    /// credentials as it has them now.
+    /// </summary>
+    /// <param name="proxyEndPoint">The endpoint, whose host an HTTPS client names in its TLS handshake.</param>
+    /// <param name="serverEp">The address and port to dial.</param>
+    /// <returns>The client.</returns>
+    /// <exception cref="NotSupportedException">The endpoint's protocol is not one of <see cref="ProxyProtocol"/>'s.</exception>
+    public static IProxyClient CreateProxyClient(ProxyEndPoint proxyEndPoint, IPEndPoint serverEp)
+    {
         return proxyEndPoint.Protocol switch {
             ProxyProtocol.Socks5 => new Socks5ProxyClient(new Socks5ProxyClientOptions {
                 ProxyEndPoint = serverEp,

@@ -9,9 +9,8 @@ namespace VpnHood.AppHosting.Avalonia;
 // mixes the two and its commas float in the middle. Linux's fontconfig answers with Noto Sans CJK's
 // Japanese cut, so the shapes are Japanese; a system without the Simplified cut goes on as before.
 // Android finds its Simplified face from "zh", and a browser page has only the one the store sends it.
-// Apple finds PingFang SC, in regular for every weight; naming it would be worse, as the app's Light
-// text turns thin and bold turns Light too: its heaviest face is 600, and for a weight it lacks Avalonia
-// takes the nearest it has loaded. So only a desktop host calls this.
+// Apple finds PingFang SC, whose regular face Avalonia emboldens for bold text; naming it would turn the
+// app's Light text thin. So only a desktop host calls this.
 //
 // A fallback rather than "zh-Hans" as the culture: Avalonia keeps the first face it finds for a script,
 // and the language list has drawn Chinese by the time someone picks it, so a culture would take effect

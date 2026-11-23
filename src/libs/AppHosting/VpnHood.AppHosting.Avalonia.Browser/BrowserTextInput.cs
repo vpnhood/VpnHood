@@ -20,10 +20,8 @@ namespace VpnHood.AppHosting.Avalonia.Browser;
 // (NativeTextInput.IsPreferred), where the page cannot read the clipboard: plain http on a LAN address,
 // the paired phone's page. The browser draws what is typed in the phone's own fonts, where Avalonia has
 // only the faces the page ships, which leave a rare character a box; and it takes the phone's paste and
-// autofill, where Avalonia 12 cannot paste: its read throws on the missing API, and its fallback reads
-// the paste event's items after the browser has locked them (AvaloniaUI/Avalonia#22655); the fonts keep
-// it after that fix. The box keeps its frame, its focus and its Text; Enter, Tab and Escape reach it as
-// its own keys.
+// autofill, where on such a page Avalonia pastes only by a keyboard's Ctrl+V and a phone pastes from its
+// menu. The box keeps its frame, its focus and its Text; Enter, Tab and Escape reach it as its own keys.
 internal sealed class BrowserTextInput : NativeControlHost
 {
     private readonly TextBox _textBox;

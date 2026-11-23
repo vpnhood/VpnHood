@@ -2,9 +2,7 @@
 # serves, into the UI's own package: VpnHood.AppUi.Avalonia.Classic's
 # buildTransitive/web-root.zip, which its targets place beside each head as assets/web-root.zip. In CI
 # the publish_app workflow runs this once (build-browser) and hands the zip to every head build as an
-# artifact, and publish_nugets runs it before the pack. Runs under the .NET 10 SDK named by global.json
-# in this folder, with its wasm-tools workload: SkiaSharp's WebAssembly libraries are built for its
-# Emscripten, which .NET 11's cannot link.
+# artifact, and publish_nugets runs it before the pack. Needs the wasm-tools workload.
 $ErrorActionPreference = "Stop"
 Push-Location $PSScriptRoot
 try {
@@ -12,13 +10,13 @@ try {
     # hash of its content in its name, so a changed one lands beside its last version instead of
     # replacing it. The loader asks for the names its config holds and never sees the leftovers -
     # they would only ride along in the zip, a second copy of everything that changed.
-    $publishDir = Join-Path $PSScriptRoot "bin/Release/net10.0-browser/publish"
+    $publishDir = Join-Path $PSScriptRoot "bin/Release/net11.0-browser/publish"
     if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 
     dotnet publish VpnHood.AppUi.Avalonia.Classic.Browser.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw "The browser publish failed." }
 
-    $wwwroot = (Resolve-Path "bin/Release/net10.0-browser/publish/wwwroot").Path
+    $wwwroot = (Resolve-Path "bin/Release/net11.0-browser/publish/wwwroot").Path
     $zipPath = Join-Path $PSScriptRoot "../VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip"
     if (Test-Path $zipPath) { Remove-Item $zipPath }
 

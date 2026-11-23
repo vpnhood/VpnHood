@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<Description>VpnHood's own Avalonia UI: every page in one responsive layout - the views, the controls and the two products' themes - and the same UI compiled to WebAssembly, the page the app's web host serves to a paired phone</Description>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<!-- A view takes its view model in its constructor and is made in code, never by the runtime
@@ -14,8 +14,8 @@
 	     from a browser page. -->
 
 	<ItemGroup>
-		<PackageReference Include="Avalonia" Version="12.1.6" />
-		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+		<PackageReference Include="Avalonia" Version="12.2.0" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.2.0" />
 		<!-- The QR of the pairing address: Android has no encoder of its own and Core Image is Apple's
 		     alone, so one dependency-free .NET encoder serves every platform. -->
 		<PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
@@ -49,6 +49,6 @@
 	     has nothing to serve. -->
 	<Target Name="VhRequireWebRootZip" BeforeTargets="GenerateNuspec">
 		<Error Condition="!Exists('$(MSBuildProjectDirectory)\buildTransitive\web-root.zip')"
-		       Text="There is no buildTransitive\web-root.zip to pack. Run src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/_publish.ps1 first (the .NET 10 SDK with the wasm-tools workload)." />
+		       Text="There is no buildTransitive\web-root.zip to pack. Run src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/_publish.ps1 first (with the wasm-tools workload)." />
 	</Target>
 </Project>

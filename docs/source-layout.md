@@ -343,8 +343,8 @@ to WebAssembly - the same UI the head itself runs in process, drawn by a browser
 ```text
 VpnHood.AppUi.Avalonia.Classic/          the UI itself: pages, controls, themes
 VpnHood.AppHosting.Avalonia.Browser/               mounts ANY Avalonia UI as a page: AvaloniaBrowserHost.RunAsync<TUi>
-VpnHood.AppUi.Avalonia.Classic.Browser/  names which UI: a global.json, a csproj, a three-line Main
-        │  _publish.ps1, under the .NET 10 SDK
+VpnHood.AppUi.Avalonia.Classic.Browser/  names which UI: a csproj, a three-line Main
+        │  _publish.ps1, with the wasm-tools workload
         ▼
 VpnHood.AppUi.Avalonia.Classic/buildTransitive/web-root.zip   in the UI's own package
         │  buildTransitive/*.targets
@@ -362,14 +362,18 @@ Nothing of the app runs in the page. It dials the app's HTTP API at the origin i
 the browser's own cookie carrying the pairing, and fetches the UI's store by name from `/assets/` on
 that same server.
 
-**It must be built with the .NET 10 SDK**, which a `global.json` in the page project's folder pins,
-plus the `wasm-tools` workload. SkiaSharp's WebAssembly libraries are built for that SDK's
-Emscripten; .NET 11's cannot link them, and Avalonia 12 stays on that SkiaSharp. So the page and every
-library it references stay on `net10.0`, which the .NET 11 apps reference too; every other project is
-on .NET 11.
+**It needs the `wasm-tools` workload** to publish. Its Skia is not the heads': Avalonia's
+`net11.0-browser` build takes SkiaSharp 4, built for .NET 11's Emscripten, where every other platform
+stays on SkiaSharp 3.
 
-In CI the page is built **once**: the `build-browser` job in `publish_app.yml` runs on .NET 10,
-publishes it, and uploads it as the `browser-page` artifact, which all four platform build jobs
+**It runs over plain http.** A phone opens it at the app's LAN address, which a browser does not count
+as a secure context, so the page gets no `crypto.subtle`, and .NET 11's runtime will not start without
+one (dotnet/runtime#133695). `wwwroot/subtle-digest.js`, which `main.js` imports first, gives the
+runtime the one call it makes, SHA-256; a page of your own needs both files. `BrowserPageTest` in
+`tests/VpnHood.AppUi.SmokeTest` opens the page at a LAN address and fails unless it starts.
+
+In CI the page is built **once**: the `build-browser` job in `publish_app.yml` publishes it and
+uploads it as the `browser-page` artifact, which all four platform build jobs
 download before they build. They wait for `test-app-api-types` too, which calls every method of the
 app's API against a fake server: a type missing from `AppApiJsonContext` gives no warning when the
 page is published, and throws only when the page makes that call. `publish_nugets.yml` runs the same

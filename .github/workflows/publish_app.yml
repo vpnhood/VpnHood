@@ -110,10 +110,9 @@ jobs:
           echo "✅ release_type='$DECLARED' matches pub/PubVersion.json (v$VERSION, Prerelease=$PRERELEASE)."
 
   # The browser page every head embeds (assets/web-root.zip): built ONCE here and handed to every
-  # platform build as the `browser-page` artifact. Built under the .NET 10 SDK the page's own
-  # global.json names, with the wasm-tools workload - .NET 11's Emscripten cannot link
-  # SkiaSharp's WebAssembly libraries, and the iOS runner has only 11. A head build that finds no
-  # page warns and ships a web host with nothing to serve, so the platform builds `need` this job.
+  # platform build as the `browser-page` artifact - one AOT publish of several minutes, not four, and
+  # every head ships the same page. A head build that finds no page warns and ships a web host with
+  # nothing to serve, so the platform builds `need` this job.
   build-browser:
     needs: [verify-release-type]
     runs-on: ubuntu-latest
@@ -127,13 +126,17 @@ jobs:
       # other submodule, stays out.
       - name: Check out the asset submodule
         run: git -C code submodule update --init --depth 1 src/libs/AppUi/VpnHood.AppUi.Assets.Classic
-      - uses: actions/setup-dotnet@v6
-        with: { global-json-file: code/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic.Browser/global.json }
-      - name: Install .NET WebAssembly workload (for the SDK the page's global.json names)
+      # The SDK global.json names, by its version: setup-dotnet reads that file's rollForward
+      # latestMajor as the LTS channel and installs .NET 10 instead.
+      - name: Read the SDK version global.json names
+        id: sdk
         shell: pwsh
-        run: |
-          Set-Location "$env:GITHUB_WORKSPACE/$env:PAGE_DIR"
-          dotnet workload install wasm-tools
+        run: '"version=$((Get-Content code/global.json -Raw | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT'
+      - uses: actions/setup-dotnet@v6
+        with: { dotnet-version: "${{ steps.sdk.outputs.version }}" }
+      - name: Install .NET WebAssembly workload
+        working-directory: code
+        run: dotnet workload install wasm-tools
       - name: Publish the browser page
         shell: pwsh
         run: |

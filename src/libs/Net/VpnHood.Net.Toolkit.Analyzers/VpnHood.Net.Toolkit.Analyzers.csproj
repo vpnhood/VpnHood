@@ -8,9 +8,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- The newest Roslyn every compiler that loads these analyzers has: the .NET 10 SDK's 5.9 builds the browser
-		     page, and an analyzer built on a newer one is not loaded there (CS9057), so 5.12 waits for that SDK to go. -->
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
+		<!-- The newest Roslyn every compiler that loads these analyzers has (the .NET 11 SDK's, Visual Studio's and
+		     the C# extension's): an older compiler does not load an analyzer built on a newer one (CS9057). -->
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" PrivateAssets="all" />
 	</ItemGroup>
 
 </Project>

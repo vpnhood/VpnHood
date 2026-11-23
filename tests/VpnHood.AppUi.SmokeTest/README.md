@@ -55,6 +55,12 @@ catches a page which re-opens itself instead of moving on, which is a real defec
 At the end it reads the head's own log and fails if it holds `The UI caught an error`, which is
 what `MainView.ProcessError` writes whenever a page hands it an exception it did not expect.
 
+`BrowserPageTest` opens the page a paired phone gets where a phone gets it: the head's web host at
+its LAN address, over plain http, which a browser does not count as a secure context. It runs the
+Edge that comes with Windows, headless, and fails unless the page starts there. It needs the page
+published (`_publish.ps1` beside the page project) and the head built after it; without the page,
+or without a LAN address, it reports inconclusive.
+
 ## What it does not cover, and why
 
 - **Every connected screen**, which is statistics, the extend-session page and the connected home.

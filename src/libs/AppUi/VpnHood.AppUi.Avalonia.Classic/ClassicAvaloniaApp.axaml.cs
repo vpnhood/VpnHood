@@ -89,10 +89,9 @@ public class ClassicAvaloniaApp : VpnHoodAvaloniaAppBase, IAvaloniaUi
         // a screen reader hears a button by the words it shows, not by its content's type
         AutomationNames.Register();
 
-        // TODO Accessibility waits on Avalonia (12.1.3), with nothing worked around here. On Android,
-        // TalkBack hears no roles, stops on every part of a button and is silent while a TV remote
-        // moves the focus (AvaloniaUI/Avalonia #22617, #22616, #22615); making a button's parts Raw
-        // only moves their words into the button's own speech. Android and iOS have no live texts
+        // TODO Accessibility waits on Avalonia (12.2.0), with nothing worked around here. On Android,
+        // TalkBack stops on every part of a button (AvaloniaUI/Avalonia #22616); making a button's parts
+        // Raw only moves their words into the button's own speech. Android and iOS have no live texts
         // (LiveText). No platform's text size or reduce-motion setting is read, and the paired phone's
         // browser page shows a screen reader nothing. Once Avalonia has these, walk the app again with
         // TalkBack and with VoiceOver, which was never walked.

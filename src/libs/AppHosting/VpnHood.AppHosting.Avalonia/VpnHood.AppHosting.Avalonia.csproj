@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 		<Description>What mounts any Avalonia UI for the VpnHood app: the Application every host builds and the contract a UI fulfils. It knows the app through its API alone and the UI through that contract, so no UI's own code is in it. No theme, no layout, no control, no words</Description>
 	</PropertyGroup>
@@ -10,7 +10,7 @@
 	     word or draws a picture, so nothing here needs them. -->
 
 	<ItemGroup>
-		<PackageReference Include="Avalonia" Version="12.1.6" />
+		<PackageReference Include="Avalonia" Version="12.2.0" />
 	</ItemGroup>
 
 	<ItemGroup>

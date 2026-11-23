@@ -131,8 +131,7 @@ What follows from that:
 - **Shipped in the UI's own package**, not an asset package of its own: the page is that UI's code
   and calls the app's API, so every app that uses the UI has it, at the UI's version. The look, by
   contrast, is the head's choice.
-- **Built with the .NET 10 SDK**, pinned by a `global.json` in the page project's folder, with the
-  `wasm-tools` workload.
+- **Built with the `wasm-tools` workload**, under the .NET 11 SDK the repo's `global.json` names.
 - **Cache headers follow the bundle's own fingerprints.** `dotnet.native.<hash>.wasm` is immutable;
   `index.html`, `main.js` and `dotnet.js` are no-cache.
 - **Sent compressed.** The zip holds each file as the gzip twin the SDK writes beside it,
@@ -144,7 +143,7 @@ What follows from that:
   its progress bar's colour (`themes/<theme>/manifest.json`), which the host writes in; a page that
   fails shows the error there instead.
 
-The bundle is 7.5 MB zipped and 7.5 MB on the wire: 72 files, 20.8 MB unpacked.
+The bundle is 15.4 MB zipped and 15.4 MB on the wire: 73 files, 50.8 MB unpacked.
 
 ## Adding a set of files
 
@@ -181,9 +180,10 @@ build, working app, wrong result.
    targets directly.
 5. **Never give two packages the same folder.** A `ZipAssetProvider` owns its extraction folder and
    deletes everything in it that is not the version in hand.
-6. **Never build the browser page with .NET 11.** Its Emscripten cannot link SkiaSharp's
-   WebAssembly libraries, and the 11 SDK skips the native relink for a `net10` target saying only
-   "Publishing without optimizations". The result is a bundle with no Skia in it that does not draw.
+6. **Never publish the browser page under an SDK newer than its target framework.** The .NET 11 SDK
+   published the `net10.0-browser` page without its native relink, saying only "Publishing without
+   optimizations", and the result was a bundle with no Skia in it that did not draw. The page's
+   target moves with the SDK.
 7. **Never build a second provider over a zip another one already owns.** It extracts the same bytes
    a second time into a second folder.
 8. **Never ship the words as `.resx`.** Satellite assemblies are assemblies, so they land back in

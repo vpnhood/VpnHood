@@ -29,4 +29,4 @@ dotnet add package VpnHood.Net.Toolkit
 
 - `VpnHood.Net.Toolkit` — this toolkit; it references no other VpnHood package
 
-Requires .NET 10.
+Requires .NET 11.

@@ -20,8 +20,4 @@
 		<JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
 		<ILLinkTreatWarningsAsErrors>true</ILLinkTreatWarningsAsErrors>
 	</PropertyGroup>
-
-	<!-- Published under the .NET 10 SDK, named by a global.json in the page project's folder: SkiaSharp's
-	     WebAssembly libraries are built for its Emscripten (3.1.56), which .NET 11's (6.x)
-	     cannot link. A plain build works under either; only the publish relinks. -->
 </Project>

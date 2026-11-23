@@ -228,10 +228,10 @@ workflows call.
 ### Build environment, speed, and the publishing gate
 
 - **Windows runner + workloads.** The packable suite spans `net11.0`, `net11.0-android`,
-  `net11.0-windows` (incl. the WPF library `VpnHood.AppHosting.WebView.Windows`) and `net11.0-ios`,
-  with the browser page's libraries on `net10.0`. Only a Windows host can build the Windows/WPF
-  projects, so `publish_nugets.yml` runs on `windows-latest`, installs the `android`+`ios` workloads,
-  and installs the .NET 11 SDK `global.json` names and the .NET 10 one the page's own names.
+  `net11.0-windows` (incl. the WPF library `VpnHood.AppHosting.WebView.Windows`) and `net11.0-ios`.
+  Only a Windows host can build the Windows/WPF projects, so `publish_nugets.yml` runs on
+  `windows-latest`, installs the .NET 11 SDK `global.json` names, and the `android`, `ios`, `tvos`,
+  `maui` and `wasm-tools` workloads (the last for the browser page the classic UI's package carries).
 - **One parallel pack pass.** The orchestrator writes a throwaway solution (`_nuget_pack.slnx` at the
   repo root — git-ignored, removed in a `finally`) containing exactly the discovered packable
   projects, then runs a single `dotnet pack` on it: MSBuild builds shared dependencies once and packs

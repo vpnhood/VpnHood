@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
         <Description>General-purpose .NET helpers, used across VpnHood and usable in any project: IP networks and ranges, collections, streams, JSON converters, API clients, jobs and trackers.</Description>
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>

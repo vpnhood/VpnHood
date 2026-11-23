@@ -66,6 +66,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- A network whose ads the app shows has its sellers' lines in vpnhood.com/app-ads.txt, which buyers read at the
+		     root of the website the store listing names: a network added here without them loses the buyers who check. -->
 		<ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.Ads.AdMob.Android\VpnHood.AppLogic.Ads.AdMob.Android.csproj" />
 		<ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.Stores.GooglePlay.Core\VpnHood.AppLogic.Stores.GooglePlay.Core.csproj" />
 		<ProjectReference Include="..\..\..\libs\AppLogic\VpnHood.AppLogic.Stores.GooglePlay\VpnHood.AppLogic.Stores.GooglePlay.csproj" />

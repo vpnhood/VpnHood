@@ -14,39 +14,33 @@ internal static class TcpSniExtractor
     /// <param name="tcpPayload">The TCP payload data.</param>
     /// <param name="state">State from previous call, or null for first packet.</param>
     /// <param name="nowTicks">Current time in ticks.</param>
-    /// <returns>Extraction result with SNI, need-more, or not-found status.</returns>
+    /// <returns>Extraction result with SNI, need-more, not-found or incomplete status.</returns>
     public static PacketSniResult TryExtractSniFromTcpPayload(
         ReadOnlySpan<byte> tcpPayload,
         object? state = null,
         long nowTicks = 0)
     {
-        if (nowTicks == 0) 
+        if (nowTicks == 0)
             nowTicks = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
 
-        var tcpState = state as TcpSniState;
+        // the state of a ClientHello begun, or a new one: bytes that begin none are found out below, at once
+        var tcpState = state as TcpSniState ?? new TcpSniState {
+            PacketBudget = 3,
+            DeadlineTicks = nowTicks + TimeoutTicks300Ms,
+            MaxBytes = 16 * 1024
+        };
 
-        // First packet - check if it looks like TLS ClientHello
-        if (tcpState == null) {
-            if (!LooksLikeClientHello(tcpPayload))
-                return PacketSniResult.NotFound;
-
-            tcpState = new TcpSniState {
-                PacketBudget = 3,
-                DeadlineTicks = nowTicks + TimeoutTicks300Ms,
-                MaxBytes = 16 * 1024
-            };
-        }
-
-        // Check budget/timeout
+        // Check budget/timeout. A ClientHello begun and given up is incomplete, which fails its flow closed, as a QUIC
+        // one's does: given up as not found, it passed with its name unread
         if (tcpState.PacketBudget <= 0 || nowTicks > tcpState.DeadlineTicks)
-            return PacketSniResult.NotFound;
+            return PacketSniResult.Incomplete;
 
         tcpState.PacketBudget--;
 
         // Append new data to buffer
         var totalLength = tcpState.BufferLength + tcpPayload.Length;
         if (totalLength > tcpState.MaxBytes)
-            return PacketSniResult.NotFound; // Too much data
+            return PacketSniResult.Incomplete; // Too much data
 
         if (totalLength > tcpState.Buffer.Length) {
             var newBuffer = new byte[Math.Min(totalLength * 2, tcpState.MaxBytes)];
@@ -58,50 +52,24 @@ internal static class TcpSniExtractor
         tcpPayload.CopyTo(tcpState.Buffer.AsSpan(tcpState.BufferLength));
         tcpState.BufferLength = totalLength;
 
-        // Try to parse SNI from accumulated data
+        // The name, once all the records that hold the ClientHello are in, as the stream's reader has it
+        // (StreamSniExtractor): bytes that begin no ClientHello have none, and one not well formed is incomplete
         var bufferSpan = tcpState.Buffer.AsSpan(0, tcpState.BufferLength);
-        var sni = TlsClientHelloParser.ExtractSni(bufferSpan, hasRecordHeader: true);
-        
-        if (sni != null)
-            return PacketSniResult.Found(sni);
+        var recordsLength = TlsClientHelloParser.GetRecordsLength(bufferSpan);
+        if (recordsLength == TlsClientHelloParser.NeverComplete)
+            return PacketSniResult.Incomplete;
 
-        // Check if we have enough data to determine there's no SNI
-        if (HasCompleteClientHello(bufferSpan))
-            return PacketSniResult.NotFound;
+        if (bufferSpan.Length >= recordsLength) {
+            if (!TlsClientHelloParser.TryGetServerNameFromRecords(bufferSpan, out var serverName))
+                return PacketSniResult.Incomplete;
+
+            return serverName != null ? PacketSniResult.Found(serverName) : PacketSniResult.NotFound;
+        }
 
         // Need more data
         if (tcpState.PacketBudget <= 0 || nowTicks > tcpState.DeadlineTicks)
-            return PacketSniResult.NotFound;
+            return PacketSniResult.Incomplete;
 
         return PacketSniResult.Pending(tcpState);
-    }
-
-    private static bool LooksLikeClientHello(ReadOnlySpan<byte> data)
-    {
-        // Minimum TLS record: ContentType(1) + Version(2) + Length(2) + Handshake header(4)
-        if (data.Length < 9)
-            return false;
-
-        // Check TLS Handshake record type
-        if (data[0] != 0x16)
-            return false;
-
-        // Check handshake message type is ClientHello
-        if (data[5] != 0x01)
-            return false;
-
-        return true;
-    }
-
-    private static bool HasCompleteClientHello(ReadOnlySpan<byte> data)
-    {
-        if (data.Length < 5)
-            return false;
-
-        // Get TLS record length
-        var recordLength = (data[3] << 8) | data[4];
-        var totalExpected = 5 + recordLength;
-
-        return data.Length >= totalExpected;
     }
 }

@@ -540,15 +540,6 @@ internal class Session : IDisposable
         return udpSendSequenceNumber is { } sequenceNumber && UdpChannel?.HasReceivedFrom(sequenceNumber) == true;
     }
 
-    internal Task ProcessUdpPacketRequest(UdpPacketRequest request, IStreamConnection streamConnection,
-        CancellationToken cancellationToken)
-    {
-        _ = request;
-        _ = streamConnection;
-        _ = cancellationToken;
-        throw new NotImplementedException();
-    }
-
     internal async Task ProcessSessionStatusRequest(SessionStatusRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
@@ -745,7 +736,7 @@ internal class Session : IDisposable
             session.VerifyNetScan(protocolType, remoteEndPoint, "OnNewRemoteEndPoint");
         }
 
-        public void OnConnectionEstablished(IpProtocol protocolType, IpEndPointValue localEndPoint,
+        public void OnConnectionEstablished(IpProtocol protocolType, IpEndPointValue? localEndPoint,
             IpEndPointValue remoteEndPoint,
             bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {

@@ -16,6 +16,7 @@ internal sealed class AndroidQuicConnectionState
 
     public required RemoteCertificateValidationCallback CertificateValidationCallback { get; init; }
     public required string TargetHost { get; init; }
+    public required bool AllowCertificateDownloads { get; init; }
 
     public void CloseInboundStreams()
     {

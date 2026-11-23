@@ -3,147 +3,216 @@ using System.Text;
 namespace VpnHood.Core.Filtering.DomainFiltering.SniExtractors;
 
 /// <summary>
-/// Shared TLS ClientHello parser for extracting SNI from TLS handshake data.
-/// Used by both TCP (TLS) and QUIC (which uses TLS 1.3 internally) SNI extractors.
+/// Reads the server name (SNI) of a TLS ClientHello, for every reader: a TCP stream's and a TCP packet's, which have
+/// it in TLS records, and QUIC's, which has the handshake message alone.
 /// </summary>
+/// <remarks>
+/// A reader gives it a whole ClientHello, and it tells one that names no server from one that is not well formed,
+/// whose name is not known: the first passes as a connection with no name, the second must not. It refuses nothing a
+/// TLS server accepts: each of its checks is one the protocol makes a server do.
+/// </remarks>
 internal static class TlsClientHelloParser
 {
+    /// <summary>The length that tells a ClientHello no more bytes can complete.</summary>
+    public const int NeverComplete = -1;
+
+    private const int RecordHeaderLength = 5;
+    private const int HandshakeHeaderLength = 4;
+    private const byte HandshakeRecordType = 0x16;
+    private const byte ClientHelloType = 0x01;
+
     /// <summary>
-    /// Extracts SNI from a TLS ClientHello message.
+    /// Gets how many bytes of a stream to have before its name is looked for: all the TLS records that hold its
+    /// ClientHello, as far as the bytes read tell, or the bytes there already when they begin no ClientHello.
     /// </summary>
-    /// <param name="data">The TLS record data (with or without record header).</param>
-    /// <param name="hasRecordHeader">True if data includes TLS record header (TCP), false for raw handshake (QUIC).</param>
-    /// <returns>The SNI domain name if found, null otherwise.</returns>
-    public static string? ExtractSni(ReadOnlySpan<byte> data, bool hasRecordHeader = true)
+    /// <returns>
+    /// The length, which is more than the data's while the ClientHello is not complete; <see cref="NeverComplete"/>
+    /// for a ClientHello that no more bytes can complete.
+    /// </returns>
+    public static int GetRecordsLength(ReadOnlySpan<byte> data)
     {
-        if (data.Length == 0)
-            return null;
+        if (!IsClientHelloStart(data))
+            return data.Length;
 
-        var p = 0;
+        // The records until their fragments hold the whole handshake, whose length its own header gives: the first
+        // four bytes of the fragments, which a first record shorter than that leaves to the next
+        var position = 0;
+        var collected = 0;
+        var handshakeHeader = 0;
+        var handshakeHeaderCount = 0;
+        while (true) {
+            if (data.Length < position + RecordHeaderLength)
+                return position + RecordHeaderLength;
 
-        if (hasRecordHeader) {
-            // TLS Record Layer: ContentType (1) + Version (2) + Length (2)
-            if (data.Length < 5)
-                return null;
+            // A record of another type inside a ClientHello not yet complete: TLS allows none there, and the name may
+            // be in a handshake record after it
+            if (data[position] != HandshakeRecordType)
+                return NeverComplete;
 
-            // Check if it's a TLS Handshake record (0x16)
-            if (data[0] != 0x16)
-                return null;
+            var recordLength = (data[position + 3] << 8) | data[position + 4];
+            var fragmentStart = position + RecordHeaderLength;
+            var recordEnd = fragmentStart + recordLength;
+            if (data.Length < recordEnd)
+                return recordEnd;
 
-            // Skip record header to get to handshake message
-            p = 5;
+            // the header's first byte is the handshake's type, the other three its length
+            for (var i = fragmentStart; i < recordEnd && handshakeHeaderCount < HandshakeHeaderLength; i++) {
+                handshakeHeader = (handshakeHeader << 8) | data[i];
+                handshakeHeaderCount++;
+            }
+
+            collected += recordLength;
+            if (handshakeHeaderCount == HandshakeHeaderLength &&
+                collected >= HandshakeHeaderLength + (handshakeHeader & 0xFFFFFF))
+                return recordEnd;
+
+            position = recordEnd;
         }
-
-        // Handshake message: Type (1) + Length (3)
-        if (p + 4 > data.Length)
-            return null;
-
-        // Check if it's a ClientHello (0x01)
-        if (data[p] != 0x01)
-            return null;
-
-        // Read handshake message length
-        var handshakeLen = (data[p + 1] << 16) | (data[p + 2] << 8) | data[p + 3];
-        p += 4;
-
-        // Calculate handshake end position
-        var handshakeEnd = p + handshakeLen;
-        if (handshakeEnd > data.Length)
-            handshakeEnd = data.Length; // Partial data, try to parse what we have
-
-        // ClientHello body:
-        // - Version (2)
-        // - Random (32)
-        // - Session ID length (1) + Session ID (variable)
-        // - Cipher Suites length (2) + Cipher Suites (variable)
-        // - Compression Methods length (1) + Compression Methods (variable)
-        // - Extensions length (2) + Extensions (variable)
-
-        // Skip Version (2) + Random (32) = 34 bytes
-        p += 34;
-        if (p >= handshakeEnd)
-            return null;
-
-        // Skip Session ID
-        if (p + 1 > handshakeEnd)
-            return null;
-        var sessionIdLen = data[p++];
-        p += sessionIdLen;
-        if (p > handshakeEnd)
-            return null;
-
-        // Skip Cipher Suites
-        if (p + 2 > handshakeEnd)
-            return null;
-        var cipherSuitesLen = (data[p] << 8) | data[p + 1];
-        p += 2 + cipherSuitesLen;
-        if (p > handshakeEnd)
-            return null;
-
-        // Skip Compression Methods
-        if (p + 1 > handshakeEnd)
-            return null;
-        var compressionLen = data[p++];
-        p += compressionLen;
-        if (p > handshakeEnd)
-            return null;
-
-        // Extensions
-        if (p + 2 > handshakeEnd)
-            return null;
-        var extensionsLen = (data[p] << 8) | data[p + 1];
-        p += 2;
-
-        var extensionsEnd = p + extensionsLen;
-        if (extensionsEnd > handshakeEnd)
-            extensionsEnd = handshakeEnd;
-
-        // Parse extensions to find SNI (type 0x0000)
-        while (p + 4 <= extensionsEnd) {
-            var extType = (data[p] << 8) | data[p + 1];
-            var extLen = (data[p + 2] << 8) | data[p + 3];
-            p += 4;
-
-            if (p + extLen > extensionsEnd)
-                return null;
-
-            if (extType == 0x0000) // Server Name Indication
-                return ParseSniExtension(data.Slice(p, extLen));
-
-            p += extLen;
-        }
-
-        return null;
     }
 
-    private static string? ParseSniExtension(ReadOnlySpan<byte> extData)
+    /// <summary>
+    /// Reads the server name from the TLS records that hold a whole ClientHello, as
+    /// <see cref="GetRecordsLength"/> measured them.
+    /// </summary>
+    /// <returns>
+    /// <see langword="false"/> if the records begin a ClientHello that is not well formed, whose name is not known;
+    /// otherwise <see langword="true"/>, with the name, or <see langword="null"/> where the ClientHello names no
+    /// server or the bytes begin none.
+    /// </returns>
+    public static bool TryGetServerNameFromRecords(ReadOnlySpan<byte> records, out string? serverName)
     {
-        if (extData.Length < 2)
-            return null;
+        serverName = null;
+        if (!IsClientHelloStart(records))
+            return true;
 
-        // Server Name List length
-        var listLen = (extData[0] << 8) | extData[1];
-        var p = 2;
-
-        if (p + listLen > extData.Length)
-            listLen = extData.Length - p;
-
-        var listEnd = p + listLen;
-
-        while (p + 3 <= listEnd) {
-            var nameType = extData[p++];
-            var nameLen = (extData[p] << 8) | extData[p + 1];
-            p += 2;
-
-            if (p + nameLen > listEnd)
-                return null;
-
-            if (nameType == 0) // host_name
-                return Encoding.ASCII.GetString(extData.Slice(p, nameLen));
-
-            p += nameLen;
+        // one record that holds the whole ClientHello, as nearly every one does: read where it is
+        if (records.Length >= RecordHeaderLength + HandshakeHeaderLength) {
+            var firstRecordLength = (records[3] << 8) | records[4];
+            var messageLength = HandshakeHeaderLength + ((records[6] << 16) | (records[7] << 8) | records[8]);
+            if (messageLength <= firstRecordLength && records.Length >= RecordHeaderLength + firstRecordLength)
+                return TryGetServerName(records.Slice(RecordHeaderLength, messageLength), out serverName);
         }
 
-        return null;
+        // the handshake's bytes, from the fragments of the handshake records that hold it
+        var handshake = new byte[records.Length];
+        var handshakeLength = 0;
+        var position = 0;
+        while (records.Length >= position + RecordHeaderLength && records[position] == HandshakeRecordType) {
+            var recordLength = (records[position + 3] << 8) | records[position + 4];
+            var fragmentStart = position + RecordHeaderLength;
+            var fragment = records.Slice(fragmentStart, Math.Min(recordLength, records.Length - fragmentStart));
+            fragment.CopyTo(handshake.AsSpan(handshakeLength));
+            handshakeLength += fragment.Length;
+            position = fragmentStart + recordLength;
+        }
+
+        return TryGetServerName(handshake.AsSpan(0, handshakeLength), out serverName);
+    }
+
+    /// <summary>
+    /// Reads the server name from a whole ClientHello: the handshake message, its four-byte header first.
+    /// </summary>
+    /// <returns>
+    /// <see langword="false"/> if the bytes are no well-formed ClientHello, whose name is then not known; otherwise
+    /// <see langword="true"/>, with the name, or <see langword="null"/> where the ClientHello names no server.
+    /// </returns>
+    public static bool TryGetServerName(ReadOnlySpan<byte> handshake, out string? serverName)
+    {
+        serverName = null;
+
+        // the handshake's header: its type, then its length in three bytes
+        if (handshake.Length < HandshakeHeaderLength || handshake[0] != ClientHelloType)
+            return false;
+
+        var length = (handshake[1] << 16) | (handshake[2] << 8) | handshake[3];
+        if (handshake.Length - HandshakeHeaderLength < length)
+            return false;
+
+        // the version (2) and the random (32), then the session ID, the cipher suites and the compression methods
+        var body = handshake.Slice(HandshakeHeaderLength, length);
+        var position = 34;
+        if (body.Length < position ||
+            !TryReadVector(body, ref position, lengthSize: 1, out _) ||
+            !TryReadVector(body, ref position, lengthSize: 2, out _) ||
+            !TryReadVector(body, ref position, lengthSize: 1, out _))
+            return false;
+
+        // a ClientHello with no extensions ends here, as an old client's does
+        if (position == body.Length)
+            return true;
+
+        // the extensions, which end the ClientHello
+        if (!TryReadVector(body, ref position, lengthSize: 2, out var extensions) || position != body.Length)
+            return false;
+
+        position = 0;
+        while (position < extensions.Length) {
+            if (extensions.Length - position < 2)
+                return false;
+
+            var extensionType = (extensions[position] << 8) | extensions[position + 1];
+            position += 2;
+            if (!TryReadVector(extensions, ref position, lengthSize: 2, out var extension))
+                return false;
+
+            if (extensionType == 0x0000) // server_name
+                return TryGetHostName(extension, out serverName);
+        }
+
+        return true;
+    }
+
+    // the first host name of a server_name extension's list
+    private static bool TryGetHostName(ReadOnlySpan<byte> extension, out string? hostName)
+    {
+        hostName = null;
+        var position = 0;
+        if (!TryReadVector(extension, ref position, lengthSize: 2, out var names) || position != extension.Length)
+            return false;
+
+        position = 0;
+        while (position < names.Length) {
+            var nameType = names[position++];
+            if (!TryReadVector(names, ref position, lengthSize: 2, out var name))
+                return false;
+
+            if (nameType != 0) // host_name
+                continue;
+
+            if (name.Length > 0)
+                hostName = Encoding.ASCII.GetString(name);
+
+            return true;
+        }
+
+        return true;
+    }
+
+    // a vector of TLS: its length, in one or two bytes, then that many bytes
+    private static bool TryReadVector(ReadOnlySpan<byte> data, ref int position, int lengthSize,
+        out ReadOnlySpan<byte> vector)
+    {
+        vector = default;
+        if (data.Length - position < lengthSize)
+            return false;
+
+        var length = lengthSize == 1 ? data[position] : (data[position] << 8) | data[position + 1];
+        position += lengthSize;
+        if (data.Length - position < length)
+            return false;
+
+        vector = data.Slice(position, length);
+        position += length;
+        return true;
+    }
+
+    // Whether the bytes, as far as they go, are the start of a TLS handshake record that holds a ClientHello: type
+    // 0x16, version 3.x, then the handshake's type 0x01. Strict, as a reader waits for the rest of what it finds
+    private static bool IsClientHelloStart(ReadOnlySpan<byte> data)
+    {
+        return data.Length > 0 && data[0] == HandshakeRecordType &&
+               (data.Length < 2 || data[1] == 0x03) &&
+               (data.Length < 3 || data[2] <= 0x04) &&
+               (data.Length < 6 || data[5] == ClientHelloType);
     }
 }

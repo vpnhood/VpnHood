@@ -270,18 +270,25 @@ internal static class ClientHelper
     }
 
     // throws where the client and the server share no way for TCP; warns where the server overrides the TCP forwarding switch
-    public static void ValidateTcpSupport(HelloResponse helloResponse, VpnHoodClientConfig config)
+    public static void ValidateTcpSupport(HelloResponse helloResponse, bool useTcpForwarding)
     {
         if (helloResponse is { IsTcpPacketIpV4Supported: false, IsTcpForwardingSupported: false })
             throw new NotSupportedException(
                 "The server does not support any protocol to support TCP. Please contact support.");
 
-        if (!helloResponse.IsTcpPacketIpV4Supported && !config.UseTcpForwarding)
+        if (!helloResponse.IsTcpPacketIpV4Supported && !useTcpForwarding)
             VhLogger.Instance.LogWarning("TCP forwarding turned on because the server does not support TCP packets.");
 
-        if (!helloResponse.IsTcpForwardingSupported && config.UseTcpForwarding)
+        if (!helloResponse.IsTcpForwardingSupported && useTcpForwarding)
             VhLogger.Instance.LogWarning("TCP forwarding turned off because the server does not support it.");
     }
+
+    // The server's Cloak Mode. Compatibility (2026-11): an older server does not say; one that takes no TCP as packets at
+    // all is read as in it, as its Cloak Mode and an adapter that carries no TCP look the same there, and the client's
+    // drops applied to both before; drop once the servers before IsTcpForwardingRequired are gone
+    public static bool IsTcpForwardingRequired(HelloResponse helloResponse) =>
+        helloResponse.IsTcpForwardingRequired ??
+        helloResponse is { IsTcpPacketIpV4Supported: false, IsTcpPacketIpV6Supported: false };
 
     // The largest packet the tunnel carries both ways, which the adapter takes as its MTU. Never above what the server
     // carries: an adapter above it gets full-size TCP segments sent that the server drops, as the apps send TCP as

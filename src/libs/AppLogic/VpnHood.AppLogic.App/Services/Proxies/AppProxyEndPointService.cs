@@ -43,11 +43,9 @@ public class AppProxyEndPointService(
     private Task<IProxyEndPointStore>? _storeTask;
     private readonly HostCountryResolver? _hostCountryResolver = ipLocationProvider != null ? new HostCountryResolver(ipLocationProvider) : null;
     private bool _pendingResetStates;
-    private bool? _hasCustomEndPointsCache;
-    private DateTime _hasCustomEndPointsCacheTime = DateTime.MinValue;
-    private static readonly TimeSpan HasCustomEndPointsCacheTimeout = TimeSpan.FromSeconds(10);
     private AppProxySettings ProxySettings => settingsService.UserSettings.ProxySettings;
 
+    // Manual: the person's list, whatever it holds, as the connect goes through it or not at all
     internal bool IsProxyEndPointActive {
         get {
             return ProxySettings.Mode switch {
@@ -55,30 +53,9 @@ public class AppProxyEndPointService(
                 AppProxyMode.Device =>
                     deviceUiProvider.IsProxySettingsSupported &&
                     deviceUiProvider.GetProxySettings() != null,
-                // this state property cannot await; serve the last-known value and refresh it
-                // in the background. Mutations refresh the cache themselves, so it is only ever
-                // stale when the core process changes the db (url auto-update)
-                _ => HasCustomEndPointsCached()
+                _ => true
             };
         }
-    }
-
-    private bool HasCustomEndPointsCached()
-    {
-        if (_hasCustomEndPointsCache is null ||
-            FastDateTime.UtcNow - _hasCustomEndPointsCacheTime > HasCustomEndPointsCacheTimeout)
-            _ = VhInvoker.TryInvokeAsync("refresh whether custom proxy endpoints exist", LogLevel.Warning,
-                () => RefreshHasCustomEndPoints(CancellationToken.None));
-
-        return _hasCustomEndPointsCache ?? false;
-    }
-
-    private async Task<bool> RefreshHasCustomEndPoints(CancellationToken cancellationToken)
-    {
-        var store = await GetStore(cancellationToken).Vhc();
-        _hasCustomEndPointsCache = await store.Count(cancellationToken).Vhc() > 0;
-        _hasCustomEndPointsCacheTime = FastDateTime.UtcNow;
-        return _hasCustomEndPointsCache.Value;
     }
 
     private CoreProxy.ProxyEndPoint? GetDeviceProxyEndPoint()
@@ -169,7 +146,6 @@ public class AppProxyEndPointService(
         await store.Upsert([new ProxyEndPointRecord { EndPoint = endPoint }], keepExistingStatus: true,
             keepExistingEnabled: false, cancellationToken).Vhc();
         await UpdateCopy(store, [endPoint.Id], cancellationToken).Vhc();
-        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
 
         return await Get(endPoint.Id, cancellationToken).Vhc();
@@ -204,7 +180,6 @@ public class AppProxyEndPointService(
         var store = await GetStore(cancellationToken).Vhc();
         await store.Delete([proxyEndPointId], cancellationToken).Vhc();
         await UpdateCopy(store, [], cancellationToken).Vhc();
-        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
     }
 
@@ -213,7 +188,6 @@ public class AppProxyEndPointService(
         var store = await GetStore(cancellationToken).Vhc();
         await store.DeleteAll(options ?? new DeleteAllOptions(), cancellationToken).Vhc();
         await UpdateCopy(store, [], cancellationToken).Vhc();
-        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
     }
 
@@ -231,7 +205,6 @@ public class AppProxyEndPointService(
         var store = await GetStore(cancellationToken).Vhc();
         var newProxyEndPoints = await Merge(store, content, cancellationToken).Vhc();
         await UpdateCopy(store, newProxyEndPoints.Select(x => x.Id).ToArray(), cancellationToken).Vhc();
-        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
     }
 
@@ -243,7 +216,6 @@ public class AppProxyEndPointService(
         var content = await httpClient.GetStringAsync(ProxySettings.AutoUpdateOptions.Url, cancellationToken).Vhc();
         var store = await GetStore(cancellationToken).Vhc();
         await Merge(store, content, cancellationToken).Vhc();
-        await RefreshHasCustomEndPoints(cancellationToken).Vhc();
         settingsService.Save(); // fire changes
     }
 
@@ -298,17 +270,18 @@ public class AppProxyEndPointService(
         var resetStates = _pendingResetStates;
         _pendingResetStates = false;
 
-        // this decides Managed vs None for a real connection, so read fresh from the store.
-        // an auto-update url counts even with an empty store; the core downloads the initial list
-        var hasCustomEndPoints = ProxySettings.Mode is AppProxyMode.Manual &&
-                                 (await RefreshHasCustomEndPoints(cancellationToken).Vhc() ||
-                                  ProxySettings.AutoUpdateOptions.Url != null);
-
+        // The person's list whatever it holds: an empty one waits in the core for its first download from the URL, or
+        // fails with no proxy reached, and never goes straight to the server once the person's proxies are on
         var mode = ProxySettings.Mode switch {
             AppProxyMode.Device => ProxyMode.Simple,
-            AppProxyMode.Manual when hasCustomEndPoints => ProxyMode.Managed,
+            AppProxyMode.Manual => ProxyMode.Managed,
             _ => ProxyMode.None
         };
+
+        // the store opened before the core reads it: its open brings back the proxies the person added where the
+        // platform emptied it, as tvOS does while the app is closed
+        if (mode is ProxyMode.Managed)
+            await GetStore(cancellationToken).Vhc();
 
         // the device proxy travels inline; it never enters the shared store
         var singleProxyEndPoint = mode is ProxyMode.Simple ? GetDeviceProxyEndPoint() : null;
@@ -325,20 +298,32 @@ public class AppProxyEndPointService(
 
     private Task<IProxyEndPointStore> GetStore(CancellationToken cancellationToken)
     {
-        lock (_storeLock)
-            _storeTask ??= OpenStore();
+        Task<IProxyEndPointStore> storeTask;
+        lock (_storeLock) {
+            // a failed open is not kept: the next caller opens again, once the other process's lock is gone
+            if (_storeTask is { IsFaulted: true } or { IsCanceled: true })
+                _storeTask = null;
 
-        return _storeTask.WaitAsync(cancellationToken);
+            storeTask = _storeTask ??= OpenStore();
+        }
+
+        return storeTask.WaitAsync(cancellationToken);
     }
 
     // one open for every caller, so no caller's token ends it
     private async Task<IProxyEndPointStore> OpenStore()
     {
         var store = new ProxyEndPointStore(dbPath);
-        if (endPointCopy != null)
-            await RestoreCopy(store, endPointCopy, CancellationToken.None).Vhc();
+        try {
+            if (endPointCopy != null)
+                await RestoreCopy(store, endPointCopy, CancellationToken.None).Vhc();
 
-        return store;
+            return store;
+        }
+        catch {
+            store.Dispose();
+            throw;
+        }
     }
 
     // An empty db beside a copy is one the platform deleted while the app was closed: the proxies the

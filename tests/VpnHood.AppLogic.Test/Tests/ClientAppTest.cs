@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 using VpnHood.AppLogic.Api.App;
 using VpnHood.AppLogic.Api.Exceptions;
 using VpnHood.AppLogic.App;
@@ -9,6 +10,7 @@ using VpnHood.AppLogic.Api.WebHost.Helpers;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test;
 using VpnHood.Test.Device;
@@ -339,6 +341,47 @@ public class ClientAppTest : TestAppBase
         Assert.AreEqual(token2.ServerToken.CreatedTime,
             app.VpnProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
+    }
+
+    // Anyone on the way could answer a plain http update link, and the secret that encrypts the update is in every copy of
+    // the key: the app asks only https links and those to the device itself
+    [TestMethod]
+    public async Task An_update_link_over_plain_http_to_another_host_is_not_asked()
+    {
+        // the link on the machine's own LAN address: plain http that is not loopback, counting the asks
+        var lanAddresses = await IPAddressUtil.GetLanAddresses(AddressFamily.InterNetwork);
+        if (lanAddresses.Count == 0)
+            Assert.Inconclusive("This machine has no LAN address.");
+
+        var endPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(lanAddresses[0]);
+        var tokenAsks = 0;
+        using var webServer = new WebserverLite(new WebserverSettings(endPoint.Address.ToString(), endPoint.Port),
+            x => x.SendPlainText("", 404));
+
+        webServer
+            .AddRouteMapper(allowAnyOrigin: true)
+            .AddStatic(HttpMethod.GET, "/accesskey", async ctx => {
+                Interlocked.Increment(ref tokenAsks);
+                await ctx.SendPlainText("something_wrong");
+            });
+
+        _ = webServer.StartAsync(TestContext.CancellationToken);
+
+        // a key whose server is gone, so the connect fails and the app turns to the key's update links
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.ServerTokenUrls = [$"http://{endPoint}/accesskey"];
+        using var accessManager = await TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var token = await TestHelper.CreateAccessToken(server);
+        // ReSharper disable once DisposeOnUsingVariable
+        await server.DisposeAsync();
+
+        await using var app = TestAppHelper.CreateClientApp();
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await Assert.ThrowsAsync<Exception>(() =>
+            app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestContext.CancellationToken));
+
+        Assert.AreEqual(0, tokenAsks);
     }
 
     // The person's no at the OS's VPN prompt ends the connect: the retry with a token from the server's

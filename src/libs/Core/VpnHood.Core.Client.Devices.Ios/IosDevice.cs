@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NetworkExtension;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Ios.Extensions;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.Abstractions;
@@ -137,8 +138,6 @@ public class IosDevice : IDevice
     /// <remarks>Not known here: <see langword="null"/>.</remarks>
     public DeviceMemInfo? MemInfo => null;
 
-    internal static bool IsVpnServiceProcess => true; // iOS always runs in the VPN service process.
-
     // as Safari says it, which names no model: "(iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15
     // (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1", an iPad "iPad; CPU OS 18_0 like Mac OS X";
     // an Apple TV, which has no Safari, as its own media player says it: "Apple TV; CPU OS 18_0 like Mac OS X"
@@ -186,9 +185,10 @@ public class IosDevice : IDevice
 
     /// <inheritdoc/>
     /// <remarks>
-    /// It stops a tunnel iOS still runs, waiting up to 4 seconds for its end, saves the VPN configuration, which points
-    /// the extension at the service's folders, and starts the tunnel, saving the configuration again and retrying once
-    /// where the start fails. It returns once iOS reports the tunnel connecting, or after 2 seconds.
+    /// It stops a tunnel iOS still runs, waiting up to 4 seconds for its end, as for one iOS still tears down, and logs
+    /// one still up then; saves the VPN configuration, which points the extension at the service's folders, and starts
+    /// the tunnel, saving the configuration again and retrying once where the start fails. It returns once iOS reports
+    /// the tunnel connecting, or after 2 seconds.
     /// </remarks>
     /// <exception cref="Foundation.NSErrorException">iOS could not save the VPN configuration or start the tunnel.</exception>
     public async Task StartVpnService(CancellationToken cancellationToken)
@@ -208,24 +208,39 @@ public class IosDevice : IDevice
             initialStatus = NEVpnStatus.Invalid;
         }
 
-        if (initialStatus is NEVpnStatus.Connected or NEVpnStatus.Connecting or NEVpnStatus.Reasserting) {
-            try { _vpnManager.Connection.StopVpnTunnel(); }
-            catch { /* ignore */ }
-            // Wait up to 4s for it to actually disconnect
-            for (var i = 0; i < 8; i++) {
-                await Task.Delay(500, cancellationToken).Vhc();
-                var s = _vpnManager.Connection.Status;
-                if (s is NEVpnStatus.Disconnected or NEVpnStatus.Invalid) 
-                    break;
+        // a tunnel iOS still runs is stopped, and one it still tears down is waited for too, as the new start would
+        // meet it
+        if (initialStatus is NEVpnStatus.Connected or NEVpnStatus.Connecting or NEVpnStatus.Reasserting
+            or NEVpnStatus.Disconnecting) {
+            if (initialStatus is not NEVpnStatus.Disconnecting) {
+                try {
+                    _vpnManager.Connection.StopVpnTunnel();
+                }
+                catch (Exception ex) {
+                    VhLogger.Instance.LogWarning(ex, "Could not stop the last VPN tunnel.");
+                }
             }
+
+            // Wait up to 4s for it to actually disconnect
+            var status = initialStatus;
+            for (var i = 0; i < 8 && status is not (NEVpnStatus.Disconnected or NEVpnStatus.Invalid); i++) {
+                await Task.Delay(500, cancellationToken).Vhc();
+                status = _vpnManager.Connection.Status;
+            }
+
+            if (status is not (NEVpnStatus.Disconnected or NEVpnStatus.Invalid))
+                VhLogger.Instance.LogWarning(
+                    "The last VPN tunnel did not stop in 4 seconds; the start goes on. Status: {Status}", status);
         }
 
-        // ---- Delete stale vpn.status ----
+        // ---- Delete stale vpn.status: one left would read as the new start's state ----
         try {
-            var statusPath = Path.Combine(VpnServiceConfigFolder, "vpn.status");
+            var statusPath = Path.Combine(VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
             if (File.Exists(statusPath)) File.Delete(statusPath);
         }
-        catch { /* ignore */ }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Could not delete the last start's status file.");
+        }
 
         // ---- Build new protocol ----
         var providerProtocol = new NETunnelProviderProtocol();

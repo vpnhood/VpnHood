@@ -369,6 +369,51 @@ public class FileAccessManagerTest : TestBase
         return accessManager.SessionService.Sessions[sessionId].LastUsedTime;
     }
 
+    // The usage of a key told none of the key's traffic in all, so the app showed a session's traffic as all the key had
+    // used; and the client of a new session counted none, as it was not in yet. It tells the key's traffic and counts
+    // the client. The key's end is the session's start's to tell, not the session's own end, which ends a session as
+    // its own time's
+    [TestMethod]
+    public async Task A_sessions_usage_tells_the_keys_traffic_and_counts_its_client()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        var accessManager = await FileAccessManager.Create(storagePath, TestHelper.CreateFileAccessManagerOptions(),
+            TestCt);
+
+        var expirationTime = DateTime.UtcNow.AddDays(1);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, expirationTime: expirationTime);
+        var token = accessManager.GetToken(accessToken);
+
+        var created = await accessManager.Session_Create(CreateSessionRequestEx(token), TestCt);
+        Assert.AreEqual(SessionErrorCode.Ok, created.ErrorCode, created.ErrorMessage);
+        Assert.AreEqual(expirationTime, created.AccessInfo?.ExpirationTime);
+        Assert.IsNull(created.AccessUsage?.ExpirationTime, "A session with no end of its own ended at the key's.");
+        Assert.AreEqual(1, created.AccessUsage?.ActiveClientCount);
+
+        var used = await accessManager.Session_AddUsage(created.SessionId, new Traffic { Sent = 20, Received = 10 },
+            null, TestCt);
+
+        Assert.AreEqual(30, used.AccessUsage?.TotalTraffic.Total);
+    }
+
+    // Opens of a key at once each counted the key's live sessions without the others, so all passed a limit of one
+    // client and stayed live together until a later check. The opens of a key take their turns
+    [TestMethod]
+    public async Task Opens_of_a_key_at_once_keep_to_its_client_limit()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        using var accessManager = await TestHelper.CreateAccessManager(storagePath: storagePath);
+        var token = await accessManager.CreateToken(TestCt, maxClientCount: 1);
+        var sessionRequests = Enumerable.Range(0, 32).Select(_ => CreateSessionRequestEx(token)).ToArray();
+
+        var responses = await Task.WhenAll(sessionRequests.Select(sessionRequest =>
+            Task.Run(() => accessManager.Session_Create(sessionRequest, TestCt), TestCt)));
+
+        Assert.IsTrue(responses.All(x => x.ErrorCode == SessionErrorCode.Ok));
+        Assert.AreEqual(1, accessManager.SessionService.Sessions.Values.Count(x => x.IsAlive && x.TokenId == token.TokenId),
+            "More live clients than the key allows.");
+    }
+
     public SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
     {
         clientId ??= Guid.NewGuid().ToString();

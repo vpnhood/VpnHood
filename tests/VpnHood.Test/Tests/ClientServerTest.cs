@@ -201,6 +201,48 @@ public class ClientServerTest : TestBase
         Assert.IsTrue(helloResponse.IsUdpPacketSupported);
     }
 
+    // An older server does not say whether its settings require TCP forwarding: one that takes no TCP as packets at all
+    // is read as in Cloak Mode, as the drops took it before, so a client updated first keeps the user's drops there; one
+    // that takes either IP version's is not
+    [TestMethod]
+    [DataRow(false, false, true)]
+    [DataRow(true, true, false)]
+    [DataRow(true, false, false)]
+    [DataRow(false, true, false)]
+    public void An_older_servers_Cloak_Mode_is_read_from_its_TCP_packets(bool isTcpPacketIpV4Supported,
+        bool isTcpPacketIpV6Supported, bool isRequired)
+    {
+        var helloJson = JsonSerializer.SerializeToNode(new HelloResponse {
+                            ErrorCode = SessionErrorCode.Ok,
+                            IsTcpPacketIpV4Supported = isTcpPacketIpV4Supported,
+                            IsTcpPacketIpV6Supported = isTcpPacketIpV6Supported
+                        })?.AsObject()
+                        ?? throw new InvalidOperationException("The hello has no JSON object.");
+
+        helloJson.Remove(nameof(HelloResponse.IsTcpForwardingRequired));
+
+        var helloResponse = JsonUtils.Deserialize<HelloResponse>(helloJson.ToJsonString());
+        Assert.IsNull(helloResponse.IsTcpForwardingRequired);
+        Assert.AreEqual(isRequired, ClientHelper.IsTcpForwardingRequired(helloResponse));
+
+        // a server that says is taken at its word, whatever its adapter carries
+        helloResponse.IsTcpForwardingRequired = false;
+        Assert.IsFalse(ClientHelper.IsTcpForwardingRequired(helloResponse));
+    }
+
+    // a drop of all UDP drops QUIC too, which the status says
+    [TestMethod]
+    public async Task A_drop_of_all_UDP_shows_as_a_drop_of_QUIC()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var clientOptions = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
+        clientOptions.DropUdp = true;
+        await using var client = await TestHelper.CreateClient(clientOptions);
+
+        Assert.IsFalse(((ClientSession)client.RequiredSession).PacketHandler.DropQuic);
+        Assert.IsTrue(client.RequiredSession.Status.IsDropQuic);
+    }
+
 
     [TestMethod]
     public async Task MaxPacketChannels()
@@ -531,6 +573,30 @@ public class ClientServerTest : TestBase
             connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
         Assert.AreEqual(ClientState.Disposed, client.State);
         Assert.IsNull(client.LastException);
+    }
+
+    [TestMethod]
+    public async Task A_connects_ad_that_can_show_over_the_VPN_waits_for_the_adapter_and_loads_through_the_tunnel()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+        var options = TestHelper.CreateClientOptions(accessManager.GetToken(accessToken));
+        options.CanShowAdOverVpn = true;
+        await using var client = await TestHelper.CreateClient(options, autoConnect: false);
+        var connectTask = client.Connect(TestCt);
+        await client.WaitForState(ClientState.WaitingForAd, TestCt);
+
+        // the VPN is up before the ad, whose traffic goes through the tunnel: the ad came before the adapter
+        Assert.IsTrue(client.RequiredSession.Status.IsAdapterStarted);
+        await TestHelper.Test_Https();
+        Assert.IsGreaterThan(0, client.RequiredSession.Status.StreamTunnelledCount);
+        Assert.AreEqual(0, client.RequiredSession.Status.StreamPassthruCount);
+
+        // the ad's outcome ends the connect
+        ((ClientSession)client.RequiredSession).AdHandler.SetAdOk();
+        await connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(ClientState.Connected, client.State);
     }
 
     [TestMethod]
@@ -1019,6 +1085,46 @@ public class ClientServerTest : TestBase
         Assert.IsFalse(client.RequiredSession.Status.IsTcpForwarding);
     }
 
+    // DropQuic and DropUdp apply where TCP forwarding is chosen, by the user or by the server's Cloak Mode, and then to
+    // both IP versions. Forwarding the client takes on by itself, for a server adapter that carries no IPv6 TCP packets or
+    // for the domain rules, applies neither, nor does TCP as packets: the drops followed whatever turned IPv4's on. The
+    // packets that meet the flags are ClientUdpDropTest's
+    [TestMethod]
+    [DataRow("user", true)]
+    [DataRow("cloak mode", true)]
+    [DataRow("no IPv6 TCP packets", false)]
+    [DataRow("domain rules", false)]
+    [DataRow("packets", false)]
+    public async Task QUIC_and_UDP_drop_only_where_TCP_forwarding_is_chosen(string tcpBy, bool isDropped)
+    {
+        using var vpnAdapter = new TestUdpServerVpnAdapter { IsNatIpV6Supported = tcpBy != "no IPv6 TCP packets" };
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.AllowTcpPacket = tcpBy != "cloak mode";
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
+
+        var token = await TestHelper.CreateAccessToken(server);
+        var clientOptions = TestHelper.CreateClientOptions(token, useTcpForwarding: tcpBy == "user");
+        clientOptions.DropQuic = true;
+        clientOptions.DropUdp = true;
+        var netFilter = new NetFilter {
+            IpFilter = TestHelper.ClientNetFilter.IpFilter,
+            DomainFilter = new StaticDomainFilter(null) {
+                Blocks = tcpBy == "domain rules" ? ["a-name-nobody-asks-for.example"] : []
+            },
+            IpMapper = TestHelper.ClientNetFilter.IpMapper
+        };
+
+        await using var client = await TestHelper.CreateClient(clientOptions, netFilter: netFilter);
+
+        // the server's QUIC and UDP are on, so only the setting asks for the drops
+        Assert.IsTrue(client.RequiredSession.Info.IsQuicPacketSupported);
+        Assert.IsTrue(client.RequiredSession.Info.IsUdpPacketSupported);
+        var packetHandler = ((ClientSession)client.RequiredSession).PacketHandler;
+        Assert.AreEqual(isDropped, packetHandler.DropQuic);
+        Assert.AreEqual(isDropped, packetHandler.DropUdp);
+        Assert.AreEqual(isDropped, client.RequiredSession.Status.IsDropQuic);
+    }
+
     [TestMethod]
     public async Task Server_without_tcp_packets_turns_tcp_forwarding_on()
     {
@@ -1085,6 +1191,76 @@ public class ClientServerTest : TestBase
         // and no forwarding once no rule is left
         domainFilter.Blocks = [];
         Assert.IsFalse(client.RequiredSession.Status.IsTcpForwarding);
+    }
+
+    // A domain rule reads a TCP connection's name only where the client forwards it: on a server that forwards no TCP,
+    // the rules miss every TCP connection, and the log says so
+    [TestMethod]
+    public async Task Domain_rules_on_a_server_that_forwards_no_tcp_log_a_warning()
+    {
+        // a server that carries TCP as packets alone
+        var logCapture = TestLogCapture.Instance; // before the client logs
+        using var vpnAdapter = new TestUdpServerVpnAdapter();
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.AllowTcpForwarding = false;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
+        var netFilter = new NetFilter {
+            IpFilter = TestHelper.ClientNetFilter.IpFilter,
+            DomainFilter = new StaticDomainFilter(null) { Blocks = [TestHelper.WebServer.MockEps.HttpsUrl1.Host] },
+            IpMapper = TestHelper.ClientNetFilter.IpMapper
+        };
+
+        await using var client = await TestHelper.CreateClient(
+            TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server)), netFilter: netFilter);
+
+        await client.WaitForState(ClientState.Connected, TestCt);
+        // a line of this session alone: the access managers of the tests count their sessions from 1 alike
+        var sessionLine = $"SessionId: {VhLogger.FormatSessionId(client.RequiredSession.Config.SessionId)}, " +
+                          $"HostEndPoint: {VhLogger.Format(client.RequiredSession.Config.HostTcpEndPoint)}";
+
+        Assert.IsTrue(logCapture.GetWarnings().Any(x =>
+            x.StartsWith("The domain rules cannot read TCP connections", StringComparison.Ordinal) &&
+            x.EndsWith(sessionLine, StringComparison.Ordinal)));
+    }
+
+    // The same warning by the rules themselves, once each time one comes: names are read with no rule where ForceLogSni
+    // asks, which is no rule missing
+    [TestMethod]
+    public async Task Domain_rules_coming_while_connected_warn_once_each_time()
+    {
+        var logCapture = TestLogCapture.Instance; // before the client logs
+        using var vpnAdapter = new TestUdpServerVpnAdapter();
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.AllowTcpForwarding = false;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions, vpnAdapter: vpnAdapter);
+        var domainFilter = new StaticDomainFilter(null);
+        var netFilter = new NetFilter {
+            IpFilter = TestHelper.ClientNetFilter.IpFilter,
+            DomainFilter = domainFilter,
+            IpMapper = TestHelper.ClientNetFilter.IpMapper
+        };
+
+        var clientOptions = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
+        clientOptions.ForceLogSni = true;
+        await using var client = await TestHelper.CreateClient(clientOptions, netFilter: netFilter);
+        await client.WaitForState(ClientState.Connected, TestCt);
+        // a line of this session alone: the access managers of the tests count their sessions from 1 alike
+        var sessionLine = $"SessionId: {VhLogger.FormatSessionId(client.RequiredSession.Config.SessionId)}, " +
+                          $"HostEndPoint: {VhLogger.Format(client.RequiredSession.Config.HostTcpEndPoint)}";
+
+        Assert.AreEqual(0, CountWarnings());
+
+        domainFilter.Blocks = [TestHelper.WebServer.MockEps.HttpsUrl1.Host];
+        Assert.AreEqual(1, CountWarnings());
+
+        domainFilter.Blocks = [];
+        domainFilter.Blocks = [TestHelper.WebServer.MockEps.HttpsUrl1.Host];
+        Assert.AreEqual(2, CountWarnings());
+        return;
+
+        int CountWarnings() => logCapture.GetWarnings().Count(x =>
+            x.StartsWith("The domain rules cannot read TCP connections", StringComparison.Ordinal) &&
+            x.EndsWith(sessionLine, StringComparison.Ordinal));
     }
 
     [TestMethod]

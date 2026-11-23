@@ -128,6 +128,7 @@ internal sealed class AndroidQuicConnection : IQuicConnection
             using var cert = X509CertificateLoader.LoadCertificate(der);
             using var chain = new X509Chain();
             chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+            chain.ChainPolicy.DisableCertificateDownloads = !state.AllowCertificateDownloads;
 
             // Add the intermediate certs msquic provides (portable Chain buffer, usually a PKCS#7 bundle)
             // so the chain can actually be built — otherwise it always reports RemoteCertificateChainErrors.

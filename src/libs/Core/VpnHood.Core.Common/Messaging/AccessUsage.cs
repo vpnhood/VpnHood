@@ -30,8 +30,8 @@ public class AccessUsage
     public Traffic CycleTraffic { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the access's traffic in all; zero where the access manager does not report it, as the file access
-    /// manager does not.
+    /// Gets or sets the access's traffic in all; zero where the access manager does not report it. The file access
+    /// manager, which has no cycles, reports the same as <see cref="CycleTraffic"/>.
     /// </summary>
     public Traffic TotalTraffic { get; set; } = new();
 
@@ -44,7 +44,7 @@ public class AccessUsage
     /// <summary>
     /// Gets or sets when the session expires, in UTC, or <see langword="null"/> where the access manager reports no
     /// time. MANAGER gives the sooner of the session's end and its access's; the file access manager gives the
-    /// session's alone.
+    /// session's alone, as the access's end is in the session's <see cref="AccessInfo"/>.
     /// </summary>
     public DateTime? ExpirationTime { get; set; }
 

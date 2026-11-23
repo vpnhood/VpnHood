@@ -14,7 +14,10 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
 3. A stop's cancellation goes in its own catch that rethrows, ahead of the catch-all, not in a
    `when` filter: it reads more easily.
 4. A member is required when every platform has it. A setting with a natural default is a plain type
-   set to that default, not a nullable one.
+   set to that default, not a nullable one. Avoid `[SetsRequiredMembers]`: it ends the compiler's check
+   of the required members for that constructor's callers, so one added later goes unset in silence. A
+   constructor that takes another object's values takes the optional ones, and its caller gives the
+   required ones in the object initializer, as `VpnAdapterSettings` does.
 5. Migration code is marked `[Obsolete("Migration (YYYY-MM): drop a few months after it ships, with
    <what goes with it>")]`, so each call is marked too, by its `#pragma warning disable CS0618`. A
    migration method's name says so (`MigrateInstallId`) unless its class's does (`AppStorageMigration`).

@@ -122,9 +122,9 @@ public class CommandListener(string commandFilePath) : IDisposable
         CommandReceived?.Invoke(this, new CommandReceivedEventArgs(args));
     }
 
-    /// <summary>Stops watching the command file.</summary>
+    /// <summary>Stops watching the command file, as <see cref="Stop"/> does.</summary>
     public void Dispose()
     {
-        _fileSystemWatcher?.Dispose();
+        Stop();
     }
 }

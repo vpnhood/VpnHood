@@ -109,7 +109,7 @@ factories the app hands it in `ClientOptions`, each made again from its type and
 | --- | --- | --- |
 | `session_start` | the tracker is made, with the switch on: each connect | — |
 | `vh_endpoint_status` | a server endpoint is found reachable or not, with endpoint tracking on | the endpoint, its host name, IPv6 or not, reachable or not |
-| `vh_connect_attempt` | the connect succeeds, or fails with endpoint tracking on | the server location, connected or not, IPv6 support, redirected or not, the endpoint |
+| `vh_connect_attempt` | the connect succeeds, or fails with endpoint tracking on | the server location, connected or not, IPv6 support, redirected or not; the endpoint with endpoint tracking on |
 | `vh_usage` | every 25 minutes while connected ([`ClientUsageTracker`](../../src/libs/Core/VpnHood.Core.Client/ClientUsageTracker.cs)) | traffic total, sent and received in MB; request and connection counts |
 
 Endpoint tracking is `AppOptions.AllowEndPointTracker`. It is off by default, and runs only while
@@ -192,7 +192,7 @@ UI of one's own shows its first-run page while that state is set and saves the b
 | The app's events | [`AppTrackerService`](../../src/libs/AppLogic/VpnHood.AppLogic.App/Services/Trackers/AppTrackerService.cs), which sets the tracker's `IsEnabled` at each settings save |
 | The VPN service's `vh_usage` | its tracker, made with the switch, and set in a running session by the reconfigure the app sends on every change |
 | A VPN service started without the app, from its saved options (always-on, the quick-settings tile, the system restarting it) | the switch in those options ([`VpnServiceOptionsFile`](../../src/libs/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnServiceOptionsFile.cs)), saved at each connect and at each settings change, connected or not |
-| A successful `vh_connect_attempt`, and the access manager's `session_start` | `VpnHoodClientConfig.AllowAnonymousTracker` |
+| A successful `vh_connect_attempt`, and the access manager's `session_start` | `VpnHoodClientConfig.AllowAnonymousTracker`; the event's endpoint, endpoint tracking too |
 | What the access manager reports by itself | the same, in the hello, from the next connect |
 | `vh_endpoint_status`, and a failed `vh_connect_attempt` | endpoint tracking, which runs only with the switch on |
 | Analytics in a UI of one's own | that UI itself |

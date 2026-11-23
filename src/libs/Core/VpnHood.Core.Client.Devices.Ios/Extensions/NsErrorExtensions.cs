@@ -2,7 +2,7 @@ namespace VpnHood.Core.Client.Devices.Ios.Extensions;
 
 /// <summary>
 /// Provides the reading of a native <c>NSError</c>: its description, whether it is a cancel, and the managed exception
-/// it becomes; the iOS counterpart of <c>AndroidUtils.JavaExceptionToApiException</c>.
+/// it becomes.
 /// </summary>
 /// <remarks>
 /// An error may carry more detail — an underlying framework code, a server message — in its userInfo or its
@@ -39,8 +39,10 @@ public static class NsErrorExtensions
                 parts.Add($"[{current.Domain} {current.Code}] {current.LocalizedDescription}");
 
                 // UserInfo is declared non-nullable by the binding but is null for errors built
-                // without one.
-                var userInfo = current.UserInfo;
+                // without one, which then end the chain: the error's own line is kept
+                if (current.UserInfo is not { } userInfo)
+                    break;
+
                 foreach (var key in userInfo.Keys) {
                     var name = key.ToString();
                     if (name != UnderlyingErrorKey)

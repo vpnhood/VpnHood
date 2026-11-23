@@ -174,8 +174,8 @@ internal class ServerFinder(
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: false), CancellationToken.None);
 
-        // throw specific exception for proxy server issues
-        if (proxyConnector is { IsEnabled: true, Status.IsAnySucceeded: false })
+        // no proxy worked, where a managed list with no endpoint has none to work
+        if (proxyConnector is { Status.IsAnySucceeded: false })
             throw new UnreachableProxyServerException();
 
         throw new UnreachableServerException();
@@ -217,8 +217,8 @@ internal class ServerFinder(
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: true), CancellationToken.None);
 
-        // throw specific exception for proxy server issues
-        if (proxyConnector is { IsEnabled: true, Status.IsAnySucceeded: false })
+        // no proxy worked, where a managed list with no endpoint has none to work
+        if (proxyConnector is { Status.IsAnySucceeded: false })
             throw new UnreachableProxyServerException();
 
         // throw unreachable server location exception
@@ -409,9 +409,10 @@ internal class ServerFinder(
                 ? true
                 : throw new SessionException(errorCode);
         }
-        catch (UnauthorizedAccessException) {
+        catch (RequestAuthorizationException) {
             // ServerCheck returns 401 even for a valid proof; it establishes reachability only.
             // If a saved server refuses the hello, the client's close clears it for the next connect.
+            // A proxy's refusal of its credentials, an UnauthorizedAccessException too, is no answer of the server.
             return true;
         }
         catch (OperationCanceledException ex) {

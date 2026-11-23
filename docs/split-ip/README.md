@@ -113,8 +113,22 @@ immutable; what changes is which files are current:
    verdict outlives the gates that produced it. Nobody re-toggles SNI extraction either: the client
    re-derives it from its own pipe (`IDomainFilter.IsEmpty`) on every `Changed`, so rules appearing
    or vanishing switch extraction on and off with no outside caller.
-4. Flows already decided keep their verdict (open connections, the QUIC flow cache until its
-   timeout); new lookups see the new rules.
+4. While a domain rule is on, a changed rule, IP or domain, ends the open TCP connections, and one
+   still being set up is not joined to its host or to the tunnel, so the apps' new ones follow the new
+   rules (`ClientSession`): a TCP connection is then decided once, when its name is read, and its
+   packets meet no gate after, but for IPv6 that the server or the device's own network does not carry
+   ([split-domain.md](split-domain.md)). The change that takes the last domain rule away ends them
+   too, as does the one that brings the first. With no domain rule on, before the change and after it,
+   nothing is ended: each TCP packet is asked of the IP gates, so a new block stops a connection
+   there, and one that the client already carries as a stream stays on the side of the tunnel it was
+   opened on. A QUIC flow keeps its verdict until it has gone unused for two minutes, so a changed
+   domain rule reaches its open connections only then; a new connection on it has its name read by
+   the new rules, which decide its first packets, and its verdict then joins the flow's
+   ([split-domain.md](split-domain.md)). A flow that no domain entry named is asked of the IP gates at
+   each packet, so a changed IP rule reaches it at once. New lookups see the new rules. A reconfigure
+   that changes no rule ends nothing: a split stage whose databases are the same swaps nothing, and
+   the client's modes, which every reconfigure sets again, announce a change only when their value
+   changes.
 
 Triggers: any UserSettings save (country mode/selection, via-app and domain toggles), the split text-file
 settings (`SplitIpViaAppSettings.Set` / `SplitDomainSettings.Set` / `SplitIpViaDeviceSettings.Set` raise

@@ -146,8 +146,9 @@ public class ProxyEndPointParserTests
             new Uri("http://139.59.1.14:80/"),
             ProxyEndPointParser.ExtractFromText("139.59.1.14 80 IN India anonymous no no 13 secs ago"));
 
+        // an HTTP proxy, as lists mean an IP address on 443
         Assert.AreEqual(
-            new Uri("https://139.59.1.14:443/"),
+            new Uri("http://139.59.1.14:443/"),
             ProxyEndPointParser.ExtractFromText("139.59.1.14 443 IN India anonymous no no 13 secs ago"));
 
         Assert.AreEqual(
@@ -189,6 +190,215 @@ public class ProxyEndPointParserTests
         
         // SVG path data should not be matched as proxy
         Assert.IsNull(ProxyEndPointParser.ExtractFromText("M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"), "SVG path data");
+    }
+
+    [TestMethod]
+    public void A_disabled_endpoints_URL_reads_back_disabled()
+    {
+        // the URL said nothing of it, which the reader takes for enabled
+        var endPoint = new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "proxy.example", Port = 1080, IsEnabled = false };
+        Assert.IsFalse(ProxyEndPointParser.FromUrl(endPoint.Url).IsEnabled);
+
+        endPoint.IsEnabled = true;
+        Assert.IsTrue(ProxyEndPointParser.FromUrl(endPoint.Url).IsEnabled);
+    }
+
+    [TestMethod]
+    public void The_last_use_of_an_endpoint_that_never_failed_is_its_last_success()
+    {
+        // it was null while there was no failure, whatever the successes
+        var lastSucceeded = DateTime.UtcNow;
+        Assert.AreEqual(lastSucceeded, new ProxyEndPointStatus { LastSucceeded = lastSucceeded }.LastUsed);
+        Assert.AreEqual(lastSucceeded, new ProxySessionStatus { LastSucceeded = lastSucceeded }.LastUsed);
+
+        var lastFailed = lastSucceeded.AddMinutes(1);
+        Assert.AreEqual(lastFailed, new ProxyEndPointStatus { LastSucceeded = lastSucceeded, LastFailed = lastFailed }.LastUsed);
+        Assert.IsNull(new ProxyEndPointStatus().LastUsed);
+    }
+
+    [TestMethod]
+    public void A_success_and_a_failure_at_the_same_moment_count_as_a_failure()
+    {
+        // it was in neither group
+        var time = DateTime.UtcNow;
+        var status = new ProxyEndPointStatus { SucceededCount = 1, FailedCount = 1, LastSucceeded = time, LastFailed = time };
+        Assert.IsTrue(status.IsLastUsedFailed);
+        Assert.IsFalse(status.IsLastUsedSucceeded);
+    }
+
+    [TestMethod]
+    public void A_downloaded_endpoint_equal_to_a_stored_one_is_kept_once()
+    {
+        // two objects of one endpoint were kept twice, and pushed a stored endpoint out of the limit: stored ones never
+        // used come after the new ones
+        var stored = new[] {
+            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 0),
+            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 0)
+        };
+
+        var downloaded = new[] { new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "proxy1.com", Port = 1080 } };
+
+        var merged = ProxyEndPointUpdater.Merge(stored, downloaded, maxItemCount: 2, maxPenalty: null);
+        CollectionAssert.AreEquivalent(stored.Select(x => x.EndPoint.Id).ToArray(), merged.Select(x => x.Id).ToArray());
+    }
+
+    // An HTTPS entry the old check turned off stays off, and the list's next update brings its address back as an HTTP
+    // proxy, a row of its own, as a list's bare IP address on 443 now reads
+    [TestMethod]
+    public void A_turned_off_HTTPS_entry_stays_off_beside_the_HTTP_one_its_list_now_gives()
+    {
+        var stored = new[] {
+            new ProxyEndPointInfo {
+                EndPoint = new ProxyEndPoint {
+                    Protocol = ProxyProtocol.Https, Host = "1.2.3.4", Port = 443, IsEnabled = false
+                },
+                Status = new ProxyEndPointStatus { ErrorMessage = "Verification of TLS connection failed." }
+            }
+        };
+
+        var downloaded = ProxyEndPointParser.ExtractFromContent("1.2.3.4:443")
+            .Select(ProxyEndPointParser.FromUrl)
+            .ToArray();
+
+        var merged = ProxyEndPointUpdater.Merge(stored, downloaded, maxItemCount: 10, maxPenalty: null);
+
+        Assert.HasCount(2, merged);
+        Assert.IsFalse(merged.Single(x => x.Protocol == ProxyProtocol.Https).IsEnabled);
+        Assert.IsTrue(merged.Single(x => x.Protocol == ProxyProtocol.Http).IsEnabled);
+    }
+
+    [TestMethod]
+    public void A_list_of_addresses_and_ports_parted_by_spaces_is_read()
+    {
+        // the text was cut at spaces, which parted each address from its port
+        var urls = ProxyEndPointParser.ExtractFromContent("1.2.3.4 8080\n5.6.7.8 3128\n");
+        CollectionAssert.AreEqual(new[] { new Uri("http://1.2.3.4:8080/"), new Uri("http://5.6.7.8:3128/") }, urls);
+
+        // two addresses on a line are both read
+        urls = ProxyEndPointParser.ExtractFromContent("socks5://1.1.1.1:1080 http://2.2.2.2:3128");
+        Assert.HasCount(2, urls);
+    }
+
+    [TestMethod]
+    public void An_IPv6_address_in_a_list_is_read()
+    {
+        // the text was cut at its brackets
+        var urls = ProxyEndPointParser.ExtractFromContent("[2001:db8::1]:1080\n");
+        Assert.AreEqual(new Uri("socks5://[2001:db8::1]:1080/"), urls.Single());
+    }
+
+    [TestMethod]
+    public void A_port_written_is_kept_the_schemes_standard_one_too()
+    {
+        // a scheme's standard port was taken for one left out, and http's 80 became 8080
+        Assert.AreEqual(80, ProxyEndPointParser.ParseHostToUrl("http://proxy.example:80", null).Port);
+        Assert.AreEqual(8080, ProxyEndPointParser.ParseHostToUrl("http://proxy.example", null).Port);
+        Assert.AreEqual(443, ProxyEndPointParser.ParseHostToUrl("https://proxy.example:443", null).Port);
+    }
+
+    [TestMethod]
+    public void A_scheme_that_is_no_proxy_protocol_is_refused_with_a_port_too()
+    {
+        // with a port other than its own, any scheme passed
+        Assert.ThrowsExactly<ArgumentException>(() => ProxyEndPointParser.ParseHostToUrl("ftp://proxy.example:1080", null));
+    }
+
+    [TestMethod]
+    public void A_SOCKS_alias_is_read_as_SOCKS5()
+    {
+        // the URL kept the alias, which the reader refused
+        var endPoint = ProxyEndPointParser.Normalize(new ProxyEndPoint {
+            Protocol = ProxyProtocol.Socks5, Host = "socks://proxy.example:1080", Port = 1080
+        });
+        Assert.AreEqual(ProxyProtocol.Socks5, endPoint.Protocol);
+    }
+
+    [TestMethod]
+    public void The_credentials_of_the_address_stay_and_the_endpoints_own_fill_what_it_leaves_out()
+    {
+        // the endpoint's own, null, took their place
+        var endPoint = ProxyEndPointParser.Normalize(new ProxyEndPoint {
+            Protocol = ProxyProtocol.Socks5, Host = "socks5://user:pass@proxy.example:1080", Port = 1080
+        });
+        Assert.AreEqual("user", endPoint.Username);
+        Assert.AreEqual("pass", endPoint.Password);
+
+        // an address with none takes the endpoint's own
+        endPoint = ProxyEndPointParser.Normalize(new ProxyEndPoint {
+            Protocol = ProxyProtocol.Socks5, Host = "proxy.example", Port = 1080, Username = " own ", Password = "secret"
+        });
+
+        Assert.AreEqual("own", endPoint.Username);
+        Assert.AreEqual("secret", endPoint.Password);
+    }
+
+    [TestMethod]
+    public void Credentials_with_URL_characters_come_back_as_they_were()
+    {
+        // they went into the URL as they were, where a '/', '?' or '#' ends its address
+        var endPoint = new ProxyEndPoint {
+            Protocol = ProxyProtocol.Socks5, Host = "proxy.example", Port = 1080, Username = "u:x", Password = "p/#?%41"
+        };
+
+        var read = ProxyEndPointParser.FromUrl(endPoint.Url);
+        Assert.AreEqual(endPoint.Username, read.Username);
+        Assert.AreEqual(endPoint.Password, read.Password);
+
+        read = ProxyEndPointParser.Normalize(new ProxyEndPoint {
+            Protocol = ProxyProtocol.Socks5, Host = "proxy.example", Port = 1080, Username = "u", Password = "a/b#c"
+        });
+
+        Assert.AreEqual("a/b#c", read.Password);
+    }
+
+    [TestMethod]
+    public void Port_443_goes_to_the_default_scheme_where_HTTPS_is_not_preferred()
+    {
+        // the choice changed nothing; a host name, as an IP address on 443 is an HTTP proxy either way
+        Assert.AreEqual(new Uri("http://proxy.example:443/"),
+            ProxyEndPointParser.ExtractFromText("proxy.example:443", preferHttpsWhenPort443: false));
+        Assert.AreEqual(new Uri("https://proxy.example:443/"), ProxyEndPointParser.ExtractFromText("proxy.example:443"));
+    }
+
+    // An HTTPS proxy needs a certificate the device trusts for its address, which one at an IP address almost never
+    // has, and lists write HTTPS for an HTTP proxy that carries HTTPS: such entries were HTTPS proxies that always failed
+    [TestMethod]
+    public void A_lists_HTTPS_entry_at_an_IP_address_with_no_user_name_is_an_HTTP_proxy()
+    {
+        var urls = ProxyEndPointParser.ExtractFromContent(
+            "https://1.2.3.4:8080\n" + // written, as the list the website suggests has it
+            "5.6.7.8:443\n" + // guessed from the port
+            "9.9.9.9 3128 HTTPS\n" + // a table's protocol column
+            "[2001:db8::1]:443\n" +
+            "https://user:pass@1.2.3.4:443\n" + // its password goes inside the proxy's TLS alone
+            "proxy.example:443\n" + // a name may have a certificate
+            "https://proxy.example:8443");
+
+        CollectionAssert.AreEqual(new[] {
+            "http://1.2.3.4:8080/",
+            "http://5.6.7.8:443/",
+            "http://9.9.9.9:3128/",
+            "http://[2001:db8::1]:443/",
+            "https://user:pass@1.2.3.4/",
+            "https://proxy.example/",
+            "https://proxy.example:8443/"
+        }, urls.Select(x => x.AbsoluteUri).ToArray());
+    }
+
+    [TestMethod]
+    public void A_URL_found_in_a_text_keeps_its_query_and_its_SOCKS4_credentials()
+    {
+        // the query was dropped, and a disabled endpoint came back enabled
+        var url = ProxyEndPointParser.ExtractFromText("socks5://proxy.example:1080/?enabled=0");
+        Assert.IsNotNull(url);
+        Assert.IsFalse(ProxyEndPointParser.FromUrl(url).IsEnabled);
+
+        // a SOCKS4 URL was not one, and its user was lost
+        url = ProxyEndPointParser.ExtractFromText("socks4://user@1.2.3.4:1080");
+        Assert.IsNotNull(url);
+        var endPoint = ProxyEndPointParser.FromUrl(url);
+        Assert.AreEqual(ProxyProtocol.Socks4, endPoint.Protocol);
+        Assert.AreEqual("user", endPoint.Username);
     }
 
     [TestMethod]
@@ -373,6 +583,57 @@ public class ProxyEndPointParserTests
         Assert.AreEqual("used2.com", merged[2].Host, "Third penalty (still > maxPenalty)");
         Assert.AreEqual("used4.com", merged[3].Host, "Then next bad");
         Assert.AreEqual("used1.com", merged[4].Host, "Highest penalty last");
+    }
+
+    [TestMethod]
+    public void A_port_written_in_a_list_is_kept_the_schemes_standard_one_too()
+    {
+        // the app's import and a list's download read a URL by the extractor, which took 80 for no port: 8080
+        var url = ProxyEndPointParser.ExtractFromContent("http://proxy.example:80").Single();
+        Assert.AreEqual(80, ProxyEndPointParser.FromUrl(url).Port);
+    }
+
+    [TestMethod]
+    public void A_port_of_0_or_of_six_digits_is_no_address()
+    {
+        // 0 took the default port, and the sixth digit was cut off
+        Assert.IsEmpty(ProxyEndPointParser.ExtractFromContent("http://proxy.example:0"));
+        Assert.IsEmpty(ProxyEndPointParser.ExtractFromContent("http://proxy.example:123456"));
+        Assert.ThrowsExactly<ArgumentException>(() => ProxyEndPointParser.ParseHostToUrl("http://proxy.example:0", null));
+    }
+
+    [TestMethod]
+    public void A_protocol_named_before_an_address_in_a_list_is_its_protocol()
+    {
+        // the name was a word of its own, and the address took the port's guess
+        var url = ProxyEndPointParser.ExtractFromContent("SOCKS4 1.2.3.4 8080").Single();
+        Assert.AreEqual(ProxyProtocol.Socks4, ProxyEndPointParser.FromUrl(url).Protocol);
+    }
+
+    [TestMethod]
+    public void A_protocol_named_after_an_address_in_a_list_is_its_protocol()
+    {
+        // tables give it after the port: the address took the port's guess
+        var url = ProxyEndPointParser.ExtractFromContent("1.2.3.4 4145 SOCKS4").Single();
+        Assert.AreEqual(ProxyProtocol.Socks4, ProxyEndPointParser.FromUrl(url).Protocol);
+    }
+
+    [TestMethod]
+    public void A_space_at_the_end_of_a_password_in_an_address_is_kept()
+    {
+        // the address's credentials were trimmed as the typed ones are
+        var endPoint = ProxyEndPointParser.Normalize(new ProxyEndPoint {
+            Protocol = ProxyProtocol.Socks5, Host = "socks5://user:pass%20@proxy.example:1080", Port = 1080
+        });
+        Assert.AreEqual("pass ", endPoint.Password);
+    }
+
+    [TestMethod]
+    public void The_scheme_unknown_is_no_proxy_protocol()
+    {
+        // it was the parser's own mark for an address with no scheme, so a default protocol took its place
+        Assert.ThrowsExactly<ArgumentException>(() => ProxyEndPointParser.ParseHostToUrl("unknown://proxy.example:1080",
+            new ProxyEndPointDefaults { Protocol = ProxyProtocol.Socks5 }));
     }
 
     // Helper method to create ProxyEndPointInfo with custom penalty and LastUsedTime

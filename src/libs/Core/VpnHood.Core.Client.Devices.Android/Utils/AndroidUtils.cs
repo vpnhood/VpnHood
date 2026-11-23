@@ -4,7 +4,6 @@ using Android.Content.Res;
 using Android.OS;
 using Android.Provider;
 using Microsoft.Extensions.Logging;
-using VpnHood.Net.Toolkit.ApiClients;
 using VpnHood.Net.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Android.Utils;
@@ -34,10 +33,12 @@ public static class AndroidUtils
     /// <param name="activity">The activity.</param>
     /// <param name="action">The action.</param>
     /// <returns>A task that completes when the action has run, or fails with its exception.</returns>
-    /// <remarks>An awaiting caller may resume on the UI thread.</remarks>
+    /// <remarks>
+    /// An awaiting caller resumes off the UI thread, as on iOS, unless it captured that thread's context itself.
+    /// </remarks>
     public static Task RunOnUiThread(Activity activity, Action action)
     {
-        var taskCompletionSource = new TaskCompletionSource();
+        var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         activity.RunOnUiThread(() => {
             try {
                 action();
@@ -56,10 +57,12 @@ public static class AndroidUtils
     /// <param name="activity">The activity.</param>
     /// <param name="action">The function.</param>
     /// <returns>A task whose result is the function's, or that fails with its exception.</returns>
-    /// <remarks>An awaiting caller may resume on the UI thread.</remarks>
+    /// <remarks>
+    /// An awaiting caller resumes off the UI thread, as on iOS, unless it captured that thread's context itself.
+    /// </remarks>
     public static Task<T> RunOnUiThread<T>(Activity activity, Func<T> action)
     {
-        var taskCompletionSource = new TaskCompletionSource<T>();
+        var taskCompletionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         activity.RunOnUiThread(() => {
             try {
                 var result = action();
@@ -106,19 +109,6 @@ public static class AndroidUtils
                 VhLogger.Instance.LogError(ex, "Error showing a toast");
             }
         });
-    }
-
-    /// <summary>Makes an <see cref="ApiException"/> of a Java error, with its Java type's names and its text.</summary>
-    /// <param name="error">The Java error.</param>
-    /// <returns>The exception.</returns>
-    internal static ApiException JavaExceptionToApiException(Java.Lang.Object error)
-    {
-        return new ApiException(
-            new ApiError {
-                TypeFullName = error.Class.TypeName,
-                TypeName = error.Class.SimpleName,
-                Message = error.ToString()
-            });
     }
 
     /// <summary>Determines whether the device is a TV: in TV mode, or with the leanback feature.</summary>

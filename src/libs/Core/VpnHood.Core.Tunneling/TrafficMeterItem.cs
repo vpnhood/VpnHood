@@ -35,8 +35,6 @@ internal sealed class TrafficMeterItem : IDisposable
     // pause saves at most the burst. The clock's 10-16 ms steps stay within the wait threshold
     private long _paidUntil = long.MinValue;
 
-    public required TimeSpan SpeedInterval { get; init; }
-
     /// <remarks>Unit: bytes per second; 0 means no limit.</remarks>
     public long MaxSpeed { get; set; }
 

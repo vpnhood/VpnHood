@@ -80,7 +80,10 @@ internal class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPo
         // B => D1
         // C => D3
 
+        // under the lock the close takes too, which disposes the workers it finds: none is made after it
         lock (_udpForwarders) {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+
             // find the forwarder for the connection (source-destination)
             if (!TryGetConnection(connectionKey, ipPacket, udpPacket, out var udpForwarder))
                 udpForwarder = CreateConnection(connectionKey, ipPacket, udpPacket);
@@ -127,11 +130,16 @@ internal class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPo
         var addressFamily = sourceEndPoint.AddressFamily;
         var isNewLocalEndPoint = false;
 
-        // add the remote endpoint
-        _remoteEndPoints.GetOrAdd(destinationEndPoint, static _ => new TimeoutItem<bool>(true),
-            out var isNewRemoteEndPoint);
-        if (isNewRemoteEndPoint)
+        // A new destination is checked first, and remembered only once its flow exists, below: remembered first, one the
+        // check refused, as the server's net-scan check does by a throw, passed unchecked with the next packet, and one
+        // whose flow failed after, at the worker quota say, went on with no line in the server's track log
+        var isNewRemoteEndPoint = !_remoteEndPoints.TryGetValue(destinationEndPoint, out _);
+        if (isNewRemoteEndPoint) {
             _packetForwarderCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint.ToValue());
+
+            // the check may have closed the pool, as a session it ended does
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+        }
 
         // DNS workers live in their own list with their own quota, so a DNS burst can neither occupy
         // general workers nor be starved by them, and a general flow can never land on a small-buffer
@@ -189,6 +197,11 @@ internal class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPo
         // it is just for speed.
         _connectionMap.AddOrUpdate(connectionKey,
             new TimeoutItem<(UdpForwarder, TimeoutItem<IPEndPoint>)>((udpForwarder, mapping)));
+
+        // the destination, now that its flow exists
+        if (isNewRemoteEndPoint)
+            _remoteEndPoints.GetOrAdd(destinationEndPoint, static _ => new TimeoutItem<bool>(true),
+                out isNewRemoteEndPoint);
 
         // Raise new endpoint
         if (isNewLocalEndPoint || isNewRemoteEndPoint)

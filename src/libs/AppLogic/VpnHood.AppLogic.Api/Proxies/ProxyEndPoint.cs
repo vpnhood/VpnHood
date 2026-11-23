@@ -1,9 +1,8 @@
 namespace VpnHood.AppLogic.Api.Proxies;
 
-// A proxy as a UI sees it, and as a UI sends one back when adding or editing. Id and Url are the
-// engine's to compute - a hash of the address, and the address as a URL - so they arrive filled and
-// are ignored on the way in: what the app reads from an incoming one is the protocol, the host, the
-// port and the credentials.
+// A proxy as a UI sees it, and as a UI sends one back when adding or editing. Id is the engine's to
+// compute, a hash of the address, so it arrives filled and is ignored on the way in: what the app reads
+// from an incoming one is the protocol, the host, the port and the credentials.
 
 /// <summary>
 /// Represents a proxy server: its protocol, address, credentials and whether it is used.
@@ -33,10 +32,4 @@ public class ProxyEndPoint
 
     /// <summary>Gets or sets the password, or <see langword="null"/>.</summary>
     public string? Password { get; set; }
-
-    /// <summary>
-    /// Gets the endpoint's URL, credentials included, as <c>socks5://user:password@host:1080/?enabled=1</c>. The
-    /// query is there only for an enabled endpoint.
-    /// </summary>
-    public string Url { get; set; } = string.Empty;
 }

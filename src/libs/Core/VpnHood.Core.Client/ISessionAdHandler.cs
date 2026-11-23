@@ -3,7 +3,8 @@
 /// <summary>
 /// Represents a session's wait for an ad: while it waits, the session sends its new traffic around the tunnel, but the
 /// DNS and pings it carries as packets, so the ad loads through the device's own network, until the app tells it the
-/// ad's outcome.
+/// ad's outcome. Where the app's ads can show over the VPN (<see cref="Abstractions.ClientOptions.CanShowAdOverVpn"/>),
+/// its traffic keeps its routing, and the ad's goes as the rest does.
 /// </summary>
 /// <remarks>Disposing it cancels a wait under way.</remarks>
 public interface ISessionAdHandler : IDisposable
@@ -17,10 +18,11 @@ public interface ISessionAdHandler : IDisposable
     /// <returns>A task that completes once the ad has been shown.</returns>
     /// <remarks>
     /// The connections of the moment stay as they go when a wait starts. Once a wait it started ends, the session drops
-    /// its TCP connections and forwarded ones, so the new ones follow the splits again.
+    /// its TCP connections and forwarded ones, so the new ones follow the splits again; a wait over the VPN drops none.
     /// </remarks>
     /// <exception cref="OperationCanceledException">
-    /// <paramref name="cancellationToken"/> was canceled, or the handler or its session was disposed.
+    /// <paramref name="cancellationToken"/> was canceled; the caller that started the wait this one joined canceled it,
+    /// which ends it for every caller; or the handler or its session was disposed.
     /// </exception>
     /// <exception cref="Exception">The ad failed: the error <see cref="SetAdFailed"/> gave.</exception>
     Task WaitForAd(CancellationToken cancellationToken);

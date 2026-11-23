@@ -5,6 +5,7 @@ using Android.Content.PM;
 using Android.Net;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Android.Utils;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
@@ -12,6 +13,7 @@ using VpnHood.Net.Quic.Android;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Sockets;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Net.VpnAdapters.Abstractions;
 using VpnHood.Net.VpnAdapters.AndroidTun;
 using VpnHood.Core.Client.Devices.Android;
@@ -81,7 +83,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         // continuing would let the system kill the process ten seconds later with
         // ForegroundServiceDidNotStartInTimeException, and returning Sticky would restart it into the
         // same failure.
-        if (!TryShowNotification(VpnServiceHost.DefaultConnectionInfo)) {
+        if (!TryPromote()) {
             StopSelf(startId);
             return StartCommandResult.NotSticky;
         }
@@ -132,9 +134,10 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                     messageListener: _messageListener,
                     withLogger: AndroidDevice.IsVpnServiceProcess);
 
+                // A connect that began nothing is no stop: an always-on start finds a connection under way, which is the
+                // service's, and the host stops the service itself where a connect ends with none
                 AndroidTlsProvider.EnsureInstalled(); // before the first handshake; after the log
-                if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn).Vhc())
-                    StopSelf(_lastStartId);
+                await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not start VPN service host.");
@@ -185,39 +188,49 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     /// <exception cref="ArgumentOutOfRangeException">The settings' queue capacity is less than 1.</exception>
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
-        return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {
+        return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings(adapterSettings) {
             AdapterName = adapterSettings.AdapterName,
-            Blocking = adapterSettings.Blocking,
-            AutoRestart = adapterSettings.AutoRestart,
-            MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
-            QueueCapacity = adapterSettings.QueueCapacity,
-            AutoMetric = adapterSettings.AutoMetric
+            Blocking = adapterSettings.Blocking
         });
     }
 
     /// <inheritdoc/>
     /// <remarks>
-    /// It shows the state in the foreground notification, promoting the service first where it is not yet; a refused
-    /// promotion is logged.
+    /// It shows the state in the foreground notification, promoting the service first where it is not yet, for a
+    /// connection on its way up or up, as a session's end may have taken down the notification its next connect's start
+    /// put up; a refused promotion is logged. Where there is none, a state on its way down shows nothing: it is a late
+    /// word of a session a stop has taken the notification down for.
     /// </remarks>
     public void ShowNotification(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
+        if (connectionInfo.ClientState is ClientState.Disconnecting or ClientState.Disposed) {
+            lock (_notificationLock)
+                _notification?.Update(connectionInfo.ClientState);
+
+            return;
+        }
+
         TryShowNotification(connectionInfo);
     }
 
+    // A start's promotion of the service to the foreground, with a notification made on first use. One already up keeps
+    // the state it shows, the session's, which a start that finds a connection under way would otherwise reset. Returns
+    // false when the system refused the promotion.
+    private bool TryPromote()
+    {
+        lock (_notificationLock)
+            return _notification != null || TryStartForeground() != null;
+    }
+
     // Promotes the service to the foreground on first use, then keeps the notification in step with
-    // the connection state. Returns false when the system refused the promotion. One at a time with
+    // the connection state; a refused promotion is logged, and the next call tries again. One at a time with
     // StopNotification: start commands come on the main thread and the host's calls on its own, and a
     // notification stopped in between would be updated after its disposal.
-    private bool TryShowNotification(ConnectionInfo connectionInfo)
+    private void TryShowNotification(ConnectionInfo connectionInfo)
     {
         lock (_notificationLock) {
             var notification = _notification ?? TryStartForeground();
-            if (notification == null)
-                return false;
-
-            notification.Update(connectionInfo.ClientState);
-            return true;
+            notification?.Update(connectionInfo.ClientState);
         }
     }
 
@@ -303,18 +316,22 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     }
 
     /// <inheritdoc/>
-    /// <remarks>It removes the notification and ends the host and the message channel.</remarks>
+    /// <remarks>
+    /// It removes the notification and ends the host and the message channel, each whatever the one before did; a failure
+    /// is logged.
+    /// </remarks>
     public override void OnDestroy()
     {
         VhLogger.Instance.LogDebug("VpnService is destroying.");
+        VhInvoker.TryInvoke("remove the VPN service's notification", LogLevel.Error, StopNotification);
 
-        StopNotification();
-
-        _vpnServiceHost?.Dispose();
+        var vpnServiceHost = _vpnServiceHost;
         _vpnServiceHost = null;
+        if (vpnServiceHost != null)
+            VhInvoker.TryInvoke("end the VPN service host", LogLevel.Error, vpnServiceHost.Dispose);
 
         // the host's ApiController disposes the listener; this covers the bind-only case
-        _messageListener.Dispose();
+        VhInvoker.TryInvoke("close the app's channel", LogLevel.Error, _messageListener.Dispose);
 
         base.OnDestroy();
     }

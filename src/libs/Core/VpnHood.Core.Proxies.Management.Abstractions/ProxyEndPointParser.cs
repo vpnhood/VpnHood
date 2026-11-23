@@ -8,7 +8,7 @@ namespace VpnHood.Core.Proxies.Management.Abstractions;
 /// </summary>
 public static class ProxyEndPointParser
 {
-    private const string PseudoScheme = "unknown";
+    private const string PseudoScheme = "vh-no-scheme";
 
     /// <summary>
     /// Reads a proxy endpoint from a URL such as <c>socks5://user:password@host:1080</c>.
@@ -58,7 +58,8 @@ public static class ProxyEndPointParser
     /// </summary>
     /// <param name="proxyEndPoint">The endpoint.</param>
     /// <returns>
-    /// A new endpoint, with the original's user name and password, trimmed, in place of any the host held.
+    /// A new endpoint: the address's own parts, its credentials too, and the original's where the address leaves them
+    /// out; the original's user name and password trimmed, the address's kept as written.
     /// </returns>
     /// <exception cref="ArgumentException">The host is empty or no valid address.</exception>
     /// <exception cref="NotSupportedException">The address's scheme is no proxy protocol.</exception>
@@ -66,17 +67,14 @@ public static class ProxyEndPointParser
     {
         var defaults = new ProxyEndPointDefaults {
             IsEnabled = proxyEndPoint.IsEnabled,
-            Password = proxyEndPoint.Password,
+            Password = proxyEndPoint.Password?.Trim(),
             Port = proxyEndPoint.Port,
             Protocol = proxyEndPoint.Protocol,
-            Username = proxyEndPoint.Username
+            Username = proxyEndPoint.Username?.Trim()
         };
 
         var uri = ParseHostToUrl(proxyEndPoint.Host, defaults);
-        var ret = FromUrl(uri);
-        ret.Username = proxyEndPoint.Username?.Trim();
-        ret.Password = proxyEndPoint.Password?.Trim();
-        return ret;
+        return FromUrl(uri);
     }
 
     /// <summary>
@@ -102,16 +100,17 @@ public static class ProxyEndPointParser
     /// <param name="value">The address, with or without a scheme, a port and credentials.</param>
     /// <param name="defaults">
     /// The values for the parts the address leaves out, or <see langword="null"/>; a missing port then takes the
-    /// protocol's default (1080 for SOCKS, 8080 for HTTP, 443 for HTTPS), and <c>socks</c> and <c>socks5h</c> read as
-    /// SOCKS5 for it. A port that is the scheme's standard one, as 80 for <c>http</c>, counts as missing.
+    /// protocol's default (1080 for SOCKS, 8080 for HTTP, 443 for HTTPS). A port written in the address is kept, the
+    /// scheme's standard one too, as 80 for <c>http</c>.
     /// </param>
     /// <returns>
-    /// The URL; with <c>enabled=false</c> in its query when <paramref name="defaults"/> says the endpoint is
-    /// disabled and the address's query does not say otherwise.
+    /// The URL, whose scheme is one <see cref="FromUrl"/> reads: <c>socks</c> and <c>socks5h</c> become <c>socks5</c>.
+    /// Its query has <c>enabled=false</c> when <paramref name="defaults"/> says the endpoint is disabled and the
+    /// address's query does not say otherwise.
     /// </returns>
     /// <exception cref="ArgumentException">
     /// The address is empty or not valid, or the address and the defaults give no scheme, or the scheme is no proxy
-    /// protocol and no port is given; with a port, any scheme passes.
+    /// protocol, or the address's port is 0.
     /// </exception>
     public static Uri ParseHostToUrl(
         string value,
@@ -125,6 +124,9 @@ public static class ProxyEndPointParser
             throw new ArgumentException("Invalid URL format.", nameof(value));
 
         var parts = ExtractParts(parsed);
+        if (parts.Port is <= 0)
+            throw new ArgumentException("The port must be from 1 to 65535.", nameof(value));
+
         // Apply defaults (preserving original precedence & behavior)
         if (defaults?.Protocol != null)
             parts.Scheme ??= ProtocolToScheme(defaults.Protocol.Value);
@@ -135,21 +137,20 @@ public static class ProxyEndPointParser
         if (string.IsNullOrWhiteSpace(parts.Scheme) || string.IsNullOrWhiteSpace(parts.Host))
             throw new ArgumentException("URL must include scheme and host.", nameof(value));
 
-        // apply protocol default port if still missing
-        if (parts.Port is null) {
-            var proto = ParseProtocolLenient(parts.Scheme);
-            parts.Port = GetDefaultPort(proto);
-        }
+        // the scheme is a proxy protocol's, with a port or not, in the form FromUrl reads
+        var protocol = ParseProtocolLenient(parts.Scheme);
+        parts.Port ??= GetDefaultPort(protocol);
 
         var uriBuilder = new UriBuilder {
-            Scheme = parts.Scheme,
+            Scheme = ProtocolToScheme(protocol),
             Host = parts.Host,
             Port = parts.Port!.Value,
             Path = string.Empty
         };
 
-        if (!string.IsNullOrEmpty(parts.User)) uriBuilder.UserName = parts.User;
-        if (!string.IsNullOrEmpty(parts.Password)) uriBuilder.Password = parts.Password;
+        // escaped, as FromUrl reads them back: a '/', '?' or '#' in a password ended the URL's address
+        if (!string.IsNullOrEmpty(parts.User)) uriBuilder.UserName = Uri.EscapeDataString(parts.User);
+        if (!string.IsNullOrEmpty(parts.Password)) uriBuilder.Password = Uri.EscapeDataString(parts.Password);
 
         var valueCollection = HttpUtility.ParseQueryString(parsed.Query);
         if (defaults?.IsEnabled == false && valueCollection["enabled"] == null) {
@@ -167,10 +168,16 @@ public static class ProxyEndPointParser
     /// <param name="text">The text.</param>
     /// <param name="defaultScheme">The scheme when nothing tells the protocol. The default is <c>http</c>.</param>
     /// <param name="preferHttpsWhenPort443">
-    /// Meant to choose HTTPS for port 443 with no other sign; it changes nothing, as port 443 is taken for HTTPS
-    /// either way. The default is <see langword="true"/>.
+    /// <see langword="true"/> to take port 443 with no other sign for HTTPS; <see langword="false"/> to give it
+    /// <paramref name="defaultScheme"/>. The default is <see langword="true"/>.
     /// </param>
-    /// <returns>The address as a URL, or <see langword="null"/> when none is found.</returns>
+    /// <returns>The address as a URL, its query kept, or <see langword="null"/> when none is found.</returns>
+    /// <remarks>
+    /// An HTTPS address at an IP address with no user name comes back as HTTP, a written <c>https://</c> too: such a
+    /// proxy almost never has a certificate the device trusts for its address, which an HTTPS proxy needs, and lists
+    /// write HTTPS for an HTTP proxy that carries HTTPS. One with a user name stays HTTPS, so its password never travels
+    /// in the clear.
+    /// </remarks>
     public static Uri? ExtractFromText(string text,
         string defaultScheme = "http",
         bool preferHttpsWhenPort443 = true)
@@ -179,15 +186,17 @@ public static class ProxyEndPointParser
     }
 
     /// <summary>
-    /// Finds the proxy addresses in a text, as <see cref="ExtractFromText"/> does, after splitting it into pieces at
-    /// line ends, spaces, commas, quotes and brackets, so an address whose port follows a space, as
-    /// <c>1.2.3.4 8080</c>, is lost.
+    /// Finds the proxy addresses in a text, as <see cref="ExtractFromText"/> does: the text is cut into pieces at line
+    /// ends, commas, quotes, braces and parentheses, and each piece into words at white space, a word that is a port
+    /// alone joining the address before it, as in <c>1.2.3.4 8080</c>, and a protocol's name alone the address after
+    /// it, as in <c>SOCKS4 1.2.3.4 8080</c>, or, where none came before, the address before it, as tables give it:
+    /// <c>1.2.3.4 8080 SOCKS4</c>. An HTTPS address at an IP address with no user name comes back as HTTP, as there.
     /// </summary>
     /// <param name="content">The text.</param>
     /// <param name="defaultScheme">The scheme when nothing tells the protocol. The default is <c>http</c>.</param>
     /// <param name="preferHttpsWhenPort443">
-    /// Meant to choose HTTPS for port 443 with no other sign; it changes nothing, as port 443 is taken for HTTPS
-    /// either way. The default is <see langword="true"/>.
+    /// <see langword="true"/> to take port 443 with no other sign for HTTPS; <see langword="false"/> to give it
+    /// <paramref name="defaultScheme"/>. The default is <see langword="true"/>.
     /// </param>
     /// <returns>The addresses as URLs, in their order in the text.</returns>
     public static Uri[] ExtractFromContent(
@@ -195,21 +204,39 @@ public static class ProxyEndPointParser
         string defaultScheme = "http",
         bool preferHttpsWhenPort443 = true)
     {
-        // Normalize delimiters to new lines
-        content = FastReplaceCharsWithNewline(content);
-
-        // Split by new lines
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         var results = new List<Uri>();
+        foreach (var piece in content.Split(PieceSeparators, StringSplitOptions.RemoveEmptyEntries)) {
+            var words = piece.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < words.Length; i++) {
+                var protocolWord = IsProtocolWord(words[i]) && i + 1 < words.Length ? words[i++] : null;
+                var word = words[i];
+                if (i + 1 < words.Length && IsPort(words[i + 1]) && !HasPortWritten(word))
+                    word = $"{word}:{words[++i]}";
 
-        foreach (var line in lines) {
-            var uri = ProxyEndPointExtractor.Extract(line, defaultScheme, preferHttpsWhenPort443);
-            if (uri != null)
-                results.Add(uri);
+                // a protocol's name after an address, where none came before it
+                if (protocolWord is null && i + 1 < words.Length && IsProtocolWord(words[i + 1]) &&
+                    ProxyEndPointExtractor.Extract(word, defaultScheme, preferHttpsWhenPort443) != null)
+                    protocolWord = words[++i];
+
+                var uri = ProxyEndPointExtractor.Extract(protocolWord is null ? word : $"{protocolWord} {word}",
+                    defaultScheme, preferHttpsWhenPort443);
+
+                if (uri != null)
+                    results.Add(uri);
+            }
         }
 
         return [.. results];
     }
+
+    // not white space, which parts an address from its port, nor brackets, which hold an IPv6 address
+    private static readonly char[] PieceSeparators = ['\n', '\r', '"', '`', ',', '{', '}', '(', ')'];
+
+    private static bool IsPort(string word) =>
+        word.Length <= 5 && word.All(char.IsAsciiDigit) && int.Parse(word) is > 0 and <= 65535;
+
+    private static bool IsProtocolWord(string word) =>
+        word.TrimEnd(':').ToLowerInvariant() is "socks" or "socks4" or "socks5" or "http" or "https";
 
     private static bool TryCreateUri(string input, [NotNullWhen(true)] out Uri? uri)
     {
@@ -240,7 +267,9 @@ public static class ProxyEndPointParser
         if (!string.IsNullOrEmpty(url.Host))
             parts.Host = url.Host;
 
-        if (url is { Port: > 0, IsDefaultPort: false })
+        // a port written in the address, the scheme's standard one too, which Uri's IsDefaultPort does not tell apart
+        // from one left out
+        if (HasPortWritten(url.OriginalString))
             parts.Port = url.Port;
 
         if (!string.IsNullOrEmpty(url.UserInfo)) {
@@ -253,6 +282,23 @@ public static class ProxyEndPointParser
         return parts;
     }
 
+    // whether a URL's authority names a port: after its user information, and after an IPv6 address's brackets
+    internal static bool HasPortWritten(string url)
+    {
+        var start = url.IndexOf("://", StringComparison.Ordinal);
+        var authority = start < 0 ? url : url[(start + 3)..];
+        var end = authority.IndexOfAny(['/', '?', '#']);
+        if (end >= 0)
+            authority = authority[..end];
+
+        var at = authority.LastIndexOf('@');
+        if (at >= 0)
+            authority = authority[(at + 1)..];
+
+        var colon = authority.LastIndexOf(':');
+        return colon > authority.LastIndexOf(']') && colon < authority.Length - 1;
+    }
+
     private static ProxyProtocol ParseProtocolLenient(string scheme) => scheme.ToLowerInvariant() switch {
         "socks" or "socks5" or "socks5h" => ProxyProtocol.Socks5,
         "socks4" => ProxyProtocol.Socks4,
@@ -261,12 +307,12 @@ public static class ProxyEndPointParser
         _ => throw new ArgumentException($"Unknown protocol: {scheme}")
     };
 
-    private static string? ProtocolToScheme(ProxyProtocol protocol) => protocol switch {
+    private static string ProtocolToScheme(ProxyProtocol protocol) => protocol switch {
         ProxyProtocol.Socks4 => "socks4",
         ProxyProtocol.Socks5 => "socks5",
         ProxyProtocol.Http => "http",
         ProxyProtocol.Https => "https",
-        _ => null
+        _ => throw new NotSupportedException($"Unsupported proxy protocol: {protocol}")
     };
 
     private static int GetDefaultPort(ProxyProtocol protocol) => protocol switch {
@@ -276,19 +322,4 @@ public static class ProxyEndPointParser
         ProxyProtocol.Https => 443,
         _ => 8080
     };
-
-    private static string FastReplaceCharsWithNewline(string content)
-    {
-        if (string.IsNullOrEmpty(content))
-            return content;
-
-        var chars = content.ToCharArray();
-
-        for (var i = 0; i < chars.Length; i++) {
-            if (chars[i] is '\r' or ' ' or '"' or '`' or ',' or '{' or '}' or '(' or ')' or '[' or ']')
-                chars[i] = '\n';
-        }
-
-        return new string(chars);
-    }
 }

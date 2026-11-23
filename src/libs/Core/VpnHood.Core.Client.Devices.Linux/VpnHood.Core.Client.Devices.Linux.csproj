@@ -5,6 +5,10 @@
 		<VhApiDocsComplete>true</VhApiDocsComplete>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="VpnHood.AppLogic.Test" />
+	</ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
     <ProjectReference Include="..\..\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />

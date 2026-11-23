@@ -64,24 +64,26 @@ public class StreamForwardingChannel : IStreamForwardingChannel
     /// <param name="trafficMeter">
     /// The meter that counts its bytes and holds it to the session's speed limits, or <see langword="null"/>.
     /// </param>
-    /// <exception cref="ArgumentOutOfRangeException">A buffer size is out of its range.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// A buffer size is out of its range; <see cref="ArgumentException.ParamName"/> is <c>tunnelBufferSize</c>.
+    /// </exception>
     public StreamForwardingChannel(string channelId, IStreamConnection orgStreamConnection, IStreamConnection tunnelStreamConnection,
         TransferBufferSize tunnelBufferSize, TrafficMeter? trafficMeter = null)
     {
+        if (tunnelBufferSize.Receive is < BufferSizeMin or > BufferSizeMax)
+            throw new ArgumentOutOfRangeException(nameof(tunnelBufferSize), tunnelBufferSize.Receive,
+                $"The receive buffer size must be from {BufferSizeMin} to {BufferSizeMax} bytes.");
+
+        if (tunnelBufferSize.Send is < BufferSizeMin or > BufferSizeMax)
+            throw new ArgumentOutOfRangeException(nameof(tunnelBufferSize), tunnelBufferSize.Send,
+                $"The send buffer size must be from {BufferSizeMin} to {BufferSizeMax} bytes.");
+
         _hostStreamConnection = orgStreamConnection;
         _tunnelStreamConnection = tunnelStreamConnection;
         _tunnelBufferSize = tunnelBufferSize;
         _trafficMeter = trafficMeter;
         _throttleCancellationToken = _throttleCancellationTokenSource.Token;
         VhTypeTracker.Track(this);
-
-        if (_tunnelBufferSize.Receive is < BufferSizeMin or > BufferSizeMax)
-            throw new ArgumentOutOfRangeException(
-                $"Forwarding receive buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Receive}");
-
-        if (_tunnelBufferSize.Send is < BufferSizeMin or > BufferSizeMax)
-            throw new ArgumentOutOfRangeException(
-                $"Forwarding send buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Send}");
 
         ChannelId = channelId;
 
@@ -122,7 +124,8 @@ public class StreamForwardingChannel : IStreamForwardingChannel
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-        if (_started)
+        // once, even for two starts at once
+        if (Interlocked.Exchange(ref _started, true))
             throw new InvalidOperationException("StreamForwardingChannel is already started.");
 
         var startTask = StartInternal(_cancellationTokenSource.Token);
@@ -133,8 +136,6 @@ public class StreamForwardingChannel : IStreamForwardingChannel
     {
         VhTypeTracker.Record("StreamForwardingChannel.StartInternal.started");
         try {
-            _started = true;
-
             var tunnelReadTask = CopyFromTunnelAsync(
                 _tunnelStreamConnection.Stream, _hostStreamConnection.Stream, _tunnelBufferSize.Receive,
                 cancellationToken, cancellationToken); // tunnel => host

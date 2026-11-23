@@ -1,4 +1,5 @@
 using Ga4.Trackers;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Filtering.Abstractions;
@@ -8,6 +9,7 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
@@ -35,23 +37,32 @@ public class VpnHoodClientFactory
     /// <exception cref="InvalidDataException">The access key's JSON is <c>null</c>.</exception>
     /// <exception cref="OverflowException">A duration in the access key is out of range.</exception>
     /// <exception cref="InvalidOperationException">The access key has no farm secret.</exception>
-    /// <exception cref="ArgumentNullException">
+    /// <exception cref="ArgumentOutOfRangeException">
     /// The options' longest packet channel life, where finite, is below their shortest.
     /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public virtual async Task<VpnHoodClient> Create(VpnHoodClientParams clientParams, NetFilter netFilter,
         CancellationToken cancellationToken)
     {
-        return new VpnHoodClient(
-            vpnAdapter: clientParams.VpnAdapter,
-            socketFactory: clientParams.SocketFactory,
-            netFilter: netFilter,
-            proxyConnector: await CreateProxyConnector(clientParams, cancellationToken).Vhc(),
-            tracker: CreateTracker(clientParams),
-            // this device's, so the config folder: the data folder travels with a backup
-            workingFolder: clientParams.ConfigFolder,
-            options: clientParams.ServiceOptions.ClientOptions,
-            knownHostAddresses: clientParams.KnownHostAddresses);
+        // the client owns the connector only once made, so one that refuses its options or key leaves it to be closed
+        // here: a managed one holds its store and runs its update
+        var proxyConnector = await CreateProxyConnector(clientParams, cancellationToken).Vhc();
+        try {
+            return new VpnHoodClient(
+                vpnAdapter: clientParams.VpnAdapter,
+                socketFactory: clientParams.SocketFactory,
+                netFilter: netFilter,
+                proxyConnector: proxyConnector,
+                tracker: CreateTracker(clientParams),
+                // this device's, so the config folder: the data folder travels with a backup
+                workingFolder: clientParams.ConfigFolder,
+                options: clientParams.ServiceOptions.ClientOptions,
+                knownHostAddresses: clientParams.KnownHostAddresses);
+        }
+        catch {
+            await proxyConnector.TryDisposeAsync().Vhc();
+            throw;
+        }
     }
 
     /// <summary>
@@ -85,20 +96,40 @@ public class VpnHoodClientFactory
     // manifest (the app rewrites it before signaling a reconfigure), so when the Reconfigure command
     // rolls down the pipe the stage finds the current signature-versioned dbs there and swaps its own
     // gates — no db path ever travels through vpn.config or the reconfigure request.
+    // The inner filter is the chain's once the chain is made: till then a failure closes it here, a failure of its close
+    // logged, the one that came first thrown
     internal async Task<IIpFilter> CreateIpFilter(VpnHoodClientParams clientParams,
         CancellationToken cancellationToken)
     {
-        return await SqliteIpFilterChain.Create(CreateInnerIpFilter(clientParams),
-            Path.Combine(clientParams.ConfigFolder, SplitDbManifest.IpFiltersFolderName),
-            autoDisposeNextFilter: true, cancellationToken).Vhc();
+        var innerIpFilter = CreateInnerIpFilter(clientParams);
+        try {
+            return await SqliteIpFilterChain.Create(innerIpFilter,
+                Path.Combine(clientParams.ConfigFolder, SplitDbManifest.IpFiltersFolderName),
+                autoDisposeNextFilter: true, cancellationToken).Vhc();
+        }
+        catch {
+            if (innerIpFilter != null)
+                VhInvoker.TryInvoke("close an inner IP filter", LogLevel.Error, innerIpFilter.Dispose);
+
+            throw;
+        }
     }
 
     internal async Task<IDomainFilter> CreateDomainFilter(VpnHoodClientParams clientParams,
         CancellationToken cancellationToken)
     {
-        return await SqliteDomainFilterChain.Create(CreateInnerDomainFilter(clientParams),
-            Path.Combine(clientParams.ConfigFolder, SplitDbManifest.DomainFiltersFolderName),
-            autoDisposeNextFilter: true, cancellationToken).Vhc();
+        var innerDomainFilter = CreateInnerDomainFilter(clientParams);
+        try {
+            return await SqliteDomainFilterChain.Create(innerDomainFilter,
+                Path.Combine(clientParams.ConfigFolder, SplitDbManifest.DomainFiltersFolderName),
+                autoDisposeNextFilter: true, cancellationToken).Vhc();
+        }
+        catch {
+            if (innerDomainFilter != null)
+                VhInvoker.TryInvoke("close an inner domain filter", LogLevel.Error, innerDomainFilter.Dispose);
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -120,6 +151,9 @@ public class VpnHoodClientFactory
             ProxyMode.Managed => await ManagedProxyConnector.Create(
                 proxyOptions: proxyOptions,
                 store: new ProxyEndPointStore(VpnServiceFolders.GetProxyStoreFilePath(clientParams.DataFolder)),
+                // under the kill switch alone, as the server search asks the network's resolvers there alone: its block
+                // lets only the VPN's own traffic out, so the list's first download goes over the VPN's sockets
+                socketFactory: serviceOptions.ClientOptions.UseKillSwitch ? clientParams.SocketFactory : null,
                 serverCheckTimeout: serviceOptions.ClientOptions.Transport.ServerQueryTimeout,
                 cancellationToken: cancellationToken).Vhc(),
             _ => null

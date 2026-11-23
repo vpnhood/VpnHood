@@ -102,13 +102,13 @@ public class SessionStatus
     public required bool CanChangeTcpForwarding { get; init; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the client drops the QUIC bound for the tunnel now, by the setting and
-    /// the server.
+    /// Gets a value indicating whether the client drops the QUIC bound for the tunnel now, by the setting and the
+    /// server.
     /// </summary>
-    public required bool IsDropQuic { get; set; }
+    public required bool IsDropQuic { get; init; }
 
-    /// <summary>Gets or sets a value indicating whether the session's VPN adapter has started.</summary>
-    public required bool IsAdapterStarted { get; set; }
+    /// <summary>Gets a value indicating whether the session's VPN adapter has started.</summary>
+    public required bool IsAdapterStarted { get; init; }
 
     /// <summary>Gets the protocol of the session's packet channels now.</summary>
     public required ChannelProtocol ChannelProtocol { get; init; }

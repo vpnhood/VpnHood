@@ -59,13 +59,9 @@ internal class ApiController : IDisposable
         return System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(response);
     }
 
-    private async Task<ConnectionInfo> UpdateConnectionInfo(CancellationToken cancellationToken)
+    private Task<ConnectionInfo> UpdateConnectionInfo(CancellationToken cancellationToken)
     {
-        var client = _vpnHoodService.Client;
-        if (client != null)
-            await _vpnHoodService.UpdateConnectionInfo(client, cancellationToken: cancellationToken).Vhc();
-
-        return _vpnHoodService.Context.ConnectionInfo;
+        return _vpnHoodService.UpdateConnectionInfoForAnswer(cancellationToken);
     }
 
     private async Task<object?> ProcessRequestInternal(Stream stream, CancellationToken cancellationToken)

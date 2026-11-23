@@ -73,7 +73,11 @@ a PNG.
    - **Personal information:** **Yes** — the app sends your server the person's Client ID, the server
      sees their IP address, and analytics run where they are on — with your privacy policy's URL.
    - **Support info:** your account's contact details, which the listing shows as the EU Digital
-     Services Act requires. They must work.
+     Services Act requires. They must work. Because the app asks for `networkingVpnProvider`, also
+     choose **Use different details for this app** and enter your support email and website there,
+     even if they are the account's. That is the field Microsoft's certification team named when it
+     refused this project's CLIENT app for lacking "a valid support contact or a developer website
+     URL", while the account's details already held both (step 7).
    - **Product declarations:** untick **"Windows can include this product's data in automatic backups
      to OneDrive"**, on by default: the app's data holds the access keys people add. For Connect, tick
      **"This product allows users to make purchases, but does not use the Microsoft Store commerce
@@ -104,7 +108,9 @@ a PNG.
    - **No GitHub link.** The reviewers want a working support contact or a developer website in the
      reason itself, and a GitHub link counts as neither. This project's own CLIENT app was refused
      under Store Policies 10.6.3 for a reason whose only link was its GitHub repository, with a
-     listing that already showed the account's website and support email.
+     listing that already showed the account's website and support email. The reason alone is not
+     enough either: rewritten to name the company, the website and the support email, it was
+     refused again in the same words. Set the app's own support info too (step 2).
 7. **Additional Testing Information** (under **Supplemental info**): the notes for certification —
    how a tester adds the key and connects — and the key itself under **Credentials**, never in the
    notes, which Partner Center asks to hold none. A stored credential shows masked from then on.
@@ -140,6 +146,11 @@ handle cards to PCI DSS.
    and its Store ID, say when it was resubmitted, and give the earlier report's id. The free
    **Professional No Charge** plan is enough. It offers only the lowest severity and answers by email
    during business hours.
+   For a refusal, write to `reportapp@microsoft.com`, the address the product's page gives for
+   certification questions, and name the app's Store ID and your Seller ID (**Account settings** ›
+   **Legal info**), or the first reply only asks for them. CLIENT's answer came three business days
+   later and named the field the reviewers check (step 2, Support info). Its support request had no
+   answer after a week.
 2. **The publish waits for you** (step 5, Submission options): once certified, **Publish now** on the
    product's page releases it.
 3. **Usage data asks first.** Microsoft wants the person's opt-in, in the app, before personal

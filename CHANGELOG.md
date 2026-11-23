@@ -1,5 +1,61 @@
 # Latest
 
+* Fix: Connecting right after disconnecting waits for the last connection to close, where it could start while that one was still closing and fail
+* Fix: Disconnecting while the VPN is still connecting shows no error, where the app could show the connection as canceled
+* Fix: When a connection ends with an error just as it disconnects, the app shows that error, where it could show none
+* Fix: When the VPN stops answering the app, the app shows it stopped within seconds, where its status froze and Disconnect did nothing
+* Fix: Disconnect reaches the VPN while the app waits for a slow answer from it, where it could run out of time and leave the VPN on
+* Fix: A connect right after a disconnect is no longer ended by that disconnect, where the app could show it stopped while it ran
+* Fix: Switching servers while the VPN is still connecting no longer stops or replaces the new connection, where the old connect could end it, by failing or by finishing late
+* Fix: When another VPN app takes over the VPN and you connect again at once, the new connection stays, where it could end with the old one #windows #linux
+* Fix: With the kill switch on, switching servers keeps the block set for the new connection, where a late word from the old one could set it by the old connection's routes #windows #linux
+* Fix: With the kill switch on, a connection never goes on without its block, where switching servers as the old connection failed could leave the block down #windows #linux
+* Fix: When another VPN app takes over the VPN while it is still connecting, it stops connecting and the app says why, where it could come up for a moment beside the other app, or show a canceled connection #windows #linux
+* Fix: Connecting again right after a connect failed, or while one still takes over the VPN from another app, no longer reports that another VPN app took over #windows #linux
+* Fix: With the kill switch on, disconnecting, or another VPN app taking over, just as the VPN changes its block no longer leaves the block up after the app lifts it, with no internet #windows #linux
+* Fix: When part of closing a connection fails, the rest of the close goes on, so the VPN goes down and the app sees it stopped, where the VPN could stay up and the app wait
+* Fix: With the kill switch on, a server that has only an IPv6 address is reached
+* Update: The app takes an access key's updates only from a secure (https) link, where a plain http link could bring an update from anyone on the way, which could send you to their server
+* Fix: After the VPN crashed, a custom server address you set is the one the app connects to, where it could first connect to the server it was on before
+* Fix: Turning the kill switch on takes effect while the VPN connects, and after the system refused it once or failed to turn it off, where the app took it for on
+* Fix: The kill switch shows on only while it blocks, where after a restart it showed on before the block was back #linux
+* Fix: Your proxies' ratings are no longer reset each time the VPN starts from Quick Settings or Always-on after you reset them once, and a reset you ask for while the VPN connects is no longer lost
+* Update: The usage data the app sends, where you allow it, no longer holds your server's address #client
+* Update: Block QUIC and Block UDP work only while Cloak Mode is on, by your switch or by the server's, and then for IPv4 and IPv6 alike; where only your domain rules or the server's setup hold Cloak Mode on, the Protocols page shows them locked off, with the reason
+* Fix: On a device set to Turkish, server locations whose code has an "i", as Iran or Italy, show and connect right
+* Fix: When a connect fails before the VPN opens, iPhone and Apple TV hear of it at once, where they kept waiting #ios
+* Fix: Connecting right after disconnecting waits for the last tunnel to stop #ios
+* Fix: Stopping the VPN as it starts stops it, where it could come up after, or keep iPhone and Apple TV waiting #ios
+* Fix: After you switch servers while connected, the VPN can still find its server when it restarts after a crash #windows
+* Fix: Disconnect is sent once, where after an answer that failed it went again and could end your next connection #windows
+* Fix: When your server's dynamic name gets a new address, a connection over IPv6 follows it too, as does one whose server moved to the other IP version where your network has that version, where it kept waiting
+* Fix: When your server's dynamic name gets a new address, the app finds it without waiting on a DNS server your network cannot reach, as an IPv6 one where your network has no IPv6 #android
+* Fix: Canceling a connect while Android asks for the VPN permission cancels it, where the app reported a timeout #android
+* Fix: The system's own start of the VPN, as Always-on's, no longer cancels or stops a connection you began or have, where it could take its place and fail, or stop the VPN #android
+* Fix: The VPN's notification no longer comes back for a few seconds after the VPN stops #android
+* Fix: With proxies on, the whole tunnel goes through them, over TCP, whatever the Tunnel protocol setting, where with UDP or QUIC it went straight to the server, around the proxies
+* Fix: HTTPS proxies work, where the tunnel went around the proxy's own encryption and failed. An HTTPS proxy needs a certificate your device trusts for the proxy's name or address, as your proxy user name and password go inside that connection; a self-signed one works only once your device trusts it. An HTTPS proxy the app turned off before stays off until you turn it on; one from a list at a bare IP address, with no user name, comes back with the list's next update as an HTTP proxy
+* Update: The app checks your proxies by reaching your VPN server through them, and no one else, where it reached Cloudflare through each; a proxy that shows a certificate of its own for your server fails the check. A proxy whose check fails stays on, where a failed secure handshake, or an HTTP proxy's refusal of your server's port, turned it off for good
+* Improve: With a list of proxies, the app connects as soon as one of them reaches your server, and checks the rest in the background, where it checked the whole list first
+* Fix: When none of your proxies works, the app says so, where a proxy that was turned off or never tried, or one that refused its user name and password, made it blame the server; when your server is down behind proxies that work, the app says the server cannot be reached
+* Fix: A proxy you turn off while connected stays off, where the VPN could turn it on again
+* Fix: Your proxy list is no longer emptied when the app opens it while the VPN is busy with it, nor when the app and the VPN make it at the same moment
+* Fix: An update of the proxy list from its URL keeps a proxy you have once, where it kept it twice and pushed others out of the list, and keeps its user name and password where the list gives none
+* Improve: The proxy list takes more: addresses parted from their ports by a space, as `1.2.3.4 8080`, with the protocol's name before or after them, as tables give it, IPv6 addresses, `socks://` addresses, read as SOCKS5, and URLs with a query. `http://host:80` keeps port 80, where it became 8080, and the user name and password in an address are kept. In the form for one proxy, a password with characters such as `/`, `#` or `?` works
+* Fix: With your proxies on and none to use, as before your list's first download, the app waits for the list and connects through a proxy, where it connected straight to your server; with no proxy to use at all, Manual proxies with none listed too, it says that no proxy can be reached. A list whose update is set to never still downloads once while it has no proxy to use. With Manual proxies on, the home screen shows Proxies even with none listed
+* Fix: With the kill switch on, the VPN downloads your proxy list from its URL when you connect, where it could not look up the list's address
+* Update: An HTTPS proxy in a list at a bare IP address, with no user name, is used as an HTTP proxy: such a proxy rarely has a certificate your device trusts for its address, and lists say HTTPS for HTTP proxies that carry HTTPS sites
+* Fix: While it connects, the app no longer fetches an address that your server's certificate names, which a certificate shown on the way, by a proxy too, could make any address, reached outside the VPN
+* Fix: When your local network stays out of the VPN, only its IPv6 addresses do, as with IPv4, and the kill switch lets no more through. Other IPv6 addresses that are not public, such as those of a carrier's IPv6-to-IPv4 gateway, went around the VPN.
+* Fix: With Split Domains on, DNS lookups no longer stall: about half of them were held back, and an app waited for its own retry
+* Fix: With Split Domains on, an app whose server speaks first, as with SMTP, FTP or MySQL, connects after a second, where it waited until it gave up
+* Fix: A domain you include in Split Domains goes through the VPN even where Split IPs blocks its address, as the include promises, where its connections were dropped, but for HTTP/3 ones
+* Update: A domain you exclude in Split Domains goes around the VPN even where Split IPs blocks its address, as its HTTP/3 connections did
+* Fix: A site blocked in Split Domains is no longer reachable while an ad shows
+* Fix: Split Domains no longer lets a site's HTTP/3 connection through without its rule when the start of it is late or not whole; that start is dropped, and read again when the app sends it again
+* Update: With Split Domains on, a change to Split IPs or Split Domains while connected ends the apps' open TCP connections, so they connect again under the new rules; an HTTP/3 connection keeps its rule until it ends
+* Fix: Split Domains no longer lets a blocked site through, or an included site out of the VPN, when an app reaches it over HTTP/3 from the same port as another site at the same address, as sites on one content network share an address
+* Fix: A DNS lookup over TCP or over TLS no longer goes outside the VPN while an ad shows, nor, with Split DNS on Always use VPN, where Split IPs excludes your DNS server
 * Fix: With Split DNS on Always use VPN, a name under your network's own DNS domain is no longer looked up outside the VPN. A name that only your network's DNS server knows, such as `nas.lan`, no longer resolves while connected; choose Allow Bypass VPN if you need such names. Where the system does not let the app do this, as Ubuntu 20.04 and 22.04 on a network of that kind that systemd-networkd manages, the app still connects, and those names are looked up outside the VPN #linux
 * Fix: The app no longer shows Connected while IPv6 goes outside the VPN: on a computer that has IPv6 but refuses the VPN its IPv6 address, the app does not connect and says why, and it disconnects when such a computer moves to a network with IPv6. A computer with no IPv6 connects as before #windows #linux
 * Fix: With Split DNS on Always use VPN, a DNS domain that your network sets while you are connected, as when it renews your address, no longer sends the names under it outside the VPN: the app takes it off within a moment, where the system lets it #linux

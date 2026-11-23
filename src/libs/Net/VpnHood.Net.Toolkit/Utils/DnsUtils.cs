@@ -3,18 +3,23 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Logging;
+using VpnHood.Net.Toolkit.Sockets;
 
 namespace VpnHood.Net.Toolkit.Utils;
 
 /// <summary>
-/// Provides DNS helpers: the network's resolvers, and a minimal A-record lookup over UDP.
+/// Provides DNS helpers: the network's resolvers, and a minimal A-record lookup over UDP, with AAAA records too for the
+/// lookup over the network's resolvers.
 /// </summary>
 public static class DnsUtils
 {
     private const ushort DnsResponseFlag = 0x8000; // QR
     private const ushort DnsTruncatedFlag = 0x0200; // TC
     private const ushort DnsResponseCodeMask = 0x000F; // RCODE
+    private static readonly TimeSpan OtherQueryDelay = TimeSpan.FromMilliseconds(50);
 
     /// <summary>
     /// Gets the resolvers of the networks the machine reaches beyond itself by: adapters that are up with a gateway, not
@@ -63,6 +68,104 @@ public static class DnsUtils
             .Where(x => !IPAddress.IsLoopback(x))
             .Distinct()
             .ToArray();
+    }
+
+    /// <summary>
+    /// Looks up a host's addresses from the network's resolvers (<see cref="GetNetworkDnsServers"/>), asked in turn over
+    /// UDP clients a socket factory makes, until one answers with an address: a process whose own traffic alone a firewall
+    /// lets out gets an answer that the system's resolver, asking from a process of its own, cannot. Each is asked for
+    /// the IPv4 and the IPv6 addresses at once, each query on a client of its own, so a name with IPv6 addresses alone
+    /// resolves too, and a resolver that drops or refuses one query still gives the other's addresses. The IPv4 query is
+    /// waited for, as any client can use its addresses; once it gave addresses, the IPv6 one is waited for 50 ms more at
+    /// most. A query left behind ends with the lookup.
+    /// </summary>
+    /// <param name="host">The host name.</param>
+    /// <param name="socketFactory">The factory of the UDP clients.</param>
+    /// <param name="timeoutPerResolver">How long each of a resolver's queries may take.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// A task whose result is the host's addresses, the IPv4 ones first, as the first resolver that had any gave them.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">No resolver answered with an address, or the network has none.</exception>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    public static Task<IReadOnlyList<IPAddress>> GetHostAddressesByNetworkResolvers(string host,
+        ISocketFactory socketFactory, TimeSpan timeoutPerResolver, CancellationToken cancellationToken)
+    {
+        var resolvers = GetNetworkDnsServers().Select(x => new IPEndPoint(x, 53)).ToArray();
+        return GetHostAddresses(host, resolvers, socketFactory, timeoutPerResolver, cancellationToken);
+    }
+
+    // The lookup of GetHostAddressesByNetworkResolvers, of the resolvers given
+    internal static async Task<IReadOnlyList<IPAddress>> GetHostAddresses(string host,
+        IReadOnlyList<IPEndPoint> resolvers, ISocketFactory socketFactory, TimeSpan timeoutPerResolver,
+        CancellationToken cancellationToken)
+    {
+        foreach (var resolver in resolvers) {
+            var addresses = await QueryResolver(host, resolver, socketFactory, timeoutPerResolver, cancellationToken)
+                .Vhc();
+
+            if (addresses.Count > 0)
+                return addresses;
+
+            VhLogger.Instance.LogWarning("A network's resolver gave no address of a name. DnsServer: {DnsServer}",
+                VhLogger.Format(resolver));
+        }
+
+        throw new InvalidOperationException(
+            $"The network's resolvers could not resolve the name. DnsServers: {resolvers.Count}");
+    }
+
+    // One resolver's addresses of a name. Its two queries end, their clients closed, before it returns or throws, a
+    // cancellation too: one left behind held its client until its own timeout, which may be none
+    private static async Task<IReadOnlyList<IPAddress>> QueryResolver(string host, IPEndPoint resolver,
+        ISocketFactory socketFactory, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        using var resolverCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var ipv4Task = TryQuery(host, resolver, AddressFamily.InterNetwork, socketFactory, timeout, resolverCts.Token);
+        var ipv6Task = TryQuery(host, resolver, AddressFamily.InterNetworkV6, socketFactory, timeout,
+            resolverCts.Token);
+
+        try {
+            // The IPv4 answer is waited for, as any client can use its addresses: an IPv6 answer that came first and
+            // alone left a client without IPv6 no server. Once it gave addresses, the IPv6 one has a moment more, not its
+            // whole timeout, as a resolver that drops that query would cost it on each lookup (RFC 8305's resolution
+            // delay)
+            var ipv4Addresses = await ipv4Task.Vhc();
+            if (ipv4Addresses.Count > 0)
+                await Task.WhenAny(ipv6Task, Task.Delay(OtherQueryDelay, cancellationToken)).Vhc();
+            else
+                await ipv6Task.Vhc();
+
+            cancellationToken.ThrowIfCancellationRequested();
+            IReadOnlyList<IPAddress> ipv6Addresses = ipv6Task.IsCompletedSuccessfully ? ipv6Task.Result : [];
+            return [.. ipv4Addresses, .. ipv6Addresses];
+        }
+        finally {
+            await resolverCts.CancelAsync().Vhc();
+            await Task.WhenAny(Task.WhenAll(ipv4Task, ipv6Task)).Vhc();
+        }
+    }
+
+    // One family's query over a UDP client of its own: none where it failed, which is logged
+    private static async Task<IReadOnlyList<IPAddress>> TryQuery(string host, IPEndPoint resolver,
+        AddressFamily addressFamily, ISocketFactory socketFactory, TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        try {
+            using var udpClient = socketFactory.CreateUdpClient(resolver.AddressFamily);
+            udpClient.Connect(resolver);
+            return await Query(host, udpClient, addressFamily, timeout, cancellationToken).Vhc();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(ex,
+                "A network's resolver did not answer a query. DnsServer: {DnsServer}, AddressFamily: {AddressFamily}",
+                VhLogger.Format(resolver), addressFamily);
+
+            return [];
+        }
     }
 
     /// <summary>
@@ -120,29 +223,58 @@ public static class DnsUtils
         }
 
         udpClient.Connect(dnsEndPoint);
+        var addresses = await Query(host, udpClient, AddressFamily.InterNetwork, timeout, cancellationToken).Vhc();
+        if (addresses.Count == 0)
+            throw new Exception("No valid A records found in DNS response.");
 
-        // Build DNS query
-        var queryId = (ushort)new Random().Next(ushort.MaxValue);
-        var query = BuildDnsQuery(queryId, host);
+        return new IPHostEntry { HostName = host, AddressList = addresses.ToArray() };
+    }
 
-        // Send the DNS query
+    /// <summary>
+    /// Looks up a host's addresses of one IP version with one query to a resolver, over a given UDP client: the IN A
+    /// records of the answer section for IPv4, its AAAA records for IPv6; the names and the other sections are not
+    /// checked.
+    /// </summary>
+    /// <param name="host">The host name.</param>
+    /// <param name="dnsEndPoint">The resolver.</param>
+    /// <param name="udpClient">The UDP client, which this call connects to the resolver; the caller keeps owning it.</param>
+    /// <param name="addressFamily">
+    /// <see cref="AddressFamily.InterNetwork"/> for the IPv4 addresses, or <see cref="AddressFamily.InterNetworkV6"/>
+    /// for the IPv6 ones.
+    /// </param>
+    /// <param name="timeout">How long the send and the answer may take.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task whose result is the host's addresses of that version, none where the answer has none.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="host"/> is empty or white space, or no host name; or <paramref name="addressFamily"/> is
+    /// neither.
+    /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="dnsEndPoint"/> is <see langword="null"/>.</exception>
+    /// <exception cref="OperationCanceledException">The timeout passed, or <paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="InvalidOperationException">The answer is not this query's, not a response, truncated, or an error.</exception>
+    /// <exception cref="EndOfStreamException">The answer ends early.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is negative, other than infinite, or too long.</exception>
+    public static Task<IReadOnlyList<IPAddress>> GetHostAddresses(string host, IPEndPoint dnsEndPoint,
+        UdpClient udpClient, AddressFamily addressFamily, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(host);
+        ArgumentNullException.ThrowIfNull(dnsEndPoint);
+        udpClient.Connect(dnsEndPoint);
+        return Query(host, udpClient, addressFamily, timeout, cancellationToken);
+    }
+
+    // One query of a host's addresses of a family, its A or AAAA records, over a UDP client connected to the resolver,
+    // within the timeout: none where the answer has none
+    private static async Task<IReadOnlyList<IPAddress>> Query(string host, UdpClient udpClient,
+        AddressFamily addressFamily, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var queryId = (ushort)Random.Shared.Next(ushort.MaxValue);
+        var query = BuildDnsQuery(queryId, host, addressFamily);
         using var timeoutCts = new CancellationTokenSource(timeout);
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
-        await udpClient
-            .SendAsync(query.AsMemory(), linkedCts.Token)
-            .Vhc();
-
-        // Wait for response with a timeout
-        var task = await udpClient
-            .ReceiveAsync(linkedCts.Token)
-            .Vhc();
-
-        var response = task.Buffer;
-
-        // Parse the DNS response
-        var hostEntry = ParseDnsResponse(response, queryId);
-        hostEntry.HostName = host;
-        return hostEntry;
+        await udpClient.SendAsync(query.AsMemory(), linkedCts.Token).Vhc();
+        var result = await udpClient.ReceiveAsync(linkedCts.Token).Vhc();
+        return ReadAddresses(result.Buffer, queryId, addressFamily);
     }
 
     /// <summary>Builds a DNS query for a host's A records, recursion desired.</summary>
@@ -156,6 +288,12 @@ public static class DnsUtils
     /// name longer than 253.
     /// </exception>
     public static byte[] BuildDnsQuery(ushort queryId, string host)
+    {
+        return BuildDnsQuery(queryId, host, AddressFamily.InterNetwork);
+    }
+
+    // the query for the records of a family: A for IPv4, AAAA for IPv6
+    private static byte[] BuildDnsQuery(ushort queryId, string host, AddressFamily addressFamily)
     {
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
@@ -175,10 +313,20 @@ public static class DnsUtils
         }
 
         writer.Write((byte)0); // End of hostname
-        writer.Write((ushort)IPAddress.HostToNetworkOrder((short)1)); // Type A
+        writer.Write((ushort)IPAddress.HostToNetworkOrder((short)GetRecordType(addressFamily))); // A or AAAA
         writer.Write((ushort)IPAddress.HostToNetworkOrder((short)1)); // Class IN
 
         return stream.ToArray();
+    }
+
+    private static ushort GetRecordType(AddressFamily addressFamily)
+    {
+        return addressFamily switch {
+            AddressFamily.InterNetwork => 1, // A
+            AddressFamily.InterNetworkV6 => 28, // AAAA
+            _ => throw new ArgumentOutOfRangeException(nameof(addressFamily), addressFamily,
+                "Only IPv4 and IPv6 addresses have records.")
+        };
     }
 
     // The name as a query carries it: without the root's dot at its end, its Unicode labels in their ASCII form, and
@@ -219,6 +367,22 @@ public static class DnsUtils
     /// <exception cref="Exception">The response has no A record.</exception>
     public static IPHostEntry ParseDnsResponse(byte[] response, ushort queryId)
     {
+        var addresses = ReadAddresses(response, queryId, AddressFamily.InterNetwork);
+        if (addresses.Count == 0)
+            throw new Exception("No valid A records found in DNS response.");
+
+        return new IPHostEntry {
+            HostName = "",
+            AddressList = addresses.ToArray()
+        };
+    }
+
+    // the IN records of a family in a response's answer section, A or AAAA, after the checks ParseDnsResponse makes;
+    // none where it has none
+    private static IReadOnlyList<IPAddress> ReadAddresses(byte[] response, ushort queryId, AddressFamily addressFamily)
+    {
+        var recordType = GetRecordType(addressFamily);
+        var addressLength = addressFamily == AddressFamily.InterNetwork ? 4 : 16;
         using var stream = new MemoryStream(response);
         using var reader = new BinaryReader(stream);
 
@@ -266,24 +430,17 @@ public static class DnsUtils
             var dataLength = (ushort)IPAddress.NetworkToHostOrder(reader.ReadInt16());
             // ReSharper restore UnusedVariable
 
-            if (type == 1 && @class == 1 && dataLength == 4) // Type A, Class IN, an IPv4 address
+            if (type == recordType && @class == 1 && dataLength == addressLength) // the family's type, class IN
             {
                 var addressBytes = ReadBytes(reader, dataLength);
                 ipAddresses.Add(new IPAddress(addressBytes));
             }
             else {
-                ReadBytes(reader, dataLength); // Skip non-A records
+                ReadBytes(reader, dataLength); // Skip the other records
             }
         }
 
-        if (ipAddresses.Count == 0) {
-            throw new Exception("No valid A records found in DNS response.");
-        }
-
-        return new IPHostEntry {
-            HostName = "",
-            AddressList = [.. ipAddresses]
-        };
+        return ipAddresses;
     }
 
     private static void SkipDomainName(BinaryReader reader)

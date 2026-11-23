@@ -148,9 +148,78 @@ public class SqliteFilterChainTest : TestBase
         await SplitDbManifest.Write(folder, [newDbPath], TestCt);
         await chain.Reconfigure(TestCt);
 
-        Assert.AreEqual(FilterAction.Default, chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")),
-            "a closed chain must take no new gates");
-        File.Delete(newDbPath); // nor leave the new db open
+        // a closed chain takes no new gates, nor leaves the new db open, and a lookup fails
+        File.Delete(newDbPath);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
+    }
+
+    [TestMethod]
+    public async Task A_lookup_after_the_close_fails_rather_than_let_a_blocked_address_pass()
+    {
+        // a lookup that races the pipe's teardown found no gate, or a gate that found no member, and a blocked
+        // address passed
+        var folder = CreateDbFolder("ip-lookup-closed");
+        var dbPath = await BuildIpDb(folder, "ip-lookup-closed.1.db", "1.0.0.1");
+        await SplitDbManifest.Write(folder, [dbPath], TestCt);
+        var chain = await SqliteIpFilterChain.Create(next: null, folder, autoDisposeNextFilter: true, TestCt);
+        Assert.AreEqual(FilterAction.Block, chain.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
+
+        chain.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => chain.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
+
+        var gate = new SqliteIpFilter(next: null, dbPath);
+        gate.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => gate.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
+    }
+
+    [TestMethod]
+    public async Task A_lookup_after_the_close_fails_whatever_the_next_stage_would_answer()
+    {
+        // The chain asks its next stage first, and gave that stage's verdict after its own close: the exclude of a
+        // stage the close had disposed sent the address around the tunnel, past gates that were gone
+        var folder = CreateDbFolder("ip-next-closed");
+        var dbPath = await BuildIpDb(folder, "ip-next-closed.1.db", "1.0.0.1");
+        await SplitDbManifest.Write(folder, [dbPath], TestCt);
+        var next = new StaticIpFilter(null) { ExcludeRanges = new[] { IpRange.Parse("2.0.0.2") }.ToOrderedList() };
+        var chain = await SqliteIpFilterChain.Create(next, folder, autoDisposeNextFilter: true, TestCt);
+        Assert.AreEqual(FilterAction.Exclude, chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
+
+        chain.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => chain.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
+    }
+
+    [TestMethod]
+    public async Task A_lookup_after_the_close_fails_rather_than_take_an_included_address_out_of_the_tunnel()
+    {
+        // a gate with an include set alone sends every address outside it around the tunnel: closed, it found no
+        // member, so an address inside the set went around too
+        var folder = CreateDbFolder("ip-include-closed");
+        var dbPath = Path.Combine(folder, "ip-include-closed.1.db");
+        await new IpRangeListDbBuilder(() => "ip-include-closed",
+            includesFactory: () => new[] { IpRange.Parse("1.0.0.1") }.ToOrderedList()).BuildAsync(dbPath, TestCt);
+        var gate = new SqliteIpFilter(next: null, dbPath);
+        Assert.AreEqual(FilterAction.Default, gate.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
+        Assert.AreEqual(FilterAction.Exclude, gate.Process(IpProtocol.Tcp, Ep("2.0.0.2")));
+
+        gate.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => gate.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
+    }
+
+    [TestMethod]
+    public async Task A_name_lookup_after_the_close_fails_rather_than_let_a_blocked_name_pass()
+    {
+        var folder = CreateDbFolder("domain-lookup-closed");
+        var dbPath = await BuildDomainDb(folder, "domain-lookup-closed.1.db", "blocked.com");
+        await SplitDbManifest.Write(folder, [dbPath], TestCt);
+        var chain = await SqliteDomainFilterChain.Create(next: null, folder, autoDisposeNextFilter: true, TestCt);
+        Assert.AreEqual(FilterAction.Block, chain.Process("blocked.com"));
+
+        chain.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => chain.Process("blocked.com"));
+
+        var gate = new SqliteDomainFilter(next: null, dbPath);
+        gate.Dispose();
+        Assert.ThrowsExactly<ObjectDisposedException>(() => gate.Process("blocked.com"));
     }
 
     [TestMethod]
@@ -167,8 +236,9 @@ public class SqliteFilterChainTest : TestBase
         await SplitDbManifest.Write(folder, [newDbPath], TestCt);
         await chain.Reconfigure(TestCt);
 
-        Assert.AreEqual(FilterAction.Default, chain.Process("new.com"), "a closed chain must take no new gates");
-        File.Delete(newDbPath); // nor leave the new db open
+        // a closed chain takes no new gates, nor leaves the new db open, and a lookup fails
+        File.Delete(newDbPath);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => chain.Process("new.com"));
     }
 
     [TestMethod]

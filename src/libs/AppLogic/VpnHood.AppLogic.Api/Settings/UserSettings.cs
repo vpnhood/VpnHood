@@ -45,7 +45,7 @@ public class UserSettings
 
     /// <summary>
     /// Gets or sets a value indicating whether the client drops the UDP bound for the tunnel, but to DNS's ports; it
-    /// applies only while the client forwards IPv4 TCP, and then to either IP version.
+    /// applies as <see cref="DropQuic"/> does.
     /// </summary>
     public bool DropUdp { get; set; }
 
@@ -61,7 +61,8 @@ public class UserSettings
 
     /// <summary>
     /// Gets or sets a value indicating whether the client drops the QUIC bound for the tunnel, UDP to ports 80 and 443,
-    /// so apps turn to TCP; it applies only while the client forwards IPv4 TCP, and then to either IP version.
+    /// so apps turn to TCP; it applies, to both IP versions, only while TCP forwarding is chosen, by
+    /// <see cref="UseTcpForwarding"/> or by the server's Cloak Mode, not where the client takes it on by itself.
     /// </summary>
     public bool DropQuic { get; set; }
 

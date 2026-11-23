@@ -31,8 +31,15 @@ public static class EndPointResolver
         try {
             VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...",
                 VhLogger.FormatHostName(serverToken.HostName));
-            var addresses = ownResolverSocketFactory != null
-                ? await ResolveByOwnResolver(serverToken.HostName, ownResolverSocketFactory, cancellationToken).Vhc()
+            // The name asked of the network's resolvers from this process, over sockets the factory makes: under the
+            // kill switch's block, which lets only the VPN service's own traffic out, the OS's resolver cannot answer,
+            // as it asks from a process of its own (Windows' DNS Client, systemd-resolved). Keep no copy of a name's last
+            // addresses for it: a crash's redial tries the dead session's server first (ConnectedServerFile), a connect's
+            // token update brings the server's addresses, and what is left - a farm that gives names only, on a box whose
+            // only resolver is a stub other than systemd-resolved - is where a kept address is likeliest stale.
+            IReadOnlyList<IPAddress> addresses = ownResolverSocketFactory != null
+                ? await DnsUtils.GetHostAddressesByNetworkResolvers(serverToken.HostName, ownResolverSocketFactory,
+                    OwnResolverTimeout, cancellationToken).Vhc()
                 : (await Dns.GetHostEntryAsync(serverToken.HostName, cancellationToken).Vhc()).AddressList;
 
             return addresses.Select(x => new IPEndPoint(x, serverToken.HostPort));
@@ -46,37 +53,6 @@ public static class EndPointResolver
         }
     }
 
-    // The name asked of the network's resolvers from this process, over sockets the factory makes: under the
-    // kill switch's block, which lets only the VPN service's own traffic out, the OS's resolver cannot answer,
-    // as it asks from a process of its own (Windows' DNS Client, systemd-resolved). Keep no copy of a name's last
-    // addresses for it: a crash's redial tries the dead session's server first (ConnectedServerFile), a connect's
-    // token update brings the server's addresses, and what is left - a farm that gives names only, on a box whose
-    // only resolver is a stub other than systemd-resolved - is where a kept address is likeliest stale.
-    private static async Task<IPAddress[]> ResolveByOwnResolver(string hostName, ISocketFactory socketFactory,
-        CancellationToken cancellationToken)
-    {
-        var dnsServers = DnsUtils.GetNetworkDnsServers();
-        foreach (var dnsServer in dnsServers) {
-            try {
-                using var udpClient = socketFactory.CreateUdpClient(dnsServer.AddressFamily);
-                var hostEntry = await DnsUtils.GetHostEntry(hostName, new IPEndPoint(dnsServer, 53), udpClient,
-                    OwnResolverTimeout, cancellationToken).Vhc();
-                if (hostEntry.AddressList.Length > 0)
-                    return hostEntry.AddressList;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
-                throw;
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogWarning(ex, "A network's resolver could not resolve the server's name. DnsServer: {DnsServer}",
-                    VhLogger.Format(dnsServer));
-            }
-        }
-
-        throw new InvalidOperationException(
-            $"The network's resolvers could not resolve the server's name. DnsServers: {dnsServers.Count}");
-    }
-
     /// <summary>Resolves a server token's endpoints, as <see cref="ResolveHostEndPointsAndName"/> does.</summary>
     /// <param name="serverToken">The server token.</param>
     /// <param name="strategy">The order, or <see cref="EndPointStrategy.Auto"/> for the token's own.</param>
@@ -84,13 +60,10 @@ public static class EndPointResolver
     /// <param name="ownResolverSocketFactory">
     /// The factory of sockets to ask the network's resolvers from this process, as where the kill switch's block lets
     /// only the VPN service's traffic out, or <see langword="null"/> for the system's resolver. The network's resolvers
-    /// are asked in turn, over UDP and for IPv4 addresses only, five seconds each, and the first answer is taken; the
-    /// system's resolver is not asked then.
+    /// are asked in turn, over UDP and for IPv4 and IPv6 addresses at once, five seconds each, and the first answer is
+    /// taken, its IPv4 addresses waited for; the system's resolver is not asked then.
     /// </param>
-    /// <returns>
-    /// A task whose result is the endpoints, without repeats but for <see cref="EndPointStrategy.IpOnly"/>'s, which are
-    /// the token's list as it is.
-    /// </returns>
+    /// <returns>A task whose result is the endpoints, without repeats.</returns>
     /// <exception cref="InvalidOperationException">The token has neither endpoints nor a real host name.</exception>
     /// <exception cref="Exceptions.EndPointDiscoveryException">No endpoint was found.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -116,8 +89,8 @@ public static class EndPointResolver
     /// <param name="ownResolverSocketFactory">
     /// The factory of sockets to ask the network's resolvers from this process, as where the kill switch's block lets
     /// only the VPN service's traffic out, or <see langword="null"/> for the system's resolver. The network's resolvers
-    /// are asked in turn, over UDP and for IPv4 addresses only, five seconds each, and the first answer is taken; the
-    /// system's resolver is not asked then.
+    /// are asked in turn, over UDP and for IPv4 and IPv6 addresses at once, five seconds each, and the first answer is
+    /// taken; the system's resolver is not asked then.
     /// </param>
     /// <param name="knownAddresses">
     /// The host name's addresses, known already, which are taken rather than asking the name where theirs is the
@@ -126,8 +99,8 @@ public static class EndPointResolver
     /// <returns>A task whose result is the endpoints, with those the name gave among them.</returns>
     /// <remarks>
     /// A failure to resolve the name is logged and leaves the listed endpoints, or, under
-    /// <see cref="EndPointStrategy.DnsOnly"/>, none, which fails. <see cref="EndPointStrategy.IpOnly"/>'s endpoints are
-    /// the token's list as it is; the others come without repeats.
+    /// <see cref="EndPointStrategy.DnsOnly"/>, none, which fails. The endpoints come without repeats, the token's list
+    /// under <see cref="EndPointStrategy.IpOnly"/> too.
     /// </remarks>
     /// <exception cref="InvalidOperationException">The token has neither endpoints nor a real host name.</exception>
     /// <exception cref="Exceptions.EndPointDiscoveryException">No endpoint was found.</exception>
@@ -146,10 +119,13 @@ public static class EndPointResolver
             throw new InvalidOperationException(
                 "The token does not contain any server endpoints or a valid hostname. Please contact your provider's support.");
 
-        // fix token only strategy
+        // fix token only strategy: without repeats, which the client would try again for nothing
         if (strategy == EndPointStrategy.IpOnly) {
             if (!VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))
-                return new ResolvedHostEndPoints { EndPoints = serverToken.HostEndPoints, NameEndPoints = [] };
+                return new ResolvedHostEndPoints {
+                    EndPoints = serverToken.HostEndPoints.Distinct().ToArray(),
+                    NameEndPoints = []
+                };
 
             VhLogger.Instance.LogWarning(
                 "TokenOnly strategy is not supported by this token because there are no endpoints in the token. Fallback to DnsOnly.");

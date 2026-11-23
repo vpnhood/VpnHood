@@ -54,8 +54,19 @@ public class VpnHoodClientConfig
     /// </summary>
     public required bool AllowAnonymousTracker { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether the app's trackers get the server endpoints the client checks and connects to
+    /// (<see cref="ClientOptions.AllowEndPointTracker"/>).
+    /// </summary>
+    public required bool AllowEndPointTracker { get; init; }
+
     /// <summary>Gets the plan to connect with (<see cref="ClientOptions.PlanId"/>).</summary>
     public required ConnectPlanId PlanId { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the app's ads can show over the VPN (<see cref="ClientOptions.CanShowAdOverVpn"/>).
+    /// </summary>
+    public required bool CanShowAdOverVpn { get; init; }
 
     /// <summary>
     /// Gets the premium code to connect with, or <see langword="null"/> (<see cref="ClientOptions.AccessCode"/>).
@@ -98,18 +109,6 @@ public class VpnHoodClientConfig
     public required SplitDnsMode SplitDnsMode { get; init; }
 
     /// <summary>
-    /// Gets what happens to a destination the server does not route, at the connect
-    /// (<see cref="ClientOptions.UnroutedIpMode"/>).
-    /// </summary>
-    public required SplitUnsupportedIpMode UnroutedIpMode { get; init; }
-
-    /// <summary>
-    /// Gets what happens to IPv6 where the server carries none, at the connect
-    /// (<see cref="ClientOptions.UnsupportedIpV6Mode"/>).
-    /// </summary>
-    public required SplitUnsupportedIpMode UnsupportedIpV6Mode { get; init; }
-
-    /// <summary>
     /// Gets the name the VPN adapter gives its session, or <see langword="null"/> (<see cref="ClientOptions.SessionName"/>).
     /// </summary>
     public required string? SessionName { get; init; }
@@ -134,22 +133,4 @@ public class VpnHoodClientConfig
     /// debug data has <c>/disable-WebSocket</c>.
     /// </summary>
     public required bool UseWebSocket { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the client prefers to forward TCP connections, at the connect
-    /// (<see cref="ClientOptions.UseTcpForwarding"/>).
-    /// </summary>
-    public required bool UseTcpForwarding { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the client was asked to drop the UDP bound for the tunnel, at the connect
-    /// (<see cref="ClientOptions.DropUdp"/>); the session works out what is in effect.
-    /// </summary>
-    public required bool DropUdp { get; init; }
-
-    /// <summary>
-    /// Gets a value indicating whether the client was asked to drop the QUIC bound for the tunnel, at the connect
-    /// (<see cref="ClientOptions.DropQuic"/>); the session works out what is in effect.
-    /// </summary>
-    public required bool DropQuic { get; init; }
 }

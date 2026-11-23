@@ -7,7 +7,12 @@ rebuild mechanics) is in [README.md](README.md); the db format is in the
 
 Domains are matched on the **extracted SNI** (TLS ClientHello over TCP, QUIC initial). That makes the
 domain gate inherently partial: traffic that carries no readable domain (plain TCP/UDP, raw-IP
-connections) returns `Default` from the domain pipe and is decided by the IP gates alone.
+connections) returns `Default` from the domain pipe and is decided by the IP gates alone. A TCP connection
+whose app sends nothing in the first second is one of them: where the server speaks first, as with SMTP,
+FTP or MySQL, the app waits for it, and the server is reached only after the verdict. A ClientHello begun
+and not complete within that second fails the connection rather than pass it unnamed, as does one that is
+not well formed. A name that Encrypted Client Hello hides is not read either: the rules see the outer
+name, the provider's.
 
 ## Sources
 
@@ -49,6 +54,32 @@ Within the db the most specific entry that matches decides, whichever set holds 
 another is an exception to it: `google.com` excluded with `mail.google.com` included sends mail through
 the tunnel and the rest of Google around it. Only between entries of the same domain is the order
 block > exclude > include.
+
+A flow whose name an entry matches takes that verdict whatever the IP gates say, TCP and QUIC alike: an
+include goes through the tunnel past an IP exclude or block, and an exclude goes around it past an IP
+block. The IP gates decide only a flow whose name matches no entry, or that has none. A TCP connection is
+decided once, when its name is read, so a rule that changes while connected, IP or domain, ends the open
+TCP connections, and one still being set up is not joined to its host or to the tunnel; the apps' new ones
+follow it (`ClientSession`). So does the change that takes the last domain rule away.
+
+Reading a TCP connection's name first has a price: the connection is made on the device before it is
+decided, so one that the IP gates block is ended once its name is read, where its packets were dropped
+before a domain rule was on. An app that tries its addresses only as it connects then fails where one of a
+name's address families alone is blocked, or is not routed by the server while what it does not route is
+blocked. IPv6 that the server or the device's own network does not carry is kept from that: its TCP
+packets meet the IP gates first, as with no domain rule on, so a connection that cannot go the way they
+say, into the tunnel or around it, is never made, and such an app goes on to IPv4 (`ClientPacketHandler`).
+A name's verdict passes no IP gate there, as it does over IPv4 and over QUIC.
+
+A QUIC flow is the packets between two addresses and ports, and a client that keeps one socket may run
+several connections on it to one server address, as to a CDN's, at once or one after another. Each has
+its name read from its first packets. A blocked one is dropped there and never gets past them, so the
+others go on. Past the first packets the connections of a flow are not told apart, so the flow goes by
+the most protective of their verdicts: include, then no entry, then exclude. None leaves the tunnel by
+another's exclude, at the price of an excluded name that is not excluded while it shares a flow with one
+that is not. A connection's first packets still go by its own verdict, so the IP gates judge a name with
+no entry there, whatever the flow's verdict. Where they send it another way than the flow goes, as an IP
+exclude does under an included flow, that connection may fail: its later packets follow the flow.
 
 Why the asymmetry: every packet has an IP, so IP gates can be pure vetoes; but a domain is *more
 specific* knowledge than an IP, and an exception to an IP-level exclusion can only be expressed by a

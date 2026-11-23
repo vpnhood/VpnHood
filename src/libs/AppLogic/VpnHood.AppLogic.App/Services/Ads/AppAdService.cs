@@ -46,20 +46,13 @@ internal class AppAdService(
             item.IsEnabled = value;
     }
 
-    private bool CanShowOverVpn(AdType adType) =>
-        adProviderItems.Any(x => x.AdProvider.AdType == adType && x.CanShowOverVpn);
-
-    public bool CanShowOverVpn(AdRequestType adRequestType)
-    {
-        return adRequestType switch {
-            AdRequestType.Interstitial => CanShowOverVpn(AdType.InterstitialAd),
-            AdRequestType.Rewarded => CanShowOverVpn(AdType.RewardedAd),
-            _ => throw new ArgumentOutOfRangeException(nameof(adRequestType), adRequestType, null)
-        };
-    }
-
     public bool CanShowInterstitial => adProviderItems.Any(x => x.AdProvider.AdType == AdType.InterstitialAd);
     public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd);
+
+    // over the VPN only where every network can: the session decides at its start, before it knows which network will
+    // fill the ad, and one that refuses VPN traffic must never load in the tunnel. Taken with the loaders' own copies of
+    // the list, so a change to the caller's list later cannot tell the session one thing and load another
+    public bool CanShowOverVpn { get; } = adProviderItems.Count > 0 && adProviderItems.All(x => x.CanShowOverVpn);
 
     public async Task LoadInterstitialAd(IUiContext uiContext, bool useFallback, CancellationToken cancellationToken)
     {

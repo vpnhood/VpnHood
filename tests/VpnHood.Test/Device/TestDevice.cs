@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.Devices.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
+using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Sockets;
@@ -23,7 +25,7 @@ public class TestDevice(
     public int BindProcessToVpnTrueCount { get; private set; }
     public bool LastBindProcessToVpnValue { get; private set; }
     public bool IsQuicSupported => MsQuicClient.IsSupported;
-    public bool IsBindProcessToVpnSupported => true;
+    public bool IsBindProcessToVpnSupported { get; init; } = true;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public DeviceUserAgentInfo UserAgentInfo { get; init; } = new() {
         Platform = "X11; Linux x86_64",
@@ -48,6 +50,15 @@ public class TestDevice(
     // the VPN permission's ask, where a test plays the person: the answer may come late, past the start's cancel
     public Func<CancellationToken, Task>? RequestVpnServiceHandler { get; init; }
 
+    // each client the service makes, before the service follows it: a handler added here runs before the service's
+    public Action<VpnHoodClient>? ClientCreated { get; init; }
+
+    // the proxies' connector of each client the service makes, where a test plays one; else the options' own
+    public Func<IProxyConnector>? ProxyConnectorFactory { get; init; }
+
+    // the app's channel to the service, where a test plays one; else the loopback TCP one
+    public Func<IMessageClient>? MessageClientFactory { get; init; }
+
     public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
@@ -66,7 +77,7 @@ public class TestDevice(
 
     public IMessageClient CreateMessageClient()
     {
-        return new TcpMessageClient(VpnServiceConfigFolder);
+        return MessageClientFactory?.Invoke() ?? new TcpMessageClient(VpnServiceConfigFolder);
     }
 
     public void BindProcessToVpn(bool value)
@@ -87,7 +98,7 @@ public class TestDevice(
         // create service
         if (VpnService == null || VpnService.IsDisposed)
             VpnService = new TestVpnService(VpnServiceConfigFolder, testHelper.ClientNetFilter, vpnAdapterFactory,
-                TunnelLock, KillSwitch);
+                TunnelLock, KillSwitch, ClientCreated, ProxyConnectorFactory);
 
         VpnService.OnConnect();
     }

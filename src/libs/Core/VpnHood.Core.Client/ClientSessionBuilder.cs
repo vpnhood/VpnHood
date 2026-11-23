@@ -41,6 +41,9 @@ internal class ClientSessionBuilder(
     NetFilter netFilter,
     ServerIpFilter serverIpFilter,
     ChannelProtocol channelProtocol,
+    bool useTcpForwarding,
+    bool dropUdp,
+    bool dropQuic,
     Action<ClientState> setState)
 {
     public async Task<ClientSession> Build(
@@ -57,7 +60,7 @@ internal class ClientSessionBuilder(
             "DropUdp: {DropUdp}, VpnProtocol: {VpnProtocol}, " +
             "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
             "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
-            config.DropUdp, channelProtocol, config.IncludeLocalNetwork, workerThreads, completionPortThreads,
+            dropUdp, channelProtocol, config.IncludeLocalNetwork, workerThreads, completionPortThreads,
             vpnAdapter.IsIpVersionSupported(IpVersion.IPv6), Process.GetCurrentProcess().Id);
 
         VhLogger.Instance.LogInformation(
@@ -67,21 +70,49 @@ internal class ClientSessionBuilder(
             config.Version, VpnHoodClientConfig.MinProtocolVersion, VpnHoodClientConfig.MaxProtocolVersion,
             VhLogger.FormatId(config.ClientId));
 
-        if (proxyConnector is { IsEnabled: true }) {
+        // With custom endpoints, a crash's record goes first only where it names one of them: they are the person's
+        // choice, which may be newer than the record
+        var keptServer = await connectedServerFile.Read(linkedCts.Token).Vhc();
+        var connectedServer = keptServer != null && (serverFinder.CustomServerEndpoints.Count == 0 ||
+                                                     serverFinder.CustomServerEndpoints.Contains(keptServer.TcpEndPoint))
+            ? keptServer
+            : null;
+
+        // Checked against a server they are for, the last one connected or one of the access key's, as the device
+        // reaches no one else through them, with the VPN's own check of its certificate. Their failure ends nothing
+        // here: that server may be down where another is not, and the connections to each server check the proxies
+        // against it again. A key whose servers are known only by name is left to those checks, as is its lookup
+        var checkEndPoint = connectedServer?.TcpEndPoint ??
+                            (serverFinder.CustomServerEndpoints.Count > 0
+                                ? serverFinder.CustomServerEndpoints
+                                : token.ServerToken.HostEndPoints ?? []).Shuffle().FirstOrDefault();
+
+        if (proxyConnector != null) {
             setState(ClientState.ValidatingProxies);
-            await proxyConnector.CheckServers(socketFactory, linkedCts.Token).Vhc();
 
-            var status = proxyConnector.Status;
-            VhLogger.Instance.LogInformation("Proxy servers succeeded: {Count}",
-                status.SucceededServerCount);
-
-            if (!status.IsAnySucceeded)
+            // A managed list with no enabled endpoint waits here for its first download, under the connect's own time:
+            // the server search's probes each give up at theirs, and the close of a failed connect ends the download.
+            // With none to use after it, no connection can be made, and the connect ends before any server lookup
+            if (!await proxyConnector.WaitForEndPoints(linkedCts.Token).Vhc())
                 throw new UnreachableProxyServerException();
+
+            // Checked here, a list that has only just come too, under the connect's own time and until a proxy passes,
+            // the rest behind the connect: the search's first probe would check them otherwise, within its own few
+            // seconds, which a slow proxy takes whole
+            if (checkEndPoint != null) {
+                var certificateHash = connectedServer?.CertificateHash ?? token.ServerToken.CertificateHash;
+                await proxyConnector.CheckServers(socketFactory, checkEndPoint,
+                    connectedServer?.HostName ?? token.ServerToken.HostName,
+                    (_, certificate, chain, errors) =>
+                        ConnectorService.IsServerCertificateValid(certificateHash, certificate, chain, errors),
+                    linkedCts.Token).Vhc();
+
+                VhLogger.Instance.LogInformation("Proxy servers succeeded: {Count}",
+                    proxyConnector.Status.SucceededServerCount);
+            }
         }
 
         setState(ClientState.FindingReachableServer);
-
-        var connectedServer = await connectedServerFile.Read(linkedCts.Token).Vhc();
         var vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], connectedServer,
             linkedCts.Token).Vhc();
         var allowRedirect = !serverFinder.CustomServerEndpoints.Any();
@@ -174,6 +205,7 @@ internal class ClientSessionBuilder(
                 $"IsTcpPacketIpV4Supported: {helloResponse.IsTcpPacketIpV4Supported}, " +
                 $"IsTcpPacketIpV6Supported: {helloResponse.IsTcpPacketIpV6Supported}, " +
                 $"IsTcpForwardingSupported: {helloResponse.IsTcpForwardingSupported}, " +
+                $"IsTcpForwardingRequired: {helloResponse.IsTcpForwardingRequired}, " +
                 $"IsQuicPacketSupported: {helloResponse.IsQuicPacketSupported}, " +
                 $"IsUdpPacketSupported: {helloResponse.IsUdpPacketSupported}, " +
                 $"IsLocalNetworkAllowed: {serverAllowedLocalNetworks.Any()}, " +
@@ -185,11 +217,16 @@ internal class ClientSessionBuilder(
             var sessionId = helloResponse.SessionId;
             var sessionKey = helloResponse.SessionKey;
 
-            var hostUdpEndPoint = helloResponse is { UdpPort: > 0, ProtocolVersion: >= UdpDatagram.MinProtocolVersion }
-                ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.UdpPort.Value)
+            // With proxies, the tunnel goes through them alone: UDP and QUIC would go to the server straight, around
+            // them, so the session takes neither, as with a server that offers none. By the connector, not by whether it
+            // has a proxy at this moment: a managed list may fill while the session runs
+            var isProxied = proxyConnector != null;
+            var hostUdpEndPoint = !isProxied && ChannelProtocolValidator.IsUdpChannelOffered(helloResponse) &&
+                                  helloResponse.UdpPort is { } udpPort
+                ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, udpPort)
                 : null;
 
-            var hostQuicEndPoint = helloResponse.QuicPort > 0
+            var hostQuicEndPoint = !isProxied && helloResponse.QuicPort > 0
                 ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.QuicPort.Value)
                 : null;
 
@@ -205,10 +242,9 @@ internal class ClientSessionBuilder(
             // so the server's own word rejects a home-LAN resolver, no client-side LAN heuristic involved)
             // and the fate of what it does not route — per family: a v4-only server leaves every IPv6
             // destination to UnsupportedIpV6Mode regardless of its declared ranges. From here one Process
-            // call answers for the whole session: client gates first, then the server's ranges.
+            // call answers for the whole session: client gates first, then the server's ranges. The modes are the
+            // client's own, from its options or set since (VpnHoodClient)
             serverIpFilter.IncludeRanges = serverIncludeIpRanges;
-            serverIpFilter.UnroutedIpMode = config.UnroutedIpMode;
-            serverIpFilter.UnsupportedIpV6Mode = config.UnsupportedIpV6Mode;
             serverIpFilter.IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             var dnsConfig = ClientHelper.GetDnsServers(
@@ -224,8 +260,8 @@ internal class ClientSessionBuilder(
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
                 clientIncludeIpRanges: config.IncludeIpRangesByDevice.ToOrderedList(),
                 serverIncludeIpRanges: serverIncludeIpRangesByDevice,
-                unroutedIpMode: config.UnroutedIpMode,
-                unsupportedIpV6Mode: config.UnsupportedIpV6Mode,
+                unroutedIpMode: serverIpFilter.UnroutedIpMode,
+                unsupportedIpV6Mode: serverIpFilter.UnsupportedIpV6Mode,
                 isIpV6SupportedByServer: helloResponse.IsIpV6Supported,
                 includeLocalNetwork: config.IncludeLocalNetwork,
                 hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address,
@@ -238,9 +274,11 @@ internal class ClientSessionBuilder(
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
             if (hostUdpEndPoint is null)
-                VhLogger.Instance.LogWarning("The server does not support UDP channel.");
+                VhLogger.Instance.LogWarning(isProxied
+                    ? "The session takes no UDP channel: its connections go through proxies."
+                    : "The server does not support UDP channel.");
 
-            ClientHelper.ValidateTcpSupport(helloResponse, config);
+            ClientHelper.ValidateTcpSupport(helloResponse, useTcpForwarding);
 
             var sessionInfo = new SessionInfo {
                 SessionId = helloResponse.SessionId.ToString(),
@@ -262,11 +300,13 @@ internal class ClientSessionBuilder(
                 IsTcpPacketIpV4Supported = helloResponse.IsTcpPacketIpV4Supported,
                 IsTcpPacketIpV6Supported = helloResponse.IsTcpPacketIpV6Supported,
                 IsTcpForwardingSupported = helloResponse.IsTcpForwardingSupported,
+                IsTcpForwardingRequired = ClientHelper.IsTcpForwardingRequired(helloResponse),
                 IsQuicPacketSupported = helloResponse.IsQuicPacketSupported,
                 IsUdpPacketSupported = helloResponse.IsUdpPacketSupported,
                 IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.QuicClientFactory?.IsSupported == true,
-                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse,
-                    socketFactory.QuicClientFactory?.IsSupported == true),
+                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(
+                    isUdpChannelSupported: hostUdpEndPoint != null,
+                    isQuicChannelSupported: hostQuicEndPoint != null && socketFactory.QuicClientFactory?.IsSupported == true),
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)
                     : null
@@ -288,13 +328,14 @@ internal class ClientSessionBuilder(
                         VhLogger.Instance, CancellationToken.None);
                 }
 
+                // the server's endpoint only where the person lets the endpoints be tracked
                 if (tracker != null) {
                     _ = tracker.TryTrack(
                         ClientTrackerBuilder.BuildConnectionSucceeded(
                             serverFinder.ServerLocation,
                             isIpV6Supported: vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
                             hasRedirected: !allowRedirect,
-                            endPoint: connectorService.VpnEndPoint.TcpEndPoint,
+                            endPoint: config.AllowEndPointTracker ? connectorService.VpnEndPoint.TcpEndPoint : null,
                             adNetworkName: null), CancellationToken.None);
                 }
             }
@@ -338,9 +379,9 @@ internal class ClientSessionBuilder(
                     NetFilter = netFilter,
                     ChannelProtocol = channelProtocol,
                     SplitDnsMode = config.SplitDnsMode,
-                    DropQuic = config.DropQuic,
-                    DropUdp = config.DropUdp,
-                    UseTcpForwarding = config.UseTcpForwarding,
+                    DropQuic = dropQuic,
+                    DropUdp = dropUdp,
+                    UseTcpForwarding = useTcpForwarding,
                     ServerAddressCheck = CreateServerAddressCheck(vpnEndPoint)
                 },
                 config: new ClientSessionConfig {
@@ -358,6 +399,7 @@ internal class ClientSessionBuilder(
                     HostQuicEndPoint = hostQuicEndPoint,
                     IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
                     AdRequirement = helloResponse.AdRequirement,
+                    CanShowAdOverVpn = config.CanShowAdOverVpn,
                     MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
                         ? Math.Min(config.Transport.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)
                         : config.Transport.MaxPacketChannelCount
@@ -436,10 +478,10 @@ internal class ClientSessionBuilder(
         return ret;
     }
 
-    // only for an address the name gave, and an IPv4 one: the name is asked again for IPv4 addresses only
+    // only for an address the name gave, of either IP version: the name is asked again for that version's
     private ServerAddressCheck? CreateServerAddressCheck(VpnEndPoint vpnEndPoint)
     {
-        return serverFinder.IsByHostName(vpnEndPoint) && vpnEndPoint.TcpEndPoint.AddressFamily == AddressFamily.InterNetwork
+        return serverFinder.IsByHostName(vpnEndPoint)
             ? new ServerAddressCheck(vpnEndPoint.HostName, vpnEndPoint.TcpEndPoint.Address, vpnAdapter)
             : null;
     }

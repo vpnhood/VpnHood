@@ -69,8 +69,10 @@ in the same process on a phone, and over HTTP on a desktop.
 5. **The session starts** (steps 6-9). The engine starts its local TCP stack and opens its first connection for
    packets to the server. If the session needs an ad, the service waits while the app shows it, and the app tells
    the service how it went. Then the adapter starts,
-   with its routes and DNS, and the app shows Connected. A server may send a newer access key with the session, and
-   the app saves it.
+   with its routes and DNS, and the app shows Connected. Where every ad network of the app can show its ads over the
+   VPN (`AppAdProviderItem.CanShowOverVpn`), the adapter starts first, and the ad's traffic goes as the rest does,
+   through the tunnel unless a split takes it around. A server may send a newer access key with the session, and the
+   app saves it.
 
 Until the adapter starts, the device's traffic goes on as before, so a connect that fails leaves the device's
 internet as it was. The kill switch is the exception: when the person has turned it on, it blocks the device's
@@ -85,7 +87,7 @@ The app's API gives the step as `AppConnectionState`; the words are the ones Vpn
 | Initializing | `Initializing` | The app gets ready, and the VPN service starts |
 | The system's dialog | `WaitingForVpnPermission` | The system asks the person to allow the VPN |
 | Diagnosing | `Diagnosing` | A connect the person asked to diagnose: the app checks the network and the servers first |
-| Validating proxies | `ValidatingProxies` | The engine checks the proxies it connects through, where the app uses them |
+| Validating proxies | `ValidatingProxies` | The engine checks the proxies it connects through against a server of the access key, where the app uses them and the key gives a server's address |
 | Finding network | `FindingReachableServer` | The engine looks for a server of the access key that answers |
 | Finding best server | `FindingBestServer` | After a redirect: the engine looks for the first of the given servers that answers |
 | Connecting | `Connecting` | The hello, and the session's start |

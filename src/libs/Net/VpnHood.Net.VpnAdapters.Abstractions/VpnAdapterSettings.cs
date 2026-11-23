@@ -71,4 +71,30 @@ public class VpnAdapterSettings
     /// what remains is routed as it is.
     /// </summary>
     public bool AutoMetric { get; init; } = true;
+
+    /// <summary>Initializes a new instance of the <see cref="VpnAdapterSettings"/> class.</summary>
+    public VpnAdapterSettings()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VpnAdapterSettings"/> class with the optional settings of another,
+    /// as a platform's settings take the host's, so none is left behind.
+    /// </summary>
+    /// <param name="settings">The settings whose optional ones are copied.</param>
+    /// <remarks>
+    /// <see cref="AdapterName"/> and <see cref="Blocking"/> are not copied: as required settings, they are given in the
+    /// object initializer, as for any new instance.
+    /// </remarks>
+    public VpnAdapterSettings(VpnAdapterSettings settings)
+    {
+        // [SetsRequiredMembers] would spare the callers the required ones, but end the compiler's check of them: one
+        // added later, in a platform's settings too, would go unset in silence
+        AppId = settings.AppId;
+        QueueCapacity = settings.QueueCapacity;
+        BlockingTimeout = settings.BlockingTimeout;
+        MaxPacketSendDelay = settings.MaxPacketSendDelay;
+        AutoRestart = settings.AutoRestart;
+        AutoMetric = settings.AutoMetric;
+    }
 }

@@ -12,6 +12,7 @@ public class CloseRecordingStream : MemoryStream
     public bool FailReads { get; init; }
     public bool HoldAsyncClose { get; init; }
     public bool FailAsyncClose { get; init; }
+    public bool FailSyncClose { get; init; }
 
     public void ReleaseAsyncClose() => _asyncCloseRelease.TrySetResult();
 
@@ -26,6 +27,8 @@ public class CloseRecordingStream : MemoryStream
     {
         SyncClosed = true;
         base.Dispose(disposing);
+        if (FailSyncClose && disposing)
+            throw new IOException("A sync close failure for the test.");
     }
 
     // the async close alone: the base's runs the sync one

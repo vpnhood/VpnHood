@@ -38,8 +38,9 @@ internal class TcpSniFilteringService(
         if (tcpPacket is not { DestinationPort: 443 })
             return false;
 
-        // Skip non-data packets (SYN, FIN, RST, ACK-only)
-        if (tcpPacket.Payload.Length == 0)
+        // Skip packets with no data (SYN, ACK-only), but a FIN or RST, which ends the flow: passed over, it left the
+        // flow's verdict to the next connection of the same addresses and ports
+        if (tcpPacket.Payload.Length == 0 && !tcpPacket.Finish && !tcpPacket.Reset)
             return false;
 
         flowKey = new FlowKey(

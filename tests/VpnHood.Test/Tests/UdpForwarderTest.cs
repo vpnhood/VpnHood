@@ -63,7 +63,7 @@ public class UdpForwarderTest : TestBase
         }
 
         public void OnConnectionEstablished(IpProtocol protocolType, 
-            IpEndPointValue localEndPoint,
+            IpEndPointValue? localEndPoint,
             IpEndPointValue remoteEndPoint,
             bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {

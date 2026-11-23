@@ -34,4 +34,22 @@ public class TcpForwardingSettingsTest : TestAppBase
         // the file now holds the new names alone
         Assert.DoesNotContain("TcpProxy", await File.ReadAllTextAsync(filePath, TestCt));
     }
+
+    // The Protocols page keeps the QUIC and UDP blocks usable in the server's Cloak Mode and locks them off where only
+    // the server's adapter forces TCP forwarding: the app's session info tells the two apart
+    [TestMethod]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    public async Task The_session_says_whether_the_server_requires_TCP_forwarding(bool allowTcpPacket, bool isRequired)
+    {
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.AllowTcpPacket = allowTcpPacket;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+        var token = await TestHelper.CreateAccessToken(server);
+        await using var app = TestAppHelper.CreateClientApp();
+
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        Assert.AreEqual(isRequired, app.State.SessionInfo?.IsTcpForwardingRequired);
+    }
 }

@@ -158,6 +158,13 @@ public class HelloResponse : SessionResponse
     public bool IsTcpPacketIpV6Supported { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the server's settings require TCP forwarding, its Cloak Mode, which takes
+    /// no TCP as packets: what its adapter cannot carry does not count. <see langword="null"/> from an older server,
+    /// which sends none.
+    /// </summary>
+    public bool? IsTcpForwardingRequired { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the server carries the users' QUIC; a client drops what it does not, so
     /// it never crosses the link. The default is <see langword="true"/>, as an older server sends none.
     /// </summary>

@@ -215,6 +215,32 @@ public class KillSwitchTest : TestAppBase
         Assert.IsNull(device.VpnService?.CurrentVpnAdapter);
     }
 
+    // A change of the switch counted as made before the block took it, so the retry of one the OS refused was taken
+    // for done, and the block never went up. It is made again
+    [TestMethod]
+    public async Task A_switch_turned_on_that_the_os_refused_goes_up_at_its_retry()
+    {
+        await using var server = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var killSwitch = new TestVpnKillSwitch();
+        await using var app = CreateApp(CreateDevice(killSwitch), KillSwitchMode.Off);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
+
+        // the OS refuses the block once
+        killSwitch.BlockException = new UnauthorizedAccessException("The firewall refused the block.");
+        app.UserSettings.KillSwitch = KillSwitchMode.UntilDisconnect;
+        app.SettingsService.Save();
+        await AssertEqualsWait(1, () => killSwitch.BlockCallCount);
+        Assert.IsFalse(killSwitch.IsUp);
+
+        killSwitch.BlockException = null;
+        app.SettingsService.Save();
+        await AssertEqualsWait(true, () => killSwitch.IsUp);
+        Assert.AreEqual(2, killSwitch.BlockCallCount, "The block went up at another ask than the retry.");
+    }
+
     // The block is the tunnel's holder's: a connect without the switch removes another app's, which would
     // block this one's traffic, while this app's person's disconnect leaves it alone.
     [TestMethod]

@@ -32,18 +32,21 @@ public class ProxySessionStatus
     public bool IsLastUsedSucceeded =>
         LastSucceeded != null && (LastFailed is null || LastSucceeded > LastFailed);
 
-    /// <summary>Gets a value indicating whether the last connection failed.</summary>
+    /// <summary>
+    /// Gets a value indicating whether the last connection failed: a failure at the same moment as the last success
+    /// too.
+    /// </summary>
     [JsonIgnore]
     public bool IsLastUsedFailed =>
-        LastFailed != null && (LastSucceeded is null || LastFailed > LastSucceeded);
+        LastFailed != null && (LastSucceeded is null || LastFailed >= LastSucceeded);
 
     /// <summary>
-    /// Gets <see cref="LastSucceeded"/> when it is later than <see cref="LastFailed"/>, and otherwise
-    /// <see cref="LastFailed"/>, which is <see langword="null"/> while no connection has failed, whatever succeeded.
+    /// Gets the later of <see cref="LastSucceeded"/> and <see cref="LastFailed"/>, or <see langword="null"/> while no
+    /// connection has been counted.
     /// </summary>
     [JsonIgnore]
     public DateTime? LastUsed =>
-        LastSucceeded > LastFailed ? LastSucceeded : LastFailed;
+        LastFailed is null || LastSucceeded > LastFailed ? LastSucceeded : LastFailed;
 
     /// <summary>Gets a value indicating whether any connection has been counted.</summary>
     [JsonIgnore]

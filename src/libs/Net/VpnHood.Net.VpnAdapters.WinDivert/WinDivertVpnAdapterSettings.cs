@@ -23,4 +23,18 @@ public class WinDivertVpnAdapterSettings : VpnAdapterSettings
     /// <see langword="true"/>.
     /// </summary>
     public bool SimulateDns { get; set; } = true;
+
+    /// <summary>Initializes a new instance of the <see cref="WinDivertVpnAdapterSettings"/> class.</summary>
+    public WinDivertVpnAdapterSettings()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WinDivertVpnAdapterSettings"/> class with the optional settings of
+    /// the host's, and this adapter's own at their defaults; the required ones are given in the object initializer.
+    /// </summary>
+    /// <param name="settings">The settings whose optional ones are copied.</param>
+    public WinDivertVpnAdapterSettings(VpnAdapterSettings settings) : base(settings)
+    {
+    }
 }

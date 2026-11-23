@@ -221,7 +221,10 @@ internal class HttpStream : ChunkStream
 
     private async Task ReadNextLine(CancellationToken cancellationToken)
     {
-        var bytesRead = await SourceStream.ReadAsync(_nextLineBuffer, 0, 2, cancellationToken).Vhc();
+        // both bytes, which a read may give one at a time, as TCP may deliver them apart
+        var bytesRead = await SourceStream.ReadAtLeastAsync(_nextLineBuffer, minimumBytes: 2,
+            throwOnEndOfStream: false, cancellationToken).Vhc();
+
         if (bytesRead < 2 || _nextLineBuffer[0] != '\r' || _nextLineBuffer[1] != '\n')
             throw new InvalidDataException("Could not find expected line feed in HTTP chunk header.");
     }

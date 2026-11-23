@@ -106,7 +106,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketForw
     }
 
     public void OnConnectionEstablished(IpProtocol protocolType, 
-        IpEndPointValue localEndPoint, IpEndPointValue remoteEndPoint,
+        IpEndPointValue? localEndPoint, IpEndPointValue remoteEndPoint,
         bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
     {
     }

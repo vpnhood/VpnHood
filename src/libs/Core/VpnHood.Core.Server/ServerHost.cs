@@ -438,10 +438,6 @@ internal class ServerHost : IAsyncDisposable
                 await ProcessTcpForwardingChannel(streamConnection, cancellationToken).Vhc();
                 break;
 
-            case RequestCode.UdpPacket:
-                await ProcessUdpPacketRequest(streamConnection, cancellationToken).Vhc();
-                break;
-
             case RequestCode.RewardedAd:
                 await ProcessRewardedAdRequest(streamConnection, cancellationToken).Vhc();
                 break;
@@ -614,6 +610,7 @@ internal class ServerHost : IAsyncDisposable
             AccessInfo = sessionResponseEx.AccessInfo,
             IsTcpPacketIpV4Supported = isTcpPacketIpV4Supported,
             IsTcpPacketIpV6Supported = isTcpPacketIpV6Supported,
+            IsTcpForwardingRequired = !session.AllowTcpPacket,
             // an older client knows only this one, IPv4's: its IPv6 TCP fails where NAT has no IPv6
 #pragma warning disable CS0618
             IsTcpPacketSupported = isTcpPacketIpV4Supported,
@@ -694,16 +691,6 @@ internal class ServerHost : IAsyncDisposable
 
         // must be last
         await _sessionManager.CloseSession(session.SessionId, cancellationToken).Vhc();
-    }
-
-    private async Task ProcessUdpPacketRequest(IStreamConnection streamConnection, CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogDebug(GeneralEventId.Request, "Reading a UdpPacket request...");
-        var request = await ReadRequest<UdpPacketRequest>(streamConnection, cancellationToken).Vhc();
-        using var scope = CreateLogScope(streamConnection, request);
-
-        var session = await GetSession(request, streamConnection, cancellationToken).Vhc();
-        await session.ProcessUdpPacketRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
     private async Task ProcessTcpPacketChannel(IStreamConnection streamConnection, CancellationToken cancellationToken)

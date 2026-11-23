@@ -24,6 +24,8 @@ internal sealed class WindowsVpnPluginService : IVpnServiceHandler
     private static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(15);
     // a connect Windows makes soon after: again within 5 s after a restart, within 2.6 s after an app's switch
     private static readonly TimeSpan SessionWaitTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan ProfilesLookupTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan ProfileDisconnectTimeout = TimeSpan.FromSeconds(20);
     private readonly Lock _hostLock = new();
     private VpnServiceHost? _host;
     private volatile WindowsVpnPluginAppServiceListener? _appServiceListener;
@@ -212,14 +214,16 @@ internal sealed class WindowsVpnPluginService : IVpnServiceHandler
     }
 
     // Closes a waiting listener's connections unless a connect has come: at once when Windows holds the package's profile
-    // disconnected, else in SessionWaitTimeout.
+    // disconnected, else in SessionWaitTimeout from the app's connection, the look at Windows' profiles within it.
     private async Task ExpireWaitingListener(WindowsVpnPluginAppServiceListener listener)
     {
-        var profiles = await WindowsVpnPluginDevice.TryGetLiveProfiles().Vhc();
+        var stopwatch = Stopwatch.StartNew();
+        var profiles = await TryGetLiveProfiles(CancellationToken.None).Vhc();
         VhLogger.Instance.LogInformation(
             "The app connected before a connect. Profiles connected or connecting: {Count}", profiles?.Length);
-        if (profiles is not { Length: 0 })
-            await Task.Delay(SessionWaitTimeout).Vhc();
+        var remaining = SessionWaitTimeout - stopwatch.Elapsed;
+        if (profiles is not { Length: 0 } && remaining > TimeSpan.Zero)
+            await Task.Delay(remaining).Vhc();
 
         lock (_hostLock) {
             if (_host is not null || _appServiceListener != listener)
@@ -274,19 +278,37 @@ internal sealed class WindowsVpnPluginService : IVpnServiceHandler
         host.Dispose();
     }
 
-    // Windows refusing leaves the channel to stop here: a dialed-again connection rather than one with no session.
+    // Windows' look at the package's profiles, which a stalled one would hold the listener's expiry and the host's
+    // release on: none where Windows does not answer in time, or the release's own time ends, which is logged
+    private static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles(CancellationToken cancellationToken)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(ProfilesLookupTimeout);
+        try {
+            return await WindowsVpnPluginDevice.TryGetLiveProfiles(timeoutCts.Token).Vhc();
+        }
+        catch (OperationCanceledException ex) {
+            VhLogger.Instance.LogError(ex, "Windows did not list the package's VPN profiles in time.");
+            return null;
+        }
+    }
+
+    // Windows refusing leaves the channel to stop here: a dialed-again connection rather than one with no session, as
+    // does a disconnect Windows does not finish in its time, the look at the profiles within it.
     private static async Task DisconnectProfile(VpnChannel channel)
     {
+        using var timeoutCts = new CancellationTokenSource(ProfileDisconnectTimeout);
         try {
             VhLogger.Instance.LogInformation("Asking Windows to disconnect the VPN profile...");
-            var connectedProfiles = await WindowsVpnPluginDevice.TryGetLiveProfiles().Vhc() ??
+            var connectedProfiles = await TryGetLiveProfiles(timeoutCts.Token).Vhc() ??
                                     throw new InvalidOperationException("Windows did not list the package's VPN profiles.");
+
             if (connectedProfiles.Length == 0)
                 throw new InvalidOperationException("Windows lists no connected VPN profile of this package.");
 
             var agent = new VpnManagementAgent();
             foreach (var profile in connectedProfiles) {
-                var status = await agent.DisconnectProfileAsync(profile).AsTask().Vhc();
+                var status = await agent.DisconnectProfileAsync(profile).AsTask(timeoutCts.Token).Vhc();
                 if (status is not (VpnManagementErrorStatus.Ok or VpnManagementErrorStatus.AlreadyDisconnecting))
                     throw new InvalidOperationException($"Windows could not disconnect the VPN profile. Status: {status}");
             }

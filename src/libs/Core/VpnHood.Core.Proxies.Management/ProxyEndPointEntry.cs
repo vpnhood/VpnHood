@@ -15,6 +15,76 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
     /// <summary>Set when the status or enabled state changed since the last store flush.</summary>
     public bool IsDirty { get; set; }
 
+    // the resets of the statuses before its load: a success it took is dropped by any reset after it
+    public long StatusResetCount { get; init; }
+
+    // whether it worked as a proxy at its last use: it connected, or it answered that the server could not be reached
+    public bool IsLastUsedAnswered {
+        get {
+            lock (_lock)
+                return Status.IsLastUsedSucceeded || _isLastFailureServerUnreachable;
+        }
+    }
+
+    private bool _isLastFailureServerUnreachable;
+
+    // A copy of the endpoint and its status as they are, for a flush to write, which clears the flag: a change made
+    // during the write marks the entry again, and the copy is never one half-way through a change
+    public ProxyEndPointInfo TakeForFlush()
+    {
+        lock (_lock) {
+            IsDirty = false;
+            return new ProxyEndPointInfo {
+                EndPoint = CopyEndPoint(),
+                Status = new ProxyEndPointStatus {
+                    Penalty = Status.Penalty,
+                    SucceededCount = Status.SucceededCount,
+                    FailedCount = Status.FailedCount,
+                    Latency = Status.Latency,
+                    LastSucceeded = Status.LastSucceeded,
+                    LastFailed = Status.LastFailed,
+                    ErrorMessage = Status.ErrorMessage,
+                    QueuePosition = Status.QueuePosition
+                }
+            };
+        }
+    }
+
+    // A copy of the endpoint as it is, with a status as a reset of the statuses leaves it, for a flush to write, which
+    // clears the flag: what a reset keeps, the enabled state, without the counts it cleared
+    public ProxyEndPointInfo TakeEnabledStateForReset()
+    {
+        lock (_lock) {
+            IsDirty = false;
+            return new ProxyEndPointInfo { EndPoint = CopyEndPoint(), Status = new ProxyEndPointStatus() };
+        }
+    }
+
+    // A copy of the endpoint as it is, with its enabled state
+    public ProxyEndPoint CopyEndPoint()
+    {
+        lock (_lock) {
+            return new ProxyEndPoint {
+                Protocol = EndPoint.Protocol,
+                Host = EndPoint.Host,
+                Port = EndPoint.Port,
+                Username = EndPoint.Username,
+                Password = EndPoint.Password,
+                IsEnabled = EndPoint.IsEnabled
+            };
+        }
+    }
+
+    // a success taken back, as one whose connection failed after its connect; none below zero, as a reset of the
+    // statuses since the connect took it already
+    public void TakeBackSuccess()
+    {
+        lock (_lock) {
+            if (Status.SucceededCount > 0)
+                Status.SucceededCount--;
+        }
+    }
+
     public long GetSortValue(long currentRequestCount)
     {
         lock (_lock) {
@@ -33,8 +103,9 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             IsDirty = true;
             Status.SucceededCount++;
             Status.Latency = latency;
-            Status.LastSucceeded = FastDateTime.UtcNow;
+            Status.LastSucceeded = DateTime.UtcNow; // once per connection: a coarse second made a success and a failure tie
             Status.ErrorMessage = null;
+            _isLastFailureServerUnreachable = false;
 
             var isSlow = fastestLatency != null && latency > GetSlowThreshold(fastestLatency.Value);
             if (isSlow) {
@@ -67,8 +138,9 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             Status.Penalty++;
             Status.Penalty++;
             Status.FailedCount++;
-            Status.LastFailed = FastDateTime.UtcNow;
+            Status.LastFailed = DateTime.UtcNow;
             Status.ErrorMessage = exception?.Message;
+            _isLastFailureServerUnreachable = exception != null && ProxyFailures.IsServerUnreachable(exception);
             UpdatePosition(currentQueuePos);
 
             VhLogger.Instance.LogDebug(

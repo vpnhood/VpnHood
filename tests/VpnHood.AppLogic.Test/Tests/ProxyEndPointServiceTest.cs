@@ -165,8 +165,8 @@ public class ProxyEndPointServiceTest : TestAppBase
         var updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(10, updatedNodes);
         Assert.HasCount(0, updatedNodes.Where(x => x.EndPoint.Id == added[2].EndPoint.Id));
-        Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == updatedNode.EndPoint.Id).EndPoint.Url,
-            updatedNode.EndPoint.Url);
+        Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == updatedNode.EndPoint.Id).EndPoint.Host,
+            updatedNode.EndPoint.Host);
     }
 
     [TestMethod]
@@ -252,8 +252,8 @@ public class ProxyEndPointServiceTest : TestAppBase
         updatedNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(11, updatedNodes);
         Assert.HasCount(0, updatedNodes.Where(x => x.EndPoint.Id == added[2].EndPoint.Id));
-        Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == newNodeInfo.EndPoint.Id).EndPoint.Url,
-            newNodeInfo.EndPoint.Url);
+        Assert.AreEqual(updatedNodes.Single(x => x.EndPoint.Id == newNodeInfo.EndPoint.Id).EndPoint.Host,
+            newNodeInfo.EndPoint.Host);
 
         // check infos
         var updatedAppNodes = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
@@ -290,7 +290,7 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         var deviceProxy = dom.App.Services.ProxyEndPointService.GetDeviceProxy();
         Assert.IsNotNull(deviceProxy);
-        Assert.AreEqual(deviceUiProvider.DeviceProxySettings.ProxyUrl.Host, new Uri(deviceProxy.EndPoint.Url).Host);
+        Assert.AreEqual(deviceUiProvider.DeviceProxySettings.ProxyUrl.Host, deviceProxy.EndPoint.Host);
         Assert.IsFalse(dom.App.State.IsProxyEndPointActive);
 
         // set proxy options to use device proxy; it travels as a single inline proxy, not via the store
@@ -306,6 +306,20 @@ public class ProxyEndPointServiceTest : TestAppBase
         proxyOptions = await dom.App.Services.ProxyEndPointService.GetProxyOptions(TestCt);
         Assert.AreEqual(ProxyMode.None, proxyOptions.Mode);
         Assert.IsNull(proxyOptions.ProxyEndPoint);
+    }
+
+    // Manual proxies with none in the list and no URL to download one: the app asked for no proxy, and the VPN went
+    // straight to its server
+    [TestMethod]
+    public async Task Manual_proxies_with_none_listed_still_take_the_proxy_connector()
+    {
+        await using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
+        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Manual;
+        dom.App.UserSettings.ProxySettings.AutoUpdateOptions.Url = null;
+
+        var proxyOptions = await dom.App.Services.ProxyEndPointService.GetProxyOptions(TestCt);
+        Assert.AreEqual(ProxyMode.Managed, proxyOptions.Mode);
+        Assert.IsTrue(dom.App.State.IsProxyEndPointActive, "The main screen shows no proxies in use.");
     }
 
     [TestMethod]
@@ -445,8 +459,8 @@ public class ProxyEndPointServiceTest : TestAppBase
         endPointInfos = (await ListProxies(dom.App.Services.ProxyEndPointService)).Items;
         Assert.HasCount(0, endPointInfos);
 
-        // verify proxy is not active after deletion
-        Assert.IsFalse(dom.App.State.IsProxyEndPointActive);
+        // Manual proxies stay on with none listed: the VPN connects through the list or not at all
+        Assert.IsTrue(dom.App.State.IsProxyEndPointActive);
     }
 
     [TestMethod]

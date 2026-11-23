@@ -19,11 +19,8 @@ public enum RequestCode : byte
     /// <summary>The session's status (<see cref="SessionStatusRequest"/>).</summary>
     SessionStatus = 4,
 
-    /// <summary>
-    /// UDP packets in a request of their own (<see cref="UdpPacketRequest"/>), which no client sends and the server does
-    /// not serve.
-    /// </summary>
-    UdpPacket = 5,
+    // 5 was a request of UDP packets that no client ever sent: a server before its removal reads it and fails, so the
+    // number is not to be given to another request
 
     /// <summary>A rewarded ad the person has watched (<see cref="RewardedAdRequest"/>).</summary>
     RewardedAd = 10,

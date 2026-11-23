@@ -24,14 +24,16 @@ public static class ProxyEndPointUpdater
     /// <see cref="DefaultMaxPenalty"/>.
     /// </param>
     /// <param name="removeDuplicateIps">
-    /// <see langword="true"/> to drop a new endpoint whose host, ignoring case, and protocol match a current one whose
-    /// last use succeeded.
+    /// <see langword="true"/> to drop a new endpoint whose host, ignoring case, and protocol match an enabled current
+    /// one whose last use succeeded.
     /// </param>
     /// <returns>
     /// The merged list: the enabled current endpoints used with a penalty up to <paramref name="maxPenalty"/>, by
     /// penalty; the new ones; the enabled current ones never used; the enabled current ones above the penalty; then the
-    /// disabled ones. An endpoint that comes twice as the same object is kept once; one that comes as two objects,
-    /// such as a new endpoint equal to a current one, is kept twice.
+    /// disabled ones. An endpoint is kept once, by its <see cref="ProxyEndPoint.Id"/>, where it first comes in that
+    /// order: a new endpoint equal to a current one counts once toward <paramref name="maxItemCount"/>. Its credentials
+    /// are the new one's where it has any, as a list's are the newer, and the current one's otherwise, whichever of the
+    /// two takes its place and whether or not <paramref name="removeDuplicateIps"/> drops the new one.
     /// </returns>
     /// <exception cref="ArgumentException"><paramref name="maxItemCount"/> is 0 or less.</exception>
     public static ProxyEndPoint[] Merge(
@@ -48,10 +50,36 @@ public static class ProxyEndPointUpdater
 
         // Start with new endpoints
         var result = new List<ProxyEndPoint>();
-        var existingSet = new HashSet<ProxyEndPoint>();
+        var existingSet = new HashSet<string>();
         var currentEndPointInfosArray = currentEndPointInfos.ToArray();
 
-        // remove duplicates from newEndPoints if the protocol:ip already exists in currentEndPointInfos and 
+        // One endpoint, one set of credentials, whichever of its objects takes its place: a new twin's where it has
+        // any, else the current one's, so a twin with none erases none. Taken before the duplicate IPs go, as an exact
+        // twin is one of them
+        var newCredentials = newEndPoints
+            .Where(HasCredentials)
+            .GroupBy(x => x.Id)
+            .ToDictionary(x => x.Key, x => x.First());
+
+        var currentCredentials = currentEndPointInfosArray
+            .Select(x => x.EndPoint)
+            .Where(HasCredentials)
+            .GroupBy(x => x.Id)
+            .ToDictionary(x => x.Key, x => x.First());
+
+        currentEndPointInfosArray = currentEndPointInfosArray
+            .Select(info => newCredentials.TryGetValue(info.EndPoint.Id, out var twin)
+                ? new ProxyEndPointInfo { EndPoint = WithCredentials(info.EndPoint, twin), Status = info.Status }
+                : info)
+            .ToArray();
+
+        newEndPoints = newEndPoints
+            .Select(x => !HasCredentials(x) && currentCredentials.TryGetValue(x.Id, out var stored)
+                ? WithCredentials(x, stored)
+                : x)
+            .ToArray();
+
+        // remove duplicates from newEndPoints if the protocol:ip already exists in currentEndPointInfos and
         // the current one is enabled
         if (removeDuplicateIps)
             newEndPoints = RemoveDuplicateIps(currentEndPointInfosArray, newEndPoints);
@@ -98,12 +126,24 @@ public static class ProxyEndPointUpdater
         return [.. result];
     }
 
+    private static bool HasCredentials(ProxyEndPoint endPoint) => endPoint.Username != null || endPoint.Password != null;
+
+    private static ProxyEndPoint WithCredentials(ProxyEndPoint endPoint, ProxyEndPoint twin) => new() {
+        Protocol = endPoint.Protocol,
+        Host = endPoint.Host,
+        Port = endPoint.Port,
+        IsEnabled = endPoint.IsEnabled,
+        Username = twin.Username,
+        Password = twin.Password
+    };
+
     private static ProxyEndPoint[] RemoveDuplicateIps(ProxyEndPointInfo[] currentEndPointInfos,
         ProxyEndPoint[] newEndPoints)
     {
         // find new endpoints that already exist in currentEndPointInfos and have succeeded before
         var alreadyExists = newEndPoints.Where(x =>
             currentEndPointInfos.Any(y =>
+                y.EndPoint.IsEnabled &&
                 y.EndPoint.Host.Equals(x.Host, StringComparison.OrdinalIgnoreCase) &&
                 y.EndPoint.Protocol == x.Protocol &&
                 y.Status.IsLastUsedSucceeded));
@@ -138,15 +178,14 @@ public static class ProxyEndPointUpdater
         return proxyEndPoints;
     }
 
+    // by ID: ProxyEndPoint has no equality of its own, and an endpoint equal to one taken is another object
     private static void AddNoDuplicate(List<ProxyEndPoint> endPoints,
         IEnumerable<ProxyEndPoint> newEndPoints,
-        HashSet<ProxyEndPoint> existingSet)
+        HashSet<string> existingSet)
     {
         foreach (var ep in newEndPoints) {
-            if (!existingSet.Contains(ep)) {
+            if (existingSet.Add(ep.Id))
                 endPoints.Add(ep);
-                existingSet.Add(ep);
-            }
         }
     }
 }

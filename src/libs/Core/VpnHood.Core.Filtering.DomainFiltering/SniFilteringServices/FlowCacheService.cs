@@ -1,23 +1,15 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using VpnHood.Net.Toolkit.Jobs;
 
 namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 
-internal class FlowCacheService : IDisposable
+internal class FlowCacheService(TimeSpan flowTimeout) : IDisposable
 {
     private readonly ConcurrentDictionary<FlowKey, FlowInfo> _flowCache = new();
-    private readonly TimeSpan _flowTimeout;
-    private readonly Job _cleanupJob;
+    private readonly long _flowTimeoutTicks = flowTimeout.Ticks;
+    private readonly long _sweepIntervalTicks = TimeSpan.FromSeconds(Math.Min(flowTimeout.TotalSeconds, 60)).Ticks;
+    private long _nextSweepTicks;
     private bool _disposed;
-
-    public FlowCacheService(TimeSpan flowTimeout)
-    {
-        _flowTimeout = flowTimeout;
-
-        var cleanupInterval = TimeSpan.FromSeconds(Math.Min(flowTimeout.TotalSeconds, 60));
-        _cleanupJob = new Job(CleanupExpiredFlows, cleanupInterval, "FlowCacheCleanup");
-    }
 
     public bool TryGetValue(FlowKey key, [NotNullWhen(true)] out FlowInfo? value)
     {
@@ -35,27 +27,26 @@ internal class FlowCacheService : IDisposable
         _flowCache[key] = value;
     }
 
-    private ValueTask CleanupExpiredFlows(CancellationToken cancellationToken)
+    /// <summary>
+    /// Removes the flows unused for the timeout, once an interval; any other call costs a comparison.
+    /// </summary>
+    /// <remarks>
+    /// Called with each packet, on the packets' own thread: a flow is used and refreshed there alone, so the sweep
+    /// removes none that a packet has refreshed since it looked, which a sweep on a thread of its own did. A removed
+    /// flow's held packets go to the GC undisposed.
+    /// </remarks>
+    public void RemoveExpired(long nowTicks)
     {
-        if (_disposed)
-            return ValueTask.CompletedTask;
+        if (nowTicks < _nextSweepTicks)
+            return;
 
-        var nowTicks = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
-        var flowTimeoutTicks = _flowTimeout.Ticks;
-
+        _nextSweepTicks = nowTicks + _sweepIntervalTicks;
         foreach (var kvp in _flowCache) {
-            if (cancellationToken.IsCancellationRequested)
-                break;
-
-            if (nowTicks - kvp.Value.LastSeenTicks <= flowTimeoutTicks)
-                continue;
-
-            // a removed flow's packets go to the GC undisposed, here or on the packet thread: a packet in flight may
-            // add to them or take them out to send, even on an old reader that outlived an adapter restart
-            _flowCache.TryRemove(kvp.Key, out _);
+            // the flow the look found, not one that took its key since: after an adapter restart an old reader may
+            // run beside the new one for a moment
+            if (nowTicks - kvp.Value.LastSeenTicks > _flowTimeoutTicks)
+                _flowCache.TryRemove(kvp);
         }
-
-        return ValueTask.CompletedTask;
     }
 
     public void Dispose()
@@ -63,9 +54,7 @@ internal class FlowCacheService : IDisposable
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        _cleanupJob.Dispose();
-
-        // the flows' packets are left to the GC, as the cleanup's are
+        // the flows' packets are left to the GC, as the sweep's are
         _flowCache.Clear();
         GC.SuppressFinalize(this);
     }

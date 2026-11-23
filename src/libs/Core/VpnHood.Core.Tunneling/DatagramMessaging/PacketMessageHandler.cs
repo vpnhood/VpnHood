@@ -43,9 +43,9 @@ public static class PacketMessageHandler
 
     internal static bool IsPacketMessage(IpPacket ipPacket)
     {
+        // Packet messages go to 255.255.255.255 (CreateMessage), as in every version this file's history shows, so that
+        // check stays. 0.0.0.0, taken since 7.2.728 for a change of the sender that never came, is read as one too
         return ipPacket.Protocol == IpProtocol.Udp && (
-            // Compatibility (2025-07): a client before 7.2.728 sends its packet messages to 255.255.255.255; drop
-            // once MinClientProtocolVersion is 10, as such a client speaks 9 at most
             IPAddress.None.SpanEquals(ipPacket.DestinationAddressSpan) ||
             IPAddress.Any.SpanEquals(ipPacket.DestinationAddressSpan));
     }

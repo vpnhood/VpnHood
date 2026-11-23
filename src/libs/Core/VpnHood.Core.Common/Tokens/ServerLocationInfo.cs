@@ -110,10 +110,11 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         // Parse location parts
         var parts = locationPart.Split('/');
         var ret = new ServerLocationInfo {
-            CountryCode = ParseLocationPart(parts, 0).ToUpper(),
+            CountryCode = ParseLocationPart(parts, 0).ToUpperInvariant(),
             RegionName = ParseLocationPart(parts, 1),
             Tags = tags
         };
+
         return ret;
     }
 
@@ -172,7 +173,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
             return regionInfo.EnglishName;
         }
         catch (Exception) {
-            return countryCode.ToUpper();
+            return countryCode.ToUpperInvariant();
         }
     }
 

@@ -18,8 +18,12 @@ public class AppAdProviderItem
     public required IAdProvider AdProvider { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether the network can show its ads while the VPN is connected. Nothing in the app acts
-    /// on it.
+    /// Gets a value indicating whether the network can show its ads while the VPN is connected, their traffic going
+    /// through it. Where every network of the app can, the VPN connects before the ad a connect needs, and the traffic
+    /// keeps its routing while an ad shows (<see cref="VpnHood.Core.Client.Abstractions.ClientOptions.CanShowAdOverVpn"/>):
+    /// the ad's goes as the rest does, by the splits, and an ad preloaded before a connect came through the device's own
+    /// network. Otherwise the ad a connect needs comes before the VPN starts, and the traffic goes around the tunnel while
+    /// a later one shows. The default is <see langword="false"/>, for networks that refuse VPN traffic.
     /// </summary>
     public bool CanShowOverVpn { get; init; }
 

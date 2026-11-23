@@ -11,7 +11,10 @@ internal static partial class ProxyEndPointExtractor
     /// </summary>
     /// <param name="text">Raw text that may contain proxy information.</param>
     /// <param name="defaultScheme">Scheme to use when none can be determined (default "http").</param>
-    /// <param name="preferHttpsWhenPort443">If true and no scheme present but port == 443, use https.</param>
+    /// <param name="preferHttpsWhenPort443">
+    /// If true and no scheme present but port == 443, use https; an IP address with no user name takes http whatever the
+    /// scheme.
+    /// </param>
     /// <returns>Parsed Uri object or null if no valid proxy found.</returns>
     public static Uri? Extract(
         string text,
@@ -23,9 +26,13 @@ internal static partial class ProxyEndPointExtractor
 
         text = text.Trim();
 
-        // First, try to find a complete URL in the text
+        // First, try to find a complete URL in the text; one whose port goes on past five digits is none
         var urlMatch = UrlRegex().Match(text);
         if (urlMatch.Success) {
+            var end = urlMatch.Index + urlMatch.Length;
+            if (end < text.Length && char.IsAsciiDigit(text[end]))
+                return null;
+
             var urlString = urlMatch.Value;
             if (Uri.TryCreate(urlString, UriKind.Absolute, out var uri) && IsValidProxyScheme(uri.Scheme)) {
                 return NormalizeUri(uri);
@@ -153,7 +160,6 @@ internal static partial class ProxyEndPointExtractor
             1081 => "socks5", // Alternative SOCKS port
             9050 => "socks5", // Tor SOCKS port
             443 when preferHttpsWhenPort443 => "https",
-            443 => "https",
             80 => "http",
             8080 => "http",
             3128 => "http", // Common HTTP proxy port (Squid)
@@ -180,7 +186,7 @@ internal static partial class ProxyEndPointExtractor
         return lower is "http" or "https" or "socks4" or "socks5" or "socks" or "socks5h";
     }
 
-    private static Uri NormalizeUri(Uri uri)
+    private static Uri? NormalizeUri(Uri uri)
     {
         // Normalize scheme (e.g., socks -> socks5)
         var scheme = uri.Scheme.ToLowerInvariant() switch {
@@ -189,35 +195,46 @@ internal static partial class ProxyEndPointExtractor
             _ => uri.Scheme.ToLowerInvariant()
         };
 
-        // Ensure port is set
-        var port = uri is { Port: > 0, IsDefaultPort: false }
-            ? uri.Port
-            : GetDefaultPortForScheme(scheme);
+        // a port written is kept, the scheme's standard one too, which Uri's IsDefaultPort does not tell apart from
+        // one left out, and a port of 0 is no address; the query, as an endpoint's enabled=0, is kept
+        var isPortWritten = ProxyEndPointParser.HasPortWritten(uri.OriginalString);
+        if (isPortWritten && uri.Port <= 0)
+            return null;
 
-        return BuildUri(scheme, uri.Host, port, uri.UserInfo);
+        var port = isPortWritten ? uri.Port : GetDefaultPortForScheme(scheme);
+        return BuildUri(scheme, uri.Host, port, uri.UserInfo, uri.Query);
     }
 
-    private static Uri BuildUri(string scheme, string host, int port, string? userInfo = null)
+    private static Uri BuildUri(string scheme, string host, int port, string? userInfo = null, string? query = null)
     {
         var ub = new UriBuilder {
-            Scheme = scheme.ToLowerInvariant(),
+            Scheme = IsHttpsAtIpAddress(scheme, host, userInfo) ? "http" : scheme.ToLowerInvariant(),
             Host = host,
-            Port = port
+            Port = port,
+            Query = string.IsNullOrEmpty(query) ? null : query.TrimStart('?')
         };
 
+        // the user information as it came, escaped: unescaped, a '#' in a password ended the URL's address
         if (!string.IsNullOrEmpty(userInfo)) {
             var parts = userInfo.Split(':', 2);
-            ub.UserName = Uri.UnescapeDataString(parts[0]);
+            ub.UserName = parts[0];
             if (parts.Length > 1)
-                ub.Password = Uri.UnescapeDataString(parts[1]);
+                ub.Password = parts[1];
         }
 
         return ub.Uri;
     }
 
-    // Complete URL pattern: scheme://[user:pass@]host[:port]
+    // An HTTPS proxy at an IP address with no user name is read as HTTP, a written https:// too: such a proxy almost
+    // never has a certificate the device trusts for its address, and lists write HTTPS for an HTTP proxy that carries
+    // HTTPS. One with a user name stays HTTPS, so its password never travels in the clear
+    private static bool IsHttpsAtIpAddress(string scheme, string host, string? userInfo) =>
+        scheme.Equals("https", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(userInfo) &&
+        Uri.CheckHostName(host.Trim('[', ']')) is UriHostNameType.IPv4 or UriHostNameType.IPv6;
+
+    // Complete URL pattern: scheme://[user:pass@]host[:port][/][?query]
     [GeneratedRegex(
-        @"(?<url>(?:https?|socks5?h?|socks)://(?:[^:@\s]+(?::[^@\s]*)?@)?(?:\[[^\]]+\]|[a-zA-Z0-9\.\-]+)(?::\d{1,5})?)",
+        @"(?<url>(?:https?|socks4|socks5h?|socks)://(?:[^:@\s]+(?::[^@\s]*)?@)?(?:\[[^\]]+\]|[a-zA-Z0-9\.\-]+)(?::\d{1,5})?(?:/?\?[^\s]*)?)",
         RegexOptions.IgnoreCase)]
     private static partial Regex UrlRegex();
 

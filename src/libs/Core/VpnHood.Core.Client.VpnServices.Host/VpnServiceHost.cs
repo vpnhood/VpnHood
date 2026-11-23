@@ -1,16 +1,13 @@
 ﻿using System.Diagnostics;
-using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
-using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Net.Toolkit.ApiClients;
+using VpnHood.Core.Client.VpnServices.Host.Sessions;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
-using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Net.VpnAdapters.Abstractions;
@@ -29,29 +26,24 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 /// </remarks>
 public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 {
+    // The host runs the flows: connect, the service's own reconnect, stop, revoke and a session's end. What they share
+    // lives in Sessions, one class per job. Every connect begins a new session (VpnServiceContext). Each part checks
+    // the session under its own lock, so a connect that a newer one replaced sees it and leaves the newer one alone.
+    // A check is not a reservation: a platform call made after it may still meet a newer connect.
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly IClientSocketFactory _socketFactory;
-    private readonly IVpnTunnelLock? _tunnelLock;
-    private readonly IVpnKillSwitch? _killSwitch;
-    private readonly AsyncLock _killSwitchLock = new();
     private readonly string _dataFolder;
     private readonly LogService? _logService;
-    private IDisposable? _tunnelHold;
-    private bool _useKillSwitch;
-    private VpnKillSwitchRules? _killSwitchRules; // this connect's, while it may change the block; null once it may not
-    private IVpnAdapter? _vpnAdapter; // the last connect's, which a revoke takes down at once
-    private Exception? _disconnectException;
-    private CancellationTokenSource _connectCts = new();
+    private readonly VpnServiceConnectState _connectState;
+    private readonly VpnServiceTunnel _tunnel;
+    private readonly VpnServiceKillSwitch _killSwitch;
+    private readonly VpnServiceNotification _notification;
+    private readonly ConnectionInfoUpdater _connectionInfoUpdater;
+    private readonly TaskCompletionSource _predecessorsWaiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
-    private bool _disposed;
-    private bool _disconnectRequested;
 
-    // A stop against the service's own reconnect after a session's end: the stop's mark with the connect it cancels,
-    // and the reconnect's claim of the ended client with the connect it begins.
-    private readonly Lock _connectLock = new();
-
-    internal VpnHoodClient? Client { get; private set; }
+    internal VpnHoodClient? Client => _connectState.Client;
 
     internal VpnHoodClient RequiredClient =>
         Client ?? throw new InvalidOperationException("Client is not initialized.");
@@ -74,6 +66,15 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     /// Gets the placeholder info before the service has made a real one (<see cref="ConnectionInfo.Default"/>).
     /// </summary>
     public static ConnectionInfo DefaultConnectionInfo => ConnectionInfo.Default;
+
+    // for tests: set when a take of the tunnel starts waiting for an earlier take or release
+    internal Task TunnelTakeWaiting => _tunnel.TakeWaiting;
+
+    // for tests: set when a session's end starts waiting for a hold that another end is closing
+    internal Task TunnelReleaseWaiting => _tunnel.ReleaseWaiting;
+
+    // for tests: set when a failed connect's end starts waiting for earlier connects or a replaced client's close
+    internal Task PredecessorsWaiting => _predecessorsWaiting.Task;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VpnServiceHost"/> class: it makes the config folder where it is
@@ -114,8 +115,11 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _vpnServiceHandler = vpnServiceHandler;
-        _tunnelLock = tunnelLock;
-        _killSwitch = killSwitch;
+        _connectState = new VpnServiceConnectState(Context, vpnServiceHandler, VpnHoodClient_StateChanged);
+        _tunnel = new VpnServiceTunnel(tunnelLock, this, Context);
+        _killSwitch = new VpnServiceKillSwitch(killSwitch, _tunnel, Context);
+        _notification = new VpnServiceNotification(vpnServiceHandler, Context);
+        _connectionInfoUpdater = new ConnectionInfoUpdater(Context, _connectState, _killSwitch);
 
         // A log file of its own where the VPN service has a process of its own (withLogger), opened at
         // each start request; in the app's process its lines go to the app's file, through the same
@@ -132,95 +136,8 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
         // Write an initial ConnectionInfo so that the app side can discover the service state.
         _ = Context.TryWriteConnectionInfo(Context.BeginSession(),
-            CreateConnectionInfo(ClientState.Initializing, sessionName: null, exception: null), CancellationToken.None);
-    }
-
-    private void VpnHoodClient_StateChanged(object? sender, EventArgs e)
-    {
-        var client = (VpnHoodClient?)sender;
-        if (client is null || Client != client)
-            return; // the active client is changed, so ignore the event
-
-        // the session ended for a new connect: an end the app does not see (UpdateConnectionInfo), as the service
-        // connects again at once, and the new connect finds the server anew
-        if (IsReconnectEnd(client)) {
-            if (client.State is ClientState.Disposed)
-                _ = ReconnectAfterSessionEnd(client);
-
-            return;
-        }
-
-        // update last sate; a disconnect asked for with a reason - a revoke, say - carries it, since this
-        // write and TryDisconnect's own may land in either order
-        VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}",
-            client.State, client.Session?.Status.Error);
-        _ = UpdateConnectionInfo(client, _disconnectException, CancellationToken.None);
-
-        // an end for a new connect noticed since the check above, or a reconnect that took the host: not this
-        // callback's to finish
-        if (Client != client || IsReconnectEnd(client))
-            return;
-
-        // if client is not disposed, we can show notification
-        if (client.State is not ClientState.Disposed) {
-            // the info as the client has it now: the write above may wait for its lock, and until it is
-            // done the context's info is the one before
-            _vpnServiceHandler.ShowNotification(CreateConnectionInfo(client, _disconnectException),
-                CancellationToken.None);
-            return;
-        }
-
-        // client is disposed, its adapter with it, so the tunnel is free for another app; stop the
-        // notification and service
-        ReleaseTunnel();
-        VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification and service.");
-        _vpnServiceHandler.StopNotification();
-
-        // it may be a red flag for android if we don't stop the service after stopping the notification
-        Task.Delay(_killServiceTimeout).ContinueWith(_ => {
-            if (client != Client) return;
-            VhLogger.Instance.LogDebug("VpnServiceHost requests to StopSelf.");
-            _vpnServiceHandler.StopSelf();
-        });
-    }
-
-    // A session that ended for a new connect, where this service may connect by itself and no stop is asked for: the
-    // server moved from the address the session was fixed to, or the network lacks that address's IP version
-    private bool IsReconnectEnd(VpnHoodClient client)
-    {
-        return client.LastException is ServerAddressChangedException or ServerIpVersionUnsupportedException &&
-               CanReconnectBySelf();
-    }
-
-    private bool IsReconnectEnd(ConnectionInfo connectionInfo)
-    {
-        return connectionInfo.Error is { } error &&
-               (error.Is<ServerAddressChangedException>() || error.Is<ServerIpVersionUnsupportedException>()) &&
-               CanReconnectBySelf();
-    }
-
-    private bool CanReconnectBySelf()
-    {
-        return _vpnServiceHandler.CanReconnect && !_disconnectRequested && !_disposed;
-    }
-
-    // One reconnect per ended client, from whichever of its callbacks sees it disposed first, and none once a stop
-    // is asked for. After a move it takes the name's new addresses the move's check found: asked now, the system's
-    // resolver may still go through the old VPN, which Android tears down a moment later.
-    private async Task ReconnectAfterSessionEnd(VpnHoodClient client)
-    {
-        lock (_connectLock) {
-            if (Client != client || _disconnectRequested || _disposed)
-                return;
-
-            Client = null;
-        }
-
-        client.StateChanged -= VpnHoodClient_StateChanged;
-        VhLogger.Instance.LogInformation("The session has ended for a new connect, so the VPN service connects again. " +
-                                         "Reason: {Reason}", client.LastException?.Message);
-        var newAddresses = (client.LastException as ServerAddressChangedException)?.NewAddresses;
-        await TryConnect(forceReconnect: false, isAlwaysOn: false, isReconnect: true, newAddresses).Vhc();
+            ConnectionInfoBuilder.BuildWithoutClient(ClientState.Initializing, sessionName: null, exception: null),
+            CancellationToken.None);
     }
 
     /// <summary>Connects with the options the app saved, unless a connection is under way.</summary>
@@ -233,93 +150,144 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     /// </param>
     /// <returns>
     /// A task whose result is <see langword="true"/> once a connect was made and ran its course, its outcome in the
-    /// state the app reads; <see langword="false"/> where none was made, as the host is disposed or a connection is under
-    /// way.
+    /// state the app reads; <see langword="false"/> where none was made, as the host is disposed, or a connection is
+    /// under way, one still starting too, where it is not forced.
     /// </returns>
     /// <remarks>It never throws: a failure is reported to the app as the state's error, or, where it is not, logged.</remarks>
     public Task<bool> TryConnect(bool forceReconnect = false, bool isAlwaysOn = false)
     {
-        return TryConnect(forceReconnect, isAlwaysOn, isReconnect: false, knownHostAddresses: null);
+        return TryConnect(forceReconnect, isAlwaysOn, endedSessionId: null, knownHostAddresses: null);
     }
 
-    // isReconnect: the service's own, after a session ended for a new connect. Its log goes on, as it holds why the
-    // last session ended, and a stop asked for meanwhile ends it rather than being undone.
-    private async Task<bool> TryConnect(bool forceReconnect, bool isAlwaysOn, bool isReconnect,
+    // endedSessionId: set for the service's own reconnect, to the session that just ended. Such a connect keeps the
+    // log, which holds why that session ended, and a stop asked for meanwhile wins over it.
+    private async Task<bool> TryConnect(bool forceReconnect, bool isAlwaysOn, int? endedSessionId,
         HostNameAddresses? knownHostAddresses)
     {
-        if (_disposed)
+        if (_connectState.IsDisposed)
             return false;
 
         try {
-            if (!isReconnect) {
-                _disconnectRequested = false;
-                _disconnectException = null;
+            var admission = _connectState.Admit(forceReconnect, endedSessionId);
+            if (admission.Connect is not { } connect) {
+                await EndRefusedConnect(admission).Vhc();
+                return false;
             }
 
-            var oldClient= Client;
-
-            // handle previous client
-            if (oldClient != null) {
-                if (!forceReconnect && oldClient is not { State: ClientState.Disposed or ClientState.Disconnecting }) {
-                    // user must disconnect first
-                    VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
-                    await UpdateConnectionInfo(oldClient, _connectCts.Token).Vhc();
-                    return false;
+            try {
+                // the old client is detached first, so its end is neither reported nor acted on; it closes beside this
+                // connect, and a stop waits for that close
+                if (connect.OldClient is { } oldClient) {
+                    VhLogger.Instance.LogWarning("VpnService is killing the previous connection.");
+                    oldClient.StateChanged -= VpnHoodClient_StateChanged;
+                    _ = CloseOldClient(oldClient, connect.OldClientClosed);
                 }
 
-                // this prevents the previous connection to overwrite the state or stop the service
-                VhLogger.Instance.LogWarning("VpnService is killing the previous connection.");
-                oldClient.StateChanged -= VpnHoodClient_StateChanged;
-                Client = null; // double sure to prevent the event handler considered as active client. 
+                await connect.OldConnectCts.TryCancelAsync().Vhc();
+                connect.OldConnectCts.Dispose();
 
-                // dispose old client in the background
-                _ = oldClient.DisposeAsync();
+                await Connect(isAlwaysOn, keepLog: endedSessionId is not null, knownHostAddresses, connect.SessionId,
+                    connect.PredecessorsEnded, connect.ConnectToken).Vhc();
+
+                return true;
             }
-
-            // cancel previous connection if exists
-            await _connectCts.TryCancelAsync().Vhc();
-            _connectCts.Dispose();
-
-            // a reconnect that a stop came before ends here; a stop that comes after cancels this connect
-            var connectCts = TryBeginConnect(isReconnect);
-            if (connectCts is null)
-                return false;
-
-            // start connecting: a new session, which an older one's words can no longer overwrite
-            var sessionId = Context.BeginSession();
-            await Connect(isAlwaysOn, keepLog: isReconnect, knownHostAddresses, sessionId, connectCts.Token).Vhc();
-            return true;
+            finally {
+                connect.Ended.TrySetResult();
+            }
         }
         catch (Exception ex) {
-            if (!_disconnectRequested)
+            if (!_connectState.IsDisconnectRequested)
                 VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
 
             return false;
         }
     }
 
-    private CancellationTokenSource? TryBeginConnect(bool isReconnect)
+    // A connect that did not begin. If a connection is under way, the app is told its state. If a stop came first, the
+    // service stops, as no session will end it: iOS still waits to hear the end of the start it asked for
+    private async Task EndRefusedConnect(ConnectAdmission admission)
     {
-        lock (_connectLock) {
-            if (isReconnect && (_disconnectRequested || _disposed))
-                return null;
+        if (admission.IsUnderWay) {
+            VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
+            if (admission.ClientUnderWay is { } clientUnderWay)
+                await _connectionInfoUpdater.Update(clientUnderWay, CancellationToken.None).Vhc();
 
-            _connectCts = new CancellationTokenSource();
-            return _connectCts;
+            return;
+        }
+
+        if (admission.StopSessionId is { } stopSessionId)
+            await EndSessionWithoutClient(stopSessionId, _connectState.ConnectsEnded, failure: null,
+                CancellationToken.None).Vhc();
+    }
+
+    // A replaced client's close, which a stop waits for: its failure is logged
+    private static async Task CloseOldClient(VpnHoodClient client, TaskCompletionSource closed)
+    {
+        try {
+            await client.DisposeAsync().Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not close the replaced client.");
+        }
+        finally {
+            closed.TrySetResult();
         }
     }
 
-    // keepLog: the log goes on rather than starting anew
+    // keepLog: the log continues instead of starting anew. predecessorsEnded: completes when every earlier connect and
+    // the replaced client have ended; a failure of this connect waits for it before it ends the session
     private async Task Connect(bool isAlwaysOn, bool keepLog, HostNameAddresses? knownHostAddresses, int sessionId,
+        Task predecessorsEnded, CancellationToken cancellationToken)
+    {
+        // this connect's own client: a newer connect may replace Client meanwhile
+        var client = await TryCreateSessionClient(isAlwaysOn, keepLog, knownHostAddresses, sessionId, predecessorsEnded,
+            cancellationToken).Vhc();
+
+        if (client is null)
+            return;
+
+        try {
+            await _connectionInfoUpdater.Update(client, cancellationToken).Vhc();
+            _notification.Show(Context.ConnectionInfo, sessionId, cancellationToken);
+
+            await client.Connect(cancellationToken).Vhc();
+
+            // a reconfigure that came while the session was not up
+            await Reconfigurer.ApplyMissed(client, cancellationToken).Vhc();
+        }
+        catch (Exception ex) when (Context.SessionId != sessionId) {
+            // a newer connect took over: the tunnel, the service and Client are its now, and this one closes only its
+            // own client
+            VhLogger.Instance.LogDebug(ex, "A connect that a newer one took over has ended.");
+            _ = client.DisposeAsync();
+        }
+        catch (Exception ex) {
+            // the client's end (EndClientSession) stops the notification and the service; a start that a requested
+            // disconnect ended is no failure
+            if (!_connectState.IsDisconnectRequested)
+                VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
+
+            _ = client.DisposeAsync();
+        }
+    }
+
+    // A connect's steps up to its published client. Returns null if it failed or a newer connect took over; a failure
+    // ends the session here, as there is no client to end it
+    private async Task<VpnHoodClient?> TryCreateSessionClient(bool isAlwaysOn, bool keepLog,
+        HostNameAddresses? knownHostAddresses, int sessionId, Task predecessorsEnded,
         CancellationToken cancellationToken)
     {
-        if (Client is not null)
-            throw new InvalidOperationException("Client is already initialized.");
-        
         try {
-            // read the client options, and start the log with them: the file holds this session, and a
-            // reconfigure kept from before, as the app writes each there before it sends it
+            // the session's first word, at once: until then the status file may still hold the last session's end,
+            // which the app would take for this one's (at a system's start the app wrote nothing over it)
+            await Context.TryWriteConnectionInfo(sessionId,
+                ConnectionInfoBuilder.BuildWithoutClient(ClientState.Initializing, sessionName: null, exception: null),
+                cancellationToken).Vhc();
+
+            // Before the options are read. A kept reconfigure is dropped: the options file already holds it, as the app
+            // writes the file before it sends one. A kill switch asked for from BeginStart on is kept for Start
             await Reconfigurer.Reset(cancellationToken).Vhc();
+            await _killSwitch.BeginStart(sessionId, cancellationToken).Vhc();
 
             var serviceOptions = await Context.ServiceOptionsFile.Read(cancellationToken).Vhc();
             var clientOptions = serviceOptions.ClientOptions;
@@ -335,18 +303,18 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
 
             // create a connection info for notification
             await Context.TryWriteConnectionInfo(sessionId,
-                CreateConnectionInfo(ClientState.Initializing, clientOptions.SessionName, exception: null),
+                ConnectionInfoBuilder.BuildWithoutClient(ClientState.Initializing, clientOptions.SessionName,
+                    exception: null),
                 cancellationToken).Vhc();
 
             // show notification as soon as possible
-            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo, cancellationToken);
+            _notification.Show(Context.ConnectionInfo, sessionId, cancellationToken);
 
             // sni is sensitive, must be explicitly enabled
             clientOptions.ForceLogSni |=
                 clientOptions.LogServiceOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni),
                     StringComparer.OrdinalIgnoreCase);
 
-            // create client
             VhLogger.Instance.LogDebug("VpnService is creating a new VpnHoodClient.");
             var adapterSetting = new VpnAdapterSettings {
                 AdapterName = clientOptions.AdapterName,
@@ -354,25 +322,58 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
                 Blocking = false
             };
 
-            // The machine's one tunnel, before an adapter comes up: an app that holds it drops its adapter
-            // and lets go, and this host keeps it across its own reconnects until its client is gone or
-            // another app asks for it. A null-capture makes no adapter, so it takes none.
-            if (_tunnelLock != null && !clientOptions.UseNullCapture && _tunnelHold == null)
-                _tunnelHold = await _tunnelLock.Take(this, cancellationToken).Vhc();
+            // the machine's one tunnel, before the adapter comes up; a null-capture starts no platform adapter, so it
+            // takes none
+            if (!clientOptions.UseNullCapture)
+                await _tunnel.EnsureTaken(sessionId, cancellationToken).Vhc();
 
-            // the kill switch's block, before the adapter and the connect's first packet
-            await StartKillSwitch(clientOptions, cancellationToken).Vhc();
+            // The block goes up before the adapter and the connect's first packet. The client is told the switch in
+            // use: under a block the system's resolver is cut off, and how the client looks names up and gets the
+            // proxies' list depends on it
+            clientOptions.UseKillSwitch = await _killSwitch.Start(sessionId, clientOptions, cancellationToken).Vhc();
 
             // null-capture is host debug plumbing, so the adapter is resolved here and handed to the
             // handler ready-made
             var vpnAdapter = clientOptions.UseNullCapture
                 ? new NullVpnAdapter(blocking: false)
                 : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1);
-            _vpnAdapter = vpnAdapter;
-            vpnAdapter.Started += VpnAdapter_Started;
 
-            // assign Client member to monitor states while connecting, even if the client is not connected yet.
-            // This is important to update the connection info file and notification correctly.
+            var client = await CreateClient(vpnAdapter, serviceOptions, knownHostAddresses, sessionId,
+                cancellationToken).Vhc();
+
+            // not published: a newer connect began or a stop came while the client was made. It is closed, its adapter
+            // not up yet, and the connect ends as canceled
+            if (!_connectState.TryPublishClient(client, sessionId, cancellationToken)) {
+                await client.DisposeAsync().Vhc();
+                throw new OperationCanceledException("The connect was canceled as its client was made.");
+            }
+
+            return client;
+        }
+        catch (Exception ex) when (Context.SessionId != sessionId) {
+            // a newer connect took over: the tunnel and the service are its now
+            VhLogger.Instance.LogDebug(ex, "A connect that a newer one took over has ended.");
+            return null;
+        }
+        catch (Exception ex) {
+            // no client, so no adapter of this connect is up; earlier connects and the replaced client may still hold
+            // theirs, so the end waits for them
+            if (!predecessorsEnded.IsCompleted)
+                _predecessorsWaiting.TrySetResult();
+
+            await EndSessionWithoutClient(sessionId, predecessorsEnded, ex, cancellationToken).Vhc();
+            return null;
+        }
+    }
+
+    // The client owns the adapter once it is made; until then a failure closes the adapter here and is rethrown. Live
+    // filter updates need no wiring here: the filters re-read their folder manifests on Reconfigure
+    private async Task<VpnHoodClient> CreateClient(IVpnAdapter vpnAdapter, VpnServiceOptions serviceOptions,
+        HostNameAddresses? knownHostAddresses, int sessionId, CancellationToken cancellationToken)
+    {
+        try {
+            vpnAdapter.Started += (_, adapterOptions) => VpnAdapter_Started(sessionId, adapterOptions);
+            _connectState.SetVpnAdapter(vpnAdapter, sessionId);
             var clientFactory = _vpnServiceHandler.CreateClientFactory();
             var clientParams = new VpnHoodClientParams {
                 ServiceOptions = serviceOptions,
@@ -383,155 +384,73 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
                 KnownHostAddresses = knownHostAddresses
             };
 
-            // the filter pipes are self-updating: their split filter stages re-read the folder
-            // manifests when the Reconfigure command rolls down them, so a live filter update needs no
-            // wiring here and the client stays blind to the swap (its caches self-invalidate via the
-            // rolled-up change event)
-            try {
-                Client = await CreateClient(clientFactory, clientParams, cancellationToken).Vhc();
-            }
-            catch {
-                // the client owns the adapter only once constructed
-                vpnAdapter.Dispose();
-                throw;
-            }
-
-            // this connect's client, captured once: a reconnect may replace Client meanwhile
-            var client = Client;
-            client.StateChanged += VpnHoodClient_StateChanged;
-
-            // show notification.
-            await UpdateConnectionInfo(client, cancellationToken).Vhc();
-            _vpnServiceHandler.ShowNotification(Context.ConnectionInfo, cancellationToken);
-
-            // let connect in the background
-            // ignore cancellation because it will be cancelled by disconnect or dispose
-            await client.Connect(cancellationToken).Vhc();
-
-            // a reconfigure that came while the session was not up
-            await Reconfigurer.ApplyMissed(client, cancellationToken).Vhc();
-        }
-        catch (Exception ex) when (Client is null) {
-            // no client, so no adapter is up: the tunnel goes back
-            ReleaseTunnel();
-            await Context.TryWriteConnectionInfo(sessionId,
-                CreateConnectionInfo(ClientState.Disposed, sessionName: null, ex), _connectCts.Token).Vhc();
-            _vpnServiceHandler.StopNotification();
-            _vpnServiceHandler.StopSelf();
-        }
-        catch (Exception ex) {
-            // we do not need to do anything if client is not null because the state changed event
-            // will handle the notification and service stopping.
-            // dispose the client in the background. A start that a requested disconnect ended is no failure
-            if (!_disconnectRequested)
-                VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
-
-            _ = Client?.DisposeAsync();
-        }
-    }
-
-    // the client and its filter pipes, which it owns once made; till then a failure closes them here, as they hold
-    // their split dbs open
-    private static async Task<VpnHoodClient> CreateClient(VpnHoodClientFactory clientFactory,
-        VpnHoodClientParams clientParams, CancellationToken cancellationToken)
-    {
-        var netFilter = await CreateNetFilter(clientFactory, clientParams, cancellationToken).Vhc();
-        try {
-            return await clientFactory.Create(clientParams, netFilter, cancellationToken).Vhc();
+            return await VpnServiceClientBuilder.Build(clientFactory, clientParams, cancellationToken).Vhc();
         }
         catch {
-            netFilter.Dispose();
+            VhInvoker.TryInvoke("close the VPN adapter of a client not made", LogLevel.Error, vpnAdapter.Dispose);
             throw;
         }
     }
 
-    private static async Task<NetFilter> CreateNetFilter(VpnHoodClientFactory clientFactory,
-        VpnHoodClientParams clientParams, CancellationToken cancellationToken)
+    // every start of the adapter, a restart too: the kill switch's block is pointed at it while its connect is current
+    private void VpnAdapter_Started(int sessionId, VpnAdapterOptions adapterOptions)
     {
-        var ipFilter = await clientFactory.CreateIpFilter(clientParams, cancellationToken).Vhc();
-        try {
-            return new NetFilter {
-                IpFilter = ipFilter,
-                DomainFilter = await clientFactory.CreateDomainFilter(clientParams, cancellationToken).Vhc(),
-                IpMapper = clientFactory.CreateIpMapper(clientParams)
-            };
-        }
-        catch {
-            ipFilter.Dispose();
-            throw;
-        }
+        if (Context.SessionId != sessionId)
+            return;
+
+        _ = VhInvoker.TryInvokeAsync("point the kill switch's block at the tunnel", LogLevel.Error,
+            () => _killSwitch.Repoint(sessionId, adapterOptions, CancellationToken.None));
     }
 
-    // a disconnect asked for with a reason - a revoke, say - carries it, as the client's own state changes do, or
-    // a reply to the app would publish the session's end without it
-    internal Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
+    private void VpnHoodClient_StateChanged(object? sender, EventArgs e)
     {
-        return UpdateConnectionInfo(client, _disconnectException, cancellationToken);
-    }
-
-    internal async Task UpdateConnectionInfo(VpnHoodClient client, Exception? ex, CancellationToken cancellationToken)
-    {
-        // flush pending proxy statuses so the app process sees fresh data in the shared endpoint store
-        if (client.ProxyConnector != null)
-            await client.ProxyConnector.Flush(cancellationToken).Vhc();
-
-        // nothing from a client that is no longer the current one. The session before the client check: one begun in
-        // between has detached this client already
+        // the session before the client check: one begun in between has detached this client already
         var sessionId = Context.SessionId;
-        if (client != Client)
+        var client = (VpnHoodClient?)sender;
+        if (client is null || Client != client)
+            return; // the active client is changed, so ignore the event
+
+        // a session that ended for a new connect: the app does not see its end, as the service connects again at once
+        if (_connectState.IsReconnectEnd(client)) {
+            if (client.State is ClientState.Disposed)
+                _ = ReconnectAfterSessionEnd(client);
+
             return;
-
-        // the end of a session that ended for a new connect is not the app's to see, as the service connects again:
-        // judged by what would be written, as the end may be noticed meanwhile
-        var connectionInfo = CreateConnectionInfo(client, ex);
-        if (IsReconnectEnd(connectionInfo))
-            return;
-
-        await Context.TryWriteConnectionInfo(sessionId, connectionInfo, cancellationToken).Vhc();
-    }
-
-    // the connection's info as the client has it now
-    private static ConnectionInfo CreateConnectionInfo(VpnHoodClient client, Exception? ex)
-    {
-        return new ConnectionInfo {
-            CreatedTime = FastDateTime.UtcNow,
-            ProxyConnectorStatus = client.ProxyConnector?.Status,
-            SessionName = client.Config.SessionName,
-            SessionInfo = client.Session?.Info,
-            SessionStatus = client.Session?.Status.ToDto(),
-            ClientState = client.State,
-            ClientStateProgress = client.StateProgress,
-            ClientStateChangedTime = client.StateChangedTime,
-            Error = ex?.ToApiError() ?? client.LastException?.ToApiError(),
-            VpnEngineInfo = VpnEngineInfo.VpnHoodEngine
-        };
-    }
-
-    // the host's own word, with no client to tell it
-    private static ConnectionInfo CreateConnectionInfo(ClientState clientState, string? sessionName,
-        Exception? exception)
-    {
-        return new ConnectionInfo {
-            CreatedTime = FastDateTime.UtcNow,
-            ProxyConnectorStatus = null,
-            SessionInfo = null,
-            SessionStatus = null,
-            ClientState = clientState,
-            ClientStateProgress = null,
-            ClientStateChangedTime = null,
-            Error = exception?.ToApiError(),
-            SessionName = sessionName,
-            VpnEngineInfo = VpnEngineInfo.VpnHoodEngine
-        };
-    }
-
-
-    private CancellationTokenSource MarkDisconnectRequested()
-    {
-        lock (_connectLock) {
-            _disconnectRequested = true;
-            return _connectCts;
         }
+
+        VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}",
+            client.State, client.Session?.Status.Error);
+
+        if (client.State is ClientState.Disposed) {
+            _ = EndClientSession(client, sessionId);
+            return;
+        }
+
+        _ = _connectionInfoUpdater.Update(client, CancellationToken.None);
+
+        // checked again: since the check above the client may have ended for a reconnect, or been replaced
+        if (Client != client || _connectState.IsReconnectEnd(client))
+            return;
+
+        // the info as the client has it now, not the context's: the write above may still wait for its lock
+        _notification.Show(ConnectionInfoBuilder.Build(client, _connectState.DisconnectException), sessionId,
+            CancellationToken.None);
+    }
+
+    // One reconnect per ended client, and none once a stop is asked for. After a server move it passes on the new
+    // addresses the move's check found: a lookup now may still go through the old VPN, which Android tears down a
+    // moment later
+    private async Task ReconnectAfterSessionEnd(VpnHoodClient client)
+    {
+        if (_connectState.ClaimEndedClient(client) is not { } endedSessionId)
+            return;
+
+        client.StateChanged -= VpnHoodClient_StateChanged;
+        VhLogger.Instance.LogInformation("The session has ended for a new connect, so the VPN service connects again. " +
+                                         "Reason: {Reason}", client.LastException?.Message);
+
+        var newAddresses = (client.LastException as ServerAddressChangedException)?.NewAddresses;
+        await TryConnect(forceReconnect: false, isAlwaysOn: false, endedSessionId, newAddresses).Vhc();
     }
 
     /// <summary>
@@ -540,197 +459,216 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
     /// </summary>
     /// <param name="exception">
     /// Why, reported to the app as the end's error, or <see langword="null"/> to keep the reason an earlier disconnect or
-    /// a revoke gave, if any.
+    /// a revoke gave, or else the error the session ended with, if any.
     /// </param>
     /// <returns>A task that completes once the session is gone; it never throws, and logs a failure.</returns>
-    public async Task TryDisconnect(Exception? exception = null)
+    public Task TryDisconnect(Exception? exception = null)
     {
-        if (_disposed)
-            return;
+        if (_connectState.IsDisposed)
+            return Task.CompletedTask;
 
+        if (exception != null)
+            VhLogger.Instance.LogError(exception, "VpnServiceHost is disconnecting due to an error...");
+        else
+            VhLogger.Instance.LogDebug("VpnServiceHost is disconnecting...");
+
+        // The mark is taken together with the connect it cancels and that connect's session, so a reconnect cannot slip
+        // in between and this stop cannot end a newer session. The reason is kept with the mark, so a state the app
+        // reads before the end already carries it
+        return TryDisconnect(_connectState.MarkDisconnectRequested(exception));
+    }
+
+    private async Task TryDisconnect(RequestedDisconnect disconnect)
+    {
         try {
-            // marked with the connect to cancel below, so the service's own reconnect either sees the mark or has its
-            // connect cancelled
-            var connectCts = MarkDisconnectRequested();
-            if (exception != null)
-                VhLogger.Instance.LogError(exception, "VpnServiceHost is disconnecting due to an error...");
-            else
-                VhLogger.Instance.LogDebug(exception, "VpnServiceHost is disconnecting...");
-
-            // a plain disconnect keeps the reason the session already ended for (a revoke, say) in the terminal
-            // state below: the app may ask for it before it has seen that end
-            exception ??= _disconnectException;
-            _disconnectException = exception;
+            // The order matters. The session's kill-switch changes end before its client closes: the app may lift the
+            // block at the client's end, and no change of this session may land after that. Waiting here is safe: a
+            // session with a client is past its own block. The client starts closing before the cancel, so its connect
+            // sees the close, and a person's own disconnect leaves no cancel error
+            if (disconnect.Client is { } closingClient) {
+                await _killSwitch.EndChanges(disconnect.SessionId).Vhc();
+                _ = closingClient.DisposeAsync();
+            }
 
             // a start still on its way - waiting for the tunnel, say - ends too, rather than connecting after
-            await connectCts.TryCancelAsync().Vhc();
+            await disconnect.ConnectCts.TryCancelAsync().Vhc();
 
-            // the block stays as it is: lifting it is a person's disconnect's, the app's; this connect changes
-            // it no more, not even by a re-point under way, which may otherwise land after that lift
-            await EndKillSwitchChanges().Vhc();
+            // again after the cancel: with no client, the connect's own start may have held the switch's lock until
+            // now. The block itself stays: lifting it is the app's call
+            await _killSwitch.EndChanges(disconnect.SessionId).Vhc();
 
-            // the session this disconnect ends, so its end cannot land on a newer one
-            var sessionId = Context.SessionId;
+            // every connect ends first, a replaced one too, with the tunnel and adapter its start may hold: the app
+            // takes the session's end as "everything is released" and may connect again at once
+            await disconnect.ConnectsEnded.Vhc();
 
-            // let dispose in the background
+            // a connect begun since owns the host now: it closes this session's client itself, and this stop reports
+            // nothing
             var client = Client;
+            if (Context.SessionId != disconnect.SessionId)
+                return;
+
             if (client != null)
                 await client.DisposeAsync().Vhc();
 
-            // the terminal state, unless the client has published its own first: the first Disposed is the
-            // session's last word, which the app-side TryStop waits for before reporting the service stopped
-            await Context.TryWriteConnectionInfo(sessionId,
-                CreateConnectionInfo(ClientState.Disposed, sessionName: null, exception), CancellationToken.None).Vhc();
+            // the tunnel goes back before the end is written: not where a connect has begun meanwhile, which keeps it
+            if (!await _tunnel.TryRelease(disconnect.SessionId).Vhc())
+                return;
+
+            // the session's last word, unless the client's own end was written first: the first Disposed stands, and
+            // the app's stop waits for it. Always reported as Disposed, as the client may still be closing
+            var connectionInfo = client != null
+                ? ConnectionInfoBuilder.Build(client, disconnect.Exception, ClientState.Disposed)
+                : ConnectionInfoBuilder.BuildWithoutClient(ClientState.Disposed, sessionName: null,
+                    disconnect.Exception);
+
+            await Context.TryWriteConnectionInfo(disconnect.SessionId, connectionInfo, CancellationToken.None).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect the client.");
         }
     }
 
-    // Another app took the machine's one tunnel, which goes to it once this returns. The adapter goes now,
-    // on this thread, as Android takes a revoked VPN's, or the next app's routes would meet its own: first,
-    // so the client's dispose, which it may set off, cannot be the one tearing it down meanwhile. The
-    // session ends in its own time, and a connect still on its way, which may not have its adapter yet,
-    // ends too. The hold ends itself, so a reconnect takes the tunnel anew.
+    // Another app took the machine's one tunnel and gets it when this returns, so the adapter goes down now, on this
+    // thread, as Android does for a revoked VPN: else the next app's routes would meet ours. The session ends in its
+    // own time
     void IVpnTunnelHolder.OnTunnelRevoked()
     {
+        _ = RevokeTunnel();
+    }
+
+    // Returns the disconnect it starts, which a test waits for. The order matters: the stop is marked first, so the
+    // end that the adapter's loss brings carries the revoke as its reason; then the adapter goes down here, before the
+    // disconnect, whose close of the client could otherwise take it down after this has returned. The adapter is the
+    // last registered one, taken with the mark, so a connect begun after the mark is not this revoke's to end
+    internal Task RevokeTunnel()
+    {
         VhLogger.Instance.LogInformation("Another VPN app asked for the tunnel, so this one lets it go.");
-        Interlocked.Exchange(ref _tunnelHold, null);
+        _tunnel.Forget();
 
-        // before the adapter goes, so the client's end it brings tells of the revoke
-        var exception = new VpnServiceRevokedException();
-        _disconnectRequested = true;
-        _disconnectException = exception;
-        _vpnAdapter?.Dispose();
-        _ = TryDisconnect(exception);
+        var disconnect = _connectState.MarkDisconnectRequested(new VpnServiceRevokedException());
+        if (disconnect.VpnAdapter is { } vpnAdapter)
+            VhInvoker.TryInvoke("take the VPN adapter down for another app", LogLevel.Error, vpnAdapter.Dispose);
+
+        return TryDisconnect(disconnect);
     }
 
-    // Whether the tunnel's block is this host's to change: the tunnel's holder's, or any host's where the
-    // platform has no tunnel lock.
-    private bool IsTunnelHeld => _tunnelLock == null || _tunnelHold != null;
-
-    // A connect's block, before its adapter: up where the switch is on, else none. The tunnel is this host's
-    // now, so a block a crashed or revoked holder left is its to replace or remove. Fail-closed: a block that
-    // cannot go up fails the connect, which says why.
-    private async Task StartKillSwitch(ClientOptions clientOptions, CancellationToken cancellationToken)
+    // A client's own end. The app takes a session's end as "everything is released" and may connect again at once, so
+    // the end is written, and the service stopped, only after every earlier connect and replaced client has ended and
+    // the session has let go. Until then the app is told Disconnecting
+    private async Task EndClientSession(VpnHoodClient client, int sessionId)
     {
-        if (clientOptions.UseKillSwitch) {
-            if (_killSwitch == null)
-                throw new NotSupportedException("This device has no kill switch.");
+        try {
+            if (Client != client || _connectState.IsReconnectEnd(client))
+                return;
 
-            // nothing would let the tunnel's traffic through: a null-capture makes no adapter of its own
-            if (clientOptions.UseNullCapture)
-                throw new NotSupportedException("The kill switch cannot work with a null-capture.");
+            // the app may lift the block as soon as it reads Disconnecting, so the kill-switch changes end first. The
+            // write skips the proxies' save and is not awaited, so neither delays the tunnel's release
+            await _killSwitch.EndChanges(sessionId).Vhc();
+            _ = Context.TryWriteConnectionInfo(sessionId,
+                ConnectionInfoBuilder.Build(client, _connectState.DisconnectException, ClientState.Disconnecting),
+                CancellationToken.None);
+
+            await _connectState.ConnectsEnded.Vhc();
+            if (Client != client || _connectState.IsReconnectEnd(client) || !await TryLetSessionGo(sessionId).Vhc())
+                return;
+
+            await _connectionInfoUpdater.WriteClientEnd(client, sessionId).Vhc();
+
+            // not where a newer connect has begun meanwhile, whose notification and service they are
+            if (Context.SessionId != sessionId)
+                return;
+
+            // the service stops whatever the notification's close did
+            VhLogger.Instance.LogDebug("VpnServiceHost requests to stop the notification and service.");
+            VhInvoker.TryInvoke("stop the notification", LogLevel.Error, () => _notification.Stop(sessionId));
+
+            // it may be a red flag for android if we don't stop the service after stopping the notification
+            await Task.Delay(_killServiceTimeout).Vhc();
+            StopService(sessionId);
         }
-
-        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
-        _useKillSwitch = clientOptions.UseKillSwitch;
-        _killSwitchRules = clientOptions.UseNullCapture
-            ? null
-            : VpnKillSwitchRules.CreateBySettings(clientOptions.AdapterName, clientOptions.IncludeIpRangesByDevice,
-                clientOptions.SplitLocalNetwork);
-        await ApplyKillSwitch(cancellationToken).Vhc();
-    }
-
-    // A session's adapter start: what its routes leave out, as the adapter has them.
-    private static VpnKillSwitchRules CreateKillSwitchRules(string adapterName, VpnAdapterOptions adapterOptions)
-    {
-        var includeIpRanges = adapterOptions.IncludeNetworks.ToIpRanges();
-        var passIpRanges = includeIpRanges.Invert();
-        if (adapterOptions.ServerIp != null)
-            passIpRanges = passIpRanges.Exclude(adapterOptions.ServerIp);
-
-        return new VpnKillSwitchRules {
-            AdapterName = adapterName,
-            PassIpRanges = passIpRanges,
-            DnsServers = adapterOptions.DnsServers.Where(x => !includeIpRanges.Contains(x)).ToArray()
-        };
-    }
-
-    // Each start of this connect's adapter, a restart's too, which may make its interface anew: the block
-    // follows it, with what the session's routes leave out. Until it does, the tunnel's own traffic is
-    // blocked too, which fails closed.
-    private void VpnAdapter_Started(object? sender, VpnAdapterOptions adapterOptions)
-    {
-        if (sender != _vpnAdapter)
-            return;
-
-        _ = VhInvoker.TryInvokeAsync("point the kill switch's block at the tunnel", LogLevel.Error,
-            () => RepointKillSwitch(adapterOptions, CancellationToken.None));
-    }
-
-    private async Task RepointKillSwitch(VpnAdapterOptions adapterOptions, CancellationToken cancellationToken)
-    {
-        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
-        if (_killSwitchRules == null)
-            return;
-
-        _killSwitchRules = CreateKillSwitchRules(_killSwitchRules.AdapterName, adapterOptions);
-        if (_useKillSwitch)
-            await ApplyKillSwitch(cancellationToken).Vhc();
-    }
-
-    // The switch, turned on or off while a connect of this host holds the tunnel: on, the block goes up with
-    // the rules as they are; off, it goes. Otherwise the block is no connect's: the app lifts it itself.
-    internal async Task ReconfigureKillSwitch(bool useKillSwitch, CancellationToken cancellationToken)
-    {
-        using var scope = await _killSwitchLock.LockAsync(cancellationToken).Vhc();
-        if (_killSwitchRules == null || _useKillSwitch == useKillSwitch)
-            return;
-
-        _useKillSwitch = useKillSwitch;
-        await ApplyKillSwitch(cancellationToken).Vhc();
-    }
-
-    // Under the kill switch's lock.
-    private async Task ApplyKillSwitch(CancellationToken cancellationToken)
-    {
-        if (_killSwitch == null || !IsTunnelHeld)
-            return;
-
-        if (_useKillSwitch && _killSwitchRules != null) {
-            VhLogger.Instance.LogInformation("The kill switch blocks all but the tunnel. PassIpRanges: {Count}",
-                _killSwitchRules.PassIpRanges.Count);
-            await _killSwitch.Block(_killSwitchRules, cancellationToken).Vhc();
-            return;
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not end the client's session.");
         }
-
-        await _killSwitch.Unblock(anyApp: true, cancellationToken).Vhc();
     }
 
-    private async Task EndKillSwitchChanges()
+    // Ends a session that has no client: once `ends` completes and the session has let go, its end is written and the
+    // service stops. Written before the stop, as a desktop's stop ends the process. failure: null if the connect never
+    // began
+    private async Task EndSessionWithoutClient(int sessionId, Task ends, Exception? failure,
+        CancellationToken cancellationToken)
     {
-        using var scope = await _killSwitchLock.LockAsync(CancellationToken.None).Vhc();
-        _killSwitchRules = null;
+        await ends.Vhc();
+        if (!await TryLetSessionGo(sessionId).Vhc())
+            return;
+
+        // A requested stop is reported with its own reason (none for a person's own), not the cancel it caused. It is
+        // written here too, as the first end stands and this one may come first: the stop's own write waits for a
+        // failed connect to end. Any other failure is written unless the host's dispose canceled it
+        var isStopped = _connectState.TryGetStopReason(sessionId, out var stopReason);
+        if (isStopped || failure != null)
+            await Context.TryWriteConnectionInfo(sessionId,
+                ConnectionInfoBuilder.BuildWithoutClient(ClientState.Disposed, sessionName: null,
+                    isStopped ? stopReason : failure),
+                isStopped ? CancellationToken.None : cancellationToken).Vhc();
+
+        StopService(sessionId);
     }
 
-    // Once no adapter of this host is up.
-    private void ReleaseTunnel()
+    // Before a session's end is written: its kill-switch changes end and its tunnel goes back, as the app may lift the
+    // block and take the tunnel at the end. Returns false if a newer connect had begun by then
+    private async Task<bool> TryLetSessionGo(int sessionId)
     {
-        Interlocked.Exchange(ref _tunnelHold, null)?.Dispose();
+        await _killSwitch.EndChanges(sessionId).Vhc();
+        return await _tunnel.TryRelease(sessionId).Vhc();
+    }
+
+    // Stops the service, whatever the notification's stop did, unless a newer connect has begun, which the service now
+    // serves. The platform's stop is called outside the session lock, as it may call back, so a connect can still
+    // begin between the check and the stop
+    private void StopService(int sessionId)
+    {
+        if (!_connectState.IsCurrent(sessionId))
+            return;
+
+        VhInvoker.TryInvoke("stop the notification", LogLevel.Error, () => _notification.Stop(sessionId));
+        _vpnServiceHandler.StopSelf();
+    }
+
+    // the state an answer to the app carries, for the API controller
+    internal Task<ConnectionInfo> UpdateConnectionInfoForAnswer(CancellationToken cancellationToken)
+    {
+        return _connectionInfoUpdater.UpdateForAnswer(cancellationToken);
+    }
+
+    // the kill switch, turned on or off, for the reconfigurer
+    internal Task ReconfigureKillSwitch(bool useKillSwitch, CancellationToken cancellationToken)
+    {
+        return _killSwitch.Reconfigure(useKillSwitch, cancellationToken);
     }
 
     /// <summary>Ends the connection at once, without reporting it, and stops listening to the app.</summary>
+    /// <remarks>
+    /// A connect still under way is canceled first: the end of a client it has made may be reported before the host
+    /// stops listening to that client.
+    /// </remarks>
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, true))
+        if (!_connectState.TryMarkDisposed())
             return;
 
-        // cancel connection if exists
+        // logged before the cancel, whose own lines then follow it
         VhLogger.Instance.LogDebug("VpnService Host is destroying...");
-        _connectCts.TryCancel();
-        _connectCts.Dispose();
+        _connectState.CancelLastConnect();
 
-        // dispose client
+        // the end this close brings is not reported: the host stops listening to the client first
         var client = Client;
         if (client != null) {
-            client.StateChanged -= VpnHoodClient_StateChanged; // after VpnHoodClient disposed
+            client.StateChanged -= VpnHoodClient_StateChanged;
             client.Dispose();
         }
 
-        ReleaseTunnel();
+        _tunnel.Dispose();
 
-        // dispose api controller
         _apiController.Dispose();
         VhLogger.Instance.LogDebug("VpnService has been destroyed.");
         _logService?.Dispose();

@@ -23,9 +23,7 @@ public class ChannelProtocolValidatorTest : TestBase
             ProtocolVersion = UdpDatagram.MinProtocolVersion
         };
 
-        Assert.DoesNotContain(ChannelProtocol.Udp,
-            ChannelProtocolValidator.GetChannelProtocols(olderServer, isQuicSupported: false));
-        Assert.Contains(ChannelProtocol.Udp,
-            ChannelProtocolValidator.GetChannelProtocols(newServer, isQuicSupported: false));
+        Assert.IsFalse(ChannelProtocolValidator.IsUdpChannelOffered(olderServer));
+        Assert.IsTrue(ChannelProtocolValidator.IsUdpChannelOffered(newServer));
     }
 }

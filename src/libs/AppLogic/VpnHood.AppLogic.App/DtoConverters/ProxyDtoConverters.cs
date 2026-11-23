@@ -6,7 +6,7 @@ using CoreProxy = VpnHood.Core.Proxies.Management.Abstractions;
 namespace VpnHood.AppLogic.App.DtoConverters;
 
 // The app's proxy shapes and the engine's, in both directions. The engine's ProxyEndPoint computes
-// its own Id and Url and rates its own quality; the contract carries those as values, because a
+// its own Id and rates its own quality; the contract carries those as values, because a
 // contract holds no behaviour and a second implementation of the rating rule in a UI would drift
 // from the one the engine actually routes by. Every enum maps with no default arm on purpose: a
 // protocol or a grade added to the engine breaks this file rather than reaching a UI as Unknown.
@@ -21,12 +21,11 @@ internal static class ProxyDtoConverters
             Host = endPoint.Host,
             Port = endPoint.Port,
             Username = endPoint.Username,
-            Password = endPoint.Password,
-            Url = endPoint.Url.ToString()
+            Password = endPoint.Password
         };
     }
 
-    // Id and Url are not read back: they are the engine's to derive from the address.
+    // Id is not read back: it is the engine's to derive from the address.
     public static CoreProxy.ProxyEndPoint ToEngine(this ProxyEndPoint endPoint)
     {
         return new CoreProxy.ProxyEndPoint {

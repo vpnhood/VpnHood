@@ -27,7 +27,10 @@ namespace VpnHood.Core.Client;
 public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
     private volatile bool _disposing; // a close has begun, either one: a start that it ends failed at nothing
-    private bool _disposed; // the release has run
+    private bool _disposed; // the release has begun
+
+    // the release's end, which a graceful close waits for where a quick one on another thread began it
+    private readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly IVpnAdapter _vpnAdapter;
     private readonly IClientSocketFactory _socketFactory;
@@ -37,10 +40,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly ConnectedServerFile _connectedServerFile;
     private readonly AsyncLock _disposeLock = new();
     private readonly DomainFilteringService _domainFilteringService;
-    // the filter stage that speaks for the server; its rules (routing declaration + SplitUnsupportedIpMode) are
-    // assigned when the session is built, then only read — the device's word lives in the capture set.
+    // the filter stage that speaks for the server: its routing declaration is assigned when the session is built, and its
+    // modes are the client's live UnroutedIpMode and UnsupportedIpV6Mode — the device's word lives in the capture set.
     private readonly ServerIpFilter _serverIpFilter;
     private ClientSession? _session;
+
+    // the live settings and the session's publication: a setting changed while the session is built reaches the
+    // session once it is published, and none is lost between; and a close, which either finds the session published
+    // or has the publish refuse it
+    private readonly Lock _settingsLock = new();
+    private int _isConnectStarted;
 
     internal DomainObserver DomainObserver => _domainFilteringService.DomainObserver;
 
@@ -76,41 +85,65 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public DateTime StateChangedTime { get; private set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// Gets or sets the requested TCP forwarding (<see cref="ClientOptions.UseTcpForwarding"/>), which the session
-    /// applies at once; its status gives what is in effect, which the server and the domain filters decide too.
+    /// Gets or sets the requested TCP forwarding, from <see cref="ClientOptions.UseTcpForwarding"/> at first, which the
+    /// session applies at once, or at its start for a value set before; its status gives what is in effect, which the
+    /// server and the domain filters decide too.
     /// </summary>
-    /// <remarks>
-    /// It starts <see langword="false"/> whatever the options say, and gives the last value set; a value set before the
-    /// session is built does not change how the session starts, which is from the options.
-    /// </remarks>
-    public bool UseTcpForwarding { get; set { field = value; _session?.UseTcpForwarding = value; } }
+    public bool UseTcpForwarding {
+        get;
+        set {
+            lock (_settingsLock) {
+                field = value;
+                _session?.UseTcpForwarding = value;
+            }
+        }
+    }
 
     /// <summary>
-    /// Gets or sets the requested dropping of the UDP bound for the tunnel (<see cref="ClientOptions.DropUdp"/>), which
-    /// the session applies at once; it is in effect only while the client forwards IPv4 TCP.
+    /// Gets or sets the requested dropping of the UDP bound for the tunnel, from <see cref="ClientOptions.DropUdp"/> at
+    /// first, which the session applies at once, or at its start for a value set before; it is in effect only while TCP
+    /// forwarding is chosen (<see cref="ClientOptions.DropUdp"/>).
     /// </summary>
-    /// <remarks>
-    /// It starts <see langword="false"/> whatever the options say, and gives the last value set; a value set before the
-    /// session is built does not change how the session starts, which is from the options.
-    /// </remarks>
-    public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }
+    public bool DropUdp {
+        get;
+        set {
+            lock (_settingsLock) {
+                field = value;
+                _session?.DropUdp = value;
+            }
+        }
+    }
 
     /// <summary>
-    /// Gets or sets the requested dropping of the QUIC bound for the tunnel (<see cref="ClientOptions.DropQuic"/>),
-    /// which the session applies at once; its status gives what is in effect.
+    /// Gets or sets the requested dropping of the QUIC bound for the tunnel, from <see cref="ClientOptions.DropQuic"/>
+    /// at first, which the session applies at once, or at its start for a value set before; its status gives what is in
+    /// effect.
     /// </summary>
-    /// <remarks>
-    /// It starts <see langword="false"/> whatever the options say, and gives the last value set; a value set before the
-    /// session is built does not change how the session starts, which is from the options.
-    /// </remarks>
-    public bool DropQuic { get; set { field = value; _session?.DropQuic = value; } }
+    public bool DropQuic {
+        get;
+        set {
+            lock (_settingsLock) {
+                field = value;
+                _session?.DropQuic = value;
+            }
+        }
+    }
 
     /// <summary>
-    /// Gets or sets the requested protocol of the tunnel's packet channels (<see cref="ClientOptions.ChannelProtocol"/>),
-    /// which the session applies at once; its status gives the one in effect, as a requested QUIC or UDP that cannot be
-    /// had falls back to TCP.
+    /// Gets or sets the requested protocol of the tunnel's packet channels, from
+    /// <see cref="ClientOptions.ChannelProtocol"/> at first, which the session applies at once, or at its start for a
+    /// value set before; its status gives the one in effect, as a requested QUIC or UDP that cannot be had falls back to
+    /// TCP.
     /// </summary>
-    public ChannelProtocol ChannelProtocol { get; set { field = value; _session?.ChannelProtocol = value; } }
+    public ChannelProtocol ChannelProtocol {
+        get;
+        set {
+            lock (_settingsLock) {
+                field = value;
+                _session?.ChannelProtocol = value;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the error that ended the client's connect, or else its session's last one, or <see langword="null"/>; a
@@ -119,12 +152,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Exception? LastException { get => field ?? _session?.LastException; private set; }
 
     /// <summary>
-    /// Gets or sets what happens to a destination the server does not route (<see cref="ClientOptions.UnroutedIpMode"/>);
-    /// it applies at once.
+    /// Gets or sets what happens to a destination the server does not route, from
+    /// <see cref="ClientOptions.UnroutedIpMode"/> at first; it applies at once, and a value set before the connect is
+    /// what the connect takes.
     /// </summary>
     /// <remarks>
-    /// Only the filter's verdict changes: the VPN adapter keeps what it captures from the connect, so a change that
-    /// needs it to capture otherwise, as from Exclude to Block against a server that splits, takes a reconnect.
+    /// Only the filter's verdict changes: the VPN adapter keeps what it captures from the moment the connect works it out,
+    /// so a change from then on, during the connect too, that needs it to capture otherwise, as from Exclude to Block
+    /// against a server that splits, takes a reconnect.
     /// </remarks>
     public SplitUnsupportedIpMode UnroutedIpMode {
         get => _serverIpFilter.UnroutedIpMode;
@@ -132,8 +167,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// Gets or sets what happens to IPv6 where the server carries none (<see cref="ClientOptions.UnsupportedIpV6Mode"/>);
-    /// it applies at once.
+    /// Gets or sets what happens to IPv6 where the server carries none, from
+    /// <see cref="ClientOptions.UnsupportedIpV6Mode"/> at first; it applies at once, and a value set before the connect
+    /// is what the connect takes.
     /// </summary>
     /// <remarks>As with <see cref="UnroutedIpMode"/>, only the filter's verdict changes.</remarks>
     public SplitUnsupportedIpMode UnsupportedIpV6Mode {
@@ -173,7 +209,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     /// The addresses the access key's host name gave already, which the connect takes rather than asking again, or
     /// <see langword="null"/>.
     /// </param>
-    /// <exception cref="ArgumentNullException">
+    /// <exception cref="ArgumentOutOfRangeException">
     /// The options' longest packet channel age is below their shortest and not infinite.
     /// </exception>
     /// <exception cref="FormatException">The access key is not valid.</exception>
@@ -194,17 +230,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         if (!VhUtils.IsInfinite(options.MaxPacketChannelTimespan) &&
             options.MaxPacketChannelTimespan < options.MinPacketChannelTimespan)
-            throw new ArgumentNullException(nameof(options.MaxPacketChannelTimespan),
-                $"{nameof(options.MaxPacketChannelTimespan)} must be bigger or equal than {nameof(options.MinPacketChannelTimespan)}.");
+            throw new ArgumentOutOfRangeException(nameof(options), options.MaxPacketChannelTimespan,
+                $"{nameof(options.MaxPacketChannelTimespan)} must be bigger than or equal to {nameof(options.MinPacketChannelTimespan)}.");
 
         // build config
         Config = new VpnHoodClientConfig {
             AllowAnonymousTracker = options.AllowAnonymousTracker,
+            AllowEndPointTracker = options.AllowEndPointTracker,
             MinPacketChannelLifespan = options.MinPacketChannelTimespan,
             MaxPacketChannelLifespan = options.MaxPacketChannelTimespan,
             AutoDisposeVpnAdapter = options.AutoDisposeVpnAdapter,
             Transport = options.Transport,
             PlanId = options.PlanId,
+            CanShowAdOverVpn = options.CanShowAdOverVpn,
             AccessCode = options.AccessCode,
             ExcludeApps = options.ExcludeApps,
             IncludeApps = options.IncludeApps,
@@ -217,11 +255,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ClientId = options.ClientId,
             IncludeLocalNetwork = !options.SplitLocalNetwork, // split is out of the VPN, the reverse of include
             SplitDnsMode = options.SplitDnsMode,
-            UnroutedIpMode = options.UnroutedIpMode,
-            UnsupportedIpV6Mode = options.UnsupportedIpV6Mode,
-            UseTcpForwarding = options.UseTcpForwarding,
-            DropUdp = options.DropUdp,
-            DropQuic = options.DropQuic,
             UserReview = options.UserReview,
             UseWebSocket = options.DebugData1?.Contains("/disable-WebSocket", StringComparison.OrdinalIgnoreCase) is null or false
         };
@@ -236,8 +269,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _socketFactory = socketFactory;
         _vpnAdapter = vpnAdapter;
         Tracker = tracker;
-        ChannelProtocol = options.ChannelProtocol;
         ProxyConnector = proxyConnector;
+
+        // the live settings, from the options: the one place the session takes them from, at its start and after
+        ChannelProtocol = options.ChannelProtocol;
+        UseTcpForwarding = options.UseTcpForwarding;
+        DropUdp = options.DropUdp;
+        DropQuic = options.DropQuic;
         _connectedServerFile = new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), Token.TokenId);
 
         // Prepare filters. The gate chain (e.g. the split-ip/split-domain dbs) is supplied by the caller
@@ -248,7 +286,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // The handed-in chains may change at runtime (the host live-swaps the split gates on reconfigure);
         // the change event rolls up the pipe and the cached stages invalidate themselves — the client
         // never needs to know a swap happened.
-        _serverIpFilter = new ServerIpFilter(netFilter?.IpFilter);
+        _serverIpFilter = new ServerIpFilter(netFilter?.IpFilter) {
+            UnroutedIpMode = options.UnroutedIpMode,
+            UnsupportedIpV6Mode = options.UnsupportedIpV6Mode
+        };
+
         // Domain gates preempt the IP gates, and their include set is the override lane — a member domain is
         // forced through the tunnel past any IP-gate veto (domains are more specific knowledge than IPs).
         NetFilter = new NetFilter {
@@ -274,10 +316,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // (or SNI logging is forced). Nobody tells the client: it derives the answer from its own pipe
         // (IsEmpty) and re-derives whenever the pipe announces a change — rules appearing or vanishing
         // in a live gate swap toggle extraction with no outside caller.
+        // The read for a TCP connection's name holds a whole TLS record and its header, 16 KB, where a ClientHello that
+        // outgrows it fails its connection: a read of 4 KB, the prefetch's, missed a name past it, and a large
+        // ClientHello passed the domain rules
         _domainFilteringService = new DomainFilteringService(
             NetFilter.DomainFilter,
             sniEventId: GeneralEventId.Sni,
-            tlsBufferSize: TransportDefaults.PrefetchStreamBufferSize);
+            tlsBufferSize: 5 + 16 * 1024);
         var forceLogSni = options.ForceLogSni;
         _domainFilteringService.IsEnabled = forceLogSni || !NetFilter.DomainFilter.IsEmpty;
         NetFilter.DomainFilter.Changed += (_, _) =>
@@ -298,11 +343,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _ => null
         };
 
-    /// <summary>Gets the client's state.</summary>
+    /// <summary>Gets the client's state, which stays <see cref="ClientState.Disposed"/> once it is.</summary>
     public ClientState State {
         get;
         private set {
-            field = value;
+            // A connect that a close ended may still set its state, which would show a closed client connected: the
+            // look and the set are one step, as the close may set Disposed between them
+            lock (_stateEventLock) {
+                if (field == ClientState.Disposed)
+                    return;
+
+                field = value;
+            }
+
             FireStateChanged();
         }
     } = ClientState.None;
@@ -334,17 +387,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that completes once the client is connected.</returns>
     /// <remarks>
-    /// A failure disposes the client; where the session ended with an error of its own meanwhile, that error is thrown,
-    /// rather than how the connect found out.
+    /// A client connects once. A failure disposes the client; where the session ended with an error of its own
+    /// meanwhile, that error is thrown, rather than how the connect found out. A second call fails alone, and leaves the
+    /// first connect and its session as they are.
     /// </remarks>
     /// <exception cref="ObjectDisposedException">The client is disposed.</exception>
     /// <exception cref="Exception">
-    /// The client has connected, or is connecting, already; a redirect named no server endpoint; or the ad the session
-    /// required failed, with that failure.
+    /// A redirect named no server endpoint, or the ad the session required failed, with that failure.
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// The VPN adapter has started already; the tunnel's MTU is below 1280; or no DNS server can go through the tunnel
-    /// where <see cref="SplitDnsMode.IncludeAll"/> keeps DNS in it.
+    /// Connect was called already; the VPN adapter has started already; the tunnel's MTU is below 1280; or no DNS server
+    /// can go through the tunnel where <see cref="SplitDnsMode.IncludeAll"/> keeps DNS in it.
     /// </exception>
     /// <exception cref="VpnHood.Core.Client.Abstractions.Exceptions.UnreachableServerException">No server answered.</exception>
     /// <exception cref="VpnHood.Core.Client.Abstractions.Exceptions.UnreachableProxyServerException">No proxy server answered.</exception>
@@ -362,6 +415,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     /// </exception>
     public async Task Connect(CancellationToken cancellationToken)
     {
+        // A second call fails alone, before the failure handling below, which would dispose the client and with it the
+        // first connect or its session; so does one during a close, which a graceful close begins before its release
+        ObjectDisposedException.ThrowIf(_disposed || _disposing, this);
+        if (Interlocked.Exchange(ref _isConnectStarted, 1) != 0)
+            throw new InvalidOperationException("The client connects once, and Connect has been called already.");
+
         try {
             await Connect2(cancellationToken).Vhc();
         }
@@ -387,8 +446,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // create connection log scope
         using var scope = VhLogger.Instance.BeginScope("Client");
-        if (State != ClientState.None)
-            throw new Exception("Connection is already in progress.");
 
         // Preparing device;
         if (_vpnAdapter.IsStarted) //make sure it is not a shared packet capture
@@ -396,6 +453,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Connecting. Must before IsIpv6Supported
         State = ClientState.Connecting;
+
+        // the live settings the session starts with; one set during the build reaches it once it is published, below
+        ChannelProtocol channelProtocol;
+        bool useTcpForwarding, dropUdp, dropQuic;
+        lock (_settingsLock) {
+            channelProtocol = ChannelProtocol;
+            useTcpForwarding = UseTcpForwarding;
+            dropUdp = DropUdp;
+            dropQuic = DropQuic;
+        }
 
         var sessionBuilder = new ClientSessionBuilder(
             vpnAdapter: _vpnAdapter,
@@ -409,17 +476,54 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             domainFilteringService: _domainFilteringService,
             netFilter: NetFilter,
             serverIpFilter: _serverIpFilter,
-            channelProtocol: ChannelProtocol,
+            channelProtocol: channelProtocol,
+            useTcpForwarding: useTcpForwarding,
+            dropUdp: dropUdp,
+            dropQuic: dropQuic,
             setState: state => State = state);
 
-        _session = await sessionBuilder.Build(_cancellationTokenSource.Token, cancellationToken).Vhc();
-        _session.StateChanged += Session_StateChanged;
+        // what changed while the session was built alone: the build took the rest, and a setter logs each turn it takes.
+        // A close that came meanwhile found no session, so the session is closed here and goes no further
+        var session = await sessionBuilder.Build(_cancellationTokenSource.Token, cancellationToken).Vhc();
+        var isClosing = false;
+        lock (_settingsLock) {
+            if (_disposing)
+                isClosing = true;
+            else {
+                _session = session;
+                if (ChannelProtocol != channelProtocol) session.ChannelProtocol = ChannelProtocol;
+                if (UseTcpForwarding != useTcpForwarding) session.UseTcpForwarding = UseTcpForwarding;
+                if (DropUdp != dropUdp) session.DropUdp = DropUdp;
+                if (DropQuic != dropQuic) session.DropQuic = DropQuic;
+            }
+        }
 
-        // before the adapter starts: a crash from then on leaves it for the redial
-        await _connectedServerFile.Write(_session.VpnEndPoint, cancellationToken).Vhc();
-        await _session.Start(cancellationToken).Vhc();
+        if (isClosing) {
+            await session.TryDisposeAsync(LogLevel.Warning).Vhc();
+            throw new ObjectDisposedException(nameof(VpnHoodClient), "The client was closed while it connected.");
+        }
 
+        session.StateChanged += Session_StateChanged;
+
+        // before the adapter starts: a crash from then on leaves it for the redial. A close since has deleted it, and
+        // the record writes nothing after its client's close
+        _connectedServerFile.Write(session.VpnEndPoint);
+
+        await session.Start(cancellationToken).Vhc();
         State = ClientState.Connected;
+    }
+
+    // A close's start: it is marked under the lock the session's publication takes, so the close finds the session
+    // published, or the publish finds the close and refuses it. The record of the server takes no write from here: a
+    // connect paused before its write would write over a newer client's record, which its close then deletes
+    private ClientSession? MarkClosing(out bool isFirst)
+    {
+        _connectedServerFile.Retire();
+        lock (_settingsLock) {
+            isFirst = !_disposing;
+            _disposing = true;
+            return _session;
+        }
     }
 
     private void Session_StateChanged(object? sender, EventArgs e)
@@ -447,8 +551,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     /// <inheritdoc/>
     /// <remarks>
     /// The graceful close: it closes the session, which tells its server where it can, and the proxies, and releases
-    /// the client as <see cref="Dispose"/> does, which the session's end may have started meanwhile. A second call waits
-    /// for the first one's end.
+    /// the client as <see cref="Dispose"/> does, which the session's end may have started meanwhile, and ends once that
+    /// release has. A second call waits for the first one's end.
     /// </remarks>
     public async ValueTask DisposeAsync()
     {
@@ -458,20 +562,23 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         using var lockResult = await _disposeLock.LockAsync(CancellationToken.None).Vhc();
 
         // only the first close logs its start
-        if (!Interlocked.Exchange(ref _disposing, true))
+        var session = MarkClosing(out var isFirst);
+        if (isFirst)
             VhLogger.Instance.LogInformation("Client is shutting down asynchronously...");
         await _cancellationTokenSource.TryCancelAsync().Vhc();
 
         // a failed session close must not keep the adapter from its release below
-        if (_session != null)
-            await _session.TryDisposeAsync(LogLevel.Warning).Vhc();
+        if (session != null)
+            await session.TryDisposeAsync(LogLevel.Warning).Vhc();
 
         // flush and dispose the proxy connector while we can still await
         await ProxyConnector.TryDisposeAsync().Vhc();
 
         // the rest is local, as in the quick close, whose cancel and closes of the session and the proxy connector
-        // find this one's done. The session's disposed state may have run it already
+        // find this one's done. The session's disposed state may have begun it already, on another thread: this close
+        // ends with its release, as its caller may take the client for gone and start the next one at once
         Dispose();
+        await _released.Task.Vhc();
     }
 
     /// <inheritdoc/>
@@ -485,15 +592,29 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
+        try {
+            Release();
+        }
+        finally {
+            _released.TrySetResult();
+        }
+    }
+
+    // Each step is tried, and a failed one logged, so the steps after it still run: the adapter goes down, and the
+    // state tells of the end, which the VPN service waits for
+    private void Release()
+    {
         // a graceful close that came first has logged the start
-        if (!Interlocked.Exchange(ref _disposing, true))
+        var session = MarkClosing(out var isFirst);
+        if (isFirst)
             VhLogger.Instance.LogInformation("Client is shutting down...");
 
         _cancellationTokenSource.TryCancel();
-        _session?.Dispose();
+        if (session != null)
+            VhInvoker.TryInvoke("close the session", LogLevel.Error, session.Dispose);
 
         // a close, not a crash: the next connect looks its server up again
-        _connectedServerFile.TryDelete();
+        _connectedServerFile.Close();
 
         // dispose ProxyConnector before adapter get closed and it needs Adapter's SocketFactory.
         // this sync path cannot await; the flush runs in the background and only touches the
@@ -503,14 +624,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = ProxyConnector.TryDisposeAsync();
 
         _cancellationTokenSource.Dispose();
-        _session?.StateChanged -= Session_StateChanged;
-        _domainFilteringService.Dispose();
+        session?.StateChanged -= Session_StateChanged;
+        VhInvoker.TryInvoke("close the domain filtering", LogLevel.Error, _domainFilteringService.Dispose);
         NetFilter.Dispose();
 
         // disposing adapter
         if (Config.AutoDisposeVpnAdapter) {
             VhLogger.Instance.LogDebug("Disposing Adapter...");
-            _vpnAdapter.Dispose();
+            VhInvoker.TryInvoke("close the VPN adapter", LogLevel.Error, _vpnAdapter.Dispose);
         }
 
         //everything is clean

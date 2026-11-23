@@ -20,20 +20,35 @@ internal static class SqliteHelper
         }
     }
 
-    public static async Task ExecuteAsync(SqliteConnection connection, string sql,
+    public static Task ExecuteAsync(SqliteConnection connection, string sql,
+        CancellationToken cancellationToken, params (string Name, object Value)[] parameters)
+    {
+        return ExecuteAsync(connection, transaction: null, sql, cancellationToken, parameters);
+    }
+
+    // within the connection's transaction, which a command on it must name
+    public static async Task ExecuteAsync(SqliteConnection connection, SqliteTransaction? transaction, string sql,
         CancellationToken cancellationToken, params (string Name, object Value)[] parameters)
     {
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = sql;
         foreach (var (name, value) in parameters)
             command.Parameters.AddWithValue(name, value);
         await command.ExecuteNonQueryAsync(cancellationToken).Vhc();
     }
 
-    public static async Task<object?> ExecuteScalarAsync(SqliteConnection connection, string sql,
+    public static Task<object?> ExecuteScalarAsync(SqliteConnection connection, string sql,
         CancellationToken cancellationToken)
     {
+        return ExecuteScalarAsync(connection, transaction: null, sql, cancellationToken);
+    }
+
+    public static async Task<object?> ExecuteScalarAsync(SqliteConnection connection, SqliteTransaction? transaction,
+        string sql, CancellationToken cancellationToken)
+    {
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = sql;
         return await command.ExecuteScalarAsync(cancellationToken).Vhc();
     }

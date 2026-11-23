@@ -11,7 +11,7 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 /// <remarks>
 /// Each carries every setting the session takes live, so the latest is all there is to keep — but for the proxies'
 /// reset (<c>ProxyOptions.ResetStates</c>), which the app sends once, and which a newer one that comes before the
-/// session is up drops.
+/// session is up takes on.
 /// </remarks>
 public class ClientReconfigureParams
 {

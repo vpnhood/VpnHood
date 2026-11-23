@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Net.Toolkit.Extensions;
@@ -258,6 +259,24 @@ public static class FileUtils
             VhLogger.Instance.LogWarning(ex, "Could not read the file. FilePath: {FilePath}", filePath);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Makes a folder only its owner may use, on Unix: one already there, as another tool may have left it, gets that
+    /// mode too, and a link there is refused, as it would lead elsewhere.
+    /// </summary>
+    /// <param name="path">The folder's path.</param>
+    /// <exception cref="IOException">The path is a link, or the folder could not be made.</exception>
+    /// <exception cref="UnauthorizedAccessException">The process may not make the folder or set its mode.</exception>
+    [UnsupportedOSPlatform("windows")]
+    public static void CreateOwnerOnlyDirectory(string path)
+    {
+        const UnixFileMode ownerOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+        var directory = Directory.CreateDirectory(path, ownerOnly);
+        if (directory.LinkTarget != null)
+            throw new IOException($"The folder is a link, which may lead elsewhere. Path: {path}");
+
+        File.SetUnixFileMode(path, ownerOnly);
     }
 
     /// <summary>

@@ -53,9 +53,13 @@ public class ActivityEvent : Activity, IActivityEvent
     }
 
     /// <inheritdoc/>
-    /// <remarks>It raises <see cref="NewIntentEvent"/>, and does not call the base.</remarks>
+    /// <remarks>
+    /// It calls the base, then raises <see cref="NewIntentEvent"/>; the activity's <c>Intent</c> stays the one that
+    /// started it, as Android keeps it.
+    /// </remarks>
     protected override void OnNewIntent(Intent? intent)
     {
+        base.OnNewIntent(intent);
         NewIntentEvent?.Invoke(this, new NewIntentEventArgs {
             Intent = intent
         });

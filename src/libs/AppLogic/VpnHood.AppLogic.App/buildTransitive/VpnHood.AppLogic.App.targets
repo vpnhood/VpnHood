@@ -329,8 +329,8 @@ Files = files.ToArray();
 	</Target>
 
 	<!-- App Store Connect refuses a framework whose Info.plist has no CFBundleVersion, and HarfBuzzSharp's tvOS
-	     framework has none (8.3.1.5, the line Avalonia takes; the fix would be its 14, with SkiaSharp 4). The
-	     bundle's copy gets one here, after the copy and before the signing. -->
+	     framework has none (8.3.1.5, the line Avalonia takes; the fix would be its 14, with SkiaSharp 4, which we
+	     take when Avalonia 13 does). The bundle's copy gets one here, after the copy and before the signing. -->
 	<Target Name="VhFrameworkBundleVersion" AfterTargets="_CopyDirectoriesToBundle"
 	        Condition="'$(VhAppIsTvos)' == 'true' And $([MSBuild]::IsOSPlatform('OSX'))">
 		<ItemGroup>

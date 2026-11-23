@@ -61,12 +61,17 @@ them before implementing. A rule that no longer holds is deleted here, not kept 
     arise, so a sync `Dispose` of our own types must not throw (CA1065), and its caller wraps it in
     neither a `TryDispose` nor a `finally`.
 16. A token is passed down, never dropped: a method that waits, or calls one that takes a token, takes a
-    required `CancellationToken` as its last parameter, or before its optional ones, which a required
-    parameter can't follow (first when all the others are optional), and passes it on.
+    `CancellationToken` as its last parameter, after its optional ones too (only a `params` array comes
+    after it), and passes it on; a caller that leaves some of those optional ones out passes it by name
+    (`cancellationToken: cancellationToken`). After optional parameters it is optional too (`= default`),
+    and CA2016 flags a call that drops it; with none before it, it is required.
     `CancellationToken.None` is written only at a chain's head - a callback the system or the UI makes
-    without one, an entry point, a fire-and-forget start, a constructor, a close - or where the work
-    must outlive its caller's cancel, which a comment there says; inside the method when that is the
-    method's own promise (a stop that waits for a restart). A write that a cut would leave in part is no
+    without one, an entry point, a fire-and-forget start, a constructor, a close. Work that must outlive
+    its caller's cancel (a payment a provider has started, a build that serves every caller after the
+    first, a stop that waits for a restart) is never on None either, as nothing may wait forever: it runs
+    on a deadline of its own, long enough to end only work that would otherwise hang, which a comment
+    there says; a step that then finds out what the cut work did, or records it, gets a fresh deadline,
+    as the first one may be what ended it. A write that a cut would leave in part is no
     such work: it takes the token and replaces the file whole (`FileUtils.WriteAllTextAtomicAsync`), so
     a cancel or a crash leaves the old file. A method's own limit is a linked token
     (`CreateLinkedTokenSource`, `CancelAfter`) when its end is a cancel, and a `TimeSpan` beside the

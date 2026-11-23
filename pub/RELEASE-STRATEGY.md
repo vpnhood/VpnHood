@@ -133,6 +133,12 @@ Considered and not adopted. Revisit one only if its pain grows.
 `pub/Client/Publish.ps1` is **build-only**, for local smoke tests (no bump, no distribution, no
 push).
 
+To try the whole pipeline on GitHub without a release, dispatch the brand repo's publish workflow by
+hand with `publish_release`, `publish_play`, `publish_appstore` and `publish_appletv` off, and
+`release_type` as `PubVersion.json` says: every build runs at the version the file holds, and nothing
+is uploaded. Delete the run's artifacts after it: a public repo's are open to anyone signed in to
+GitHub, and only the `release` job, skipped here, deletes them otherwise.
+
 ### The channel is asserted, never chosen twice
 
 `pub/PubVersion.json` **decides** the channel: the Play track, the TestFlight-vs-App-Store lane and

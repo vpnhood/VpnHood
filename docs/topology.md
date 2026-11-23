@@ -175,6 +175,5 @@ a server and conclude the panel drives it. It does not.
 ## See also
 
 - [`docs/README.md`](README.md) — the documentation index
-- Wiki: [Install VpnHood Server](https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Server),
-  [VpnHood MANAGER](https://github.com/vpnhood/VpnHood/wiki/VpnHood-MANAGER),
-  [VpnHood Access Server](https://github.com/vpnhood/VpnHood/wiki/VpnHood-Access-Server)
+- On the website: [Install VpnHood! SERVER](https://www.vpnhood.com/vpnhood-server/docs/install/),
+  [VpnHood! MANAGER](https://www.vpnhood.com/vpnhood-manager/)

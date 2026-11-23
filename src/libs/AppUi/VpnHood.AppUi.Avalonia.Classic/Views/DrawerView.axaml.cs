@@ -46,9 +46,10 @@ public partial class DrawerView : UserControl
         WebsiteText.Text = links.Website is { } websiteUrl ? GetWebsiteLabel(websiteUrl) : null;
         PrivacyItem.IsVisible = links.PrivacyPolicy != null;
         LinkedInItem.IsVisible = links.LinkedIn != null;
+        FacebookItem.IsVisible = links.Facebook != null;
         InstagramItem.IsVisible = links.Instagram != null;
         XItem.IsVisible = links.X != null;
-        SocialsRow.IsVisible = LinkedInItem.IsVisible || InstagramItem.IsVisible || XItem.IsVisible;
+        SocialsRow.IsVisible = LinkedInItem.IsVisible || FacebookItem.IsVisible || InstagramItem.IsVisible || XItem.IsVisible;
         PoweredByItem.IsVisible = features.ShowPoweredBy;
         Foot.IsVisible = SocialsRow.IsVisible || PoweredByItem.IsVisible;
     }
@@ -217,6 +218,17 @@ public partial class DrawerView : UserControl
         try {
             if (VhApp.Descriptor.Links.LinkedIn is { } url)
                 await Open(url.AbsoluteUri, "LinkedIn", CancellationToken.None);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+
+    private async void OnFacebookClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            if (VhApp.Descriptor.Links.Facebook is { } url)
+                await Open(url.AbsoluteUri, "Facebook", CancellationToken.None);
         }
         catch (Exception ex) {
             await this.ReportError(ex);

@@ -141,6 +141,9 @@ public static class Mdi
     /// <summary>The <c>mdi-eye-outline</c> icon's glyph.</summary>
     public const string EyeOutline = "\U000F06D0";
 
+    /// <summary>The <c>mdi-facebook</c> icon's glyph.</summary>
+    public const string Facebook = "\U000F020C";
+
     /// <summary>The <c>mdi-filter-variant</c> icon's glyph.</summary>
     public const string FilterVariant = "\U000F0236";
 

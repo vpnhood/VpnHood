@@ -69,6 +69,7 @@
 * Update: The app has a new icon, its name on a ribbon across the top
 * Feature: The app runs on Android TV, and Remote Access lets you set it up from a phone or computer on the same network #android #store
 * Feature: The app runs on Apple TV, and Remote Access lets you set it up from a phone or computer on the same network #ios
+* Feature: The menu links to VpnHood on Facebook, beside LinkedIn, Instagram and X
 * Improve: On Remote Access, you can paste into every box, IP and proxy lists included, a password manager can fill in your sign-in, and any character you type shows
 * Update: UDP has a new protocol; on a server that has not updated to it yet, the app connects without UDP
 * Improve: The Android app starts two to four times faster, most of all on budget phones #android #store

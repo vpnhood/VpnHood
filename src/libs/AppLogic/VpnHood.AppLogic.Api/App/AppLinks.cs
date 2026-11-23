@@ -27,6 +27,9 @@ public record AppLinks
     /// <summary>Gets the product's LinkedIn page, linked from the menu.</summary>
     public Uri? LinkedIn { get; init; }
 
+    /// <summary>Gets the product's Facebook page, linked from the menu.</summary>
+    public Uri? Facebook { get; init; }
+
     /// <summary>Gets the product's Instagram page, linked from the menu.</summary>
     public Uri? Instagram { get; init; }
 

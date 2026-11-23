@@ -29,6 +29,9 @@
           <Button x:Name="LinkedInItem" Classes="icon small tonal-white" Click="OnLinkedInClick" AutomationProperties.Name="LinkedIn">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Linkedin}" />
           </Button>
+          <Button x:Name="FacebookItem" Classes="icon small tonal-white" Click="OnFacebookClick" AutomationProperties.Name="Facebook">
+            <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Facebook}" />
+          </Button>
           <Button x:Name="InstagramItem" Classes="icon small tonal-white" Click="OnInstagramClick" AutomationProperties.Name="Instagram">
             <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Instagram}" />
           </Button>

@@ -4,6 +4,9 @@ An alternative way for circumvention and privacy.
 Undetectable VPN for ordinary users and experts. VpnHood! is a solution to bypass Advanced Firewalls and circumvent deep packet inspection. VpnHood has been created entirely from scratch in C#.
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Page-blue?logo=linkedin)](https://www.linkedin.com/company/vpnhood)
+[![Facebook](https://img.shields.io/badge/Facebook-Page-blue?logo=facebook)](https://www.facebook.com/vpnhood)
+[![Instagram](https://img.shields.io/badge/Instagram-Page-blue?logo=instagram)](https://www.instagram.com/vpnhood)
+[![X](https://img.shields.io/badge/X-Page-blue?logo=x)](https://x.com/vpnhood)
 [![Docs](https://img.shields.io/badge/Docs-Wiki-blue?logo=github)](https://github.com/vpnhood/vpnhood/wiki)
 [![Download](https://img.shields.io/github/v/release/vpnhood/vpnhood?label=Download)](https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client)
 [![Changelog](https://img.shields.io/badge/Changelog-Read-blue?logo=github)](https://github.com/vpnhood/vpnhood/blob/main/CHANGELOG.md)
@@ -80,7 +83,7 @@ You are always welcome!
 
 * Issues & feature requests: [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
 * Discussions & Q&A: [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
-* Stay updated and follow us: [LinkedIn](https://www.linkedin.com/company/vpnhood).
+* Stay updated and follow us: [LinkedIn](https://www.linkedin.com/company/vpnhood), [Facebook](https://www.facebook.com/vpnhood), [Instagram](https://www.instagram.com/vpnhood) and [X](https://x.com/vpnhood).
 
 ## Supported Server
 

@@ -102,8 +102,7 @@ public interface IDevice : IDisposable
     /// <paramref name="timeout"/> is negative, other than -1 ms, or too long, on Android.
     /// </exception>
     /// <exception cref="TimeoutException">
-    /// The person did not answer in time, or the wait was canceled, on Android; or the Windows VPN plug-in's profile did
-    /// not disconnect in time.
+    /// The person did not answer in time, on Android; or the Windows VPN plug-in's profile did not disconnect in time.
     /// </exception>
     /// <exception cref="InvalidOperationException">The Windows VPN plug-in's profile could not be prepared.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -139,6 +138,7 @@ public interface IDevice : IDisposable
     /// <see langword="true"/> for the system's default network; <see langword="false"/> for a network outside the VPN.
     /// </param>
     /// <exception cref="NotSupportedException">The device does not support it (<see cref="IsBindProcessToVpnSupported"/>).</exception>
+    /// <exception cref="InvalidOperationException">Android refused the binding.</exception>
     /// <exception cref="Exception">Android found no network outside the VPN.</exception>
     void BindProcessToVpn(bool value);
 }

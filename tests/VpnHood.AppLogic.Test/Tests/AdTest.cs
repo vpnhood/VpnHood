@@ -7,6 +7,7 @@ using VpnHood.AppLogic.App;
 using VpnHood.AppLogic.App.Services.Ads;
 using VpnHood.AppLogic.Test.Dom;
 using VpnHood.AppLogic.Test.Providers;
+using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -14,6 +15,7 @@ using VpnHood.Core.Common.Tokens;
 using ConnectPlanId = VpnHood.AppLogic.Api.App.ConnectPlanId;
 using VpnHood.AppLogic.Abstractions.Ads.AdExceptions;
 using VpnHood.AppLogic.Abstractions.Device;
+using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 using VpnHood.AppLogic.Abstractions.UiContexts;
 
@@ -374,6 +376,67 @@ public class AdTest : TestAppBase
         // all included ips should not be split now
         await FilteringTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, MockEps.HttpsUrl1);
 
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task A_connects_ad_waits_for_the_VPN_where_every_network_can_show_over_it(bool canOtherShowOverVpn)
+    {
+        using var accessManager = await TestAppHelper.CreateAccessManager();
+        await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+        var token = accessManager.GetToken(accessToken);
+
+        // the network that fills the ad can show over the VPN; the one after it, as AdMob, may not
+        var adProvider = new TestAdProvider(accessManager, AdType.InterstitialAd);
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem { AdProvider = adProvider, CanShowOverVpn = true },
+            new AppAdProviderItem {
+                AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd),
+                CanShowOverVpn = canOtherShowOverVpn
+            }
+        ];
+
+        // the ad's load sees whether the VPN is up
+        VpnHoodClient? client = null;
+        bool? isAdapterStartedAtLoad = null;
+        var device = new TestDevice(TestAppHelper, _ => new TestVpnAdapter(TestAppHelper.CreateTestVpnAdapterOptions())) {
+            ClientCreated = x => client = x
+        };
+
+        adProvider.LoadAdCallback = () => {
+            isAdapterStartedAtLoad ??= client?.Session?.Status.IsAdapterStarted;
+            return Task.CompletedTask;
+        };
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
+
+        // one load, after the VPN came up only where every network can show over it
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+        Assert.AreEqual(canOtherShowOverVpn, isAdapterStartedAtLoad);
+        Assert.AreEqual(1, adProvider.LoadAdCount);
+    }
+
+    [TestMethod]
+    public async Task The_ads_over_the_VPN_follow_the_networks_the_app_started_with()
+    {
+        // The builder's list loses its first network, one that may not show over the VPN, after the start: the
+        // loaders still try it first, from their own copies, while the session would have been told the ads show over it
+        using var accessManager = await TestAppHelper.CreateAccessManager();
+        var unmarkedItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) };
+        var adProviderItems = new List<AppAdProviderItem> {
+            unmarkedItem,
+            new() { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd), CanShowOverVpn = true }
+        };
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdProviderItems = adProviderItems;
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+
+        adProviderItems.Remove(unmarkedItem);
+        Assert.IsFalse(app.AdManager.AdService.CanShowOverVpn);
     }
 
     [TestMethod]

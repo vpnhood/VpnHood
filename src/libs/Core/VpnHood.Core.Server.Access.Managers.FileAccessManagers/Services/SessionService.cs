@@ -26,6 +26,11 @@ public class SessionService : IDisposable
     private readonly string _sessionsFolderPath;
     private readonly ConcurrentDictionary<ulong, bool> _updatedSessionIds = new();
     private readonly Lock _fileLock = new();
+
+    // A key's admissions, one at a time: a session's suppressions, its count of the key's clients and its own addition
+    // are one step, or two opens at once each count the key without the other and both pass its client limit. A fixed
+    // set of locks, a key's by its hash, as one per key would grow with every key the manager has seen
+    private readonly Lock[] _admissionLocks = Enumerable.Range(0, 64).Select(_ => new Lock()).ToArray();
     private readonly Job _cleanupSessionsJob;
     internal ConcurrentDictionary<ulong, Session> Sessions { get; }
 
@@ -128,12 +133,12 @@ public class SessionService : IDisposable
 
     internal SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx, AccessTokenData accessTokenData)
     {
-        //increment session id using atomic operation
-        Interlocked.Increment(ref _lastSessionId);
+        // the increment's own value: a read of the field after it may see another create's
+        var sessionId = (ulong)Interlocked.Increment(ref _lastSessionId);
 
         // create a new session
         var session = new Session {
-            SessionId = (ulong)_lastSessionId,
+            SessionId = sessionId,
             TokenId = accessTokenData.AccessToken.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.UtcNow,
@@ -157,31 +162,36 @@ public class SessionService : IDisposable
             ? ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId)
             : AdRequirement.None;
 
-        //create response
-        var responseEx = BuildSessionResponse(session, accessTokenData);
+        // create the response, and add the session, as one admission of the key
+        lock (GetAdmissionLock(session.TokenId)) {
+            var responseEx = BuildSessionResponse(session, accessTokenData);
 
-        // add session creation data
-        responseEx.AdRequirement = adRequirement;
-        responseEx.AccessInfo = new AccessInfo {
-            ExpirationTime = accessTokenData.AccessToken.ExpirationTime,
-            LastUsedTime = accessTokenData.Usage.LastUsedTime,
-            CreatedTime = accessTokenData.Usage.CreatedTime,
-            IsPremium = true, // token is always premium in File Access Manager
-            MaxDeviceCount = accessTokenData.AccessToken.MaxClientCount,
-            MaxSpeedMbps = accessTokenData.AccessToken.MaxSpeedMbps,
-            MaxTotalTraffic = accessTokenData.AccessToken.MaxTraffic,
-            DevicesSummary = null // not supported
-        };
+            // add session creation data
+            responseEx.AdRequirement = adRequirement;
+            responseEx.AccessInfo = new AccessInfo {
+                ExpirationTime = accessTokenData.AccessToken.ExpirationTime,
+                LastUsedTime = accessTokenData.Usage.LastUsedTime,
+                CreatedTime = accessTokenData.Usage.CreatedTime,
+                IsPremium = true, // token is always premium in File Access Manager
+                MaxDeviceCount = accessTokenData.AccessToken.MaxClientCount,
+                MaxSpeedMbps = accessTokenData.AccessToken.MaxSpeedMbps,
+                MaxTotalTraffic = accessTokenData.AccessToken.MaxTraffic,
+                DevicesSummary = null // not supported
+            };
 
-        if (responseEx.ErrorCode != SessionErrorCode.Ok)
+            if (responseEx.ErrorCode != SessionErrorCode.Ok)
+                return responseEx;
+
+            // add the new session to collection
+            if (!Sessions.TryAdd(session.SessionId, session))
+                throw new InvalidOperationException(
+                    $"A session of this ID exists already. SessionId: {session.SessionId}");
+
+            Save(session);
+
+            responseEx.SessionId = session.SessionId;
             return responseEx;
-
-        // add the new session to collection
-        Sessions.TryAdd(session.SessionId, session);
-        Save(session);
-
-        responseEx.SessionId = session.SessionId;
-        return responseEx;
+        }
     }
 
     private AdRequirement ProcessPlanId(Session session, AccessTokenData accessTokenData, ConnectPlanId planId)
@@ -218,17 +228,19 @@ public class SessionService : IDisposable
         if (hostEndPoint != null)
             session.HostEndPoint = hostEndPoint;
 
-        // create response
-        var ret = BuildSessionResponse(session, accessTokenData, isValidAd);
+        // create response, with its suppressions and count of the key's clients, in the key's turn
+        lock (GetAdmissionLock(session.TokenId)) {
+            var ret = BuildSessionResponse(session, accessTokenData, isValidAd);
 
-        // update session status
-        if (session.EndTime == null && ret.ErrorCode != SessionErrorCode.Ok) {
-            session.ErrorCode = ret.ErrorCode;
-            session.EndTime = DateTime.UtcNow;
-            Save(session);
+            // update session status
+            if (session.EndTime == null && ret.ErrorCode != SessionErrorCode.Ok) {
+                session.ErrorCode = ret.ErrorCode;
+                session.EndTime = DateTime.UtcNow;
+                Save(session);
+            }
+
+            return ret;
         }
-
-        return ret;
     }
 
     internal ulong[] ResetUpdatedSessions()
@@ -240,6 +252,11 @@ public class SessionService : IDisposable
         }
     }
 
+    private Lock GetAdmissionLock(string tokenId)
+    {
+        return _admissionLocks[(StringComparer.Ordinal.GetHashCode(tokenId) & int.MaxValue) % _admissionLocks.Length];
+    }
+
     private SessionResponseEx BuildSessionResponse(Session session, AccessTokenData accessTokenData,
         bool? isValidAd = null)
     {
@@ -247,13 +264,17 @@ public class SessionService : IDisposable
         if (isValidAd == true)
             session.ExpirationTime = null;
 
-        // build access usage
+        // Build access usage: the session's own end, and the key's traffic, which is all of it, as this manager has no
+        // cycles. Not the key's end, which the session's start tells (AccessInfo): the session's end ends a session as
+        // its own time's, where the key's end is an access key's, which the app says, and for which always-on does not
+        // try again
         var accessToken = accessTokenData.AccessToken;
         var accessUsage = new AccessUsage {
             ActiveClientCount = 0,
             ExpirationTime = session.ExpirationTime,
             MaxTraffic = accessToken.MaxTraffic,
             CycleTraffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
+            TotalTraffic = new Traffic(accessTokenData.Usage.Sent, accessTokenData.Usage.Received),
             IsPremium = true // token is always premium in File Access Manager
         };
 
@@ -334,14 +355,13 @@ public class SessionService : IDisposable
                 }
             }
 
-            // set to session expiration time if session expiration time is shorter than accessUsage.ExpirationTime
-            if (session.ExpirationTime != null &&
-                (accessUsage.ExpirationTime == null || session.ExpirationTime < accessUsage.ExpirationTime)) {
-                accessUsage.ExpirationTime = session.ExpirationTime.Value;
-            }
-
-            accessUsage.ActiveClientCount = otherSessions
-                .GroupBy(x => x.ClientInfo.ClientId)
+            // the clients with a live session of the key after the suppressions above, this session's among them, which
+            // a new session is not in yet
+            accessUsage.ActiveClientCount = Sessions.Values
+                .Where(x => x.IsAlive && x.TokenId == session.TokenId)
+                .Select(x => x.ClientInfo.ClientId)
+                .Append(session.ClientInfo.ClientId)
+                .Distinct()
                 .Count();
         }
 

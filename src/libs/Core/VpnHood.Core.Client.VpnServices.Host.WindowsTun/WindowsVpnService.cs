@@ -80,21 +80,14 @@ internal class WindowsVpnService : IVpnServiceHandler, IDisposable
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         IVpnAdapter vpnAdapter = debugData?.Contains("/windivert", StringComparison.OrdinalIgnoreCase) is true
-            ? new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings {
+            ? new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings(adapterSettings) {
                 AdapterName = adapterSettings.AdapterName,
-                AutoRestart = adapterSettings.AutoRestart,
-                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
                 Blocking = adapterSettings.Blocking,
-                QueueCapacity = adapterSettings.QueueCapacity,
                 ExcludeLocalNetwork = true
             })
-            : new WinTunVpnAdapter(new WinTunVpnAdapterSettings {
+            : new WinTunVpnAdapter(new WinTunVpnAdapterSettings(adapterSettings) {
                 AdapterName = adapterSettings.AdapterName,
-                AutoRestart = adapterSettings.AutoRestart,
-                MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
-                Blocking = adapterSettings.Blocking,
-                AutoMetric = adapterSettings.AutoMetric,
-                QueueCapacity = adapterSettings.QueueCapacity
+                Blocking = adapterSettings.Blocking
             });
 
         return vpnAdapter;

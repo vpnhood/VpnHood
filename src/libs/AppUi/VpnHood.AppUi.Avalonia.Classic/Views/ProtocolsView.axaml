@@ -31,12 +31,12 @@
               <Border Classes="divider" Margin="16,8,16,4" />
               <controls:SettingsToggleItem x:Name="DropQuicItem" Margin="0" Toggled="OnDropQuicToggled" />
               <Border x:Name="DropQuicEnforcedAlert" Classes="alert-warning" Margin="16,0,16,0" IsVisible="False">
-                <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByServer, Source={x:Static res:Strings.Current}}" />
+                <TextBlock x:Name="DropQuicEnforcedText" Classes="body-small" TextWrapping="Wrap" />
               </Border>
               <Border Classes="divider" Margin="16,8,16,4" />
               <controls:SettingsToggleItem x:Name="DropUdpItem" Margin="0" Toggled="OnDropUdpToggled" />
               <Border x:Name="DropUdpEnforcedAlert" Classes="alert-warning" Margin="16,0,16,0" IsVisible="False">
-                <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding EnforcedByServer, Source={x:Static res:Strings.Current}}" />
+                <TextBlock x:Name="DropUdpEnforcedText" Classes="body-small" TextWrapping="Wrap" />
               </Border>
             </StackPanel>
           </StackPanel>

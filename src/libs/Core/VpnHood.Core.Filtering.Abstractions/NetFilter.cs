@@ -1,4 +1,6 @@
-﻿using VpnHood.Net.Toolkit.Extensions;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Net.Toolkit.Extensions;
+using VpnHood.Net.Toolkit.Utils;
 
 namespace VpnHood.Core.Filtering.Abstractions;
 
@@ -33,10 +35,12 @@ public class NetFilter : IDisposable
     }
 
     /// <summary>Disposes the IP mapper and both filter pipes.</summary>
+    /// <remarks>It throws nothing: a part that fails to dispose is logged, and the others are still disposed.</remarks>
     public void Dispose()
     {
-        IpMapper?.Dispose();
-        IpFilter?.Dispose();
-        DomainFilter?.Dispose();
+        // each part may be a fork's, whose close may throw
+        VhInvoker.TryInvoke("close the IP mapper", LogLevel.Error, () => IpMapper?.Dispose());
+        VhInvoker.TryInvoke("close the IP filter", LogLevel.Error, () => IpFilter?.Dispose());
+        VhInvoker.TryInvoke("close the domain filter", LogLevel.Error, () => DomainFilter?.Dispose());
     }
 }

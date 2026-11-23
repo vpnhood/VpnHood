@@ -15,7 +15,7 @@ internal class CompletableFutureTask
             if (ex != null)
                 completableFutureTask._taskCompletionSource.TrySetException(new Exception(ex.ToString()));
             else
-                completableFutureTask._taskCompletionSource.TrySetResult(result?.ToString());
+                completableFutureTask._taskCompletionSource.TrySetResult(result);
         }
     }
 

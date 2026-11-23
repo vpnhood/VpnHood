@@ -610,6 +610,7 @@ internal class ServerHost : IAsyncDisposable
             AccessInfo = sessionResponseEx.AccessInfo,
             IsTcpPacketIpV4Supported = isTcpPacketIpV4Supported,
             IsTcpPacketIpV6Supported = isTcpPacketIpV6Supported,
+            IsTcpForwardingRequired = !session.AllowTcpPacket,
             // an older client knows only this one, IPv4's: its IPv6 TCP fails where NAT has no IPv6
 #pragma warning disable CS0618
             IsTcpPacketSupported = isTcpPacketIpV4Supported,

@@ -47,9 +47,12 @@ public class MauiActivityEvent : MauiAppCompatActivity, IActivityEvent
     }
 
     /// <inheritdoc/>
-    /// <remarks>It raises <see cref="NewIntentEvent"/>, and does not call the base.</remarks>
+    /// <remarks>
+    /// It calls the base, whose listeners MAUI's lifecycle events are, then raises <see cref="NewIntentEvent"/>.
+    /// </remarks>
     protected override void OnNewIntent(Intent? intent)
     {
+        base.OnNewIntent(intent);
         NewIntentEvent?.Invoke(this, new NewIntentEventArgs
         {
             Intent = intent

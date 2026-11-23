@@ -16,7 +16,7 @@ public class ProxyOptions
 
     /// <summary>
     /// Gets a value indicating whether a managed connector clears the statuses of the stored endpoints when it starts
-    /// or takes these options.
+    /// or takes these options. The VPN service's saved options leave it out, so a start from them never clears them.
     /// </summary>
     public bool ResetStates { get; init; }
 

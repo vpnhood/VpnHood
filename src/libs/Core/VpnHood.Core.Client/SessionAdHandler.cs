@@ -10,7 +10,8 @@ namespace VpnHood.Core.Client;
 // One wait at a time, which ends in one place (EndWait), under the lock that starts the next: what ends it, an ad's
 // outcome, its owner's cancellation or the session's end, also takes the session's traffic back into the tunnel and
 // resets the connections made outside it before the wait's callers go on, so a new wait never starts while the last
-// one's end is still undoing its passthrough, and no connection of a caller gone on is reset
+// one's end is still undoing its passthrough, and no connection of a caller gone on is reset. A wait for an ad that can
+// show over the VPN (ClientOptions.CanShowAdOverVpn) leaves the traffic's routing as it is, and its end resets nothing
 internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
 {
     private readonly Lock _waitForAdLock = new();
@@ -53,7 +54,10 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
 
             wait = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             _activeWait = wait;
-            session.PassthroughState.PassthroughForAd = true;
+
+            // the ad loads around the tunnel, unless it can show over the VPN (ClientOptions.CanShowAdOverVpn)
+            if (!session.Config.CanShowAdOverVpn)
+                session.PassthroughState.PassthroughForAd = true;
         }
 
         return WaitForAdInternal(wait, cancellationToken);
@@ -84,10 +88,14 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
                 return;
 
             _activeWait = null;
-            session.PassthroughState.PassthroughForAd = false;
 
-            // reset connection after recovering passthrough mode to use VPN again, before the callers go on
-            session.DropCurrentConnections();
+            // reset connection after recovering passthrough mode to use VPN again, before the callers go on; a wait
+            // over the VPN sent nothing around the tunnel, so its connections stay
+            if (!session.Config.CanShowAdOverVpn) {
+                session.PassthroughState.PassthroughForAd = false;
+                session.DropCurrentConnections();
+            }
+
             complete(wait);
         }
 

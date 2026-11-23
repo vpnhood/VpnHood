@@ -383,8 +383,11 @@ public class VpnProfileService
     internal async Task<bool> UpdateServerTokenByUrls(Token token, CancellationToken cancellationToken)
     {
         // run update for all urls asynchronously and return true if any of them is successful
-        var urls = token.ServerToken.Urls;
-        if (VhUtils.IsNullOrEmpty(urls) || token.ServerToken.Secret == null)
+        if (VhUtils.IsNullOrEmpty(token.ServerToken.Urls) || token.ServerToken.Secret == null)
+            return false;
+
+        var urls = token.ServerToken.Urls.Where(IsAllowedUpdateUrl).ToArray();
+        if (urls.Length == 0)
             return false;
 
         using var httpClient = new HttpClient();
@@ -401,6 +404,20 @@ public class VpnProfileService
 
             tasks.Remove(finishedTask);
         }
+
+        return false;
+    }
+
+    // https only, or http to the device itself: the update is encrypted with the key's secret, which every copy of the
+    // key holds, so a plain http answer from elsewhere could come from anyone on the way and send the app to their server
+    private static bool IsAllowedUpdateUrl(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttps || (uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)))
+            return true;
+
+        VhLogger.Instance.LogWarning("An update URL of the access key is ignored, as it is not https. Url: {Url}",
+            VhLogger.FormatHostName(url));
 
         return false;
     }

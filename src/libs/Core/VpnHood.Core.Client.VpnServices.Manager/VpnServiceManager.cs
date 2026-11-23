@@ -36,6 +36,10 @@ public class VpnServiceManager : IDisposable
     private readonly TimeSpan _waitForConnectionPollInterval = TimeSpan.FromMilliseconds(200);
     private bool _disposed;
 
+    // how long the service has to answer a status request, which it does at once, at each of its two tries; a test
+    // shortens it
+    internal TimeSpan StatusAnswerTimeout { get; init; } = TimeSpan.FromSeconds(5).WhenNoDebugger();
+
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
     private readonly IDevice _device;
     private readonly VpnServiceOptionsFile _serviceOptionsFile;
@@ -45,6 +49,14 @@ public class VpnServiceManager : IDisposable
     private readonly VpnServiceStartState _startState;
     private int _vpnServiceUnreachableCount;
     private CancellationTokenSource _updateConnectionInfoCts = new();
+
+    // The requests under way, which a stop ends before its disconnect: one that waits for its answer holds the channel
+    // the disconnect needs. Each stop makes a new one for the requests after it; an old one is not disposed, as a
+    // request that took it may still link to it
+    private CancellationTokenSource _requestsCts = new();
+
+    // the manager's life, which every request ends with, a stop's disconnect too
+    private readonly CancellationTokenSource _disposeCts = new();
     private ConnectionInfo? _lastConnectionInfo;
     private readonly Job _updateConnectionInfoJob;
 
@@ -69,6 +81,13 @@ public class VpnServiceManager : IDisposable
     /// <see langword="null"/> for no refresh after the first, which runs at the job runner's next tick.
     /// </param>
     public VpnServiceManager(IDevice device, TimeSpan? eventWatcherInterval)
+        : this(device, eventWatcherInterval, watcherJobRunner: null)
+    {
+    }
+
+    // watcherJobRunner: the runner of the background refresh, or null for the shared one that fits its interval; a
+    // test's runner may never run it, so no refresh comes in the middle of what the test sets up
+    internal VpnServiceManager(IDevice device, TimeSpan? eventWatcherInterval, JobRunner? watcherJobRunner)
     {
         Directory.CreateDirectory(device.VpnServiceConfigFolder);
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -80,8 +99,11 @@ public class VpnServiceManager : IDisposable
         _status = new VpnServiceStatus(device.VpnServiceConfigFolder);
         _startState = new VpnServiceStartState(_status);
 
-        _updateConnectionInfoJob = new Job(UpdateConnectionInfoJob,
-            eventWatcherInterval ?? TimeSpan.MaxValue, nameof(UpdateConnectionInfoJob));
+        _updateConnectionInfoJob = new Job(UpdateConnectionInfoJob, new JobOptions {
+            Interval = eventWatcherInterval ?? TimeSpan.MaxValue,
+            Name = nameof(UpdateConnectionInfoJob),
+            DueTime = TimeSpan.Zero
+        }, watcherJobRunner);
     }
 
     /// <summary>
@@ -101,8 +123,8 @@ public class VpnServiceManager : IDisposable
     public bool IsStarted => _startState.IsInitializing || ConnectionInfo.IsStarted();
 
     /// <summary>
-    /// Starts the VPN service with options, after it tries to stop one already started, and waits until it is
-    /// connected.
+    /// Starts the VPN service with options, after it tries to stop the old one, started or still disconnecting, and
+    /// waits until it is connected.
     /// </summary>
     /// <param name="uiContext">
     /// The caller's window, which asks the person for the VPN permission where the OS needs that (Android), or
@@ -112,9 +134,10 @@ public class VpnServiceManager : IDisposable
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that completes once the service is connected.</returns>
     /// <remarks>
-    /// The OS's permission may take 2 minutes; once the device has started the service, the service has 20 seconds to
-    /// say it is up; the connect itself has no time limit here. Under a debugger, both limits become the debugger's
-    /// timeout, a day by default. With <see cref="ClientOptions.UseNullCapture"/>, no permission is asked.
+    /// Stopping the old service may take 10 seconds, as in <see cref="TryStop"/>; the OS's permission may take 2 minutes;
+    /// once the device has started the service, the service has 20 seconds to say it is up; the connect itself has no
+    /// time limit here. Under a debugger, both limits become the debugger's timeout, a day by default. With
+    /// <see cref="ClientOptions.UseNullCapture"/>, no permission is asked.
     /// </remarks>
     /// <exception cref="VpnServiceTimeoutException">The service did not say it is up in 20 seconds.</exception>
     /// <exception cref="VpnServiceException">The service ended without a connection, and without an error.</exception>
@@ -125,13 +148,13 @@ public class VpnServiceManager : IDisposable
     /// <exception cref="Exception">
     /// The connect failed: the service's error, as <see cref="ClientExceptionConverter"/> makes it; or the device's,
     /// where it could not ask for the permission or start the service, as Android's <see cref="TimeoutException"/> for a
-    /// prompt not answered in time, or whose wait was canceled.
+    /// prompt not answered in time.
     /// </exception>
     public async Task Start(IUiContext? uiContext, VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
-        // before the start: the stop waits for an older start's Disposed, which it writes only while it owns the state
-        if (IsStarted)
-            await TryStop().Vhc();
+        // before the start, in any state: the stop waits for an older start's Disposed, which it writes only while it
+        // owns the state, and for an old session's teardown, which Disconnecting shows and IsStarted leaves out
+        await TryStop().Vhc();
 
         await InitializeVpnService(uiContext, serviceOptions, cancellationToken).Vhc();
 
@@ -301,9 +324,9 @@ public class VpnServiceManager : IDisposable
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>
-    /// A task that completes once the info is refreshed. Where the service cannot be reached, its info becomes
-    /// <see cref="ClientState.Disposed"/>, or <see cref="ClientState.None"/> while a stop runs; any other failure is
-    /// logged, and the last info stays.
+    /// A task that completes once the info is refreshed. Where the service cannot be reached, or does not answer in 10
+    /// seconds, its info becomes <see cref="ClientState.Disposed"/>, or <see cref="ClientState.None"/> while a stop runs;
+    /// any other failure is logged, and the last info stays.
     /// </returns>
     public Task RefreshState(CancellationToken cancellationToken) =>
         TryRefreshConnectionInfo(true, cancellationToken);
@@ -311,7 +334,7 @@ public class VpnServiceManager : IDisposable
     private async Task<ConnectionInfo> TryRefreshConnectionInfo(bool force, CancellationToken cancellationToken)
     {
         try {
-            return await RefreshConnectionInfo(force, cancellationToken).Vhc();
+            return await RefreshConnectionInfo(force, isStopWait: false, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not update connection info.");
@@ -321,7 +344,10 @@ public class VpnServiceManager : IDisposable
 
     private readonly AsyncLock _connectionInfoLock = new();
 
-    private async Task<ConnectionInfo> RefreshConnectionInfo(bool force, CancellationToken cancellationToken)
+    // isStopWait: a look of a stop's wait for the end, after its disconnect, the one look whose service it cannot reach
+    // has ended; a look before the stop, as a poll it found under way, may have failed for a moment
+    private async Task<ConnectionInfo> RefreshConnectionInfo(bool force, bool isStopWait,
+        CancellationToken cancellationToken)
     {
         if (_disposed)
             return _status.ConnectionInfo;
@@ -366,7 +392,7 @@ public class VpnServiceManager : IDisposable
 
         // connect to the server and get the connection info
         try {
-            await SendRequest(new ApiGetConnectionInfoRequest(), updateCts.Token).Vhc();
+            await SendGetConnectionInfo(updateCts.Token).Vhc();
             _vpnServiceUnreachableCount = 0; // reset the count if we successfully get the connection info
         }
         catch (Exception ex) when (_updateConnectionInfoCts.IsCancellationRequested) {
@@ -376,15 +402,28 @@ public class VpnServiceManager : IDisposable
         catch (Exception) when (_startState.IsInitializing) {
             throw; // initializing state, discard any log or setting new connection info
         }
+        catch (VpnServiceNotReadyException ex) when (_stopLock.IsLocked && !isStopWait) {
+            // a look the stop did not make, as one whose channel file could not be read for a moment: the stop's own
+            // looks decide the end
+            VhLogger.Instance.LogDebug(ex, "A status request found the service not ready while a stop is under way.");
+        }
         catch (VpnServiceNotReadyException ex) {
             if (_status.ConnectionInfo.ClientState != ClientState.Disposed) {
                 VhLogger.Instance.LogDebug(ex, "Could not update connection info.");
                 _status.Set(ClientState.Disposed, _status.ConnectionInfo.Error?.ToException());
             }
         }
-        catch (VpnServiceUnreachableException) when (_stopLock.IsLocked) {
-            // service is stopping, set the state to none
+        catch (VpnServiceUnreachableException) when (isStopWait) {
+            // the stop's own look, after its disconnect: a service it cannot reach has ended
             _status.Set(ClientState.None);
+        }
+        catch (VpnServiceUnreachableException ex) when (_stopLock.IsLocked) {
+            // a look the stop did not make, whose failure tells nothing of its disconnect: its own looks decide the end
+            VhLogger.Instance.LogDebug(ex, "A status request failed while a stop is under way.");
+        }
+        catch (OperationCanceledException ex) when (_stopLock.IsLocked && !cancellationToken.IsCancellationRequested) {
+            // a stop ended it, as it ends each request under way before its disconnect: no word of the service's state
+            VhLogger.Instance.LogDebug(ex, "A stop ended a status request.");
         }
         catch (VpnServiceUnreachableException ex) {
             VhLogger.Instance.LogError(ex, "VpnService is unreachable.");
@@ -411,16 +450,51 @@ public class VpnServiceManager : IDisposable
     }
 
 
+    // A status request changes nothing in the service, so one that failed goes once more, as one failure shows the
+    // service gone: its connection failed, maybe after the service took it, which the message client sends no request
+    // again for; or its answer did not come in time, as one Android lost, or one that came late for an app frozen
+    // meanwhile, whose timer ran out at the thaw beside the answer. A dead service fails the request at once. Each
+    // answer has a time of its own, as nobody waits for the poll, whose answer that never came held its locks, froze
+    // the state shown and kept a disconnect from being sent
+    private async Task SendGetConnectionInfo(CancellationToken cancellationToken)
+    {
+        // both tries are the requests a stop finds under way, so a stop that ended the first ends the second too
+        var requestsToken = _requestsCts.Token;
+        try {
+            await SendRequest<object>(new ApiGetConnectionInfoRequest(), StatusAnswerTimeout, cancellationToken,
+                requestsToken).Vhc();
+        }
+        catch (VpnServiceUnreachableException ex) when (!cancellationToken.IsCancellationRequested &&
+                                                         !requestsToken.IsCancellationRequested) {
+            VhLogger.Instance.LogDebug(ex, "VpnService did not answer a status request. Asking once more...");
+            await SendRequest<object>(new ApiGetConnectionInfoRequest(), StatusAnswerTimeout, cancellationToken,
+                requestsToken).Vhc();
+        }
+    }
+
     private Task SendRequest(IApiRequest request, CancellationToken cancellationToken)
     {
         return SendRequest<object>(request, cancellationToken);
     }
 
-    private async Task<T?> SendRequest<T>(IApiRequest request, CancellationToken cancellationToken)
+    private Task<T?> SendRequest<T>(IApiRequest request, CancellationToken cancellationToken)
     {
-        var response = await SendRequestCore<T>(request, cancellationToken).Vhc();
+        return SendRequest<T>(request, answerTimeout: Timeout.InfiniteTimeSpan, cancellationToken);
+    }
 
-        // update the last connection info
+    private Task<T?> SendRequest<T>(IApiRequest request, TimeSpan answerTimeout, CancellationToken cancellationToken)
+    {
+        return SendRequest<T>(request, answerTimeout, cancellationToken, _requestsCts.Token);
+    }
+
+    // requestsToken: the stop's end of the requests under way, which the request is one of; none for the stop's own
+    private async Task<T?> SendRequest<T>(IApiRequest request, TimeSpan answerTimeout,
+        CancellationToken cancellationToken, CancellationToken requestsToken)
+    {
+        var response = await SendRequestCore<T>(request, answerTimeout, cancellationToken, requestsToken).Vhc();
+
+        // the answer's info where it is no older than the one held. The manager's own, as a start's Initializing, has no
+        // time, so an answer never replaces it: during a start it may be an older service's; the status file does
         if (response.ConnectionInfo.CreatedTime >= _status.ConnectionInfo.CreatedTime) {
             _status.ConnectionInfo = response.ConnectionInfo;
             _connectionInfoRefreshedTime = FastDateTime.UtcNow;
@@ -436,11 +510,17 @@ public class VpnServiceManager : IDisposable
 
     private readonly AsyncLock _sendRequestLock = new();
 
-    private async Task<ApiResponse<T>> SendRequestCore<T>(IApiRequest request, CancellationToken cancellationToken)
+    // answerTimeout: the answer's time from its send, not counting the wait for the request before it. A stop ends the
+    // request, wherever it is, and so does the manager's close
+    private async Task<ApiResponse<T>> SendRequestCore<T>(IApiRequest request, TimeSpan answerTimeout,
+        CancellationToken cancellationToken, CancellationToken requestsToken)
     {
+        using var requestCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, requestsToken, _disposeCts.Token);
+
         // we have only one message client, so we need to lock it
         // VpnService should not have long-running requests, so it is ok to lock it
-        using var scopeLock = await _sendRequestLock.LockAsync(cancellationToken).Vhc();
+        using var scopeLock = await _sendRequestLock.LockAsync(requestCts.Token).Vhc();
 
         // validate connection info
         var connectionInfo = _status.ConnectionInfo;
@@ -449,15 +529,36 @@ public class VpnServiceManager : IDisposable
 
         // build the request blob: [len][requestType][len][requestBody] (StreamUtils framing)
         using var requestStream = new MemoryStream();
-        await StreamUtils.WriteObjectAsync(requestStream, request.GetType().Name, cancellationToken).Vhc();
-        await StreamUtils.WriteObjectAsync(requestStream, request, cancellationToken).Vhc();
+        await StreamUtils.WriteObjectAsync(requestStream, request.GetType().Name, requestCts.Token).Vhc();
+        await StreamUtils.WriteObjectAsync(requestStream, request, requestCts.Token).Vhc();
 
         // send via the transport; connection reuse and reconnection are handled by the message client
-        var responseBuffer = await _messageClient.SendAsync(requestStream.ToArray(), cancellationToken).Vhc();
+        var responseBuffer = await SendMessage(requestStream.ToArray(), answerTimeout, requestCts.Token).Vhc();
 
         // the response is raw ApiResponse JSON bytes (no framing)
         return JsonSerializer.Deserialize<ApiResponse<T>>(responseBuffer.Span)
                ?? throw new VpnServiceUnreachableException("VpnService returned an empty response.");
+    }
+
+    // One not answered in its time reads as unreachable, with a TimeoutException inside. One that fails as it is ended,
+    // as by a connection its end cut, reads as ended, not as the service gone, which a stop would take for its end
+    private async Task<Memory<byte>> SendMessage(Memory<byte> request, TimeSpan answerTimeout,
+        CancellationToken cancellationToken)
+    {
+        using var answerTimeoutCts = new CancellationTokenSource(answerTimeout);
+        using var answerCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, answerTimeoutCts.Token);
+        try {
+            return await _messageClient.SendAsync(request, answerCts.Token).Vhc();
+        }
+        catch (OperationCanceledException ex) when (answerTimeoutCts.IsCancellationRequested &&
+                                                    !cancellationToken.IsCancellationRequested) {
+            throw new VpnServiceUnreachableException(
+                $"VpnService did not answer in {answerTimeout.TotalSeconds} seconds.",
+                new TimeoutException(ex.Message, ex));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException && cancellationToken.IsCancellationRequested) {
+            throw new OperationCanceledException("The request was ended as it failed.", ex, cancellationToken);
+        }
     }
 
     /// <summary>Gets a value indicating whether a stop is under way.</summary>
@@ -477,8 +578,10 @@ public class VpnServiceManager : IDisposable
     /// be reached; otherwise, <see langword="false"/>, which it logs.
     /// </returns>
     /// <remarks>
-    /// It throws only for a bad timeout, and a second call while one runs waits for it. The wait's 5 seconds start once
-    /// the request has ended, but where the request used up its whole time, the wait ends at once.
+    /// It throws only for a bad timeout, and a second call while one runs waits for it. The requests under way end
+    /// first, and the ones that come until the disconnect is sent, as one may hold the channel to the service past the
+    /// request's time. The wait's 5 seconds start once the request has ended, also where the request used up its whole
+    /// time.
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException">
     /// <paramref name="timeout"/> is negative, other than infinite, or too long.
@@ -495,28 +598,39 @@ public class VpnServiceManager : IDisposable
 
         using var stopTimeoutCts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
 
-        // send disconnect request
+        // The disconnect is sent once the requests under way have let the channel go, and no request that comes before
+        // it takes the channel: a status request answered late, within its time, or one whose answer Android lost,
+        // held it past the request's time. The disconnect is no request a stop ends
+        var requestsCts = _requestsCts;
         try {
+            await requestsCts.TryCancelAsync().Vhc();
             VhLogger.Instance.LogDebug("Sending disconnect request...");
-            await SendRequest(new ApiDisconnectRequest(), stopTimeoutCts.Token).Vhc();
+            await SendRequest<object>(new ApiDisconnectRequest(), Timeout.InfiniteTimeSpan, stopTimeoutCts.Token,
+                CancellationToken.None).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex, "Could not send disconnect request. ClientState: {ClientState}",
                 ConnectionInfo.ClientState);
         }
+        finally {
+            // the requests after the disconnect go again, the wait's below first; none after the manager's close
+            if (!_disposed)
+                _requestsCts = new CancellationTokenSource();
+        }
 
         // wait for the service to reach a terminal state; the VpnServiceHost publishes Disposed after the
         // client has fully released its resources. Returning on Disconnecting would let the next connect
         // race the teardown (e.g. rebuild a split-ip db still held open by the disposing client).
+        // a deadline of its own: the request may have used up its own, where the service did not answer in time
         VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
-        stopTimeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+        using var waitTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         try {
             while (ConnectionInfo.ClientState is not (ClientState.None or ClientState.Disposed)) {
                 // the manager's close, which the app's quick close may run while its graceful one waits here,
                 // ends the wait: nothing refreshes the state after it
                 ObjectDisposedException.ThrowIf(_disposed, this);
-                await RefreshConnectionInfo(true, stopTimeoutCts.Token).Vhc();
-                await Task.Delay(200, stopTimeoutCts.Token).Vhc();
+                await RefreshConnectionInfo(true, isStopWait: true, waitTimeoutCts.Token).Vhc();
+                await Task.Delay(200, waitTimeoutCts.Token).Vhc();
             }
 
             VhLogger.Instance.LogDebug("VpnService has been stopped.");
@@ -548,9 +662,6 @@ public class VpnServiceManager : IDisposable
         _lastConnectionInfo = connectionInfo;
     }
 
-    /// <summary>Gets a value indicating whether a reconfigure is being sent to the service.</summary>
-    public bool IsReconfiguring { get; private set; }
-
     /// <summary>
     /// Saves options made again from the app's settings, connected or not, for a later start without the app, where a
     /// connect has saved options before (<see cref="IsConfigured"/>); then, where the service is started, sends it at
@@ -571,7 +682,9 @@ public class VpnServiceManager : IDisposable
     /// <exception cref="IOException">
     /// The saved options could not be read or written, as where the service still holds the file after 2 seconds.
     /// </exception>
-    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or a stop (<see cref="TryStop"/>) ended the request.
+    /// </exception>
     public async Task Reconfigure(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
         await _serviceOptionsFile.Update(serviceOptions, cancellationToken).Vhc();
@@ -591,7 +704,6 @@ public class VpnServiceManager : IDisposable
             ProxyOptions = serviceOptions.ProxyOptions ?? new ProxyOptions()
         };
 
-        IsReconfiguring = true;
         try {
             await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken).Vhc();
             Reconfigured?.Invoke(this, reconfigureParams);
@@ -603,9 +715,6 @@ public class VpnServiceManager : IDisposable
             // options after it opens the channel, so it starts with these, saved above.
             VhLogger.Instance.LogDebug(ex, "The VPN service starts with the reconfigure: its channel is not up yet.");
         }
-        finally {
-            IsReconfiguring = false;
-        }
     }
 
     /// <summary>
@@ -616,7 +725,9 @@ public class VpnServiceManager : IDisposable
     /// <exception cref="Exception">The service refused it: its error, as <see cref="ClientExceptionConverter"/> makes it.</exception>
     /// <exception cref="VpnServiceNotReadyException">The service cannot take requests.</exception>
     /// <exception cref="VpnServiceUnreachableException">The service cannot be reached.</exception>
-    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or a stop (<see cref="TryStop"/>) ended the request.
+    /// </exception>
     public Task SetWaitForAd(CancellationToken cancellationToken)
     {
         return SendRequest(new ApiSetWaitForAdRequest(), cancellationToken);
@@ -632,7 +743,9 @@ public class VpnServiceManager : IDisposable
     /// <exception cref="Exception">The service refused it: its error, as <see cref="ClientExceptionConverter"/> makes it.</exception>
     /// <exception cref="VpnServiceNotReadyException">The service cannot take requests.</exception>
     /// <exception cref="VpnServiceUnreachableException">The service cannot be reached.</exception>
-    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or a stop (<see cref="TryStop"/>) ended the request.
+    /// </exception>
     public Task SetAdOk(AdResult adResult, bool isRewarded, CancellationToken cancellationToken)
     {
         return SendRequest(
@@ -650,7 +763,9 @@ public class VpnServiceManager : IDisposable
     /// <exception cref="Exception">The service refused it: its error, as <see cref="ClientExceptionConverter"/> makes it.</exception>
     /// <exception cref="VpnServiceNotReadyException">The service cannot take requests.</exception>
     /// <exception cref="VpnServiceUnreachableException">The service cannot be reached.</exception>
-    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    /// <exception cref="OperationCanceledException">
+    /// <paramref name="cancellationToken"/> was canceled, or a stop (<see cref="TryStop"/>) ended the request.
+    /// </exception>
     public Task SetAdFailed(Exception ex, CancellationToken cancellationToken)
     {
         return SendRequest(new ApiAdFailedRequest {
@@ -660,7 +775,7 @@ public class VpnServiceManager : IDisposable
 
     private async ValueTask UpdateConnectionInfoJob(CancellationToken cancellationToken)
     {
-        await RefreshConnectionInfo(false, cancellationToken).Vhc();
+        await RefreshConnectionInfo(false, isStopWait: false, cancellationToken).Vhc();
     }
 
     /// <summary>Stops following the VPN service, which goes on running until it is stopped.</summary>
@@ -669,10 +784,13 @@ public class VpnServiceManager : IDisposable
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        // do not stop the service, lets service keep running until user explicitly stop it
+        // do not stop the service, lets service keep running until user explicitly stop it. The requests under way end, a
+        // stop's disconnect too, as one whose caller set no time, as on iOS, would wait on after the close
         _updateConnectionInfoJob.Dispose();
         _updateConnectionInfoCts.TryCancel();
         _updateConnectionInfoCts.Dispose();
+        _disposeCts.TryCancel();
+        _disposeCts.Dispose();
         _messageClient.Dispose();
     }
 }

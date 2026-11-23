@@ -56,7 +56,7 @@ public class Token
     public required ServerToken ServerToken { get; set; }
 
     /// <summary>
-    /// Gets or sets the key's tags, such as those of <see cref="TokenRegisteredTags"/>. The default is empty.
+    /// Gets or sets the key's tags, as its issuer gave them. The default is empty.
     /// </summary>
     [JsonPropertyName("tags")]
     public string[] Tags { get; set; } = [];

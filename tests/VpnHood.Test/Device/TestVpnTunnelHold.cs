@@ -21,6 +21,7 @@ public class TestVpnTunnelHold(TestVpnTunnelLock tunnelLock, IVpnTunnelHolder ho
 
     public void Dispose()
     {
+        tunnelLock.WaitForHoldDispose();
         tunnelLock.Release(this);
         _released.TrySetResult();
     }

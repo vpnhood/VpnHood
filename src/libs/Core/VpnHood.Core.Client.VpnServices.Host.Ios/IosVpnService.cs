@@ -31,14 +31,20 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     // Created in StartTunnel once the config folder is resolved from ProviderConfiguration.
     private VpnServiceHost? _vpnServiceHost;
 
+    // The start's worker and a stop, one at a time: a stop that comes before the worker has made the host keeps it
+    // from making one, and a start iOS still waits for hears of its end
+    private readonly Lock _startLock = new();
+    private bool _isStopRequested;
+
     // VpnService API transport for iOS: messages flow over NEPacketTunnelProvider's app message channel
     // (HandleAppMessage) instead of a TCP loopback socket.
     private readonly IosMessageListener _messageListener = new();
 
     // Stored when StartTunnel is called; invoked once IosVpnAdapter applies network settings
     // (iOS terminates the extension if the completion handler runs before SetTunnelNetworkSettings).
+    // Handed out and invoked under its lock, so a second outcome waits for the first's delivery.
+    private readonly Lock _completionLock = new();
     private Action<NSError>? _startTunnelCompletionHandler;
-    private bool _completionFired;
 
     // os_log subsystem for the extension's sink (IosOsLogLoggerProvider). Read from the running bundle's
     // identifier (inside an extension process, MainBundle is the .appex, so this is the extension's
@@ -52,14 +58,15 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     private const string VpnServiceDataFolderKey = "VpnServiceDataFolder";
 
     // Called by IosVpnAdapter.AdapterOpen after SetTunnelNetworkSettings succeeds (error == null)
-    // or fails (error != null). Safe to call multiple times — only the first call wins.
+    // or fails (error != null). Safe to call multiple times — only the first call wins, and a later
+    // one returns once the first has been delivered: a stop's own end never comes before the start's.
     private void CompleteStartTunnel(NSError? error)
     {
-        if (Interlocked.Exchange(ref _completionFired, true))
-            return;
-        var handler = _startTunnelCompletionHandler;
-        _startTunnelCompletionHandler = null;
-        try { handler?.Invoke(error!); } catch { /* ignore */ }
+        lock (_completionLock) {
+            var handler = _startTunnelCompletionHandler;
+            _startTunnelCompletionHandler = null;
+            try { handler?.Invoke(error!); } catch { /* ignore */ }
+        }
     }
 
     // Resolves the VPN service config folder:
@@ -145,52 +152,87 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     /// <remarks>
     /// It starts the extension's memory guard, then makes the VPN service's host off the main thread, which connects.
     /// iOS hears of a successful start only once the adapter has applied the tunnel's network settings; it hears of a
-    /// failure where the host cannot be made or the settings cannot be applied.
+    /// failure where the start cannot be prepared, the host cannot be made, the connect fails before the adapter
+    /// opens (<see cref="StopSelf"/>), or the settings cannot be applied. Nothing escapes iOS's call, which would end
+    /// the extension.
     /// </remarks>
-    /// <exception cref="InvalidOperationException">
-    /// The VPN service's folder, from an older app's configuration, has no parent folder.
-    /// </exception>
     public override void StartTunnel(
         NSDictionary<NSString, NSObject>? options, Action<NSError> startTunnelCompletionHandler)
     {
-        // Required memory systems, always on (device-measured 2026-06-14): the GC guard keeps the
-        // extension under the ~52 MB jetsam limit — without it, it crashes immediately on tunnel start —
-        // and VhMemory.Instance lets the QUIC download brake read this process's live phys_footprint.
-        IosMemoryGuard.Start();
-        IosMemory.Install();
-        IosMemoryMonitor.RegisterCrashLog();
+        // The stop's mark is not cleared here: a provider's starts false, and Apple makes a provider for each tunnel
+        // start, so a stop iOS sends as the start begins, on another thread, keeps it from connecting
+        lock (_completionLock)
+            _startTunnelCompletionHandler = startTunnelCompletionHandler;
 
-        _startTunnelCompletionHandler = startTunnelCompletionHandler;
-        _completionFired = false;
-
-        // Resolve the folders — ProviderConfiguration set by App takes priority. The config folder stays
-        // out of backups.
-        var (configFolder, dataFolder) = ResolveFolders();
         try {
-            IosNoBackupFolder.Create(configFolder);
-        }
-        catch { /* ignore */ }
+            // Required memory systems, always on (device-measured 2026-06-14): the GC guard keeps the
+            // extension under the ~52 MB jetsam limit — without it, it crashes immediately on tunnel start —
+            // and VhMemory.Instance lets the QUIC download brake read this process's live phys_footprint.
+            IosMemoryGuard.Start();
+            IosMemory.Install();
+            IosMemoryMonitor.RegisterCrashLog();
 
-        // Kick off heavy VpnHood init off the main thread.
-        _ = Task.Run(() => {
+            // Resolve the folders — ProviderConfiguration set by App takes priority. The config folder stays
+            // out of backups.
+            var (configFolder, dataFolder) = ResolveFolders();
             try {
-                // memoryScale feeds the QUIC receive-window sizing: when TCP forwarding is off, TCP rides
-                // the packet channel (few QUIC streams), so the windows can be doubled under the same
-                // memory bound. Read lazily from the host so it reflects the status at each QUIC-client
-                // creation (session build), not the state at factory construction.
-                var quicClientFactory = new IosQuicClientFactory(memoryScale: () => _vpnServiceHost?.IsTcpForwarding == true ? 1 : 2);
-                // withLogger: true - the extension is a process of its own, so the host keeps its own log
-                // file, with the settings the app's LogServiceOptions carry
-                _vpnServiceHost = new VpnServiceHost(configFolder, dataFolder, this,
-                    new ClientSocketFactory(new SystemSocketFactory(), quicClientFactory),
-                    withLogger: true, messageListener: _messageListener);
-                _ = _vpnServiceHost.TryConnect(true);
+                IosNoBackupFolder.Create(configFolder);
             }
             catch (Exception ex) {
-                CompleteStartTunnel(new NSError(new NSString(NSBundle.MainBundle.BundleIdentifier ?? nameof(IosVpnService)), 1,
-                    NSDictionary.FromObjectAndKey((NSString)($"The VPN could not start: {ex.Message}"), NSError.LocalizedDescriptionKey)));
+                VhLogger.Instance.LogWarning(ex, "Could not keep the VPN service's folder out of backups.");
             }
-        });
+
+            // Kick off heavy VpnHood init off the main thread.
+            _ = Task.Run(async () => {
+                try {
+                    // memoryScale feeds the QUIC receive-window sizing: when TCP forwarding is off, TCP rides
+                    // the packet channel (few QUIC streams), so the windows can be doubled under the same
+                    // memory bound. Read lazily from the host so it reflects the status at each QUIC-client
+                    // creation (session build), not the state at factory construction.
+                    var quicClientFactory = new IosQuicClientFactory(memoryScale: () => _vpnServiceHost?.IsTcpForwarding == true ? 1 : 2);
+
+                    // The host made, published and its connect begun under the stop's lock: a stop that came first
+                    // leaves no host, which would write its Initializing after the stop, and no connect; one after finds
+                    // the host, and the connect's clear of an earlier stop behind it. withLogger: true - the extension is
+                    // a process of its own, so the host keeps its own log file, with the settings the app's
+                    // LogServiceOptions carry
+                    Task<bool> connectTask;
+                    lock (_startLock) {
+                        if (_isStopRequested) {
+                            CompleteStartTunnel(CreateStartError("the VPN was stopped as it started."));
+                            return;
+                        }
+
+                        var vpnServiceHost = new VpnServiceHost(configFolder, dataFolder, this,
+                            new ClientSocketFactory(new SystemSocketFactory(), quicClientFactory),
+                            withLogger: true, messageListener: _messageListener);
+
+                        _vpnServiceHost = vpnServiceHost;
+                        connectTask = vpnServiceHost.TryConnect(true);
+                    }
+
+                    // a connect the host refused, as for a stop that came meanwhile, has stopped the service, which
+                    // completes the start; this one is for a start that is completed no other way
+                    if (!await connectTask.Vhc())
+                        CompleteStartTunnel(CreateStartError("the connect did not begin."));
+                }
+                catch (Exception ex) {
+                    CompleteStartTunnel(CreateStartError(ex.Message));
+                }
+            });
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not prepare the VPN's start.");
+            CompleteStartTunnel(CreateStartError(ex.Message));
+        }
+    }
+
+    // the error iOS hears of a start that failed
+    private static NSError CreateStartError(string reason)
+    {
+        return new NSError(new NSString(NSBundle.MainBundle.BundleIdentifier ?? nameof(IosVpnService)), 1,
+            NSDictionary.FromObjectAndKey((NSString)$"The VPN could not start: {reason}",
+                NSError.LocalizedDescriptionKey));
     }
 
     /// <inheritdoc/>
@@ -255,16 +297,25 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     /// <remarks>The extension's tunnel outlives an adapter: a new one applies its settings to it anew.</remarks>
     public bool CanReconnect => true;
 
+    // A stop before the start's worker has made the host keeps the worker from connecting. A start iOS still waits for
+    // is completed before the stop's own end, as one the stop came before is completed no other way
     private async Task StopTunnelAsync(Action completionHandler, Exception? stopException)
     {
+        VpnServiceHost? vpnServiceHost;
+        lock (_startLock) {
+            _isStopRequested = true;
+            vpnServiceHost = _vpnServiceHost;
+        }
+
         try {
-            if (_vpnServiceHost != null)
-                await _vpnServiceHost.TryDisconnect(stopException).Vhc();
+            if (vpnServiceHost != null)
+                await vpnServiceHost.TryDisconnect(stopException).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not cleanly stop the iOS VPN tunnel.");
         }
         finally {
+            CompleteStartTunnel(CreateStartError("the VPN was stopped as it started."));
             try { completionHandler(); } catch { /* ignore */ }
         }
     }
@@ -282,13 +333,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         VhTypeTracker.Enabled = IosMemoryMonitor.Enabled;
         IosMemoryMonitor.Start();
 
-        return new IosVpnAdapter(this, new IosVpnAdapterSettings {
+        return new IosVpnAdapter(this, new IosVpnAdapterSettings(adapterSettings) {
             AdapterName = adapterSettings.AdapterName,
-            Blocking = adapterSettings.Blocking,
-            AutoRestart = adapterSettings.AutoRestart,
-            MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
-            QueueCapacity = adapterSettings.QueueCapacity,
-            AutoMetric = adapterSettings.AutoMetric
+            Blocking = adapterSettings.Blocking
         }, CompleteStartTunnel);
     }
 
@@ -305,9 +352,14 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     }
 
     /// <inheritdoc/>
-    /// <remarks>It cancels the tunnel from the provider's side.</remarks>
+    /// <remarks>
+    /// It cancels the tunnel from the provider's side. A start iOS still waits for, as one whose connect failed before
+    /// the adapter opened, is completed with an error first: Apple asks a failed start to say so, and a cancel alone
+    /// leaves iOS waiting.
+    /// </remarks>
     public void StopSelf()
     {
+        CompleteStartTunnel(CreateStartError("the connect failed before the tunnel opened."));
         CancelTunnel(null);
     }
 }

@@ -60,13 +60,10 @@ public static class EndPointResolver
     /// <param name="ownResolverSocketFactory">
     /// The factory of sockets to ask the network's resolvers from this process, as where the kill switch's block lets
     /// only the VPN service's traffic out, or <see langword="null"/> for the system's resolver. The network's resolvers
-    /// are asked in turn, over UDP and for IPv4 addresses only, five seconds each, and the first answer is taken; the
-    /// system's resolver is not asked then.
+    /// are asked in turn, over UDP and for IPv4 and IPv6 addresses at once, five seconds each, and the first answer is
+    /// taken, its IPv4 addresses waited for; the system's resolver is not asked then.
     /// </param>
-    /// <returns>
-    /// A task whose result is the endpoints, without repeats but for <see cref="EndPointStrategy.IpOnly"/>'s, which are
-    /// the token's list as it is.
-    /// </returns>
+    /// <returns>A task whose result is the endpoints, without repeats.</returns>
     /// <exception cref="InvalidOperationException">The token has neither endpoints nor a real host name.</exception>
     /// <exception cref="Exceptions.EndPointDiscoveryException">No endpoint was found.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -92,8 +89,8 @@ public static class EndPointResolver
     /// <param name="ownResolverSocketFactory">
     /// The factory of sockets to ask the network's resolvers from this process, as where the kill switch's block lets
     /// only the VPN service's traffic out, or <see langword="null"/> for the system's resolver. The network's resolvers
-    /// are asked in turn, over UDP and for IPv4 addresses only, five seconds each, and the first answer is taken; the
-    /// system's resolver is not asked then.
+    /// are asked in turn, over UDP and for IPv4 and IPv6 addresses at once, five seconds each, and the first answer is
+    /// taken; the system's resolver is not asked then.
     /// </param>
     /// <param name="knownAddresses">
     /// The host name's addresses, known already, which are taken rather than asking the name where theirs is the
@@ -102,8 +99,8 @@ public static class EndPointResolver
     /// <returns>A task whose result is the endpoints, with those the name gave among them.</returns>
     /// <remarks>
     /// A failure to resolve the name is logged and leaves the listed endpoints, or, under
-    /// <see cref="EndPointStrategy.DnsOnly"/>, none, which fails. <see cref="EndPointStrategy.IpOnly"/>'s endpoints are
-    /// the token's list as it is; the others come without repeats.
+    /// <see cref="EndPointStrategy.DnsOnly"/>, none, which fails. The endpoints come without repeats, the token's list
+    /// under <see cref="EndPointStrategy.IpOnly"/> too.
     /// </remarks>
     /// <exception cref="InvalidOperationException">The token has neither endpoints nor a real host name.</exception>
     /// <exception cref="Exceptions.EndPointDiscoveryException">No endpoint was found.</exception>
@@ -122,10 +119,13 @@ public static class EndPointResolver
             throw new InvalidOperationException(
                 "The token does not contain any server endpoints or a valid hostname. Please contact your provider's support.");
 
-        // fix token only strategy
+        // fix token only strategy: without repeats, which the client would try again for nothing
         if (strategy == EndPointStrategy.IpOnly) {
             if (!VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))
-                return new ResolvedHostEndPoints { EndPoints = serverToken.HostEndPoints, NameEndPoints = [] };
+                return new ResolvedHostEndPoints {
+                    EndPoints = serverToken.HostEndPoints.Distinct().ToArray(),
+                    NameEndPoints = []
+                };
 
             VhLogger.Instance.LogWarning(
                 "TokenOnly strategy is not supported by this token because there are no endpoints in the token. Fallback to DnsOnly.");

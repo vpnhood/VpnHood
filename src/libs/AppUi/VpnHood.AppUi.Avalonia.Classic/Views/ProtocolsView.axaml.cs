@@ -1,5 +1,7 @@
-﻿using Avalonia.Controls;
+﻿using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using VpnHood.AppUi.Common;
 using VpnHood.AppHosting.Avalonia;
 using VpnHood.AppUi.Avalonia.Classic.Controls;
@@ -35,6 +37,29 @@ public partial class ProtocolsView : UserControl, IPage
         Show();
     }
 
+    // the locks follow the session while the page is open: a server's Cloak Mode, known only once it connects, frees
+    // the blocks the page opened with locked
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        VhApp.StateReloaded += VhApp_StateReloaded;
+        Show();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        VhApp.StateReloaded -= VhApp_StateReloaded;
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void VhApp_StateReloaded(object? sender, EventArgs e)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+            Show();
+        else
+            Dispatcher.UIThread.Post(Show);
+    }
+
     private void AddRow(ChannelProtocol protocol, string description, bool isDefault)
     {
         if (!VhApp.IsShowProtocol(protocol))
@@ -59,18 +84,28 @@ public partial class ProtocolsView : UserControl, IPage
         DomainEnforcedAlert.IsVisible = reason == TcpForwardingLockReason.SplitDomainRequiredOn;
         QuicPanel.IsVisible = TcpForwardingItem.IsOn;
 
+        // The blocks act only where TCP forwarding is chosen, by the switch or by the server's Cloak Mode. Where only the
+        // server's adapter or the domain rules hold the switch on, they are locked off, with the switch's own reason
+        var s = Strings.Current;
+        var isBlockLockedOff = !settings.UseTcpForwarding && state.SessionInfo?.IsTcpForwardingRequired != true;
+        var blockLockText = reason == TcpForwardingLockReason.SplitDomainRequiredOn
+            ? s.EnforcedByDomainFilter
+            : s.EnforcedByServer;
+
         // a server that does not carry UDP or QUIC enforces its block; else the setting, as for TCP forwarding
         var isUdpPacketSupported = state.SessionInfo?.IsUdpPacketSupported ?? true;
-        var isUdpBlocked = !isUdpPacketSupported || settings.DropUdp;
+        var isUdpBlocked = !isUdpPacketSupported || (settings.DropUdp && !isBlockLockedOff);
         DropUdpItem.IsOn = isUdpBlocked;
-        DropUdpItem.IsDisabled = !isUdpPacketSupported;
-        DropUdpEnforcedAlert.IsVisible = !isUdpPacketSupported;
+        DropUdpItem.IsDisabled = !isUdpPacketSupported || isBlockLockedOff;
+        DropUdpEnforcedAlert.IsVisible = !isUdpPacketSupported || isBlockLockedOff;
+        DropUdpEnforcedText.Text = isUdpPacketSupported ? blockLockText : s.EnforcedByServer;
 
         // QUIC runs over UDP, so a block on UDP holds its switch on; the setting is left as it is, for when it lifts
         var isQuicPacketSupported = state.SessionInfo?.IsQuicPacketSupported ?? true;
-        DropQuicItem.IsOn = isUdpBlocked || !isQuicPacketSupported || settings.DropQuic;
-        DropQuicItem.IsDisabled = isUdpBlocked || !isQuicPacketSupported;
-        DropQuicEnforcedAlert.IsVisible = !isQuicPacketSupported && isUdpPacketSupported;
+        DropQuicItem.IsOn = isUdpBlocked || !isQuicPacketSupported || (settings.DropQuic && !isBlockLockedOff);
+        DropQuicItem.IsDisabled = isUdpBlocked || !isQuicPacketSupported || isBlockLockedOff;
+        DropQuicEnforcedAlert.IsVisible = (!isQuicPacketSupported && isUdpPacketSupported) || isBlockLockedOff;
+        DropQuicEnforcedText.Text = isQuicPacketSupported ? blockLockText : s.EnforcedByServer;
 
         var active = VhApp.ActiveProtocol(state);
         foreach (var (protocol, row) in _rows) {

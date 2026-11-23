@@ -33,6 +33,10 @@ internal static class IosVpnServiceEnd
                     $"VpnService is unreachable. iOS has ended it. Error: {error.Domain} {error.Code}",
                     new Exception(error.LocalizedDescription));
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            // the caller's end, as a stop's of the status request: no word of the service, which a retry would take for one
+            throw;
+        }
         catch (Exception ex) {
             return new VpnServiceUnreachableException("VpnService is unreachable. iOS did not say how it ended.", ex);
         }

@@ -72,13 +72,14 @@ public class ClientOptions
 
     /// <summary>
     /// Gets or sets a value indicating whether the client drops the QUIC bound for the tunnel, UDP to ports 80 and 443,
-    /// so apps turn to TCP; it applies only while the client forwards IPv4 TCP, and then to either IP version.
+    /// so apps turn to TCP; it applies, to both IP versions, only while TCP forwarding is chosen, by
+    /// <see cref="UseTcpForwarding"/> or by the server's Cloak Mode, not where the client takes it on by itself.
     /// </summary>
     public bool DropQuic { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the client drops the UDP bound for the tunnel, but to DNS's ports; it
-    /// applies only while the client forwards IPv4 TCP, and then to either IP version.
+    /// applies as <see cref="DropQuic"/> does.
     /// </summary>
     public bool DropUdp { get; set; }
 
@@ -123,9 +124,9 @@ public class ClientOptions
 
     /// <summary>
     /// Gets or sets the shortest age limit of a TCP or QUIC packet channel. Each channel's limit is drawn at random from
-    /// this up to, but not including, <see cref="MaxPacketChannelTimespan"/>, both cut to whole seconds, or is that
-    /// value where the two are then equal; a channel past its limit closes gracefully at its next check, for the client
-    /// to open another. The UDP channel has no limit. The default is 5 minutes.
+    /// this up to, but not including, <see cref="MaxPacketChannelTimespan"/>, or is this value where the two are equal;
+    /// a channel past its limit closes gracefully at its next check, for the client to open another. The UDP channel
+    /// has no limit. The default is 5 minutes.
     /// </summary>
     public TimeSpan MinPacketChannelTimespan { get; set; } = TimeSpan.FromMinutes(5);
 
@@ -144,9 +145,9 @@ public class ClientOptions
     public bool AllowAnonymousTracker { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the app's trackers get the availability events of the server endpoints
-    /// the client checks while it finds one that answers; the event of a connect that succeeded carries its endpoint
-    /// whatever this says.
+    /// Gets or sets a value indicating whether the app's trackers get the server endpoints: the availability events of
+    /// those the client checks while it finds one that answers, and the endpoint in the event of a connect that
+    /// succeeded, which goes without it otherwise.
     /// </summary>
     public bool AllowEndPointTracker { get; set; }
 
@@ -165,6 +166,15 @@ public class ClientOptions
 
     /// <summary>Gets or sets the plan to connect with. The default is <see cref="ConnectPlanId.Normal"/>.</summary>
     public ConnectPlanId PlanId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the app's ads can show over the VPN: the ad a connect needs waits for the
+    /// VPN adapter to start, and a wait for any ad leaves the session's routing as it is, so the ad's traffic goes as the
+    /// rest does, through the tunnel unless a split takes it around. The default is <see langword="false"/>, for ad
+    /// networks that refuse VPN traffic: the ad a connect needs comes before the adapter starts, and the session sends
+    /// its traffic around the tunnel while it waits for a later one.
+    /// </summary>
+    public bool CanShowAdOverVpn { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the client reads and logs the domain names of the device's flows even
@@ -236,7 +246,7 @@ public class ClientOptions
     /// </summary>
     /// <remarks>
     /// After the VPN service ended without closing, as in a crash, the server it was connected to under the same access
-    /// key is tried first, before these.
+    /// key is tried first where it is one of these; one that is not is not tried.
     /// </remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]

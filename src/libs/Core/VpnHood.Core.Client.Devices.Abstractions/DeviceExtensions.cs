@@ -14,20 +14,24 @@ public static class DeviceExtensions
     extension(IDevice device)
     {
         /// <summary>
-        /// Calls <see cref="IDevice.BindProcessToVpn"/>, logging a failure rather than throwing it, and an error first
-        /// where the device does not support it.
+        /// Calls <see cref="IDevice.BindProcessToVpn"/>, logging a failure rather than throwing it; where the device does
+        /// not support it, it logs that and makes no call.
         /// </summary>
         /// <param name="value">
         /// <see langword="true"/> for the system's default network; <see langword="false"/> for a network outside the
         /// VPN.
         /// </param>
-        /// <returns><see langword="true"/> if the call threw nothing; otherwise, <see langword="false"/>.</returns>
+        /// <returns>
+        /// <see langword="true"/> if the call was made and threw nothing; otherwise, <see langword="false"/>.
+        /// </returns>
         public bool TryBindProcessToVpn(bool value)
         {
-            try {
-                if (!device.IsBindProcessToVpnSupported)
-                    VhLogger.Instance.LogError("BindProcessToVpn is not supported.");
+            if (!device.IsBindProcessToVpnSupported) {
+                VhLogger.Instance.LogError("BindProcessToVpn is not supported.");
+                return false;
+            }
 
+            try {
                 device.BindProcessToVpn(value);
                 return true;
             }

@@ -44,32 +44,34 @@ namespace VpnHood.Core.Client.Devices.Linux;
 /// </remarks>
 public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
 {
-    private const string TableName = "vpnhood_kill_switch";
-    private const string RunFolder = "/run/vpnhood-kill-switch";
-    private const string BootFolder = "/var/lib/vpnhood-kill-switch";
     private const string BootUnitName = "vpnhood-kill-switch.service";
-    private static readonly string ApplyFilePath = Path.Combine(RunFolder, "apply.nft");
-    private static readonly string BootFilePath = Path.Combine(BootFolder, "block.nft");
     private static readonly string BootUnitPath = Path.Combine("/etc/systemd/system", BootUnitName);
     private static readonly string[] NftPaths = ["/usr/sbin/nft", "/sbin/nft", "/usr/bin/nft", "/bin/nft"];
-    private const UnixFileMode RootOnly = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
 
     private readonly AsyncLock _lock = new();
 
-    // a table's comment is short, so the owner goes in as a hash
-    private readonly string _ownerTag =
+    // a table's comment is short, so the owner goes in as a hash; a test writes a block's copy with it
+    internal string OwnerTag { get; } =
         "app " + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(owner)))[..16];
+
+    // The block's table and folders; a test's own touch no block of the machine's. Not the boot unit, which Block writes
+    // where systemd runs and points at the boot copy: a test with folders of its own calls no Block
+    internal string TableName { get; init; } = "vpnhood_kill_switch";
+    internal string RunFolder { get; init; } = "/run/vpnhood-kill-switch";
+    internal string BootFolder { get; init; } = "/var/lib/vpnhood-kill-switch";
+    private string ApplyFilePath => Path.Combine(RunFolder, "apply.nft");
+    private string BootFilePath => Path.Combine(BootFolder, "block.nft");
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Without root, it cannot read the table and answers <see langword="false"/>. Where the table is gone but its boot
-    /// copy is this app's, as after a reboot before the boot unit has loaded it, it answers <see langword="true"/> though
-    /// no filtering runs.
+    /// Without root, it cannot read the table and answers <see langword="false"/>. It answers by the table the kernel
+    /// runs alone: where only the boot copy is left, as after a reboot before the boot unit has loaded it, or with no
+    /// systemd to load it, it answers <see langword="false"/>, as no filtering runs.
     /// </remarks>
     public async Task<bool> IsBlocking(CancellationToken cancellationToken)
     {
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
-        return await GetOwnerTag(cancellationToken).Vhc() == _ownerTag;
+        return await GetOwnerTag(includeBootCopy: false, cancellationToken).Vhc() == OwnerTag;
     }
 
     /// <inheritdoc/>
@@ -90,12 +92,12 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
         var tunName = LinuxTunVpnAdapter.GetValidAdapterName(rules.AdapterName);
 
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
-        Directory.CreateDirectory(RunFolder, RootOnly);
+        FileUtils.CreateOwnerOnlyDirectory(RunFolder);
         await FileUtils.WriteAllTextAtomicAsync(ApplyFilePath, CreateRuleset(rules, tunName, cgroupPath),
             cancellationToken).Vhc();
         await OsUtils.ExecuteCommandAsync(nftPath, $"-f {ApplyFilePath}", cancellationToken).Vhc();
 
-        Directory.CreateDirectory(BootFolder, RootOnly);
+        FileUtils.CreateOwnerOnlyDirectory(BootFolder);
         await FileUtils.WriteAllTextAtomicAsync(BootFilePath, CreateRuleset(rules, tunName, cgroupPath: null),
             cancellationToken).Vhc();
         await EnsureBootUnit(nftPath, cancellationToken).Vhc();
@@ -118,12 +120,12 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
             return;
 
         using var scope = await _lock.LockAsync(cancellationToken).Vhc();
-        var ownerTag = await GetOwnerTag(cancellationToken).Vhc();
-        if (ownerTag == null || (!anyApp && ownerTag != _ownerTag))
+        var ownerTag = await GetOwnerTag(includeBootCopy: true, cancellationToken).Vhc();
+        if (ownerTag == null || (!anyApp && ownerTag != OwnerTag))
             return;
 
         if (FindNft() is { } nftPath) {
-            Directory.CreateDirectory(RunFolder, RootOnly);
+            FileUtils.CreateOwnerOnlyDirectory(RunFolder);
             await FileUtils.WriteAllTextAtomicAsync(ApplyFilePath,
                 $"table inet {TableName}\ndelete table inet {TableName}\n", cancellationToken).Vhc();
             await OsUtils.ExecuteCommandAsync(nftPath, $"-f {ApplyFilePath}", cancellationToken).Vhc();
@@ -131,18 +133,18 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
 
         File.Delete(BootFilePath);
         VhLogger.Instance.LogInformation("The kill switch's block is lifted. Its app: {Owner}",
-            ownerTag == _ownerTag ? "this" : "another");
+            ownerTag == OwnerTag ? "this" : "another");
     }
 
-    // The tag of the app whose block is up, or null where none is: the kernel's table, or after a reboot whose
-    // boot unit has not loaded it, the boot copy.
-    private static async Task<string?> GetOwnerTag(CancellationToken cancellationToken)
+    // The tag of the app whose block is up, or null where none is: the kernel's table, or, for a lift, after a reboot
+    // whose boot unit has not loaded it, the boot copy, which the lift deletes too.
+    private async Task<string?> GetOwnerTag(bool includeBootCopy, CancellationToken cancellationToken)
     {
         if (!Environment.IsPrivilegedProcess)
             return null;
 
         var ruleset = await ReadTable(cancellationToken).Vhc();
-        if (ruleset == null && File.Exists(BootFilePath))
+        if (ruleset == null && includeBootCopy && File.Exists(BootFilePath))
             ruleset = await File.ReadAllTextAsync(BootFilePath, cancellationToken).Vhc();
 
         if (ruleset == null)
@@ -152,7 +154,7 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
         return match.Success ? match.Groups[1].Value : string.Empty;
     }
 
-    private static async Task<string?> ReadTable(CancellationToken cancellationToken)
+    private async Task<string?> ReadTable(CancellationToken cancellationToken)
     {
         if (FindNft() is not { } nftPath)
             return null;
@@ -176,7 +178,7 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
         builder.Append($"table inet {TableName}\n");
         builder.Append($"delete table inet {TableName}\n");
         builder.Append($"table inet {TableName} {{\n");
-        builder.Append($"  comment \"{_ownerTag}\"\n");
+        builder.Append($"  comment \"{OwnerTag}\"\n");
         AppendSet(builder, "pass_v4", "ipv4_addr", passV4.Select(FormatRange));
         AppendSet(builder, "pass_v6", "ipv6_addr", passV6.Select(FormatRange));
         AppendSet(builder, "dns_v4", "ipv4_addr", dnsV4.Select(x => x.ToString()));
@@ -256,7 +258,7 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
 
     // The boot unit that loads the boot copy before the network comes up; written and enabled once, as its
     // content changes only with nft's path. Without systemd the block does not outlast a reboot.
-    private static async Task EnsureBootUnit(string nftPath, CancellationToken cancellationToken)
+    private async Task EnsureBootUnit(string nftPath, CancellationToken cancellationToken)
     {
         if (!Directory.Exists("/run/systemd/system")) {
             VhLogger.Instance.LogWarning("No systemd here, so the kill switch's block does not outlast a reboot.");
@@ -288,7 +290,8 @@ public sealed class LinuxVpnKillSwitch(string owner) : IVpnKillSwitch
         await OsUtils.ExecuteCommandAsync("systemctl", $"enable {BootUnitName}", cancellationToken).Vhc();
     }
 
-    private static string? FindNft()
+    // nft's path, or null where nftables is not installed; a test runs the one the switch would
+    internal static string? FindNft()
     {
         return NftPaths.FirstOrDefault(File.Exists);
     }

@@ -112,6 +112,21 @@ public class ClientTunnelTest : TestBase
     }
 
 
+    // A channel's age limit was drawn in whole seconds, so one under a second was 0, and the channel closed at its first
+    // check. It is drawn by ticks
+    [TestMethod]
+    public void A_packet_channel_life_under_a_second_is_kept()
+    {
+        Assert.AreEqual(TimeSpan.FromMilliseconds(500),
+            ClientSession.DrawPacketChannelLifespan(TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500)));
+
+        var lifespan = ClientSession.DrawPacketChannelLifespan(TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(800));
+
+        Assert.IsTrue(lifespan >= TimeSpan.FromMilliseconds(200) && lifespan < TimeSpan.FromMilliseconds(800),
+            $"The life drawn: {lifespan}");
+    }
+
     [TestMethod]
     [DataRow(ChannelProtocol.Tcp)]
     [DataRow(ChannelProtocol.Udp)]

@@ -24,6 +24,8 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
     {
         var providerSession = await GetProviderSessionAsync(cancellationToken).Vhc();
 
+        // a request whose time ran out meanwhile is not sent: its caller has given up on it
+        cancellationToken.ThrowIfCancellationRequested();
         var responseDataTask = new TaskCompletionSource<NSData?>(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var cancellationRegistration = cancellationToken.Register(
             () => responseDataTask.TrySetCanceled(cancellationToken));
@@ -63,8 +65,8 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
     private async Task<NETunnelProviderSession> GetProviderSessionAsync(CancellationToken cancellationToken)
     {
         // 1. Reuse the cached live session (connection-reuse, like TcpMessageClient).
-        if (IsLive(_session))
-            return _session!;
+        if (_session is { } cachedSession && IsLive(cachedSession))
+            return cachedSession;
 
         // 2. The app's own manager — authoritative when THIS app started the tunnel.
         if (device.VpnManager.Connection is NETunnelProviderSession ownSession && IsLive(ownSession))
@@ -74,7 +76,7 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
         // Do NOT fall back to a Disconnected/Invalid session: messaging one can wake a dead extension
         // or return stale data (the false-"Connected"-at-launch bug). Fail fast so the manager
         // transitions to Disposed/None on the next poll.
-        var managers = await LoadSavedManagers().Vhc();
+        var managers = await LoadSavedManagers(cancellationToken).Vhc();
         var liveSession = managers
             .Select(m => m?.Connection as NETunnelProviderSession)
             .FirstOrDefault(IsLive);
@@ -85,11 +87,18 @@ internal sealed class IosMessageClient(IosDevice device) : IMessageClient
         throw await IosVpnServiceEnd.ToException(managers.FirstOrDefault(), cancellationToken).Vhc();
     }
 
-    private static async Task<NETunnelProviderManager?[]> LoadSavedManagers()
+    // iOS's lookup takes no token: the wait for it ends with the caller's, as one that hangs held the manager's channel
+    // past the request's time
+    private static async Task<NETunnelProviderManager?[]> LoadSavedManagers(CancellationToken cancellationToken)
     {
         try {
-            var managers = await NETunnelProviderManager.LoadAllFromPreferencesAsync().Vhc();
+            var managers = await NETunnelProviderManager.LoadAllFromPreferencesAsync()
+                .WaitAsync(cancellationToken).Vhc();
+
             return managers.ToArray<NETunnelProviderManager>();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             throw new VpnServiceUnreachableException("VpnService is unreachable.", ex);

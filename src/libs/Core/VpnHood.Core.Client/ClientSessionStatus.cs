@@ -42,7 +42,8 @@ internal class ClientSessionStatus(
         streamHandler.Stat.TcpPassthruCount + domainFilteringService.QuicStat.ExcludeCount;
     // UDP counts as one while it carries the packets, as it did when it was a channel
     public int ActivePacketChannelCount => tunnel.PacketChannelCount + (session.IsUdpOpen ? 1 : 0);
-    public bool IsDropQuic => packetHandler.DropQuic; // This is current, don't use session property
+    // This is current, don't use session property; a drop of all UDP drops QUIC too
+    public bool IsDropQuic => packetHandler.DropQuic || packetHandler.DropUdp;
     public bool IsTcpForwarding => packetHandler.UseTcpForwardingIpV4; // This is current, don't use session property
     public bool CanChangeTcpForwarding => // the switch acts on IPv4: IPv6 may go by forwarding anyway
         session.Info is { IsTcpForwardingSupported: true, IsTcpPacketIpV4Supported: true } && !domainFilteringService.IsEnabled;

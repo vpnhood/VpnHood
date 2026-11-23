@@ -8,7 +8,7 @@ namespace VpnHood.Core.Client;
 internal static class ClientTrackerBuilder
 {
     public static TrackEvent BuildConnectionSucceeded(string? serverLocation,
-        bool isIpV6Supported, bool hasRedirected, IPEndPoint endPoint, string? adNetworkName)
+        bool isIpV6Supported, bool hasRedirected, IPEndPoint? endPoint, string? adNetworkName)
     {
         return BuildConnectionAttempt(connected: true,
             serverLocation: serverLocation,

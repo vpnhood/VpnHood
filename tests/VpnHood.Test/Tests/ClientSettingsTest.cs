@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Test.Extensions;
@@ -121,6 +123,45 @@ public class ClientSettingsTest : TestBase
         adHandler.SetAdOk();
         await nextWait.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
         Assert.IsFalse(session.PassthroughState.PassthroughForAd);
+    }
+
+    [TestMethod]
+    public async Task A_wait_for_an_ad_over_the_VPN_keeps_the_traffic_and_its_connections_in_the_tunnel()
+    {
+        // a server that keeps its connection open
+        var localEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(TestHelper.TestIps.LocalNsTestIp);
+        using var listener = new TcpListener(localEndPoint);
+        listener.Start();
+        var remoteEndPoint = new IPEndPoint(TestHelper.TestIps.RemoteNsTestIp, localEndPoint.Port);
+
+        await using var server = await TestHelper.CreateServer();
+        var options = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
+        options.CanShowAdOverVpn = true;
+        await using var client = await TestHelper.CreateClient(options);
+
+        // a connection open before the ad
+        using var ioCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        ioCts.CancelAfter(TimeSpan.FromSeconds(20));
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(remoteEndPoint, ioCts.Token);
+        await tcpClient.GetStream().WriteAsync(new byte[] { 1 }, ioCts.Token);
+        using var accepted = await listener.AcceptTcpClientAsync(ioCts.Token);
+        await accepted.GetStream().ReadExactlyAsync(new byte[1], ioCts.Token);
+
+        // the ad's traffic goes through the tunnel, where it went around it
+        var session = (ClientSession)client.RequiredSession;
+        var wait = session.AdHandler.WaitForAd(TestCt);
+        Assert.IsFalse(session.PassthroughState.PassthroughForAd);
+        await TestHelper.Test_Https();
+        Assert.AreEqual(0, session.Status.StreamPassthruCount);
+
+        // the ad's end reset none of the connections, which never left the tunnel
+        session.AdHandler.SetAdOk();
+        await wait.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        await tcpClient.GetStream().WriteAsync(new byte[] { 2 }, ioCts.Token);
+        var received = new byte[1];
+        await accepted.GetStream().ReadExactlyAsync(received, ioCts.Token);
+        Assert.AreEqual(2, received[0]);
     }
 
     [TestMethod]

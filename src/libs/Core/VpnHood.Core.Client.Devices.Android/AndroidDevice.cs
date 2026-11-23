@@ -87,6 +87,20 @@ public class AndroidDevice : IDevice
     /// <inheritdoc/>
     public bool IsWaitingForVpnPermission => _isWaitingForVpnPermission;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AndroidDevice"/> class, in any process but the VPN service's, as
+    /// the app's or the tile's.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// This is the VPN service's process, Android gave this process no name, or it named no cache folder for the app.
+    /// </exception>
+    public AndroidDevice()
+    {
+        if (IsVpnServiceProcess)
+            throw new InvalidOperationException(
+                "Cannot create AndroidDevice in the VPN service process.");
+    }
+
     /// <summary>Creates the device, in any process but the VPN service's, as the app's or the tile's.</summary>
     /// <returns>The device.</returns>
     /// <exception cref="InvalidOperationException">
@@ -94,10 +108,6 @@ public class AndroidDevice : IDevice
     /// </exception>
     public static AndroidDevice Create()
     {
-        if (IsVpnServiceProcess)
-            throw new InvalidOperationException(
-                "Cannot create AndroidDevice in the VPN service process.");
-
         return new AndroidDevice();
     }
 
@@ -148,19 +158,24 @@ public class AndroidDevice : IDevice
         if (activityEvent == null)
             throw new Exception("Please open the app and grant VPN permission to proceed.");
 
-        _grantPermissionTaskSource = new TaskCompletionSource<bool>();
+        // the answer comes on the UI thread, where the connect's continuation would run inline
+        _grantPermissionTaskSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         activityEvent.ActivityResultEvent += Activity_OnActivityResult;
         try {
             VhLogger.Instance.LogDebug("Requesting user consent...");
             _isWaitingForVpnPermission = true;
             activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
-            await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(userIntentTimeout, cancellationToken))
-                .Vhc();
 
-            if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
-                throw new TimeoutException("Could not grant VPN permission in the given time.");
+            // a cancel stays one: a delay that the cancel ended was taken for the time's end
+            bool isGranted;
+            try {
+                isGranted = await _grantPermissionTaskSource.Task.WaitAsync(userIntentTimeout, cancellationToken).Vhc();
+            }
+            catch (TimeoutException ex) {
+                throw new TimeoutException("Could not grant VPN permission in the given time.", ex);
+            }
 
-            if (!await _grantPermissionTaskSource.Task.Vhc())
+            if (!isGranted)
                 throw new UserCanceledException("VPN permission has been rejected.");
         }
         finally {
@@ -276,15 +291,19 @@ public class AndroidDevice : IDevice
     }
 
     /// <inheritdoc/>
+    /// <remarks>A binding Android refuses throws, as it would otherwise leave the process where it was.</remarks>
     public void BindProcessToVpn(bool value)
     {
         var connectivityManager =
-            (ConnectivityManager?)Application.Context.GetSystemService(Context.ConnectivityService)!;
+            (ConnectivityManager?)Application.Context.GetSystemService(Context.ConnectivityService) ??
+            throw new InvalidOperationException("Android has no connectivity service.");
 
         // null is system default which is VPN if connected to VPN otherwise it is the default network
         if (value) {
             VhLogger.Instance.LogDebug("Binding process to the default network...");
-            connectivityManager.BindProcessToNetwork(null);
+            if (!connectivityManager.BindProcessToNetwork(null))
+                throw new InvalidOperationException("Android refused to bind the process to the default network.");
+
             return;
         }
 
@@ -299,7 +318,8 @@ public class AndroidDevice : IDevice
             netCaps.FirstOrDefault(x => x.Item2.HasTransport(TransportType.Cellular)).Item1 ??
             throw new Exception("Could not find any non VPN network.");
 
-        connectivityManager.BindProcessToNetwork(network);
+        if (!connectivityManager.BindProcessToNetwork(network))
+            throw new InvalidOperationException("Android refused to bind the process to a network outside the VPN.");
     }
 
     /// <summary>Does nothing: Android owns the VPN service's lifetime.</summary>

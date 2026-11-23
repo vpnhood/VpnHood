@@ -310,19 +310,26 @@ public sealed class WindowsVpnPluginDevice : IDevice
     /// Gets the package's profiles Windows holds other than disconnected: the app's client asks before it opens the app
     /// service, and the VPN plug-in before it waits for a connect.
     /// </summary>
+    /// <param name="cancellationToken">
+    /// The token to monitor for cancellation requests, which ends a wait for Windows that stalls.
+    /// </param>
     /// <returns>
     /// A task whose result is the profiles, or <see langword="null"/> where Windows does not say, which it logs.
     /// </returns>
-    public static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles()
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
+    public static async Task<VpnPlugInProfile[]?> TryGetLiveProfiles(CancellationToken cancellationToken)
     {
         try {
             var packageFamilyName = Package.Current.Id.FamilyName;
-            var profiles = await new VpnManagementAgent().GetProfilesAsync().AsTask().Vhc();
+            var profiles = await new VpnManagementAgent().GetProfilesAsync().AsTask(cancellationToken).Vhc();
             return profiles.OfType<VpnPlugInProfile>()
                 .Where(x =>
                     string.Equals(x.VpnPluginPackageFamilyName, packageFamilyName, StringComparison.OrdinalIgnoreCase) &&
                     x.ConnectionStatus != VpnManagementConnectionStatus.Disconnected)
                 .ToArray();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not read the package's VPN profiles from Windows.");

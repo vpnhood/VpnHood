@@ -283,6 +283,13 @@ internal static class ClientHelper
             VhLogger.Instance.LogWarning("TCP forwarding turned off because the server does not support it.");
     }
 
+    // The server's Cloak Mode. Compatibility (2026-11): an older server does not say; one that takes no TCP as packets at
+    // all is read as in it, as its Cloak Mode and an adapter that carries no TCP look the same there, and the client's
+    // drops applied to both before; drop once the servers before IsTcpForwardingRequired are gone
+    public static bool IsTcpForwardingRequired(HelloResponse helloResponse) =>
+        helloResponse.IsTcpForwardingRequired ??
+        helloResponse is { IsTcpPacketIpV4Supported: false, IsTcpPacketIpV6Supported: false };
+
     // The largest packet the tunnel carries both ways, which the adapter takes as its MTU. Never above what the server
     // carries: an adapter above it gets full-size TCP segments sent that the server drops, as the apps send TCP as
     // packets by default

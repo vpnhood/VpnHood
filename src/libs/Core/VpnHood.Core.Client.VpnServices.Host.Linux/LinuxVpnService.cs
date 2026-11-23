@@ -76,13 +76,9 @@ internal class LinuxVpnService : IVpnServiceHandler, IDisposable
     /// <exception cref="ArgumentOutOfRangeException">The settings' queue capacity is less than 1.</exception>
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
-        var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
+        var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings(adapterSettings) {
             AdapterName = LinuxTunVpnAdapter.GetValidAdapterName(adapterSettings.AdapterName),
-            AppId = adapterSettings.AppId,
-            AutoRestart = adapterSettings.AutoRestart,
-            MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
-            Blocking = adapterSettings.Blocking,
-            QueueCapacity = adapterSettings.QueueCapacity
+            Blocking = adapterSettings.Blocking
         });
 
         return vpnAdapter;

@@ -1,6 +1,8 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
@@ -16,7 +18,9 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 /// The app writes them at each connect and makes them again at each change of its settings or servers; the service
 /// reads them at each start, including one the app does not make — always-on, the quick-settings tile, the system's VPN
 /// settings, the system restarting the service — which then runs with what the app shows. As the two processes share
-/// the file, an access that finds it held by the other tries again for up to 2 seconds.
+/// the file, an access that finds it held by the other tries again for up to 2 seconds. A proxies' reset
+/// (<see cref="ProxyOptions.ResetStates"/>) is neither saved nor read, one an older app saved too, so such a start never
+/// clears the proxies' ratings.
 /// </remarks>
 public class VpnServiceOptionsFile(string configFolder)
 {
@@ -45,7 +49,12 @@ public class VpnServiceOptionsFile(string configFolder)
     {
         var json = await FileUtils.WaitOutSharingAsync(() => File.ReadAllTextAsync(FilePath, cancellationToken),
             SharingTimeout, cancellationToken).Vhc();
-        return JsonUtils.Deserialize<VpnServiceOptions>(json);
+
+        // a file an older app saved holds the reset it was sent with, which each start without the app took again
+        var options = JsonNode.Parse(json);
+        ClearReset(options);
+        return options.Deserialize<VpnServiceOptions>() ??
+               throw new InvalidDataException($"{typeof(VpnServiceOptions)} could not be deserialized!");
     }
 
     /// <summary>Reads the options where there is a file that can be read.</summary>
@@ -136,11 +145,26 @@ public class VpnServiceOptionsFile(string configFolder)
         }, SharingTimeout, cancellationToken).Vhc();
     }
 
-    // replaced whole, so the service never reads a part of it; the replace is tried again while the service reads
+    // Replaced whole, so the service never reads a part of it; the replace is tried again while the service reads. A
+    // proxies' reset is a word to a live connector, which the reconfigure request carries, so it is not saved: saved, it
+    // cleared the proxies' ratings again at every start without the app, as the tile's or always-on's
     private async Task WriteFile(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
-        var json = JsonSerializer.Serialize(serviceOptions);
+        var options = JsonSerializer.SerializeToNode(serviceOptions) ??
+                      throw new InvalidOperationException("The options made no JSON.");
+
+        ClearReset(options);
+
+        var json = options.ToJsonString();
         await FileUtils.WaitOutSharingAsync(() => FileUtils.WriteAllTextAtomicAsync(FilePath, json, cancellationToken),
             SharingTimeout, cancellationToken).Vhc();
+    }
+
+    // the options' JSON without a proxies' reset; JSON of anything else is left to the deserializer to refuse
+    private static void ClearReset(JsonNode? options)
+    {
+        if (options is JsonObject optionsObject &&
+            optionsObject[nameof(VpnServiceOptions.ProxyOptions)] is JsonObject proxyOptions)
+            proxyOptions[nameof(ProxyOptions.ResetStates)] = false;
     }
 }

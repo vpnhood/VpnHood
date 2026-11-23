@@ -69,8 +69,10 @@ in the same process on a phone, and over HTTP on a desktop.
 5. **The session starts** (steps 6-9). The engine starts its local TCP stack and opens its first connection for
    packets to the server. If the session needs an ad, the service waits while the app shows it, and the app tells
    the service how it went. Then the adapter starts,
-   with its routes and DNS, and the app shows Connected. A server may send a newer access key with the session, and
-   the app saves it.
+   with its routes and DNS, and the app shows Connected. Where every ad network of the app can show its ads over the
+   VPN (`AppAdProviderItem.CanShowOverVpn`), the adapter starts first, and the ad's traffic goes as the rest does,
+   through the tunnel unless a split takes it around. A server may send a newer access key with the session, and the
+   app saves it.
 
 Until the adapter starts, the device's traffic goes on as before, so a connect that fails leaves the device's
 internet as it was. The kill switch is the exception: when the person has turned it on, it blocks the device's

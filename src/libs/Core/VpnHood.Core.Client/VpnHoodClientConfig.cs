@@ -54,8 +54,19 @@ public class VpnHoodClientConfig
     /// </summary>
     public required bool AllowAnonymousTracker { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether the app's trackers get the server endpoints the client checks and connects to
+    /// (<see cref="ClientOptions.AllowEndPointTracker"/>).
+    /// </summary>
+    public required bool AllowEndPointTracker { get; init; }
+
     /// <summary>Gets the plan to connect with (<see cref="ClientOptions.PlanId"/>).</summary>
     public required ConnectPlanId PlanId { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the app's ads can show over the VPN (<see cref="ClientOptions.CanShowAdOverVpn"/>).
+    /// </summary>
+    public required bool CanShowAdOverVpn { get; init; }
 
     /// <summary>
     /// Gets the premium code to connect with, or <see langword="null"/> (<see cref="ClientOptions.AccessCode"/>).

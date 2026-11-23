@@ -35,6 +35,12 @@ public static class VhApp
     private static IReadOnlyList<string> _availableCultures = [];
     private static string? _sentCultureName;
 
+    /// <summary>
+    /// Occurs once <see cref="ReloadState"/> has read the app's state, for a page that shows what the session decides,
+    /// such as a lock the server sets as it connects.
+    /// </summary>
+    public static event EventHandler? StateReloaded;
+
     /// <summary>Gets the app's API.</summary>
     /// <exception cref="InvalidOperationException">The UI has not been given the app's API (<see cref="Init"/>).</exception>
     public static VpnHoodApi Api => _api ?? throw new InvalidOperationException(
@@ -206,6 +212,8 @@ public static class VhApp
         // a sign-in or sign-out from another UI: a paired browser's reaches the TV's own screen
         if (state.AccountTime != _accountTime && Environment.TickCount64 >= _accountRetryTime)
             await ReloadAccount(cancellationToken);
+
+        StateReloaded?.Invoke(null, EventArgs.Empty);
     }
 
     // The account read the state asks for. Its failure is not the state's: the page still shows the

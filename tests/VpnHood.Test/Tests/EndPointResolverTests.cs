@@ -38,6 +38,23 @@ public class EndPointResolverTests : TestBase
             "DnsOnly strategy should not include token-provided endpoints.");
     }
 
+    // The token's list came as it is under IpOnly, where the other ways leave out repeats, so the client tried an
+    // endpoint again for nothing. It comes without them
+    [TestMethod]
+    public async Task IpOnly_gives_the_tokens_endpoints_without_repeats()
+    {
+        var serverToken = CreateServerToken(false);
+        serverToken.HostEndPoints = [
+            IPEndPoint.Parse("192.168.1.1:443"),
+            IPEndPoint.Parse("192.168.1.1:443"),
+            IPEndPoint.Parse("192.168.1.2:443")
+        ];
+
+        var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.IpOnly, TestCt);
+        CollectionAssert.AreEqual(
+            new[] { IPEndPoint.Parse("192.168.1.1:443"), IPEndPoint.Parse("192.168.1.2:443") }, results.ToArray());
+    }
+
     // Under the kill switch's block the name is asked of the network's resolvers from this process, as the OS's
     // resolver asks from a process of its own, which the block stops.
     [TestMethod]

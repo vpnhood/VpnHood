@@ -130,11 +130,10 @@ public class ServerToken
     /// <see cref="Secret"/>, of its JSON with the properties at their defaults left out, but for those marked to be
     /// always written, such as <see cref="IsValidHostName"/>.
     /// </summary>
-    /// <param name="iv">The initialization vector, or <see langword="null"/> for random bytes as long as the secret.</param>
+    /// <param name="iv">The initialization vector, 16 bytes, or <see langword="null"/> for 16 random ones.</param>
     /// <returns>The Base64 of the IV, a dot, and the Base64 of the encrypted JSON.</returns>
     /// <remarks>
-    /// The IV must be 16 bytes, AES's block, so a random one fits only a 16-byte secret. Nothing authenticates the
-    /// result.
+    /// The IV is AES's block, 16 bytes, whatever the secret's length. Nothing authenticates the result.
     /// </remarks>
     /// <exception cref="Exception">The token has no secret.</exception>
     /// <exception cref="System.Security.Cryptography.CryptographicException">
@@ -149,12 +148,8 @@ public class ServerToken
         if (Secret is null)
             throw new Exception("There is no Secret in ServerToken.");
 
-        // generate IV
-        if (iv == null) {
-            using var rng = RandomNumberGenerator.Create();
-            iv = new byte[Secret.Length];
-            rng.GetBytes(iv);
-        }
+        // AES's block, which an IV must be whatever the key's length: one as long as a 32-byte secret was refused
+        iv ??= RandomNumberGenerator.GetBytes(16);
 
         // aes
         using var aesAlg = Aes.Create();

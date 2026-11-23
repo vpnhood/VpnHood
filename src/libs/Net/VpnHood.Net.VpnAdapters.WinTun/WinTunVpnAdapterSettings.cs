@@ -12,4 +12,18 @@ public class WinTunVpnAdapterSettings : VpnAdapterSettings
     /// </summary>
     /// <remarks>A size WinTun refuses fails the start, when the adapter opens its session.</remarks>
     public int RingCapacity { get; init; } = 0x400000;
+
+    /// <summary>Initializes a new instance of the <see cref="WinTunVpnAdapterSettings"/> class.</summary>
+    public WinTunVpnAdapterSettings()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WinTunVpnAdapterSettings"/> class with the optional settings of the
+    /// host's, and this adapter's own at their defaults; the required ones are given in the object initializer.
+    /// </summary>
+    /// <param name="settings">The settings whose optional ones are copied.</param>
+    public WinTunVpnAdapterSettings(VpnAdapterSettings settings) : base(settings)
+    {
+    }
 }

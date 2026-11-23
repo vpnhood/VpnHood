@@ -21,6 +21,7 @@ public sealed class AdministratorsNamespace : IDisposable
     private readonly string _name;
     private readonly IntPtr _boundary;
     private readonly IntPtr _handle;
+    private int _disposed;
 
     private AdministratorsNamespace(string name, IntPtr boundary, IntPtr handle)
     {
@@ -92,9 +93,15 @@ public sealed class AdministratorsNamespace : IDisposable
         throw new Win32Exception(error, "Could not name Administrators in the namespace's boundary.");
     }
 
-    /// <summary>Closes this process's handle on the namespace and deletes its boundary descriptor.</summary>
+    /// <summary>
+    /// Closes this process's handle on the namespace and deletes its boundary descriptor, once: a second close would
+    /// free them again.
+    /// </summary>
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
+
         ClosePrivateNamespace(_handle, 0);
         DeleteBoundaryDescriptor(_boundary);
     }

@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Text.Json;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
@@ -206,9 +207,9 @@ public class ServerFinderTest : TestBase
         await Assert.ThrowsExactlyAsync<EndPointDiscoveryException>(() => client.Connect(TestCt));
 
         // what a crash leaves: the server its session was on
-        await new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId).Write(
+        await WriteCrashRecord(workingFolder, token.TokenId,
             new VpnEndPoint(serverEndPoint, savedHostName, token.ServerToken.CertificateHash,
-                token.ServerToken.PathBase), TestCt);
+                token.ServerToken.PathBase));
 
         await using var client2 = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
@@ -227,9 +228,9 @@ public class ServerFinderTest : TestBase
         var connectedServerFile = new ConnectedServerFile(Path.Combine(workingFolder, "connected-servers"), token.TokenId);
 
         // The probe proves reachability; the hello fails because the saved endpoint belongs to another farm.
-        await connectedServerFile.Write(
+        await WriteCrashRecord(workingFolder, token.TokenId,
             new VpnEndPoint(savedServer.ServerHost.TcpEndPoints.First(), token.ServerToken.HostName,
-                savedToken.CertificateHash, token.ServerToken.PathBase), TestCt);
+                savedToken.CertificateHash, token.ServerToken.PathBase));
 
         await using var client = await TestHelper.CreateClient(TestHelper.CreateClientOptions(token),
             vpnAdapter: new TestNullVpnAdapter(), autoConnect: false, workingFolder: workingFolder);
@@ -241,6 +242,32 @@ public class ServerFinderTest : TestBase
             vpnAdapter: new TestNullVpnAdapter(), workingFolder: workingFolder);
         await nextClient.WaitForState(ClientState.Connected, TestCt);
         Assert.AreEqual(server.ServerHost.TcpEndPoints.First(), nextClient.RequiredSession.Config.HostTcpEndPoint);
+    }
+
+    // custom endpoints are the person's choice, which may be newer than the crash's record: the record's server goes
+    // first only where it is one of them
+    [TestMethod]
+    public async Task Kept_server_outside_the_custom_endpoints_is_not_tried()
+    {
+        await using var server = await TestHelper.CreateServer();
+        await using var keptServer = await TestHelper.CreateServer();
+        var token = await TestHelper.CreateAccessToken(server);
+        var keptToken = (await TestHelper.CreateAccessToken(keptServer)).ServerToken;
+        var serverEndPoint = server.ServerHost.TcpEndPoints.First();
+        var workingFolder = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+
+        // what a crash left: a server the custom endpoints do not name
+        await WriteCrashRecord(workingFolder, token.TokenId,
+            new VpnEndPoint(keptServer.ServerHost.TcpEndPoints.First(), token.ServerToken.HostName,
+                keptToken.CertificateHash, token.ServerToken.PathBase));
+
+        var clientOptions = TestHelper.CreateClientOptions(token);
+        clientOptions.CustomServerEndpoints = [serverEndPoint];
+        await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: new TestNullVpnAdapter(),
+            workingFolder: workingFolder);
+
+        await client.WaitForState(ClientState.Connected, TestCt);
+        Assert.AreEqual(serverEndPoint, client.RequiredSession.Config.HostTcpEndPoint);
     }
 
     // only an address the name gave may move with the name; asks a real name, as EndPointResolverTests do
@@ -330,4 +357,14 @@ public class ServerFinderTest : TestBase
         Secret = RandomNumberGenerator.GetBytes(16),
         HostEndPoints = [tokenEndPoint]
     };
+
+    // the record of a key's server a crashed VPN host left: written by another process, as no client of this one wrote it
+    private static async Task WriteCrashRecord(string workingFolder, string tokenId, VpnEndPoint vpnEndPoint)
+    {
+        var folderPath = Path.Combine(workingFolder, "connected-servers");
+        Directory.CreateDirectory(folderPath);
+        await File.WriteAllTextAsync(
+            Path.Combine(folderPath, FileUtils.ReplaceInvalidFileNameChars(tokenId) + ".json"),
+            JsonSerializer.Serialize(vpnEndPoint));
+    }
 }

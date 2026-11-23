@@ -70,7 +70,14 @@ internal class ClientSessionBuilder(
             config.Version, VpnHoodClientConfig.MinProtocolVersion, VpnHoodClientConfig.MaxProtocolVersion,
             VhLogger.FormatId(config.ClientId));
 
-        var connectedServer = await connectedServerFile.Read(linkedCts.Token).Vhc();
+        // With custom endpoints, a crash's record goes first only where it names one of them: they are the person's
+        // choice, which may be newer than the record
+        var keptServer = await connectedServerFile.Read(linkedCts.Token).Vhc();
+        var connectedServer = keptServer != null && (serverFinder.CustomServerEndpoints.Count == 0 ||
+                                                     serverFinder.CustomServerEndpoints.Contains(keptServer.TcpEndPoint))
+            ? keptServer
+            : null;
+
         // Checked against a server they are for, the last one connected or one of the access key's, as the device
         // reaches no one else through them, with the VPN's own check of its certificate. Their failure ends nothing
         // here: that server may be down where another is not, and the connections to each server check the proxies
@@ -198,6 +205,7 @@ internal class ClientSessionBuilder(
                 $"IsTcpPacketIpV4Supported: {helloResponse.IsTcpPacketIpV4Supported}, " +
                 $"IsTcpPacketIpV6Supported: {helloResponse.IsTcpPacketIpV6Supported}, " +
                 $"IsTcpForwardingSupported: {helloResponse.IsTcpForwardingSupported}, " +
+                $"IsTcpForwardingRequired: {helloResponse.IsTcpForwardingRequired}, " +
                 $"IsQuicPacketSupported: {helloResponse.IsQuicPacketSupported}, " +
                 $"IsUdpPacketSupported: {helloResponse.IsUdpPacketSupported}, " +
                 $"IsLocalNetworkAllowed: {serverAllowedLocalNetworks.Any()}, " +
@@ -292,6 +300,7 @@ internal class ClientSessionBuilder(
                 IsTcpPacketIpV4Supported = helloResponse.IsTcpPacketIpV4Supported,
                 IsTcpPacketIpV6Supported = helloResponse.IsTcpPacketIpV6Supported,
                 IsTcpForwardingSupported = helloResponse.IsTcpForwardingSupported,
+                IsTcpForwardingRequired = ClientHelper.IsTcpForwardingRequired(helloResponse),
                 IsQuicPacketSupported = helloResponse.IsQuicPacketSupported,
                 IsUdpPacketSupported = helloResponse.IsUdpPacketSupported,
                 IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.QuicClientFactory?.IsSupported == true,
@@ -319,13 +328,14 @@ internal class ClientSessionBuilder(
                         VhLogger.Instance, CancellationToken.None);
                 }
 
+                // the server's endpoint only where the person lets the endpoints be tracked
                 if (tracker != null) {
                     _ = tracker.TryTrack(
                         ClientTrackerBuilder.BuildConnectionSucceeded(
                             serverFinder.ServerLocation,
                             isIpV6Supported: vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
                             hasRedirected: !allowRedirect,
-                            endPoint: connectorService.VpnEndPoint.TcpEndPoint,
+                            endPoint: config.AllowEndPointTracker ? connectorService.VpnEndPoint.TcpEndPoint : null,
                             adNetworkName: null), CancellationToken.None);
                 }
             }
@@ -389,6 +399,7 @@ internal class ClientSessionBuilder(
                     HostQuicEndPoint = hostQuicEndPoint,
                     IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
                     AdRequirement = helloResponse.AdRequirement,
+                    CanShowAdOverVpn = config.CanShowAdOverVpn,
                     MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
                         ? Math.Min(config.Transport.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)
                         : config.Transport.MaxPacketChannelCount
@@ -467,10 +478,10 @@ internal class ClientSessionBuilder(
         return ret;
     }
 
-    // only for an address the name gave, and an IPv4 one: the name is asked again for IPv4 addresses only
+    // only for an address the name gave, of either IP version: the name is asked again for that version's
     private ServerAddressCheck? CreateServerAddressCheck(VpnEndPoint vpnEndPoint)
     {
-        return serverFinder.IsByHostName(vpnEndPoint) && vpnEndPoint.TcpEndPoint.AddressFamily == AddressFamily.InterNetwork
+        return serverFinder.IsByHostName(vpnEndPoint)
             ? new ServerAddressCheck(vpnEndPoint.HostName, vpnEndPoint.TcpEndPoint.Address, vpnAdapter)
             : null;
     }

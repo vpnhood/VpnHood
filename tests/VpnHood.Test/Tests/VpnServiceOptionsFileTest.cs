@@ -1,6 +1,9 @@
+using System.Text.Json;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
 
 namespace VpnHood.Test.Tests;
 
@@ -87,6 +90,44 @@ public class VpnServiceOptionsFileTest : TestBase
         using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
         var readTask = Task.Run(() => serviceOptionsFile.Read(cancellationTokenSource.Token), TestCt);
         await Assert.ThrowsAsync<OperationCanceledException>(() => readTask);
+    }
+
+    // A proxies' reset is a word to a live connector, which the reconfigure carries; saved, it cleared the proxies'
+    // ratings again at every start without the app, as the tile's or always-on's. It is not saved
+    [TestMethod]
+    public async Task A_proxies_reset_is_not_saved()
+    {
+        var serviceOptionsFile = CreateServiceOptionsFile();
+        await serviceOptionsFile.Write(CreateServiceOptions(resetStates: true), TestCt);
+        var savedOptions = await serviceOptionsFile.Read(TestCt);
+        Assert.AreEqual(ProxyMode.Managed, savedOptions.ProxyOptions?.Mode);
+        Assert.AreEqual(false, savedOptions.ProxyOptions?.ResetStates);
+
+        await serviceOptionsFile.Update(CreateServiceOptions(resetStates: true), TestCt);
+        savedOptions = await serviceOptionsFile.Read(TestCt);
+        Assert.AreEqual(false, savedOptions.ProxyOptions?.ResetStates);
+    }
+
+    // A file an older app saved holds the reset it was sent with, and each start without the app cleared the proxies'
+    // ratings again until the app saved the options anew. A saved reset is read as none
+    [TestMethod]
+    public async Task A_proxies_reset_an_older_app_saved_is_read_as_none()
+    {
+        var serviceOptionsFile = CreateServiceOptionsFile();
+        await File.WriteAllTextAsync(serviceOptionsFile.FilePath,
+            JsonSerializer.Serialize(CreateServiceOptions(resetStates: true)), TestCt);
+
+        var savedOptions = await serviceOptionsFile.Read(TestCt);
+        Assert.AreEqual(ProxyMode.Managed, savedOptions.ProxyOptions?.Mode);
+        Assert.AreEqual(false, savedOptions.ProxyOptions?.ResetStates);
+    }
+
+    private static VpnServiceOptions CreateServiceOptions(bool resetStates)
+    {
+        return new VpnServiceOptions {
+            ClientOptions = new ClientOptions { AdapterName = "test", AccessKey = "test", ClientId = "test" },
+            ProxyOptions = new ProxyOptions { Mode = ProxyMode.Managed, ResetStates = resetStates }
+        };
     }
 
     private VpnServiceOptionsFile CreateServiceOptionsFile()

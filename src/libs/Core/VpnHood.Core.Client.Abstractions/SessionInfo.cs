@@ -39,14 +39,21 @@ public class SessionInfo
     public required bool IsTcpForwardingSupported { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether the server's settings require TCP forwarding, its Cloak Mode, which turns on
+    /// <see cref="ClientOptions.DropQuic"/> and <see cref="ClientOptions.DropUdp"/> as the user's TCP forwarding does. An
+    /// older server, which does not say, is taken to be in it where it takes no TCP as packets at all.
+    /// </summary>
+    public bool IsTcpForwardingRequired { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the server carries the device's QUIC; where it does not, the client drops it as
-    /// <see cref="ClientOptions.DropQuic"/> does, whatever that says, while it forwards IPv4 TCP.
+    /// <see cref="ClientOptions.DropQuic"/> does, whatever that says.
     /// </summary>
     public required bool IsQuicPacketSupported { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the server carries the device's UDP; where it does not, the client drops it as
-    /// <see cref="ClientOptions.DropUdp"/> does, whatever that says, while it forwards IPv4 TCP.
+    /// <see cref="ClientOptions.DropUdp"/> does, whatever that says.
     /// </summary>
     public required bool IsUdpPacketSupported { get; init; }
 
@@ -71,10 +78,10 @@ public class SessionInfo
     public required IReadOnlyList<ChannelProtocol> ChannelProtocols { get; init; }
 
     /// <summary>
-    /// Gets or sets an access key the server gave to replace the client's, or <see langword="null"/>; the app updates
-    /// its profile with it after the connect.
+    /// Gets an access key the server gave to replace the client's, or <see langword="null"/>; the app updates its
+    /// profile with it after the connect.
     /// </summary>
-    public required string? AccessKey { get; set; }
+    public required string? AccessKey { get; init; }
 
     /// <summary>Gets the code of the country the server places the client in, or <see langword="null"/>.</summary>
     public required string? ClientCountry { get; init; }

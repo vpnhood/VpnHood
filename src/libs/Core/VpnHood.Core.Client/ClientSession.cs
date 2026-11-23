@@ -44,6 +44,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AsyncLock _disposeLock = new();
     private readonly AsyncLock _packetChannelLock = new();
+    private readonly Lock _configLock = new();
+    private readonly Lock _stateLock = new(); // a state's look and its set, as one step
+
+    // canceled at a close's start, before its stop of the adapter, which an adapter start under way would outlast
+    private readonly CancellationTokenSource _adapterStartCts = new();
     private readonly DomainFilteringService _domainFilteringService;
 
     // the session's UDP when the server offers it, which its tunnel owns
@@ -67,6 +72,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private bool _useTcpForwarding;
     private bool _dropQuic;
     private bool _dropUdp;
+    // whether a domain rule was on while the server forwards no TCP, so the warning comes once each time one turns on
+    private bool _isTcpUnreadByDomainRules;
     private DateTime? _lastConnectionErrorTime;
     // the session's own state: State shows WaitingForAd in its place while an ad is awaited
     private ClientState _state = ClientState.None;
@@ -83,6 +90,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public int CreatedPacketChannelCount { get; private set; }
     // UDP is on and its socket open, so it carries the session's packets
     internal bool IsUdpOpen => _tunnel.UseUdp && _udpChannel is { IsSocketOpen: true };
+
+    // the packets' handling as the settings and the server make it now
+    internal ClientPacketHandler PacketHandler => _packetHandler;
     internal ClientUdpPacketChannel? UdpChannel => _udpChannel;
     internal bool IsAdapterStarted => _vpnAdapter.IsStarted;
     internal PassthroughState PassthroughState { get; } = new();
@@ -236,10 +246,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // we can start managing datagram channels but lets wait for it after ad
         var manageChannelsTask = ManagePacketChannels(waitForLock: false, cancellationToken);
 
-        // wait for ad before adapter
-        var retryAd = false; 
+        // wait for ad before adapter, so the ad network sees no VPN; an ad that can show over the VPN waits for the
+        // adapter instead, below, and goes as the session's other traffic does
+        var waitForAdAfterAdapter = false;
         if (Config.AdRequirement != AdRequirement.None)
-            retryAd = await AdHandler.TryWaitForAd(cancellationToken).Vhc() != null;
+            waitForAdAfterAdapter = Config.CanShowAdOverVpn ||
+                                    await AdHandler.TryWaitForAd(cancellationToken).Vhc() != null;
 
         // manage datagram channels
         await manageChannelsTask.Vhc();
@@ -248,11 +260,31 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // once the adapter is up
         ThrowIfClosing();
 
-        // start adapter
-        await _vpnAdapter.Start(Config.AdapterOptions, cancellationToken).Vhc();
+        // start adapter: a close ends its start at its next step, or before its first, where it came after the look
+        // above
+        using var adapterStartCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _adapterStartCts.Token);
 
-        // retry ad after adapter started
-        if (retryAd) {
+        try {
+            await _vpnAdapter.Start(Config.AdapterOptions, adapterStartCts.Token).Vhc();
+        }
+        catch (OperationCanceledException) when (IsClosing && !cancellationToken.IsCancellationRequested) {
+            ThrowIfClosing();
+            throw;
+        }
+
+        // A close whose stop came between the look above and the start found the adapter down and left it, and the
+        // start brought it up after: down again, as the close would have it, as an adapter the caller keeps stays after
+        // its client
+        if (IsClosing) {
+            if (_vpnAdapter.IsStarted)
+                VhInvoker.TryInvoke("stop the VPN adapter", LogLevel.Warning, () => _vpnAdapter.Stop());
+
+            ThrowIfClosing();
+        }
+
+        // the ad after the adapter started: one that can show over the VPN, or one that failed before it, tried again
+        if (waitForAdAfterAdapter) {
             var ex = await AdHandler.TryWaitForAd(cancellationToken).Vhc();
             if (ex != null && Config.AdRequirement is not AdRequirement.Flexible)
                 throw ex;
@@ -300,13 +332,15 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             return _state;
         }
         private set {
-            if (_state == value) return;
+            // A closing session does not reopen, whatever a request still under way comes back with: the look and the
+            // set are one step, as a close may set its state between them
+            lock (_stateLock) {
+                if (_state == value) return;
+                if (IsClosing && value is not ClientState.Disposed)
+                    return;
 
-            // a closing session does not reopen, whatever a request still under way comes back with
-            if (IsClosing && value is not ClientState.Disposed)
-                return;
-
-            _state = value;
+                _state = value;
+            }
 
             // raised in place, as the client's release runs inside the Disposed one; a failed handler must not stop
             // the close, whose first step this may be
@@ -315,39 +349,49 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         }
     }
 
+    // Each setting is set under the lock its update takes, with it: an update under way, as the adapter's, reads the old
+    // value and writes the tunnel protocol back after the set
     public bool DropUdp {
         get => _dropUdp;
         set {
-            if (_dropUdp == value) return;
-            _dropUdp = value;
-            UpdateConfig();
+            lock (_configLock) {
+                if (_dropUdp == value) return;
+                _dropUdp = value;
+                UpdateConfigCore();
+            }
         }
     }
 
     public bool DropQuic {
         get => _dropQuic;
         set {
-            if (_dropQuic == value) return;
-            _dropQuic = value;
-            UpdateConfig();
+            lock (_configLock) {
+                if (_dropQuic == value) return;
+                _dropQuic = value;
+                UpdateConfigCore();
+            }
         }
     }
 
     public bool UseTcpForwarding {
         get => _useTcpForwarding;
         set {
-            if (_useTcpForwarding == value) return;
-            _useTcpForwarding = value;
-            UpdateConfig();
+            lock (_configLock) {
+                if (_useTcpForwarding == value) return;
+                _useTcpForwarding = value;
+                UpdateConfigCore();
+            }
         }
     }
 
     public ChannelProtocol ChannelProtocol {
         get => _channelProtocol;
         set {
-            if (_channelProtocol == value) return;
-            _channelProtocol = ChannelProtocolValidator.Validate(value, Info);
-            UpdateConfig();
+            lock (_configLock) {
+                if (_channelProtocol == value) return;
+                _channelProtocol = ChannelProtocolValidator.Validate(value, Info);
+                UpdateConfigCore();
+            }
         }
     }
 
@@ -370,19 +414,28 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         return _useTcpForwarding;
     }
 
+    // One update at a time: the setters and the adapter's and the domain filter's events each run one, and an older
+    // one's flags written after a newer one's would stay. Not on the packets' path
     private void UpdateConfig()
+    {
+        lock (_configLock)
+            UpdateConfigCore();
+    }
+
+    private void UpdateConfigCore()
     {
         // UseTcp, by IP version: a server may carry IPv6 TCP only by forwarding
         var useTcpForwardingIpV4 = CalcUseTcpForwarding(Info.IsTcpPacketIpV4Supported);
         var useTcpForwardingIpV6 = CalcUseTcpForwarding(Info.IsTcpPacketIpV6Supported);
 
-        // DropQuic is useful only if we use TCP forwarding; a server that does not carry QUIC turns it on whatever the
-        // user's setting
-        var dropQuic = (_dropQuic || !Info.IsQuicPacketSupported) && useTcpForwardingIpV4;
-
-        // DropUdp is useful only if we use TCP forwarding; a server that does not carry UDP turns it on whatever the
-        // user's setting
-        var dropUdp = (_dropUdp || !Info.IsUdpPacketSupported) && useTcpForwardingIpV4;
+        // DropQuic and DropUdp move apps to TCP, which helps only where TCP forwarding is chosen: by the user, or by the
+        // server's Cloak Mode. Then every IP version's TCP is forwarded, so one flag serves both. Forwarding the client
+        // takes on by itself, for a server adapter that carries no TCP packets of a version or for the domain rules,
+        // drops nothing, nor does TCP as packets. A server that does not carry QUIC or UDP has the client drop it
+        // whatever the setting, as it would not cross the server
+        var isTcpForwardingChosen = Info.IsTcpForwardingSupported && (_useTcpForwarding || Info.IsTcpForwardingRequired);
+        var dropQuic = (_dropQuic && isTcpForwardingChosen) || !Info.IsQuicPacketSupported;
+        var dropUdp = (_dropUdp && isTcpForwardingChosen) || !Info.IsUdpPacketSupported;
 
         // ChannelProtocol: UDP takes every packet at once, and a turn to TCP stops it before its first TCP channel
         _channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, Info);
@@ -400,11 +453,18 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         if (useTcpForwardingIpV4 != _useTcpForwarding)
             VhLogger.Instance.LogWarning("UseTcpForwarding is changed to {UseTcpForwarding} because of config or capability change.", useTcpForwardingIpV4);
 
+        // why a requested drop is off: the server forwards no TCP, or no one chose TCP forwarding
+        var dropOffReason = Info.IsTcpForwardingSupported
+            ? "neither the setting nor the server's Cloak Mode turns TCP forwarding on"
+            : "the server does not forward TCP";
+
         if (_dropQuic && !dropQuic)
-            VhLogger.Instance.LogWarning("DropQuic is changed to {DropQuic} because client can not use TcpForwarding.", dropQuic);
+            VhLogger.Instance.LogWarning("DropQuic is off, as {Reason}.", dropOffReason);
 
         if (_dropUdp && !dropUdp)
-            VhLogger.Instance.LogWarning("DropUdp is changed to {DropUdp} because client can not use TcpForwarding.", dropUdp);
+            VhLogger.Instance.LogWarning("DropUdp is off, as {Reason}.", dropOffReason);
+
+        WarnIfTcpUnreadByDomainRules();
 
         // update handlers. The requested drops stay as asked: a time without TCP forwarding turns them off only for
         // that time
@@ -417,6 +477,21 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         var isIpV6Supported = _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6);
         _packetHandler.IsIpV6SupportedByClient = isIpV6Supported;
         _forwardingManager.IsIpV6Supported = isIpV6Supported;
+    }
+
+    // A domain rule reads a TCP connection's name only where the client forwards it: from a server that forwards no TCP,
+    // the connections go as packets, which no rule reads. By the rules themselves, as names may be read with none
+    // (ForceLogSni); under the config lock, once each time a rule comes
+    private void WarnIfTcpUnreadByDomainRules()
+    {
+        var isTcpUnreadByDomainRules = _netFilter.DomainFilter is { IsEmpty: false } && !Info.IsTcpForwardingSupported;
+        if (isTcpUnreadByDomainRules && !_isTcpUnreadByDomainRules)
+            VhLogger.Instance.LogWarning(
+                "The domain rules cannot read TCP connections, as the server does not forward TCP. " +
+                "SessionId: {SessionId}, HostEndPoint: {HostEndPoint}",
+                VhLogger.FormatSessionId(Config.SessionId), VhLogger.Format(Config.HostTcpEndPoint));
+
+        _isTcpUnreadByDomainRules = isTcpUnreadByDomainRules;
     }
 
     private void VpnAdapter_PrimaryAdapterIpChanged(object? sender, EventArgs e)
@@ -454,6 +529,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     {
         if (_disposed)
             return;
+
+        lock (_configLock)
+            WarnIfTcpUnreadByDomainRules();
 
         lock (_filterLock) {
             // With no domain rule on, before the change and after it, nothing needs ending: each packet of a TCP
@@ -622,11 +700,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 return;
             }
 
-            // find timespan
-            var lifespan = VhUtils.IsInfinite(Config.MaxPacketChannelLifespan)
-                ? (TimeSpan?)null
-                : TimeSpan.FromSeconds(new Random().Next((int)Config.MinPacketChannelLifespan.TotalSeconds,
-                    (int)Config.MaxPacketChannelLifespan.TotalSeconds));
+            var lifespan = DrawPacketChannelLifespan(Config.MinPacketChannelLifespan, Config.MaxPacketChannelLifespan);
 
             // add the new channel; it never holds the adapter's reader, which carries all the device's
             // traffic: a full queue drops its oldest packet, as a router on the path would
@@ -767,6 +841,16 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         return true;
     }
 
+    // A packet channel's age limit: at random from the shortest up to, not including, the longest, by ticks, as whole
+    // seconds made one under a second 0, which closed the channel at its first check; the shortest where the two are
+    // equal; none where the longest is infinite
+    internal static TimeSpan? DrawPacketChannelLifespan(TimeSpan minLifespan, TimeSpan maxLifespan)
+    {
+        return VhUtils.IsInfinite(maxLifespan)
+            ? null
+            : TimeSpan.FromTicks(Random.Shared.NextInt64(minLifespan.Ticks, maxLifespan.Ticks));
+    }
+
     // A server that stopped answering may have moved, its name now giving other addresses: the session then ends with
     // that error, carrying them, for a new connect. Not once a request was answered meanwhile: the server is still
     // where the session is, whatever its name says. One check at a time: a pause may start while the last pause's
@@ -834,9 +918,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         if (_disposed)
             return;
 
-        // set state to disconnecting
+        // set state to disconnecting, and end an adapter start under way, before the stop
         VhLogger.Instance.LogInformation("Session is closing...");
         State = ClientState.Disconnecting;
+        _adapterStartCts.TryCancel();
 
         // stop adapter and events before sending bye request to free client from VPN as fast as possible and
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
@@ -903,6 +988,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private void DisposeSyncMembers()
     {
         State = ClientState.Disconnecting;
+        _adapterStartCts.TryCancel();
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
         _networkCts.TryCancel();

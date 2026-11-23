@@ -69,14 +69,21 @@ public class AppSessionInfo
     public required bool IsTcpPacketSupported { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether the server's settings require TCP forwarding, its Cloak Mode, which applies the
+    /// QUIC and UDP blocks as the switch does; a server whose adapter alone cannot take TCP packets requires nothing. An
+    /// older server, which does not say, is taken to require it where it takes no TCP as packets at all.
+    /// </summary>
+    public bool IsTcpForwardingRequired { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether the server carries the device's QUIC; where it does not, the client drops it as
-    /// <see cref="VpnHood.AppLogic.Api.Settings.UserSettings.DropQuic"/> does, whatever that says, while it forwards IPv4 TCP.
+    /// <see cref="VpnHood.AppLogic.Api.Settings.UserSettings.DropQuic"/> does, whatever that says.
     /// </summary>
     public required bool IsQuicPacketSupported { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the server carries the device's UDP; where it does not, the client drops it as
-    /// <see cref="VpnHood.AppLogic.Api.Settings.UserSettings.DropUdp"/> does, whatever that says, while it forwards IPv4 TCP.
+    /// <see cref="VpnHood.AppLogic.Api.Settings.UserSettings.DropUdp"/> does, whatever that says.
     /// </summary>
     public required bool IsUdpPacketSupported { get; init; }
 }

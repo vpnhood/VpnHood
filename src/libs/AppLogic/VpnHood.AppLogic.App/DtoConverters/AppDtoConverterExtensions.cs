@@ -54,6 +54,7 @@ internal static class AppDtoConverterExtensions
             ChannelProtocols = sessionInfo.ChannelProtocols.Select(x => x.ToAppDto()).ToArray(),
             IsTcpForwardingSupported = sessionInfo.IsTcpForwardingSupported,
             IsTcpPacketSupported = sessionInfo.IsTcpPacketIpV4Supported, // the TCP forwarding switch's, as in StateHelper
+            IsTcpForwardingRequired = sessionInfo.IsTcpForwardingRequired,
             IsQuicPacketSupported = sessionInfo.IsQuicPacketSupported,
             IsUdpPacketSupported = sessionInfo.IsUdpPacketSupported
         };

@@ -29,6 +29,7 @@
 * Fix: After you switch servers while connected, the VPN can still find its server when it restarts after a crash #windows
 * Fix: Disconnect is sent once, where after an answer that failed it went again and could end your next connection #windows
 * Fix: When your server's dynamic name gets a new address, a connection over IPv6 follows it too, as does one whose server moved to the other IP version where your network has that version, where it kept waiting
+* Fix: When your server's dynamic name gets a new address, the app finds it without waiting on a DNS server your network cannot reach, as an IPv6 one where your network has no IPv6 #android
 * Fix: Canceling a connect while Android asks for the VPN permission cancels it, where the app reported a timeout #android
 * Fix: The system's own start of the VPN, as Always-on's, no longer cancels or stops a connection you began or have, where it could take its place and fail, or stop the VPN #android
 * Fix: The VPN's notification no longer comes back for a few seconds after the VPN stops #android

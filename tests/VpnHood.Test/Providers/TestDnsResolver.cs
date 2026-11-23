@@ -11,15 +11,17 @@ public sealed class TestDnsResolver : IDisposable
 {
     private const ushort RecordTypeA = 1;
     private const ushort RecordTypeAaaa = 28;
-    private readonly UdpClient _udpClient = new(new IPEndPoint(IPAddress.Loopback, 0));
+    private readonly UdpClient _udpClient;
     private readonly CancellationTokenSource _disposeCts = new();
     private readonly CancellationToken _disposeToken;
     private readonly ConcurrentQueue<AddressFamily> _queries = new();
     private readonly IReadOnlyList<IPAddress> _addresses;
     private readonly Task _serveTask;
 
-    public TestDnsResolver(IReadOnlyList<IPAddress> addresses)
+    // at the endpoint given, or at a port of its own on IPv4's loopback
+    public TestDnsResolver(IReadOnlyList<IPAddress> addresses, IPEndPoint? endPoint = null)
     {
+        _udpClient = new UdpClient(endPoint ?? new IPEndPoint(IPAddress.Loopback, 0));
         _addresses = addresses;
         _disposeToken = _disposeCts.Token;
         _serveTask = Task.Run(Serve, CancellationToken.None);

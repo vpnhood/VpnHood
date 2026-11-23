@@ -22,6 +22,7 @@ public class ServerAddressCheckTest : TestBase
     private static readonly IPAddress SessionAddress = IPAddress.Parse("192.0.2.1");
     private static readonly IPAddress MovedAddress = IPAddress.Parse("192.0.2.2");
     private static readonly IPAddress SessionAddressIpV6 = IPAddress.Parse("2001:db8::1");
+    private static readonly IPAddress MovedAddressIpV6 = IPAddress.Parse("2001:db8::2");
 
     [TestMethod]
     public async Task An_address_the_name_still_gives_is_no_move()
@@ -119,7 +120,8 @@ public class ServerAddressCheckTest : TestBase
     [TestMethod]
     public async Task A_name_that_moved_to_IPv4_is_no_move_for_a_device_without_it()
     {
-        using var resolver = new TestDnsResolver([MovedAddress]);
+        // an IPv6 DNS server, as the network has no other within reach
+        using var resolver = new TestDnsResolver([MovedAddress], new IPEndPoint(IPAddress.IPv6Loopback, 0));
         using var vpnAdapter = new TestDnsVpnAdapter([resolver.EndPoint.Address]) {
             NetworkIpVersions = [IpVersion.IPv6]
         };
@@ -143,6 +145,33 @@ public class ServerAddressCheckTest : TestBase
 
         Assert.IsNull(await check.TryGetNewAddresses(TestCt));
         CollectionAssert.AreEqual(new[] { AddressFamily.InterNetwork }, resolver.Queries.ToArray());
+    }
+
+    // A DNS server of an IP version the network lacks is out of reach: where an adapter protects any socket, as
+    // Android's does, its query held the next server's back until it timed out, up to 5 seconds a check
+    [TestMethod]
+    [DataRow(IpVersion.IPv4)]
+    [DataRow(IpVersion.IPv6)]
+    public async Task A_DNS_server_of_an_IP_version_the_network_lacks_is_not_asked(IpVersion networkIpVersion)
+    {
+        // the check asks every DNS server at one port
+        using var resolverIpV4 = new TestDnsResolver([MovedAddress, MovedAddressIpV6]);
+        using var resolverIpV6 = new TestDnsResolver([MovedAddress, MovedAddressIpV6],
+            new IPEndPoint(IPAddress.IPv6Loopback, resolverIpV4.EndPoint.Port));
+
+        var isIpV4 = networkIpVersion == IpVersion.IPv4;
+        var resolver = isIpV4 ? resolverIpV4 : resolverIpV6;
+        var unreachedResolver = isIpV4 ? resolverIpV6 : resolverIpV4;
+        using var vpnAdapter = new TestDnsVpnAdapter([unreachedResolver.EndPoint.Address, resolver.EndPoint.Address]) {
+            NetworkIpVersions = [networkIpVersion]
+        };
+
+        var check = CreateCheck(resolver, isIpV4 ? SessionAddress : SessionAddressIpV6, vpnAdapter);
+
+        var newAddresses = await check.TryGetNewAddresses(TestCt);
+        Assert.IsEmpty(unreachedResolver.Queries);
+        CollectionAssert.AreEqual(new[] { isIpV4 ? MovedAddress : MovedAddressIpV6 },
+            newAddresses?.Addresses.ToArray());
     }
 
     // its lookup would go into the tunnel it checks

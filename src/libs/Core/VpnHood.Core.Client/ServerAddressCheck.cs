@@ -16,8 +16,10 @@ namespace VpnHood.Core.Client;
 // redirect's or a custom one never moves with the name.
 // The name is asked of the network's DNS servers, those of the network under the tunnel, over a socket the adapter
 // protects, so the lookup bypasses the tunnel (on Apple, every socket of the VPN's extension goes around its tunnel);
-// where it cannot protect one, the name is not asked, as the lookup would go into the tunnel it checks. A name that
-// gets no answer, as in an outage of the device's own network, is no move: the session waits, as it did.
+// where it cannot protect one, the name is not asked, as the lookup would go into the tunnel it checks. A DNS server of
+// an IP version the network lacks is not asked either: it is out of reach, and its query held the next server's back
+// until it timed out. A name that gets no answer, as in an outage of the device's own network, is no move: the session
+// waits, as it did.
 // The name is asked for the addresses of the session's IP version first: a resolver that drops the other version's
 // query would leave this one's answer to read as a move. The other version is asked only where an answer of the
 // session's held none, as a name that moved to the other version alone gives, and the device's network carries it.
@@ -56,7 +58,10 @@ internal class ServerAddressCheck(string hostName, IPAddress serverAddress, IVpn
 
         var isOtherUsable = IsCarried(otherAddressFamily);
 
-        var dnsServers = TryGetDnsServers();
+        var dnsServers = TryGetDnsServers()
+            .Where(x => IsCarried(x.AddressFamily))
+            .ToArray();
+
         foreach (var dnsServer in dnsServers) {
             var addresses = await TryResolveByDnsServer(dnsServer, serverAddress.AddressFamily, cancellationToken)
                 .Vhc();
@@ -74,7 +79,7 @@ internal class ServerAddressCheck(string hostName, IPAddress serverAddress, IVpn
 
         VhLogger.Instance.LogInformation(
             "The server's name got no address, so the session keeps waiting. DnsServers: {DnsServers}",
-            dnsServers.Count);
+            dnsServers.Length);
 
         return [];
     }

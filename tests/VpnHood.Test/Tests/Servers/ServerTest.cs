@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -178,7 +179,7 @@ public class ServerTest : TestBase
         using var accessManager = await TestHelper.CreateAccessManager();
         accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
         var osConfigurationProvider = new TestOsConfigurationProvider {
-            AddIpAddressException = new NotSupportedException("No IP tool here.")
+            AddIpAddressException = new ExternalException("Operation not permitted")
         };
         await using var server =
             await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
@@ -190,7 +191,7 @@ public class ServerTest : TestBase
         var osStatus = accessManager.LastServerStatus?.OsStatus ??
                        throw new InvalidOperationException("No OS status was sent.");
         CollectionAssert.AreEqual(
-            new[] { $"{nameof(OsOptions.AddListenerIpsToNetwork)}: {address}: No IP tool here." },
+            new[] { $"{nameof(OsOptions.AddListenerIpsToNetwork)}: {address}: Operation not permitted" },
             osStatus.Errors.ToArray());
     }
 

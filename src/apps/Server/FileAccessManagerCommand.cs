@@ -96,7 +96,7 @@ public class FileAccessManagerCommand(Func<FileAccessManager> getFileAccessManag
             var accessToken = await fileAccessManager.AccessTokenService.Create(cancellationToken,
                 tokenName: parseResult.GetValue(nameOption),
                 maxClientCount: parseResult.GetValue(maxClientOption) ?? 2,
-                maxTrafficByteCount: (parseResult.GetValue(maxTrafficOptions) ?? 0) * 1_000_000,
+                maxTrafficByteCount: (parseResult.GetValue(maxTrafficOptions) ?? 0) * 1_000_000L, // over 2 GB too
                 expirationTime: parseResult.GetValue(expirationTimeOption),
                 maxSpeedMbps: maxSpeedMbps != null ? new Traffic(sent: maxSpeedMbps.Value, received: maxSpeedMbps.Value) : null
             ).Vhc();

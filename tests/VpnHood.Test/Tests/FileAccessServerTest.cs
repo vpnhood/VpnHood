@@ -414,6 +414,72 @@ public class FileAccessManagerTest : TestBase
             "More live clients than the key allows.");
     }
 
+    // A restarted server takes a session's limits from its recovery's look-ups, which carried none, so a recovered
+    // session ran with no speed limit
+    [TestMethod]
+    public async Task A_sessions_look_ups_carry_its_access_keys_limits()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        var maxSpeedMbps = new Traffic(sent: 5, received: 50);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, maxSpeedMbps: maxSpeedMbps);
+        var sessionRequestEx = CreateSessionRequestEx(accessManager.GetToken(accessToken));
+        var session = await accessManager.Session_Create(sessionRequestEx, TestCt);
+
+        var sessionResponse = await accessManager.Session_Get(session.SessionId, sessionRequestEx.HostEndPoint, null,
+            TestCt);
+
+        var recoveredSession = (await accessManager.Session_GetAll(TestCt)).Single(x => x.SessionId == session.SessionId);
+        Assert.AreEqual(maxSpeedMbps, sessionResponse.AccessInfo?.MaxSpeedMbps);
+        Assert.AreEqual(maxSpeedMbps, recoveredSession.AccessInfo?.MaxSpeedMbps);
+    }
+
+    // a rewarded ad's success cleared the session's timeout in memory alone, so a restart brought the timeout back
+    [TestMethod]
+    public async Task A_rewarded_ads_success_outlasts_a_restart()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        using var accessManager1 = await TestHelper.CreateAccessManager(storagePath: storagePath);
+        var sessionRequestEx = CreateSessionRequestEx(await accessManager1.CreateToken(TestCt));
+        sessionRequestEx.PlanId = ConnectPlanId.PremiumByRewardedAd;
+        var session = await accessManager1.Session_Create(sessionRequestEx, TestCt);
+        Assert.IsNotNull(accessManager1.SessionService.Sessions[session.SessionId].ExpirationTime);
+
+        accessManager1.AddAdData("rewarded");
+        await accessManager1.Session_AddUsage(session.SessionId, new Traffic(), adData: "rewarded", TestCt);
+        Assert.IsNull(accessManager1.SessionService.Sessions[session.SessionId].ExpirationTime);
+
+        using var accessManager2 = await TestHelper.CreateAccessManager(storagePath: storagePath);
+        Assert.IsNull(accessManager2.SessionService.Sessions[session.SessionId].ExpirationTime);
+    }
+
+    // a key's traffic quota went in as an int of bytes, so no key above 2 GB could be made
+    [TestMethod]
+    public async Task An_access_key_takes_a_traffic_quota_over_2_GB()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, maxTrafficByteCount: 5_000_000_000);
+
+        var accessTokenData = await accessManager.AccessTokenService.Get(accessToken.TokenId, TestCt);
+        Assert.AreEqual(5_000_000_000, accessTokenData.AccessToken.MaxTraffic);
+    }
+
+    // A key's ad reached only the look-ups' answers, not the one that makes a session, which the server's hello takes:
+    // outside the unit-test mode, a key that asks for an ad got none
+    [TestMethod]
+    public async Task A_new_session_asks_for_its_access_keys_ad()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+        var options = new FileAccessManagerOptions { TcpEndPoints = [IPEndPoint.Parse("127.0.0.1:8000")] };
+        using var accessManager = await FileAccessManager.Create(storagePath, options, TestCt);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+
+        var session = await accessManager.Session_Create(CreateSessionRequestEx(accessManager.GetToken(accessToken)),
+            TestCt);
+
+        Assert.AreEqual(SessionErrorCode.Ok, session.ErrorCode);
+        Assert.AreEqual(AdRequirement.Flexible, session.AdRequirement);
+    }
+
     public SessionRequestEx CreateSessionRequestEx(Token token, string? clientId = null)
     {
         clientId ??= Guid.NewGuid().ToString();

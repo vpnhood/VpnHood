@@ -18,7 +18,7 @@ public class WinSystemInfoProvider : ISystemInfoProvider
     public SystemInfo GetSystemInfo()
     {
         try {
-            var availableMemoryCounter = new PerformanceCounter("Memory", "Available Bytes");
+            using var availableMemoryCounter = new PerformanceCounter("Memory", "Available Bytes");
             var availableMemory = availableMemoryCounter.RawValue;
             var totalMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
             var usage = _cpuCounter.NextValue();
@@ -31,11 +31,12 @@ public class WinSystemInfoProvider : ISystemInfoProvider
             };
         }
         catch (Exception ex) {
+            // unknown, which 0 is not
             VhLogger.Instance.LogWarning(ex, "Could not get SystemInfo.");
             return new SystemInfo {
                 OsInfo = GetOperatingSystemInfo(),
-                TotalMemory = 0,
-                AvailableMemory = 0,
+                TotalMemory = null,
+                AvailableMemory = null,
                 CpuUsage = 0,
                 LogicalCoreCount = Environment.ProcessorCount
             };

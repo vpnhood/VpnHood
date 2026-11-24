@@ -1,5 +1,14 @@
 # Latest
 
+* Fix: A key made with `gen -maxTraffic` above 2,147 MB, such as the guide's 50000, gets that quota, where it wrapped round to a negative one and the key was refused at its first connect
+* Fix: A VpnHoodServer serves files from its downloads folder alone, where a request could climb into a folder beside it whose name begins the same, such as downloads-private
+* Fix: A self-hosted VpnHoodServer restarted with sessions under way keeps their keys' speed limits, where it ran them with none
+* Fix: A VpnHoodServer with no VPN adapter refuses settings that turn off AllowTcpForwarding, with an error at its configuration, where its users' sessions connected and then had no way for TCP
+* Fix: A VpnHoodServer that its access manager configures again no longer raises its least I/O threads 30-fold each time, and logs a value the system refuses
+* Fix: A Windows VpnHoodServer that cannot read its memory reports it as unknown, where it reported 0
+* Update: With LogAnonymizer on, a VpnHoodServer's log of its settings hides its QUIC endpoints too, as it does its TCP and UDP ones
+* Fix: A VpnHoodServer closes a forwarded TCP connection that passed nothing either way for an hour, where one whose destination never answered, or whose phone changed networks, stayed open as long as its session; TcpIdleTimeout in its SessionOptions sets the time
+* Update: TcpTimeout in a server's SessionOptions is gone, as nothing read it; a settings file that has it still loads, and to keep a time set there, set TcpIdleTimeout
 * Fix: Where a VpnHoodServer forwards UDP and pings through sockets of its own, as for an IP version its VPN adapter's NAT does not take, its net-scan protection holds for them: a destination it refused is checked again at the next packet, where that packet went through unchecked
 * Fix: A VpnHoodServer that forwards pings through sockets of its own no longer closes their workers at each cleanup whatever their use, which lost the reply of a ping under way
 * Update: In a VpnHoodServer's track log, a ping's line shows no source port (-), as a ping has no socket of its own, where it showed 0; a ping writes its line for a new destination alone, so with destination tracking off it writes none

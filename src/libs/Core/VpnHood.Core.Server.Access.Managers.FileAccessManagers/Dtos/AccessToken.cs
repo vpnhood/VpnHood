@@ -30,9 +30,9 @@ public class AccessToken
     public Traffic? MaxSpeedMbps { get; set; }
 
     /// <summary>
-    /// Gets or sets the ad the access key asks for: the answers of <see cref="FileAccessManager.Session_Get"/> and
-    /// <see cref="FileAccessManager.Session_GetAll"/> whose error code is <see cref="SessionErrorCode.Ok"/> carry it,
-    /// while the answer that makes a session requires none, and the answers to a session's usage and close carry none.
+    /// Gets or sets the ad the access key asks for, which the answers that make a session and that look one up carry
+    /// (<see cref="FileAccessManager.Session_Create"/>, <see cref="FileAccessManager.Session_Get"/> and
+    /// <see cref="FileAccessManager.Session_GetAll"/>), where their error code is <see cref="SessionErrorCode.Ok"/>.
     /// </summary>
     public AdRequirement AdRequirement { get; set; }
 }

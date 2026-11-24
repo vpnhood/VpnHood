@@ -22,11 +22,6 @@ public class SessionRequestEx
     public required byte[] EncryptedClientId { get; init; }
 
     /// <summary>
-    /// Gets or sets the client's country, or <see langword="null"/>; the server does not set it.
-    /// </summary>
-    public string? ClientCountry { get; set; }
-
-    /// <summary>
     /// Gets or sets the server's own data for the session, as JSON, which the access manager keeps and gives back with
     /// the session (<see cref="SessionResponseEx.ExtraData"/>).
     /// </summary>

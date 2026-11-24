@@ -5,6 +5,7 @@ using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
+using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
 
 namespace VpnHood.Core.Tunneling;
@@ -16,6 +17,7 @@ internal class ChannelManager : IDisposable
     private readonly HashSet<IStreamForwardingChannel> _streamForwardingChannels = [];
     private readonly List<IStreamPacketChannel> _packetChannels = [];
     private readonly EventHandler<IpPacket> _channelPacketReceived;
+    private readonly TimeSpan? _streamForwardingIdleTimeout;
     private bool _disposed;
     private readonly Job _cleanupJob;
 
@@ -26,9 +28,12 @@ internal class ChannelManager : IDisposable
             return _packetChannels.ToArray();
     }
 
-    public ChannelManager(int maxPacketChannelCount, EventHandler<IpPacket> channelPacketReceived)
+    // streamForwardingIdleTimeout: null for no limit
+    public ChannelManager(int maxPacketChannelCount, TimeSpan? streamForwardingIdleTimeout,
+        EventHandler<IpPacket> channelPacketReceived)
     {
         MaxPacketChannelCount = maxPacketChannelCount;
+        _streamForwardingIdleTimeout = streamForwardingIdleTimeout;
         _channelPacketReceived = channelPacketReceived;
         _cleanupJob = new Job(Cleanup, nameof(ChannelManager));
     }
@@ -202,8 +207,34 @@ internal class ChannelManager : IDisposable
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
+        RemoveIdleStreamForwardingChannels();
         CleanupChannels();
         return default;
+    }
+
+    // A forwarded connection that passed nothing either way for the limit: its destination never answered, or its client
+    // went without a close, as a phone that changes networks does, whose half-open connection nothing else ends while
+    // the session lives. Left so, as each is rare after an hour: the close cuts the read its tunnel connection waits on,
+    // so that connection is not reused, and a chunk the speed limit holds counts as idle
+    private void RemoveIdleStreamForwardingChannels()
+    {
+        if (_streamForwardingIdleTimeout is not { } idleTimeout || _disposed)
+            return;
+
+        // the time passed, not a cutoff, which a limit as large as TimeSpan.MaxValue would make throw
+        var now = FastDateTime.UtcNow;
+        IStreamForwardingChannel[] idleChannels;
+        lock (_channelListLock)
+            idleChannels = _streamForwardingChannels.Where(x => now - x.LastActivityTime > idleTimeout).ToArray();
+
+        foreach (var channel in idleChannels) {
+            VhLogger.Instance.LogDebug(GeneralEventId.StreamForwardingChannel,
+                "Closing an idle StreamForwardingChannel. ChannelId: {ChannelId}, LastActivityTime: {LastActivityTime}",
+                channel.ChannelId, channel.LastActivityTime);
+
+            // the manager's own disposal may have taken it meanwhile: a second removal does nothing
+            RemoveChannelInternal(channel, dispose: true);
+        }
     }
 
     public void CleanupChannels()

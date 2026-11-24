@@ -28,10 +28,16 @@ public class SessionOptions
     public TimeSpan? UdpTimeout { get; set; }
 
     /// <summary>
-    /// Gets or sets a TCP idle timeout, or <see langword="null"/> for 15 minutes, which nothing in the server reads now.
+    /// Gets or sets how long a forwarded TCP connection may pass no bytes either way before the server closes it, or
+    /// <see langword="null"/> for 1 hour, the server's own default for TCP through its VPN adapter on Linux
+    /// (<see cref="OsOptions.ConnectionTrackingTcpIdleTimeout"/>).
     /// </summary>
+    /// <remarks>
+    /// It ends one whose destination took it and never answers, and one whose client went without a close, as a phone
+    /// that changes networks does. The server looks about every 30 seconds.
+    /// </remarks>
     [JsonConverter(typeof(TimeSpanConverter))]
-    public TimeSpan? TcpTimeout { get; set; }
+    public TimeSpan? TcpIdleTimeout { get; set; }
 
     /// <summary>
     /// Gets or sets how long a destination a session pings stays tracked, where the server forwards ICMP itself, or
@@ -151,7 +157,8 @@ public class SessionOptions
     /// </summary>
     /// <remarks>
     /// Turning one way off leaves TCP going by the other (<see cref="AllowTcpPacket"/>); both off leave it no way
-    /// through, which the server refuses.
+    /// through, which the server refuses. So does a server with no VPN adapter refuse this one off, as only the adapter
+    /// takes a TCP packet out.
     /// </remarks>
     public bool? AllowTcpForwarding { get; set; }
 
@@ -240,6 +247,11 @@ public class SessionOptions
     [JsonIgnore]
     public TimeSpan UdpTimeoutValue => UdpTimeout ?? TimeSpan.FromMinutes(1);
 
+    // no shorter: a phone's push-notification connection can stay quiet for nearly half an hour
+    /// <summary>Gets <see cref="TcpIdleTimeout"/>, or its default, 1 hour.</summary>
+    [JsonIgnore]
+    public TimeSpan TcpIdleTimeoutValue => TcpIdleTimeout ?? TimeSpan.FromHours(1);
+
     /// <summary>Gets <see cref="UdpChannelBufferSize"/>, which has no default here.</summary>
     [JsonIgnore]
     public TransferBufferSize? UdpChannelBufferSizeValue => UdpChannelBufferSize ?? null;
@@ -247,10 +259,6 @@ public class SessionOptions
     /// <summary>Gets <see cref="UdpForwardingBufferSize"/>, which has no default here.</summary>
     [JsonIgnore]
     public TransferBufferSize? UdpForwardingBufferSizeValue => UdpForwardingBufferSize ?? null;
-
-    /// <summary>Gets <see cref="TcpTimeout"/>, or its default, 15 minutes.</summary>
-    [JsonIgnore]
-    public TimeSpan TcpTimeoutValue => TcpTimeout ?? TimeSpan.FromMinutes(15);
 
     /// <summary>Gets <see cref="IcmpTimeout"/>, or its default, 30 seconds.</summary>
     [JsonIgnore]
@@ -340,7 +348,7 @@ public class SessionOptions
     {
         if (obj.Timeout != null) Timeout = obj.Timeout;
         if (obj.UdpTimeout != null) UdpTimeout = obj.UdpTimeout;
-        if (obj.TcpTimeout != null) TcpTimeout = obj.TcpTimeout;
+        if (obj.TcpIdleTimeout != null) TcpIdleTimeout = obj.TcpIdleTimeout;
         if (obj.IcmpTimeout != null) IcmpTimeout = obj.IcmpTimeout;
         if (obj.SyncInterval != null) SyncInterval = obj.SyncInterval;
         if (obj.SyncCacheSize != null) SyncCacheSize = obj.SyncCacheSize;
@@ -377,7 +385,7 @@ public class SessionOptions
     {
         Timeout = TimeoutValue;
         UdpTimeout = UdpTimeoutValue;
-        TcpTimeout = TcpTimeoutValue;
+        TcpIdleTimeout = TcpIdleTimeoutValue;
         IcmpTimeout = IcmpTimeoutValue;
         SyncInterval = SyncIntervalValue;
         SyncCacheSize = SyncCacheSizeValue;

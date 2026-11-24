@@ -16,4 +16,13 @@ public class TunnelOptions
     /// without UDP.
     /// </summary>
     public IPacketChannel? UdpChannel { get; init; }
+
+    /// <summary>
+    /// Gets how long a stream forwarding channel may pass no bytes either way before the tunnel closes it, or
+    /// <see langword="null"/>, the default, for no limit.
+    /// </summary>
+    /// <remarks>
+    /// The tunnel looks at each run of its cleanup, every <see cref="VpnHood.Net.Toolkit.Jobs.JobOptions.DefaultInterval"/>.
+    /// </remarks>
+    public TimeSpan? StreamForwardingIdleTimeout { get; init; }
 }

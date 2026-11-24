@@ -27,7 +27,7 @@ public class AccessTokenService
     {
         // check is tokenId has any invalid file character
         if (tokenId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            throw new InvalidOperationException("invalid character int token id.");
+            throw new InvalidOperationException("Invalid character in the token id.");
 
         return Path.Combine(_storagePath, tokenId + FileExtAccessToken);
     }
@@ -36,7 +36,7 @@ public class AccessTokenService
     {
         // check is tokenId has any invalid file character
         if (tokenId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            throw new InvalidOperationException("invalid character int token id.");
+            throw new InvalidOperationException("Invalid character in the token id.");
 
         return Path.Combine(_storagePath, tokenId + FileExtAccessTokenUsage);
     }
@@ -58,7 +58,7 @@ public class AccessTokenService
         CancellationToken cancellationToken,
         int maxClientCount = 1,
         string? tokenName = null,
-        int maxTrafficByteCount = 0,
+        long maxTrafficByteCount = 0,
         DateTime? expirationTime = null,
         Traffic? maxSpeedMbps = null,
         AdRequirement adRequirement = AdRequirement.None)

@@ -1027,6 +1027,70 @@ public class ClientServerTest : TestBase
         await AssertEqualsWait(fileAccessManagerOptions.SessionOptions.MaxTcpChannelCount, () => session?.TcpChannelCount);
     }
 
+    // A forwarded connection whose destination took it and never answered stayed open on the server for as long as its
+    // session lived, as nothing ended an idle one
+    [TestMethod]
+    public async Task Server_closes_a_forwarded_tcp_connection_idle_past_its_limit()
+    {
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.TcpIdleTimeout = TimeSpan.FromSeconds(2);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+
+        var token = await TestHelper.CreateAccessToken(server);
+        var clientOptions = TestHelper.CreateClientOptions(token);
+        clientOptions.ChannelProtocol = ChannelProtocol.Udp;
+        clientOptions.UseTcpForwarding = true;
+        await using var client = await TestHelper.CreateClient(clientOptions);
+
+        // the destination waits for a 4-byte length, which never comes whole
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(MockEps.TcpUploadEndPoint1, TestCt);
+        var stream = tcpClient.GetStream();
+        await stream.WriteAsync(new byte[1], TestCt);
+        var session = server.SessionManager.GetSessionById(client.SessionId);
+        await AssertEqualsWait(1, () => session?.TcpChannelCount);
+
+        // the server closes it, and the app's end goes with it
+        await AssertEqualsWait(0, () => session?.TcpChannelCount);
+        Assert.IsTrue(await IsClosedByPeer(stream));
+    }
+
+    // A limit as large as TimeSpan.MaxValue made each of the tunnel's cleanups throw before it took out its ended
+    // channels
+    [TestMethod]
+    public async Task Server_takes_the_largest_tcp_idle_limit_as_none()
+    {
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.TcpIdleTimeout = TimeSpan.MaxValue;
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
+
+        var token = await TestHelper.CreateAccessToken(server);
+        var clientOptions = TestHelper.CreateClientOptions(token);
+        clientOptions.ChannelProtocol = ChannelProtocol.Udp;
+        clientOptions.UseTcpForwarding = true;
+        await using var client = await TestHelper.CreateClient(clientOptions);
+
+        // the destination sends its data and closes, which ends the channel; the cleanup alone takes it out
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(MockEps.TcpDataEndPoint1, TestCt);
+        await tcpClient.GetStream().ReadExactlyAsync(new byte[2000], TestCt);
+        var session = server.SessionManager.GetSessionById(client.SessionId);
+        await AssertEqualsWait(0, () => session?.TcpChannelCount);
+    }
+
+    // a close reads as the stream's end, a reset as an error; a read still waiting after 5 seconds fails the test
+    private async Task<bool> IsClosedByPeer(Stream stream)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
+        try {
+            return await stream.ReadAsync(new byte[1], timeoutCts.Token) == 0;
+        }
+        catch (IOException) {
+            return true;
+        }
+    }
+
     [TestMethod]
     [DoNotParallelize] // asserts exact connection-reuse counts
     public async Task Reusing_ChunkStream()

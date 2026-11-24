@@ -158,9 +158,8 @@ public class SessionService : IDisposable
             };
         }
 
-        var adRequirement = IsUnitTest
-            ? ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId)
-            : AdRequirement.None;
+        // outside the unit-test mode only the normal plan comes this far, whose ad is the key's
+        var adRequirement = ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId);
 
         // create the response, and add the session, as one admission of the key
         lock (GetAdmissionLock(session.TokenId)) {
@@ -168,16 +167,7 @@ public class SessionService : IDisposable
 
             // add session creation data
             responseEx.AdRequirement = adRequirement;
-            responseEx.AccessInfo = new AccessInfo {
-                ExpirationTime = accessTokenData.AccessToken.ExpirationTime,
-                LastUsedTime = accessTokenData.Usage.LastUsedTime,
-                CreatedTime = accessTokenData.Usage.CreatedTime,
-                IsPremium = true, // token is always premium in File Access Manager
-                MaxDeviceCount = accessTokenData.AccessToken.MaxClientCount,
-                MaxSpeedMbps = accessTokenData.AccessToken.MaxSpeedMbps,
-                MaxTotalTraffic = accessTokenData.AccessToken.MaxTraffic,
-                DevicesSummary = null // not supported
-            };
+            responseEx.AccessInfo = BuildAccessInfo(accessTokenData);
 
             if (responseEx.ErrorCode != SessionErrorCode.Ok)
                 return responseEx;
@@ -232,6 +222,9 @@ public class SessionService : IDisposable
         lock (GetAdmissionLock(session.TokenId)) {
             var ret = BuildSessionResponse(session, accessTokenData, isValidAd);
 
+            // the key's limits too: a restarted server takes a session's from its recovery's look-ups
+            ret.AccessInfo = BuildAccessInfo(accessTokenData);
+
             // update session status
             if (session.EndTime == null && ret.ErrorCode != SessionErrorCode.Ok) {
                 session.ErrorCode = ret.ErrorCode;
@@ -239,8 +232,26 @@ public class SessionService : IDisposable
                 Save(session);
             }
 
+            // a valid ad cleared the session's timeout, which a restart would otherwise bring back
+            if (isValidAd == true)
+                Save(session);
+
             return ret;
         }
+    }
+
+    private static AccessInfo BuildAccessInfo(AccessTokenData accessTokenData)
+    {
+        return new AccessInfo {
+            ExpirationTime = accessTokenData.AccessToken.ExpirationTime,
+            LastUsedTime = accessTokenData.Usage.LastUsedTime,
+            CreatedTime = accessTokenData.Usage.CreatedTime,
+            IsPremium = true, // token is always premium in File Access Manager
+            MaxDeviceCount = accessTokenData.AccessToken.MaxClientCount,
+            MaxSpeedMbps = accessTokenData.AccessToken.MaxSpeedMbps,
+            MaxTotalTraffic = accessTokenData.AccessToken.MaxTraffic,
+            DevicesSummary = null // not supported
+        };
     }
 
     internal ulong[] ResetUpdatedSessions()

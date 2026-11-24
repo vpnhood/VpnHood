@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Net.Security;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Net.Toolkit.Extensions;
@@ -44,31 +46,33 @@ public static class CertificateUtil
                extensions[random.Next(extensions.Length)];
     }
 
-    /// <summary>Gets the certificate an HTTPS address presents, without checking it; the request's own errors are ignored.</summary>
-    /// <param name="url">The address.</param>
+    /// <summary>Gets the certificate a domain presents in its TLS handshake, without checking it.</summary>
+    /// <param name="domain">The domain, which is also the name the handshake asks for.</param>
+    /// <param name="port">The port. The default is 443.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the certificate.</returns>
-    /// <exception cref="Exception">The address presented no certificate.</exception>
-    public static async Task<X509Certificate2> GetCertificateFromUrl(Uri url, CancellationToken cancellationToken)
+    /// <remarks>The connection's and the handshake's own errors pass through, a cancel's too.</remarks>
+    /// <exception cref="ArgumentException">The domain is empty.</exception>
+    /// <exception cref="InvalidOperationException">The domain presented no certificate.</exception>
+    public static async Task<X509Certificate2> GetCertificateFromDomain(string domain, int port = 443,
+        CancellationToken cancellationToken = default)
     {
-        X509Certificate2? serverCertificate = null;
+        ArgumentException.ThrowIfNullOrWhiteSpace(domain);
 
-        using var handler = new HttpClientHandler();
-        handler.ServerCertificateCustomValidationCallback = (_, cert, _, _) => {
-            serverCertificate = cert != null ? new X509Certificate2(cert) : cert;
-            return true; // Accept all certificates for this example
-        };
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(domain, port, cancellationToken).Vhc();
 
-        try {
-            // ReSharper disable once ShortLivedHttpClient
-            using var client = new HttpClient(handler);
-            await client.GetAsync(url, cancellationToken).Vhc();
-        }
-        catch (Exception) {
-            // ignore
-        }
+        // the certificate is what is asked for, whoever signed it
+        await using var sslStream = new SslStream(tcpClient.GetStream(), leaveInnerStreamOpen: false,
+            userCertificateValidationCallback: (_, _, _, _) => true);
 
-        return serverCertificate ?? throw new Exception("Could not extract certificate from url");
+        await sslStream.AuthenticateAsClientAsync(
+            new SslClientAuthenticationOptions { TargetHost = domain }, cancellationToken).Vhc();
+
+        // a copy, as the stream's goes with it
+        return sslStream.RemoteCertificate is { } certificate
+            ? new X509Certificate2(certificate)
+            : throw new InvalidOperationException("The domain presented no certificate.");
     }
 
     /// <summary>Makes a copy of a certificate whose private key is kept and can be exported.</summary>
@@ -151,66 +155,51 @@ public static class CertificateUtil
     /// The subject, or <see langword="null"/> for <c>CN=</c> and a made-up host name (<see cref="CreateRandomDns"/>).
     /// </param>
     /// <param name="notAfter">The end of its validity, or <see langword="null"/> for 5 years from now.</param>
-    /// <returns>The certificate, with its private key, which can be exported.</returns>
-    /// <exception cref="ArgumentException">
-    /// The end is past the made-up authority's, 8 March 2027, as the default's is now.
-    /// </exception>
-    // ReSharper disable once UnusedMember.Global
+    /// <returns>
+    /// The certificate alone, with its private key, which can be exported; the made-up authorities are not part of it.
+    /// </returns>
+    /// <remarks>A made-up authority cannot sign as the real one, so the chain passes no check of its signatures.</remarks>
     public static X509Certificate2 CreateChained(RSA rsa, string? subjectName = null,
         DateTimeOffset? notAfter = null)
     {
         subjectName ??= $"CN={CreateRandomDns()}";
-        notAfter ??= DateTimeOffset.UtcNow.AddYears(5);
+        var notBefore = DateTimeOffset.UtcNow;
+        notAfter ??= notBefore.AddYears(5);
 
-        var random = new Random();
+        // the authorities' dates cover the certificate's, as an issuer must outlast what it signs
+        using var rootRsa = RSA.Create();
+        using var rootCertificate = CreateAuthorityRequest(
+                "CN = DigiCert Global Root CA, OU = www.digicert.com, O = DigiCert Inc, C = US", rootRsa)
+            .CreateSelfSigned(notBefore.AddYears(-10), notAfter.Value.AddYears(10));
 
-        // Create fake authority Root
-        using var rsa1 = RSA.Create();
-        var certRequest =
-            new CertificateRequest("CN = DigiCert Global Root CA, OU = www.digicert.com, O = DigiCert Inc, C = US",
-                rsa1, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var authorityRsa = RSA.Create();
+        using var authorityPublicCertificate = CreateAuthorityRequest(
+                "CN = DigiCert SHA2 Secure Server CA, O = DigiCert Inc, C = US", authorityRsa)
+            .Create(rootCertificate, notBefore.AddYears(-5), notAfter.Value.AddYears(5), CreateSerialNumber());
 
-        // set basic certificate constraints
-        certRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
+        using var authorityCertificate = authorityPublicCertificate.CopyWithPrivateKey(authorityRsa);
+        using var publicCertificate =
+            new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+                .Create(authorityCertificate, notBefore, notAfter.Value, CreateSerialNumber());
 
-        // key usage: Digital Signature and Key
-        certRequest.CertificateExtensions.Add(new X509KeyUsageExtension(
-            X509KeyUsageFlags.KeyCertSign |
-            X509KeyUsageFlags.DigitalSignature
-            , true));
-
-        var rootCertificate = certRequest.CreateSelfSigned(
-            new DateTimeOffset(2006, 11, 9, 16, 0, 0, TimeSpan.Zero),
-            new DateTimeOffset(2031, 11, 9, 16, 0, 0, TimeSpan.Zero));
-
-        // Create fake Root
-        using var rsa2 = RSA.Create();
-        certRequest = new CertificateRequest("CN = DigiCert SHA2 Secure Server CA, O = DigiCert Inc, C = US", rsa2,
-            HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        // set basic certificate constraints
-        certRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
-
-        //// key usage: Digital Signature and Key Encipherment
-        certRequest.CertificateExtensions.Add(new X509KeyUsageExtension(
-            X509KeyUsageFlags.KeyCertSign |
-            X509KeyUsageFlags.DigitalSignature
-            , true));
-
-        var serial = new byte[20];
-        random.NextBytes(serial);
-        var authorityCertificate = certRequest.Create(rootCertificate,
-            new DateTimeOffset(2013, 3, 8, 16, 0, 0, TimeSpan.Zero),
-            new DateTimeOffset(2027, 3, 8, 16, 0, 0, TimeSpan.Zero),
-            serial);
-        authorityCertificate = authorityCertificate.CopyWithPrivateKey(rsa2);
-
-        // Create certificate Root
-        certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        serial = new byte[20];
-        random.NextBytes(serial);
-        var certificate = certRequest.Create(authorityCertificate, DateTimeOffset.UtcNow, notAfter.Value, serial);
-        certificate = certificate.CopyWithPrivateKey(rsa);
-
+        using var certificate = publicCertificate.CopyWithPrivateKey(rsa);
         return CreateExportable(certificate);
+    }
+
+    private static CertificateRequest CreateAuthorityRequest(string subjectName, RSA rsa)
+    {
+        var request = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(
+            X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.DigitalSignature, true));
+
+        return request;
+    }
+
+    private static byte[] CreateSerialNumber()
+    {
+        var serialNumber = new byte[20];
+        Random.Shared.NextBytes(serialNumber);
+        return serialNumber;
     }
 }

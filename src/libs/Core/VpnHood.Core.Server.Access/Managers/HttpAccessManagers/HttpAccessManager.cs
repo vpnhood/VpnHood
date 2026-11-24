@@ -20,6 +20,8 @@ namespace VpnHood.Core.Server.Access.Managers.HttpAccessManagers;
 /// </remarks>
 public class HttpAccessManager : ApiClientBase, IAccessManager
 {
+    private readonly HttpClient? _ownHttpClient;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpAccessManager"/> class over an HTTP client, whose own base
     /// address and headers serve.
@@ -31,11 +33,12 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="HttpAccessManager"/> class with an HTTP client of its own.
+    /// Initializes a new instance of the <see cref="HttpAccessManager"/> class with an HTTP client of its own, which
+    /// <see cref="Dispose"/> disposes.
     /// </summary>
     /// <param name="options">The access manager's address and authorization.</param>
     public HttpAccessManager(HttpAccessManagerOptions options)
-        : this(new HttpClient(), options)
+        : this(new HttpClient(), options, isOwnHttpClient: true)
     {
     }
 
@@ -46,8 +49,14 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
     /// <param name="httpClient">The HTTP client, which stays the caller's.</param>
     /// <param name="options">The access manager's address and authorization.</param>
     public HttpAccessManager(HttpClient httpClient, HttpAccessManagerOptions options)
+        : this(httpClient, options, isOwnHttpClient: false)
+    {
+    }
+
+    private HttpAccessManager(HttpClient httpClient, HttpAccessManagerOptions options, bool isOwnHttpClient)
         : base(httpClient)
     {
+        _ownHttpClient = isOwnHttpClient ? httpClient : null;
         DefaultBaseAddress =
             new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/tower/").Uri;
 
@@ -252,8 +261,9 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         }
     }
 
-    /// <summary>Does nothing, not even for an HTTP client it made itself.</summary>
+    /// <summary>Disposes the HTTP client the access manager made itself; a caller's stays the caller's.</summary>
     public virtual void Dispose()
     {
+        _ownHttpClient?.Dispose();
     }
 }

@@ -81,14 +81,15 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
     /// <param name="accessManager">The access manager, which the server disposes with itself.</param>
     /// <param name="options">The options.</param>
     /// <exception cref="ArgumentNullException"><paramref name="accessManager"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidProgramException">The options' VPN adapter has no NAT for IPv4.</exception>
+    /// <exception cref="ArgumentException">The options' VPN adapter has no NAT for IPv4.</exception>
     public VpnHoodServer(IAccessManager accessManager, ServerOptions options)
     {
         if (options.SocketFactory == null)
             throw new ArgumentNullException(nameof(options.SocketFactory));
 
         if (options.VpnAdapter?.IsNatSupported(IpVersion.IPv4) == false)
-            throw new InvalidProgramException("VpnAdapter must support NAT to work with VpnServer.");
+            throw new ArgumentException("The VPN adapter must support NAT for IPv4 to work with the server.",
+                nameof(options));
 
         AccessManager = accessManager;
         _netFilter = options.NetFilter;
@@ -184,10 +185,11 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         VhLogger.Instance.LogInformation("DownloadsPath: {DownloadsPath}", ServerHost.DownloadPath);
 
         // Report TcpBuffers
-        var tcpClient = new TcpClient();
-        VhLogger.Instance.LogInformation(
-            "DefaultTcpKernelSentBufferSize: {DefaultTcpKernelSentBufferSize}, DefaultTcpKernelReceiveBufferSize: {DefaultTcpKernelReceiveBufferSize}",
-            tcpClient.SendBufferSize, tcpClient.ReceiveBufferSize);
+        using (var tcpClient = new TcpClient()) {
+            VhLogger.Instance.LogInformation(
+                "DefaultTcpKernelSentBufferSize: {DefaultTcpKernelSentBufferSize}, DefaultTcpKernelReceiveBufferSize: {DefaultTcpKernelReceiveBufferSize}",
+                tcpClient.SendBufferSize, tcpClient.ReceiveBufferSize);
+        }
 
         // Report Anonymous info
         _ = SessionManager.Tracker?.TryTrack(new TrackEvent {
@@ -218,6 +220,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         scope?.Dispose();
         _configureAndSendStatusJob.Start(); // before its own run, so a run that throws still leaves it running
         await _configureAndSendStatusJob.RunNow(cancellationToken).Vhc();
+
+        // the job ends a canceled run quietly: the caller's cancel is the caller's to see
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private async Task Configure(CancellationToken cancellationToken)
@@ -355,9 +360,11 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
         }
         // a stop's cancellation is not a configuration error: it passes, and the job swallows it. One the server's
-        // close made reports the close, as a configuration the close interrupts after its read does
+        // close made reports the close, as a configuration the close interrupts after its read does. Back to waiting,
+        // so the job's next run configures again: a canceled start left it Configuring, which no run took up
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             ObjectDisposedException.ThrowIf(_disposing, this);
+            State = ServerState.Waiting;
             throw;
         }
         // nor is a refusal once the server's close has begun, which would keep the next start from configuring
@@ -438,33 +445,19 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
         };
     }
 
-    private static TransferBufferSize GetBestStreamBufferSize(long? totalMemory, TransferBufferSize? configValue)
-    {
-        if (configValue != null)
-            return configValue.Value;
-
-        if (totalMemory == null)
-            return ServerTransportDefaults.StreamForwardingBufferSize;
-
-        var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
-        bufferSize = Math.Max(bufferSize, 8192);
-        bufferSize = Math.Min(bufferSize, 8192); //81920, it looks it doesn't have effect
-        return new TransferBufferSize((int)bufferSize, (int)bufferSize);
-    }
-
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
         var serverConfig = await ReadConfigImpl(serverInfo, cancellationToken).Vhc();
-        serverConfig.SessionOptions.StreamForwardingBufferSize =
-            GetBestStreamBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.StreamForwardingBufferSize);
         serverConfig.ApplyDefaults();
-        VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
+        VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}",
+            GetServerConfigReport(serverConfig, VhLogger.IsAnonymousMode));
 
         if (_config != null) {
             _config.ConfigCode = serverConfig.ConfigCode;
             serverConfig.Merge(_config);
             VhLogger.Instance.LogWarning("Remote configuration has been overwritten by the local settings.");
-            VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
+            VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}",
+                GetServerConfigReport(serverConfig, VhLogger.IsAnonymousMode));
         }
 
         // refused rather than applied: every session would connect, then find no way for its TCP
@@ -472,6 +465,12 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             throw new NotSupportedException(
                 $"The configuration turns off both {nameof(SessionOptions.AllowTcpPacket)} and " +
                 $"{nameof(SessionOptions.AllowTcpForwarding)}, which leaves TCP no way through.");
+
+        // nor TCP as packets alone on a server with no VPN adapter: only the adapter takes a TCP packet out
+        if (serverConfig.SessionOptions is { AllowTcpForwardingValue: false } && !SessionManager.HasVpnAdapter)
+            throw new NotSupportedException(
+                $"The configuration turns off {nameof(SessionOptions.AllowTcpForwarding)} on a server with no VPN " +
+                "adapter, which leaves TCP no way through.");
 
         // override defaults
         return serverConfig;
@@ -488,15 +487,16 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
             : json;
     }
 
-    private static string GetServerConfigReport(ServerConfig serverConfig)
+    internal static string GetServerConfigReport(ServerConfig serverConfig, bool isAnonymous)
     {
         var json = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
-        return VhLogger.IsAnonymousMode
+        return isAnonymous
             ? JsonUtils.RedactValue(json, [
                 nameof(ServerConfig.ServerSecret),
                 nameof(CertificateData.RawData),
                 nameof(ServerConfig.TcpEndPoints),
-                nameof(ServerConfig.UdpEndPoints)
+                nameof(ServerConfig.UdpEndPoints),
+                nameof(ServerConfig.QuicEndPoints)
             ])
             : JsonUtils.RedactValue(json, [
                 nameof(CertificateData.RawData) // it will ruin the report and useless to see

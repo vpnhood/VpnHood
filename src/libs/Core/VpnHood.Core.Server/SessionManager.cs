@@ -63,6 +63,8 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     internal bool IsVpnAdapterSupported(IpVersion ipVersion) =>
         _vpnAdapter != null && _vpnAdapter.IsNatSupported(ipVersion) && _vpnAdapter.IsIpVersionSupported(ipVersion);
 
+    internal bool HasVpnAdapter => _vpnAdapter != null;
+
     internal IpNetwork VirtualIpNetworkV4 => _virtualIpManager.IpNetworkV4;
     internal IpNetwork VirtualIpNetworkV6 => _virtualIpManager.IpNetworkV6;
 
@@ -238,22 +240,23 @@ public class SessionManager : IAsyncDisposable, IDisposable, ISessionResponseHan
     }
 
     /// <summary>
-    /// Logs the sessions' counts: the active, idle and dead ones and all of them, with their TCP channels and UDP
+    /// Logs the sessions' counts: the active, idle and closed ones and all of them, with their TCP channels and UDP
     /// connections.
     /// </summary>
     public void Report()
     {
-        var totalCount = Sessions.Count;
+        // a closed session stays a while before it goes, neither active nor idle
+        var sessions = Sessions.Values.ToArray();
         var idleCount = GetIdleSessions().Length;
-        var deadCount = GetDeadSessions().Length;
-        var activeCount = totalCount - idleCount - deadCount;
+        var closedCount = sessions.Count(x => x.IsDisposed);
+        var activeCount = sessions.Length - idleCount - closedCount;
 
         VhLogger.Instance.LogInformation(
             "Sessions Status. " +
-            "ActiveSessions: {ActiveSessions}, IdleSessions: {idleCount}, DeadSessions: {DeadSessions}, TotalSessions: {TotalSessions}, " +
+            "ActiveSessions: {ActiveSessions}, IdleSessions: {idleCount}, ClosedSessions: {ClosedSessions}, TotalSessions: {TotalSessions}, " +
             "TotalTcpChannels: {TotalTcpChannels}, TotalUdpChannels: {TotalUdpChannels}",
-            activeCount, idleCount, deadCount, totalCount,
-            Sessions.Sum(x => x.Value.TcpChannelCount), Sessions.Sum(x => x.Value.UdpConnectionCount));
+            activeCount, idleCount, closedCount, sessions.Length,
+            sessions.Sum(x => x.TcpChannelCount), sessions.Sum(x => x.UdpConnectionCount));
     }
 
     private Task<bool> TryTrackNewSession(ClientInfo clientInfo, CancellationToken cancellationToken)

@@ -55,9 +55,9 @@ public class Tunnel : PacketTransportBase
     /// Gets or sets a value indicating whether every packet goes on the UDP channel; the stream channels stay, and take
     /// the packets again once it is off.
     /// </summary>
-    /// <remarks>A server's stream channel whose close was lost stays until the session ends.</remarks>
+    /// <remarks>A server's stream packet channel whose close was lost stays until the session ends.</remarks>
     /// <exception cref="InvalidOperationException">It is set on, and the tunnel has no UDP channel.</exception>
-    // the server has no timeout for an established stream channel: left so
+    // the server has no timeout for an established stream packet channel: left so
     public bool UseUdp {
         get => _useUdp;
         set {
@@ -78,7 +78,9 @@ public class Tunnel : PacketTransportBase
         }, singleMode: true, passthrough: true)
     {
         Mtu = options.Mtu;
-        _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
+        _channelManager = new ChannelManager(options.MaxPacketChannelCount, options.StreamForwardingIdleTimeout,
+            Channel_OnPacketReceived);
+
         _udpChannel = options.UdpChannel;
         if (_udpChannel != null) {
             _udpChannel.PacketReceived += Channel_OnPacketReceived;

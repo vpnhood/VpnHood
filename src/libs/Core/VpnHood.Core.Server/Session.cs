@@ -181,8 +181,10 @@ internal class Session : IDisposable
         var tunnelOptions = new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
             Mtu = Math.Min(TransportDefaults.MtuClient, extraData.Mtu),
-            UdpChannel = UdpChannel
+            UdpChannel = UdpChannel,
+            StreamForwardingIdleTimeout = options.TcpIdleTimeoutValue
         };
+
         Tunnel = TrafficMeter.MaxSpeed.Sent > 0
             ? new ThrottledTunnel(tunnelOptions, TrafficMeter)
             : new Tunnel(tunnelOptions);

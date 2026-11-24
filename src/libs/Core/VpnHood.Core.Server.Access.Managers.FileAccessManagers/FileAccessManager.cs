@@ -327,7 +327,7 @@ public class FileAccessManager : IAccessManager
     }
 
     internal async Task<Token> CreateToken(CancellationToken cancellationToken, int maxClientCount = 1,
-        string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null,
+        string? tokenName = null, long maxTrafficByteCount = 0, DateTime? expirationTime = null,
         AdRequirement adRequirement = AdRequirement.None)
     {
         var accessToken = await AccessTokenService.Create(cancellationToken,

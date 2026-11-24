@@ -158,7 +158,7 @@ internal class DownloadService(string? downloadsPath)
 
     }
 
-    private static string? ResolveFilePath(string downloadsPath, string urlPath, out string relativePath, out string queryString)
+    internal static string? ResolveFilePath(string downloadsPath, string urlPath, out string relativePath, out string queryString)
     {
         relativePath = string.Empty;
         queryString = string.Empty;
@@ -179,8 +179,12 @@ internal class DownloadService(string? downloadsPath)
         var rootFullPath = Path.GetFullPath(downloadsPath);
         var filePath = Path.GetFullPath(Path.Combine(rootFullPath, relativePath));
 
-        // Ensure the resolved path is still under the root downloads directory
-        if (!filePath.StartsWith(rootFullPath, StringComparison.OrdinalIgnoreCase))
+        // Inside the folder, by its path and a separator: the bare path let a sibling folder whose name begins with it
+        // through, such as downloads-private. Case counts, as on Linux another case is another folder
+        if (!Path.EndsInDirectorySeparator(rootFullPath))
+            rootFullPath += Path.DirectorySeparatorChar;
+
+        if (!filePath.StartsWith(rootFullPath, StringComparison.Ordinal))
             return null;
 
         // Check if the file exists. Random file is a virtual file and must exist to prevent fingerprinting

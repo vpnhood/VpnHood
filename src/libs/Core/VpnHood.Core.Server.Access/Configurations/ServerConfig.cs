@@ -101,8 +101,8 @@ public class ServerConfig
     public string ConfigCode { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the thread pool's least I/O completion threads: <see langword="null"/> for 30 times the pool's
-    /// minimum at the time, at each configuration, and 0 to leave it.
+    /// Gets or sets the thread pool's least I/O completion threads: <see langword="null"/> for 30 times the pool's own
+    /// minimum, as the server's process started, and 0 to leave it.
     /// </summary>
     public int? MinCompletionPortThreads { get; set; }
 

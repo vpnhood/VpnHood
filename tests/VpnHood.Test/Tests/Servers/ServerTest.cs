@@ -13,6 +13,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.OsConfiguration;
+using VpnHood.Core.Server.Utils;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
@@ -57,6 +58,97 @@ public class ServerTest : TestBase
 
         Assert.AreEqual(ServerState.Waiting, server.State);
         Assert.IsNotNull(accessManager.LastServerStatus?.ConfigError);
+    }
+
+    // With no VPN adapter, TCP as packets has no way out: a configuration that turned off TCP forwarding there passed,
+    // and every session then found no way for its TCP
+    [TestMethod]
+    public async Task Configure_refuses_tcp_as_packets_alone_on_a_server_with_no_vpn_adapter()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.SessionOptions.AllowTcpForwarding = false;
+
+        // no adapter, as a test server has none
+        await using var server = await TestHelper.CreateServer(accessManager, autoStart: false);
+        await server.Start(TestCt);
+
+        Assert.AreEqual(ServerState.Waiting, server.State);
+        Assert.IsNotNull(accessManager.LastServerStatus?.ConfigError);
+    }
+
+    // A cancel of the start during the server's first configuration left it Configuring, which no later run took up,
+    // and the start returned as if it had gone well
+    [TestMethod]
+    public async Task A_start_canceled_during_its_configuration_leaves_the_server_to_configure_again()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        accessManager.ConfigureHold.IsHeld = true;
+        await using var server = await TestHelper.CreateServer(accessManager, autoStart: false);
+        using var startCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var start = server.Start(startCts.Token);
+        await VhTestUtil.AssertEqualsWait(1, () => accessManager.ConfigureHold.HeldCount,
+            "The configuration should be under way.", cancellationToken: TestCt);
+
+        // the start's cancel ends the access manager's call under way
+        startCts.Cancel();
+        accessManager.ServerConfigureException = new OperationCanceledException(startCts.Token);
+        accessManager.ConfigureHold.IsHeld = false;
+        accessManager.ConfigureHold.Release();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => start);
+        Assert.AreEqual(ServerState.Waiting, server.State);
+
+        // the next run configures it
+        accessManager.ServerConfigureException = null;
+        await server.ConfigureAndSendStatus(TestCt);
+        await VhTestUtil.AssertEqualsWait(ServerState.Ready, () => server.State, cancellationToken: TestCt);
+    }
+
+    // The default least I/O completion threads were 30 times the pool's minimum of the moment, so each configuration
+    // multiplied the last one's
+    [TestMethod]
+    [DoNotParallelize] // the thread pool is the process's
+    public void A_configuration_sets_the_default_least_io_threads_it_set_before()
+    {
+        ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
+        ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var maxCompletionPortThreads);
+        try {
+            // room for a multiple of a multiple, so a second one would show
+            ThreadPool.SetMaxThreads(maxWorkerThreads, 0xFFFF);
+            ThreadPool.SetMinThreads(minWorkerThreads, 2);
+            ServerUtils.ConfigMinIoThreads(null);
+            ThreadPool.GetMinThreads(out _, out var first);
+            ServerUtils.ConfigMinIoThreads(null);
+            ThreadPool.GetMinThreads(out _, out var second);
+            Assert.AreEqual(first, second);
+        }
+        finally {
+            ThreadPool.SetMinThreads(minWorkerThreads, minCompletionPortThreads);
+            ThreadPool.SetMaxThreads(maxWorkerThreads, maxCompletionPortThreads);
+        }
+    }
+
+    // the anonymous report of the configuration hid the TCP and UDP endpoints, not the QUIC ones
+    [TestMethod]
+    public void The_anonymous_configuration_report_hides_every_endpoint()
+    {
+        var serverConfig = new ServerConfig {
+            TcpEndPoints = [IPEndPoint.Parse("203.0.113.1:443")],
+            UdpEndPoints = [IPEndPoint.Parse("203.0.113.2:443")],
+            QuicEndPoints = [IPEndPoint.Parse("203.0.113.3:443")]
+        };
+
+        var report = VpnHoodServer.GetServerConfigReport(serverConfig, isAnonymous: true);
+        Assert.IsFalse(report.Contains("203.0.113.", StringComparison.Ordinal), report);
+    }
+
+    // a VPN adapter whose NAT translates no IPv4 threw InvalidProgramException, the runtime's type for invalid code
+    [TestMethod]
+    public async Task A_vpn_adapter_without_ipv4_nat_is_an_argument_error()
+    {
+        using var vpnAdapter = new TestNoNatVpnAdapter();
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
+            TestHelper.CreateServer(TestHelper.CreateFileAccessManagerOptions(), autoStart: false,
+                vpnAdapter: vpnAdapter));
     }
 
     [TestMethod]
@@ -416,7 +508,7 @@ public class ServerTest : TestBase
         serverConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(500);
         serverConfig.TrackingOptions.TrackClientIp = true;
         serverConfig.TrackingOptions.TrackLocalPort = true;
-        serverConfig.SessionOptions.TcpTimeout = TimeSpan.FromSeconds(2070);
+        serverConfig.SessionOptions.TcpIdleTimeout = TimeSpan.FromSeconds(2070);
         serverConfig.SessionOptions.UdpTimeout = TimeSpan.FromSeconds(2071);
         serverConfig.SessionOptions.IcmpTimeout = TimeSpan.FromSeconds(2072);
         serverConfig.SessionOptions.Timeout = TimeSpan.FromSeconds(2073);
@@ -445,7 +537,7 @@ public class ServerTest : TestBase
             server.SessionManager.TrackingOptions.TrackClientIp);
         Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort,
             server.SessionManager.TrackingOptions.TrackLocalPort);
-        Assert.AreEqual(serverConfig.SessionOptions.TcpTimeout, server.SessionManager.SessionOptions.TcpTimeout);
+        Assert.AreEqual(serverConfig.SessionOptions.TcpIdleTimeout, server.SessionManager.SessionOptions.TcpIdleTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.Timeout, server.SessionManager.SessionOptions.Timeout);
@@ -785,7 +877,7 @@ public class ServerTest : TestBase
                 SyncInterval = TimeSpan.FromMinutes(52),
                 StreamForwardingBufferSize = new TransferBufferSize(9000, 90001),
                 TcpConnectTimeout = TimeSpan.FromMinutes(53),
-                TcpTimeout = TimeSpan.FromMinutes(54),
+                TcpIdleTimeout = TimeSpan.FromMinutes(54),
                 Timeout = TimeSpan.FromMinutes(55),
                 UdpTimeout = TimeSpan.FromMinutes(56),
                 MinClientProtocolVersion = 57

@@ -82,13 +82,16 @@ Write-Host "create new release: $versionTag";
 # off, or Docker when the registry secrets are absent), so warn about each missing asset rather than
 # failing the whole release on a non-existent file path.
 if ($assetSet -eq "server") {
-	# Server set: Linux (x64/arm64/any + msquic + OS updates) tar.gz/sh/json, Windows-x64 zip/ps1/json, and the two
-	# docker-compose helper files. The docker files keep their literal "VpnHoodServer.docker.*" names
-	# (see src/apps/Server/pub/publish_docker.ps1), independent of $packageFileTitle.
+	# Server set: Linux (x64/arm64/any + msquic + OS updates + the installer for a user without root)
+	# tar.gz/sh/json, Windows-x64 zip/ps1/json, and the two docker-compose helper files. The docker files keep
+	# their literal "VpnHoodServer.docker.*" names (see src/apps/Server/pub/publish_docker.ps1), independent of
+	# $packageFileTitle.
 	$assets = @(
 		"$packageDir/linux-any/$packageFileTitle-linux-msquic.sh",
 		"$packageDir/linux-any/$packageFileTitle-linux-os-updates.sh",
 		"$packageDir/linux-any/$packageFileTitle-linux.sh",
+		# its updater downloads it from the release it installs (src/apps/Server/pub/Linux-User/updater.sh)
+		"$packageDir/linux-any/$packageFileTitle-linux-user.sh",
 
 		"$packageDir/linux-x64/$packageFileTitle-linux-x64.json",
 		"$packageDir/linux-x64/$packageFileTitle-linux-x64.sh",

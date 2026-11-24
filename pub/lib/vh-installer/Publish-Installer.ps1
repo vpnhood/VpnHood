@@ -89,6 +89,21 @@ if ($installTemplate -eq "install") {
     (Get-Content $osUpdatesSrc -Raw) -replace "`r", "" | Out-File -FilePath $osUpdatesDst -Encoding ASCII -Force -NoNewline
 }
 
+# The server's installer for a user without root, from the server's own Linux-User folder: one for both CPUs, as
+# it picks the package itself; with its release's values. Its updater downloads <app>-linux-user.sh from the
+# release it installs.
+if ($installTemplate -eq "install") {
+    Write-Host "Preparing the user installer script..." -ForegroundColor Green
+    $userInstallContent = Get-Content -Path "$solutionDir/src/apps/Server/pub/Linux-User/install.sh" -Raw;
+    $userInstallContent = $userInstallContent.Replace('$(releaseUrlParam)', "$releaseUrl");
+    $userInstallContent = $userInstallContent.Replace('$(versionTagParam)', "$versionTag");
+    $userInstallContent = $userInstallContent.Replace('$(productNameParam)', "$productName");
+    $userInstallContent = $userInstallContent.Replace('$(assemblyNameParam)', "$assemblyName");
+    $userInstallContent = $userInstallContent.Replace('$(launcherNameParam)', "$launcherName");
+    $userInstallContent = $userInstallContent -replace "`r`n", $lineEnding;
+    $userInstallContent | Out-File -FilePath "$moduleDir/$assemblyName-$os-user.$shellExt" -Encoding ASCII -Force -NoNewline;
+}
+
 # Copy the installer script to latest
 if ($isLatest)
 {

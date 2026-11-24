@@ -150,6 +150,19 @@ if ($installTemplate -eq "install-client") {
 	$installScript  | Out-File -FilePath "$publish_infoDir/kill-switch-off$publishFileExt" -Encoding ASCII -Force -NoNewline;
 }
 
+# the updater and the uninstaller of a Linux server installed by a user without root, from the server's own
+# Linux-User folder, whose install.sh places them as vhupdate and vhuninstall
+if ($installTemplate -eq "install" -and $os -ieq "linux") {
+	Write-Output "Creating the user install's updater and uninstaller scripts...";
+	foreach ($userScript in @(@("updater", "vhupdate-user"), @("uninstall", "vhuninstall-user"))) {
+		$installScript = Get-Content -Path "$SolutionDir/src/apps/Server/pub/Linux-User/$($userScript[0]).sh" -Raw;
+		$installScript = $installScript.Replace('$(productNameParam)', "$productName");
+		$installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");
+		$installScript = $installScript -replace "`r`n", $lineEnding;
+		$installScript  | Out-File -FilePath "$publish_infoDir/$($userScript[1])" -Encoding ASCII -Force -NoNewline;
+	}
+}
+
 # publish info: the updater's, and the app's feed (PublishInfo), which reads the same file
 if ([string]::IsNullOrWhiteSpace($installationPageUrl)) { $installationPageUrl = "$repoBaseUrl/releases/latest"; }
 $json = @{

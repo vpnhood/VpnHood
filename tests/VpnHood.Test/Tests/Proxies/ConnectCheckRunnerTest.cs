@@ -212,7 +212,8 @@ public class ConnectCheckRunnerTest : ProxyTestBase
     }
 
     // The close left a check before a connect running, on the sockets of a client that was closing, until the check's
-    // time ran out. It now stops the check, which records nothing it stopped, and the connect's wait ends with the close
+    // time ran out. It now stops the check, which records nothing it stopped, and the connect's wait ends with the
+    // close
     [TestMethod]
     public async Task The_close_ends_a_check_before_a_connect_that_has_no_pass_yet()
     {
@@ -429,7 +430,8 @@ public class ConnectCheckRunnerTest : ProxyTestBase
         await connector.UpdateOptions(proxyOptions, TestCt);
 
         var newStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == newProxy.EndPoint.Port).Status;
-        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded, "The endpoint the app added was not checked.");
+        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded,
+            "The endpoint the app added was not checked.");
     }
 
     // The checks behind the session took the server of the last call, which a server search's probe of a server that is
@@ -513,7 +515,8 @@ public class ConnectCheckRunnerTest : ProxyTestBase
         await connector.UpdateOptions(proxyOptions, TestCt);
 
         var newStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == newProxy.EndPoint.Port).Status;
-        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded, "The endpoint the app added was not checked.");
+        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded,
+            "The endpoint the app added was not checked.");
     }
 
     // A connection that waited for a list's download checked its proxy, and so did a check the download started behind
@@ -526,7 +529,8 @@ public class ConnectCheckRunnerTest : ProxyTestBase
         target.Start();
         var targetEndPoint = (IPEndPoint)target.LocalEndpoint;
 
-        // the connection's server, apart from the check's, so a check behind the session shows in what the proxy was asked
+        // the connection's server, apart from the check's, so a check behind the session shows in what the proxy was
+        // asked
         using var connectionTarget = new TcpListener(IPAddress.Loopback, 0);
         connectionTarget.Start();
         var connectionTargetEndPoint = (IPEndPoint)connectionTarget.LocalEndpoint;
@@ -567,7 +571,9 @@ public class ConnectCheckRunnerTest : ProxyTestBase
         using var connection = await connecting;
 
         // the connection's own check and its dial, both to its server, once every check ended
-        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay, "A check behind the session did not end.");
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay,
+            "A check behind the session did not end.");
+
         await AssertEqualsWait(true, () => connector.Progress is null, "A check did not end.");
         Assert.AreEqual(2, proxy.Destinations.Count, "The proxy was not asked twice.");
         Assert.IsTrue(proxy.Destinations.All(x => x.Equals(connectionTargetEndPoint)),
@@ -602,7 +608,8 @@ public class ConnectCheckRunnerTest : ProxyTestBase
 
         // every endpoint off, then the one back on and another added
         using var appStore = await CreateStore();
-        await Upsert(appStore, [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(proxy.EndPoint, isEnabled: false) }]);
+        await Upsert(appStore,
+            [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(proxy.EndPoint, isEnabled: false) }]);
         await connector.UpdateOptions(proxyOptions, TestCt);
         await Upsert(appStore, [
             new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(proxy.EndPoint) },
@@ -611,7 +618,8 @@ public class ConnectCheckRunnerTest : ProxyTestBase
 
         await connector.UpdateOptions(proxyOptions, TestCt);
         var newStatus = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == newProxy.EndPoint.Port).Status;
-        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded, "The endpoint the app added was not checked.");
+        await AssertEqualsWait(true, () => newStatus.IsLastUsedSucceeded,
+            "The endpoint the app added was not checked.");
     }
 
     // The check before a connect began with the endpoints never used, as Unknown comes first in the quality's order:
@@ -645,7 +653,8 @@ public class ConnectCheckRunnerTest : ProxyTestBase
             await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint, hostName: null,
                 serverCertificateValidation: null, TestCt).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
 
-            Assert.AreEqual(1, proxy.Destinations.Count, "The check went on at the stored success, with no check of it.");
+            Assert.AreEqual(1, proxy.Destinations.Count,
+                "The check went on at the stored success, with no check of it.");
         }
         finally {
             foreach (var silentProxy in silentProxies)
@@ -715,8 +724,8 @@ public class ConnectCheckRunnerTest : ProxyTestBase
     }
 
     // A connection's success gave the checks behind the session its server where no check had passed, and kept it there
-    // when the VPN's TLS then failed on it, as with a server that is no VPN server, or did not end in time, which reads as
-    // a cancellation: the checks rated every proxy against it. That connection's failure takes it back
+    // when the VPN's TLS then failed on it, as with a server that is no VPN server, or did not end in time, which reads
+    // as a cancellation: the checks rated every proxy against it. That connection's failure takes it back
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]

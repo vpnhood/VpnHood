@@ -32,7 +32,7 @@ public abstract class ProxyTestBase : TestBase
 
     // a connection through the connector's one proxy, whose status says it worked last, so the connect checks no
     // server first
-    protected async Task<(ManagedProxyConnector Connector, TcpClient TcpClient)> ConnectThroughProxy(
+    protected async Task<ConnectionThroughProxy> ConnectThroughProxy(
         TimeSpan? serverCheckTimeout = null, Func<IProxyEndPointStore, IProxyEndPointStore>? wrapStore = null)
     {
         using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
@@ -54,13 +54,15 @@ public abstract class ProxyTestBase : TestBase
                 Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
             }
         ]);
+
         var connector = await ManagedProxyConnector.Create(new ProxyOptions(), wrapStore?.Invoke(store) ?? store,
             socketFactory: null, serverCheckTimeout, TestCt);
 
         var connection = await connector.ConnectAsync(new TestSocketFactory(),
-            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null,
+            TestCt);
 
-        return (connector, connection.TcpClient);
+        return new ConnectionThroughProxy(connector, connection.TcpClient);
     }
 
     // an endpoint of the test SOCKS5 proxy

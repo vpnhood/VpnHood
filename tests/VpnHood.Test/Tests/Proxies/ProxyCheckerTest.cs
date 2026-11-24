@@ -62,8 +62,11 @@ public class ProxyCheckerTest : ProxyTestBase
                 Port = endPoint2.Port
             });
 
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null, serverCheckTimeout: null, TestCt);
-        await mgr.CheckServers(socketFactory, new IPEndPoint(IPAddress.Loopback, 443), hostName: null, serverCertificateValidation: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
+        await mgr.CheckServers(socketFactory, new IPEndPoint(IPAddress.Loopback, 443), hostName: null,
+            serverCertificateValidation: null, TestCt);
 
         // All servers that are no SOCKS4 proxy should be marked as inactive
         Assert.IsTrue(mgr.GetEndPointInfos().All(status => !status.EndPoint.IsEnabled));
@@ -83,7 +86,8 @@ public class ProxyCheckerTest : ProxyTestBase
             await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
 
         var vpnServerEndPoint = (IPEndPoint)vpnServer.LocalEndpoint;
-        await connector.CheckServers(new TestSocketFactory(), vpnServerEndPoint, "vpn.example", serverCertificateValidation: null, TestCt);
+        await connector.CheckServers(new TestSocketFactory(), vpnServerEndPoint, "vpn.example",
+            serverCertificateValidation: null, TestCt);
 
         CollectionAssert.AreEqual(new[] { vpnServerEndPoint }, proxy.Destinations.ToArray());
         Assert.AreEqual("vpn.example", await hostNameTask.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
@@ -121,8 +125,8 @@ public class ProxyCheckerTest : ProxyTestBase
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = true },
             await CreateStore(ToProxyEndPoint(proxy.EndPoint)), socketFactory: null, serverCheckTimeout: null, TestCt);
 
-        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)vpnServer.LocalEndpoint, hostName: null, serverCertificateValidation: null,
-            TestCt);
+        await connector.CheckServers(new TestSocketFactory(), (IPEndPoint)vpnServer.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
 
         var info = connector.GetEndPointInfos().Single();
         Assert.IsTrue(info.Status.IsLastUsedFailed);

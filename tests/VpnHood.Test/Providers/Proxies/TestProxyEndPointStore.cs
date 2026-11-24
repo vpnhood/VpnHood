@@ -65,16 +65,23 @@ public class TestProxyEndPointStore(IProxyEndPointStore store) : IProxyEndPointS
         return await store.List(cancellationToken);
     }
 
-    public Task<ProxyEndPointRecord?> Get(string id, CancellationToken cancellationToken) => store.Get(id, cancellationToken);
+    public Task<ProxyEndPointRecord?> Get(string id, CancellationToken cancellationToken) =>
+        store.Get(id, cancellationToken);
+
     public Task<int> Count(CancellationToken cancellationToken) => store.Count(cancellationToken);
-    public Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options, CancellationToken cancellationToken) =>
-        store.List(options, cancellationToken);
+    public Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options,
+        CancellationToken cancellationToken) => store.List(options, cancellationToken);
 
     public Task Upsert(IReadOnlyList<ProxyEndPointRecord> records, bool keepExistingStatus,
-        bool keepExistingEnabled, CancellationToken cancellationToken) => store.Upsert(records, keepExistingStatus, keepExistingEnabled, cancellationToken);
+        bool keepExistingEnabled, CancellationToken cancellationToken) =>
+        store.Upsert(records, keepExistingStatus, keepExistingEnabled, cancellationToken);
 
-    public Task Delete(IReadOnlyList<string> ids, CancellationToken cancellationToken) => store.Delete(ids, cancellationToken);
-    public Task DeleteAll(DeleteAllOptions options, CancellationToken cancellationToken) => store.DeleteAll(options, cancellationToken);
+    public Task Delete(IReadOnlyList<string> ids, CancellationToken cancellationToken) =>
+        store.Delete(ids, cancellationToken);
+
+    public Task DeleteAll(DeleteAllOptions options, CancellationToken cancellationToken) =>
+        store.DeleteAll(options, cancellationToken);
+
     public Task DisableAllFailed(CancellationToken cancellationToken) => store.DisableAllFailed(cancellationToken);
     public Task SetCountryCode(string id, string? countryCode, CancellationToken cancellationToken) =>
         store.SetCountryCode(id, countryCode, cancellationToken);

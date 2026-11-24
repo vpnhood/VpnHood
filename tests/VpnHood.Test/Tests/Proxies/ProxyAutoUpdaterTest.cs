@@ -28,10 +28,12 @@ public class ProxyAutoUpdaterTest : ProxyTestBase
             downloads.AddOrUpdate(ctx.Request.Url.RawWithoutQuery, 1, (_, count) => count + 1);
             await ctx.Response.Send("socks5://127.0.0.1:1080");
         });
+
         _ = webServer.StartAsync(TestCt);
         try {
             await using var connector =
-                await ManagedProxyConnector.Create(CreateAutoUpdateOptions(port, "/a"), await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+                await ManagedProxyConnector.Create(CreateAutoUpdateOptions(port, "/a"), await CreateStore(),
+                    socketFactory: null, serverCheckTimeout: null, TestCt);
 
             await AssertEqualsWait(1, () => downloads.GetValueOrDefault("/a"), "the first download");
 
@@ -95,8 +97,8 @@ public class ProxyAutoUpdaterTest : ProxyTestBase
         target.Start();
         using var proxy = new TestSocks5Proxy().Start();
         using var listServer = new ListServer($"socks5://{proxy.EndPoint}", isHeld: false, TestCt);
-        await using var connector = await ManagedProxyConnector.Create(CreateListOptions(listServer.Url, interval: null),
-            await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+        await using var connector = await ManagedProxyConnector.Create(CreateListOptions(listServer.Url,
+            interval: null), await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
 
         using var connection = await connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
             hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
@@ -229,7 +231,8 @@ public class ProxyAutoUpdaterTest : ProxyTestBase
         Assert.AreEqual(0, listServer.DownloadCount, "A list with an endpoint to use and no interval was downloaded.");
 
         using var appStore = await CreateStore();
-        await Upsert(appStore, [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(storedEndPoint, isEnabled: false) }]);
+        await Upsert(appStore,
+            [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(storedEndPoint, isEnabled: false) }]);
         await connector.UpdateOptions(proxyOptions, TestCt);
         await AssertEqualsWait(1, () => listServer.DownloadCount, "The list was not downloaded again.");
     }

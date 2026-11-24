@@ -19,7 +19,7 @@ public class ProxyEndPointListTest : ProxyTestBase
 {
     // A connector whose one proxy has a status its store has not saved yet: a connect through it succeeded. The proxy
     // succeeded last, so the connect checks nothing, and no check behind it saves the status first
-    private async Task<(ManagedProxyConnector Connector, TestProxyEndPointStore Store)> CreateConnectorWithUnsavedStatus()
+    private async Task<ConnectorWithStore> CreateConnectorWithUnsavedStatus()
     {
         using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
             ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
@@ -38,41 +38,44 @@ public class ProxyEndPointListTest : ProxyTestBase
         ]);
 
         var store = new TestProxyEndPointStore(innerStore);
-        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store, socketFactory: null, serverCheckTimeout: null, TestCt);
-        using var connection = await connector.ConnectAsync(new TestSocketFactory(),
-            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+        var connector = await ManagedProxyConnector.Create(new ProxyOptions { VerifyTls = false }, store,
+            socketFactory: null, serverCheckTimeout: null, TestCt);
 
-        return (connector, store);
+        using var connection = await connector.ConnectAsync(new TestSocketFactory(),
+            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null,
+            TestCt);
+
+        return new ConnectorWithStore(connector, store);
     }
 
     [TestMethod]
     public async Task A_second_close_waits_for_the_first_ones_flush()
     {
-        var (connector, store) = await CreateConnectorWithUnsavedStatus();
+        var unsaved = await CreateConnectorWithUnsavedStatus();
 
         // the first close's flush is held
-        store.HoldUpdates = true;
-        var firstClose = connector.DisposeAsync().AsTask();
-        await VhTestUtil.AssertEqualsWait(1, () => Volatile.Read(ref store.HeldUpdateCount),
+        unsaved.Store.HoldUpdates = true;
+        var firstClose = unsaved.Connector.DisposeAsync().AsTask();
+        await VhTestUtil.AssertEqualsWait(1, () => Volatile.Read(ref unsaved.Store.HeldUpdateCount),
             "The first close should flush.", cancellationToken: TestCt);
 
-        var secondClose = connector.DisposeAsync().AsTask();
+        var secondClose = unsaved.Connector.DisposeAsync().AsTask();
         await Task.Delay(TimeSpan.FromMilliseconds(200), TestCt);
         Assert.IsFalse(secondClose.IsCompleted);
 
-        store.ReleaseUpdates();
+        unsaved.Store.ReleaseUpdates();
         await Task.WhenAll(firstClose, secondClose).WaitAsync(TimeSpan.FromSeconds(5), TestCt);
-        Assert.IsTrue(store.IsDisposed);
+        Assert.IsTrue(unsaved.Store.IsDisposed);
     }
 
     [TestMethod]
     public async Task A_failed_flush_still_closes_the_store()
     {
-        var (connector, store) = await CreateConnectorWithUnsavedStatus();
+        var unsaved = await CreateConnectorWithUnsavedStatus();
 
-        store.FailUpdates = true;
-        await connector.DisposeAsync();
-        Assert.IsTrue(store.IsDisposed);
+        unsaved.Store.FailUpdates = true;
+        await unsaved.Connector.DisposeAsync();
+        Assert.IsTrue(unsaved.Store.IsDisposed);
     }
 
     // A reset of the statuses after the connect: the connection's failure took its success back from the reset count,
@@ -132,7 +135,8 @@ public class ProxyEndPointListTest : ProxyTestBase
 
         await connector.UpdateOptions(new ProxyOptions { VerifyTls = false, ResetStates = true }, TestCt);
         using var laterConnection = await connector.ConnectAsync(new TestSocketFactory(),
-            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
+            (IPEndPoint)target.LocalEndpoint, hostName: null, serverCertificateValidation: null, onAttempt: null,
+            TestCt);
 
         // the later connection checked, and a pass of the check behind it would land between the read and the assert
         await AssertEqualsWait(true, () => connector.Progress is null, "The check behind the connection did not end.");
@@ -145,8 +149,8 @@ public class ProxyEndPointListTest : ProxyTestBase
     }
 
     // A connection whose dial ended while a reset's reload was under way read the reset count before the reload's end,
-    // which counted the reset, and put its success on an entry the reload made: its failure after then took nothing back,
-    // and the proxy kept a success it never had. The count now comes from the entry that takes the success
+    // which counted the reset, and put its success on an entry the reload made: its failure after then took nothing
+    // back, and the proxy kept a success it never had. The count now comes from the entry that takes the success
     [TestMethod]
     public async Task A_failure_takes_back_the_success_its_connection_put_on_an_entry_a_reset_made()
     {
@@ -226,7 +230,9 @@ public class ProxyEndPointListTest : ProxyTestBase
         store.HoldLists = true;
         var updating = connector.UpdateOptions(new ProxyOptions { VerifyTls = false, ResetStates = true }, TestCt);
         try {
-            await AssertEqualsWait(1, () => Volatile.Read(ref store.HeldListCount), "The reset's reload did not start.");
+            await AssertEqualsWait(1, () => Volatile.Read(ref store.HeldListCount),
+                "The reset's reload did not start.");
+
             release.TrySetResult();
             using var connection = await connecting;
             store.HoldLists = false;
@@ -244,7 +250,9 @@ public class ProxyEndPointListTest : ProxyTestBase
             Assert.IsGreaterThan(0, succeededCount, "The later connection's success is not on the new entry.");
 
             connector.RecordFailed(connection.TcpClient, new AuthenticationException("The TLS handshake failed."));
-            Assert.AreEqual(succeededCount, status.SucceededCount, "The failure took back the later connection's success.");
+            Assert.AreEqual(succeededCount, status.SucceededCount,
+                "The failure took back the later connection's success.");
+
             Assert.AreEqual(failedCount + 1, status.FailedCount, "The failure was not recorded.");
         }
         finally {
@@ -264,7 +272,8 @@ public class ProxyEndPointListTest : ProxyTestBase
         using var proxy = new TestSocks5Proxy().Start();
         using var duplicateProxy = new TestSocks5Proxy().Start();
 
-        // both succeeded last, the first first in turn; both on this machine's address, so a success turns the other off
+        // both succeeded last, the first first in turn; both on this machine's address, so a success turns the other
+        // off
         var store = await CreateStore();
         await Upsert(store, [
             new ProxyEndPointRecord {
@@ -333,7 +342,9 @@ public class ProxyEndPointListTest : ProxyTestBase
         store.HoldResets = true;
         var updating = connector.UpdateOptions(new ProxyOptions { ResetStates = true }, TestCt);
         try {
-            await AssertEqualsWait(1, () => Volatile.Read(ref store.HeldResetCount), "The connector's reset did not start.");
+            await AssertEqualsWait(1, () => Volatile.Read(ref store.HeldResetCount),
+                "The connector's reset did not start.");
+
             using var savedStore = await CreateStore();
             var saved = (await savedStore.List(TestCt)).Single();
             Assert.AreEqual(0, saved.Status.SucceededCount, "The connector wrote its counts over the app's reset.");
@@ -346,8 +357,8 @@ public class ProxyEndPointListTest : ProxyTestBase
     }
 
     // A reset whose reload had made the entries anew, and failed at its last read, put fresh ones in their place: a
-    // connection's success on one, with the reset's count, went with them, and its failure after would take back a later
-    // connection's. The entries the reload made stay now
+    // connection's success on one, with the reset's count, went with them, and its failure after would take back a
+    // later connection's. The entries the reload made stay now
     [TestMethod]
     public async Task A_reset_whose_reload_fails_after_it_made_the_entries_keeps_them()
     {
@@ -388,7 +399,9 @@ public class ProxyEndPointListTest : ProxyTestBase
             await Assert.ThrowsAsync<OperationCanceledException>(() => updating);
 
             var status = connector.GetEndPointInfos().Single().Status;
-            Assert.AreEqual(1, status.SucceededCount, "The entry the reload made, with the connection's success, went.");
+            Assert.AreEqual(1, status.SucceededCount,
+                "The entry the reload made, with the connection's success, went.");
+
             connector.RecordFailed(connection.TcpClient, new AuthenticationException("The TLS handshake failed."));
             Assert.AreEqual(0, status.SucceededCount);
         }
@@ -456,8 +469,8 @@ public class ProxyEndPointListTest : ProxyTestBase
             "The connection's success went onto an entry the reload had replaced.");
     }
 
-    // After the close, a flush wrote a status changed since to the closed store, and a check dialed the proxies. A flush
-    // then saves nothing, as the VPN service's last status update flushes too, and a check is refused
+    // After the close, a flush wrote a status changed since to the closed store, and a check dialed the proxies. A
+    // flush then saves nothing, as the VPN service's last status update flushes too, and a check is refused
     [TestMethod]
     public async Task A_closed_connector_saves_nothing_more_and_refuses_a_check()
     {
@@ -566,13 +579,19 @@ public class ProxyEndPointListTest : ProxyTestBase
         server.Start();
 
         // first manager records a successful check and flushes on dispose
-        var mgr = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(proxyEndPoint), socketFactory: null, serverCheckTimeout: null, TestCt);
-        await mgr.CheckServers(socketFactory, (IPEndPoint)server.LocalEndpoint, hostName: null, serverCertificateValidation: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(proxyEndPoint),
+            socketFactory: null, serverCheckTimeout: null, TestCt);
+
+        await mgr.CheckServers(socketFactory, (IPEndPoint)server.LocalEndpoint, hostName: null,
+            serverCertificateValidation: null, TestCt);
+
         Assert.IsTrue(mgr.GetEndPointInfos().Single().Status.SucceededCount >= 1);
         await mgr.DisposeAsync();
 
         // a new manager over the same db restores the statuses
-        var mgr2 = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+        var mgr2 = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(), socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
         var restored = mgr2.GetEndPointInfos().Single();
         Assert.AreEqual(proxyEndPoint.Id, restored.EndPoint.Id);
         Assert.IsTrue(restored.Status.SucceededCount >= 1);

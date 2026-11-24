@@ -7,8 +7,8 @@ namespace VpnHood.Test.Providers.Proxies;
 
 // A SOCKS5 proxy, with no authentication unless given credentials, that records the destination of each connection
 // asked of it, and counts the connections it takes. It relays to this machine alone, so a test of code that sends a
-// check elsewhere reaches no one off it: a destination elsewhere goes to the stand-in, a server of the test's that plays
-// it, or, with none, gets a success, bytes that are no TLS, and a close
+// check elsewhere reaches no one off it: a destination elsewhere goes to the stand-in, a server of the test's that
+// plays it, or, with none, gets a success, bytes that are no TLS, and a close
 public sealed class TestSocks5Proxy(IPEndPoint? standIn = null) : IDisposable
 {
     private readonly TcpListener _listener = new(IPAddress.Loopback, 0);

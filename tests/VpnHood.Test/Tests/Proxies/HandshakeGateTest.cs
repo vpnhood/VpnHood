@@ -16,9 +16,9 @@ namespace VpnHood.Test.Tests.Proxies;
 public class HandshakeGateTest : ProxyTestBase
 {
     // On iOS and tvOS the check behind a connect dialed 3 at a time beside the session, so a list whose proxies mostly
-    // never answer took minutes to rate, each holding its place for the check's whole time. It now dials as many at once
-    // as before its pass, as only its TLS handshakes cost an extension's memory: here two, the run's width, where one
-    // handshake at a time is the width beside the session; and one whose check ends gives its place to the next
+    // never answer took minutes to rate, each holding its place for the check's whole time. It now dials as many at
+    // once as before its pass, as only its TLS handshakes cost an extension's memory: here two, the run's width, where
+    // one handshake at a time is the width beside the session; and one whose check ends gives its place to the next
     [TestMethod]
     public async Task The_check_behind_a_connect_dials_as_many_at_once_as_before_its_pass()
     {
@@ -78,9 +78,9 @@ public class HandshakeGateTest : ProxyTestBase
         }
     }
 
-    // A connector whose check before a connect passed at two answering proxies, which took the run's two places at once,
-    // and goes on through the silent ones behind the connect, two of them dialed and the third waiting for a place: its
-    // width is two, and one TLS handshake at a time beside the session
+    // A connector whose check before a connect passed at two answering proxies, which took the run's two places at
+    // once, and goes on through the silent ones behind the connect, two of them dialed and the third waiting for a
+    // place: its width is two, and one TLS handshake at a time beside the session
     private async Task<ManagedProxyConnector> CreateConnectorCheckingBehindItsPass(IPEndPoint targetEndPoint,
         IReadOnlyList<SilentProxy> silentProxies)
     {
@@ -566,7 +566,8 @@ public class HandshakeGateTest : ProxyTestBase
         await AssertEqualsWait(2, () => listProxy.ConnectionCount, "The connection's own check did not dial alone.");
         await Task.Delay(TimeSpan.FromSeconds(0.5), TestCt);
         Assert.IsFalse(connecting.IsCompleted, "The connection's own check went around its place.");
-        Assert.AreEqual(0, vpnServer.HelloTimes.Count, "The connection's own check made its handshake without its place.");
+        Assert.AreEqual(0, vpnServer.HelloTimes.Count,
+            "The connection's own check made its handshake without its place.");
 
         // its place, and nothing else, lets it through, while the list's check holds the other place; it holds its own
         // through its handshake
@@ -580,9 +581,9 @@ public class HandshakeGateTest : ProxyTestBase
         Assert.IsTrue(connector.IsConnectCheckUnderWay, "The list's check did not go on.");
     }
 
-    // A check that waited for its turn at the handshakes went on with the credentials its proxy had when the check began,
-    // or was dropped where the user changed them meanwhile, so a corrected proxy kept the failure of its wrong password:
-    // the run goes again over those never rated alone. It takes those the proxy has at its turn
+    // A check that waited for its turn at the handshakes went on with the credentials its proxy had when the check
+    // began, or was dropped where the user changed them meanwhile, so a corrected proxy kept the failure of its wrong
+    // password: the run goes again over those never rated alone. It takes those the proxy has at its turn
     [TestMethod]
     public async Task A_check_that_waits_for_its_turn_takes_the_credentials_given_meanwhile()
     {
@@ -670,9 +671,9 @@ public class HandshakeGateTest : ProxyTestBase
         Password = password
     };
 
-    // A check that came before a proxy reached a server took no turn for the rest of its run, though the checks that came
-    // after went beside the session: the server search's other probes went on 50 at a time. The gate reads it as each
-    // check comes
+    // A check that came before a proxy reached a server took no turn for the rest of its run, though the checks that
+    // came after went beside the session: the server search's other probes went on 50 at a time. The gate reads it as
+    // each check comes
     [TestMethod]
     public async Task The_handshake_gate_takes_turns_from_the_moment_a_server_is_reached()
     {

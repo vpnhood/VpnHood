@@ -18,7 +18,9 @@ public class ManagedProxyConnectorTest : ProxyTestBase
     [TestMethod]
     public async Task IsEnabled_False_When_No_Servers()
     {
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore(), socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
         Assert.IsFalse(mgr.IsEnabled);
     }
 
@@ -28,7 +30,9 @@ public class ManagedProxyConnectorTest : ProxyTestBase
         var store = await CreateStore(
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 });
 
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null, serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
         Assert.IsTrue(mgr.IsEnabled);
     }
 
@@ -36,11 +40,14 @@ public class ManagedProxyConnectorTest : ProxyTestBase
     public async Task ConnectAsync_With_No_Servers_Throws_NetworkUnreachable()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore(), socketFactory: null, serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore(), socketFactory: null,
+            serverCheckTimeout: null, TestCt);
+
         var target = new IPEndPoint(IPAddress.Loopback, 443);
 
         var ex = await Assert.ThrowsExactlyAsync<SocketException>(async () =>
-            await mgr.ConnectAsync(socketFactory, target, hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt));
+            await mgr.ConnectAsync(socketFactory, target, hostName: null, serverCertificateValidation: null,
+                onAttempt: null, TestCt));
 
         Assert.AreEqual((int)SocketError.NetworkUnreachable, ex.ErrorCode);
     }
@@ -54,7 +61,8 @@ public class ManagedProxyConnectorTest : ProxyTestBase
             new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "127.0.0.1", Port = 8080 },
             new ProxyEndPoint { Protocol = ProxyProtocol.Https, Host = "127.0.0.1", Port = 8443 });
 
-        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null, serverCheckTimeout: null, TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null,
+            serverCheckTimeout: null, TestCt);
 
         Assert.IsTrue(mgr.IsEnabled);
         Assert.HasCount(4, mgr.GetEndPointInfos());
@@ -134,8 +142,8 @@ public class ManagedProxyConnectorTest : ProxyTestBase
 
         Assert.IsFalse(connector.Status.IsAnySucceeded, "None was used.");
 
-        await connector.CheckServers(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443), hostName: null, serverCertificateValidation: null,
-            TestCt);
+        await connector.CheckServers(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443), hostName: null,
+            serverCertificateValidation: null, TestCt);
 
         Assert.IsFalse(connector.Status.IsAnySucceeded);
         Assert.AreEqual(1, connector.Status.FailedServerCount);
@@ -365,6 +373,7 @@ public class ManagedProxyConnectorTest : ProxyTestBase
                 Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
             }
         ]);
+
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null,
             serverCheckTimeout: isCheckTimeEndless ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), TestCt);
 
@@ -406,6 +415,7 @@ public class ManagedProxyConnectorTest : ProxyTestBase
                 Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
             }
         ]);
+
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store,
             socketFactory: null, serverCheckTimeout: null, TestCt);
 
@@ -466,6 +476,7 @@ public class ManagedProxyConnectorTest : ProxyTestBase
                 Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = now.AddMinutes(-10) }
             }
         ]);
+
         await using var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store,
             socketFactory: null, serverCheckTimeout: null, TestCt);
 
@@ -539,7 +550,9 @@ public class ManagedProxyConnectorTest : ProxyTestBase
         var connecting = connector.ConnectAsync(new TestSocketFactory(), (IPEndPoint)target.LocalEndpoint,
             hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
 
-        await AssertEqualsWait(1, () => slowProxy.Destinations.Count, "The first connection's check missed the slow one.");
+        await AssertEqualsWait(1, () => slowProxy.Destinations.Count,
+            "The first connection's check missed the slow one.");
+
         fastRelease.TrySetResult();
         using (await connecting) {
             // the first connection

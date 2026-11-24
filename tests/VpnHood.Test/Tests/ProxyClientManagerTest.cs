@@ -1967,16 +1967,16 @@ public class ManagedProxyConnectorTest : TestBase
             using var appStore = await CreateStore(newProxies.Select(x => ToProxyEndPoint(x.EndPoint)).ToArray());
             await connector.UpdateOptions(TlsCheckOptions, TestCt);
 
-            // the first check's hello is held, and every check's dial alone has closed: the server has the connection's
-            // connection and the first check's alone
+            // the first check's hello is held, and the dials of the two that wait have closed: the server has the
+            // connection's connection and the first check's alone
             await AssertEqualsWait(1, () => vpnServer.HelloTimes.Count, "The first check's hello did not come.");
-            await AssertEqualsWait(true, () => newProxies.All(x => x.BareCloseCount >= 1),
-                "Not every check's dial alone was closed.");
+            await AssertEqualsWait(2, () => newProxies.Count(x => x.BareCloseCount >= 1),
+                "Not every check that waits closed its dial.");
 
             await Task.Delay(TimeSpan.FromSeconds(0.5), TestCt);
             Assert.AreEqual(2, vpnServer.AcceptedCount, "A check that waits for its turn holds a connection open.");
 
-            // at the proxies too: each dial alone closed at once, and only the first check's own connection is open
+            // at the proxies too: each waiting check's dial closed at once, and only the first check's is open
             Assert.AreEqual(1, newProxies.Sum(x => x.ConnectionCount - x.BareCloseCount),
                 "A check that waits for its turn holds a connection to its proxy open.");
 
@@ -2043,10 +2043,140 @@ public class ManagedProxyConnectorTest : TestBase
         }
     }
 
-    // A connection's own check, before any proxy reached a server, as for a key known by name alone, runs within the
-    // server search's short probe, which three handshakes that hang would outlast where they took turns: it takes none
+    // A check that took its turn at the handshakes dialed its proxy alone and closed that connection before it took its
+    // place, then dialed again, a round trip more where a place was free: every check of a key known by name alone did,
+    // within the server search's few seconds, once the checks before a server took turns. It goes on through its dial
+    // where a place is free, beside the session as before a server
     [TestMethod]
-    public async Task A_connections_own_check_takes_no_turns_before_a_proxy_reached_a_server()
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task A_check_that_finds_a_place_free_dials_its_proxy_once(bool isBesideSession)
+    {
+        using var vpnServer = new SilentProxy().Start();
+        using var workingProxy = new TestSocks5Proxy().Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var socketFactory = new RecordingSocketFactory();
+        await using var connector = await CreateConnectorWithAWorkingProxy(workingProxy, TimeSpan.FromSeconds(30));
+
+        // beside the session, a connection gives the checks their server, and the proxy the app adds gets one; before
+        // any proxy reached a server, the one that worked goes off, and a connection checks the added one itself
+        using var connection = isBesideSession
+            ? await connector.ConnectAsync(socketFactory, vpnServer.EndPoint, hostName: null,
+                serverCertificateValidation: null, onAttempt: null, TestCt)
+            : null;
+
+        using var appStore = await CreateStore(ToProxyEndPoint(proxy.EndPoint),
+            ToProxyEndPoint(workingProxy.EndPoint, isEnabled: isBesideSession));
+
+        await connector.UpdateOptions(TlsCheckOptions, TestCt);
+        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+        var connecting = isBesideSession
+            ? Task.CompletedTask
+            : connector.ConnectAsync(socketFactory, vpnServer.EndPoint, hostName: null,
+                serverCertificateValidation: null, onAttempt: null, connectCts.Token);
+
+        await AssertEqualsWait(1, () => vpnServer.HelloCount, "The check made no handshake.");
+        Assert.AreEqual(1, proxy.ConnectionCount, "The check dialed its proxy again though a place was free.");
+
+        // its socket as the proxy client sets one it dials itself
+        Assert.IsTrue(socketFactory.TcpClients.Last().NoDelay, "The check's socket delays what it sends.");
+
+        await connectCts.CancelAsync();
+        if (!isBesideSession)
+            await Assert.ThrowsAsync<OperationCanceledException>(() => connecting);
+    }
+
+    // A check's time with no end, which a caller may give the connector, ran out at once where the check's time ran
+    // from its dial: every check failed. It has no end
+    [TestMethod]
+    public async Task A_check_whose_time_has_no_end_passes()
+    {
+        using var vpnServer = new PausingTlsServer().Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var store = await CreateStore(ToProxyEndPoint(proxy.EndPoint));
+        await using var connector = await ManagedProxyConnector.Create(TlsCheckOptions, store, socketFactory: null,
+            serverCheckTimeout: Timeout.InfiniteTimeSpan, TestCt);
+
+        await connector.CheckServers(new TestSocketFactory(), vpnServer.EndPoint, hostName: null,
+            serverCertificateValidation: null, TestCt).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+
+        Assert.IsTrue(connector.GetEndPointInfos().Single().Status.IsLastUsedSucceeded, "The check failed.");
+    }
+
+    // A check's time ran from before its socket was made, which the VPN's socket factory may take long over, as it
+    // keeps the socket out of the VPN: such a check could run out its time before it dialed. It runs from the socket's
+    // making, as it did before the checks dialed first: its first socket's, and the one it makes after a wait
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_checks_time_runs_from_its_sockets_making(bool isAfterWait)
+    {
+        using var vpnServer = new PausingTlsServer().Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        var store = await CreateStore(ToProxyEndPoint(proxy.EndPoint));
+        await using var connector = await ManagedProxyConnector.Create(TlsCheckOptions, store, socketFactory: null,
+            serverCheckTimeout: TimeSpan.FromSeconds(4), TestCt);
+
+        // the check before a connect makes one socket, the slow one; a connection's own check that waits for its place,
+        // as here where none is free until the test gives one, makes its second, the slow one, after its wait
+        var socketFactory = new SlowSocketFactory(TimeSpan.FromSeconds(4.5), slowSocketNumber: isAfterWait ? 2 : 1);
+        if (isAfterWait) {
+            connector.SearchHandshakePlaces.Dispose();
+            connector.SearchHandshakePlaces = new SemaphoreSlim(0);
+            var connecting = connector.ConnectAsync(socketFactory, vpnServer.EndPoint, hostName: null,
+                serverCertificateValidation: null, onAttempt: null, TestCt);
+
+            await AssertEqualsWait(1, () => proxy.BareCloseCount, "The check did not wait for its place.");
+            connector.SearchHandshakePlaces.Release();
+            using var connection = await connecting.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        }
+        else {
+            await connector.CheckServers(socketFactory, vpnServer.EndPoint, hostName: null,
+                serverCertificateValidation: null, TestCt).WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        }
+
+        var status = connector.GetEndPointInfos().Single().Status;
+        Assert.AreEqual(0, status.FailedCount, "The check's time ran out in the making of its socket.");
+        Assert.IsTrue(status.IsLastUsedSucceeded, "The check did not pass.");
+
+        // the server's one hello is the check's: a connection asks no TLS of it here
+        Assert.AreEqual(1, vpnServer.HelloTimes.Count, "The check made no handshake.");
+    }
+
+    // A SOCKS4 proxy carries no IPv6 address, which its client refuses before it dials, but a check that took its turn
+    // at the handshakes dialed first and waited for a place: here none comes, and the check of an IPv6 server through
+    // it never ended. It takes no turn, and fails at once
+    [TestMethod]
+    public async Task A_SOCKS4_check_of_an_IPv6_server_takes_no_turn()
+    {
+        using var socks4Proxy = new SilentProxy().Start();
+        var store = await CreateStore(new ProxyEndPoint {
+            Protocol = ProxyProtocol.Socks4,
+            Host = socks4Proxy.EndPoint.Address.ToString(),
+            Port = socks4Proxy.EndPoint.Port
+        });
+
+        await using var connector = await ManagedProxyConnector.Create(TlsCheckOptions, store, socketFactory: null,
+            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        connector.SearchHandshakePlaces.Dispose();
+        connector.SearchHandshakePlaces = new SemaphoreSlim(0);
+        await Assert.ThrowsAsync<SocketException>(() => connector.ConnectAsync(new TestSocketFactory(),
+            new IPEndPoint(IPAddress.IPv6Loopback, 443), hostName: null, serverCertificateValidation: null,
+            onAttempt: null, TestCt).WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+
+        // the check failed it, as did the connection's attempt after it, neither dialing it, and it stays on
+        var endPointInfo = connector.GetEndPointInfos().Single();
+        Assert.AreEqual(0, socks4Proxy.ConnectionCount, "A check dialed the proxy for an IPv6 server.");
+        Assert.AreEqual(2, endPointInfo.Status.FailedCount, "The check did not fail the proxy.");
+        Assert.IsTrue(endPointInfo.EndPoint.IsEnabled, "The proxy was turned off.");
+    }
+
+    // A connection's own check, before any proxy reached a server, as for a key known by name alone, runs within the
+    // server search's short probe, which three handshakes that hang would outlast where they took turns at the
+    // connections' places: it takes none of those
+    [TestMethod]
+    public async Task A_connections_own_check_takes_no_turns_at_the_connections_places_before_a_proxy_reached_a_server()
     {
         using var vpnServer = new SilentProxy().Start();
         using var proxy1 = new TestSocks5Proxy().Start();
@@ -2073,6 +2203,63 @@ public class ManagedProxyConnectorTest : TestBase
 
         await connectCts.CancelAsync();
         await Assert.ThrowsAsync<OperationCanceledException>(() => connecting);
+    }
+
+    // Before any proxy reached a server, the server search's probe of each server checked with handshakes of its own,
+    // 50 each, and up to 8 probes connected at once. The connections' own checks then share one check's width: here
+    // two, both held by one server's checks, so the other server's wait for them. A check's end gives its place at once
+    // to one that waits, while the other handshake and both connections go on
+    [TestMethod]
+    public async Task The_connections_own_checks_before_a_proxy_reached_a_server_share_one_checks_width()
+    {
+        using var vpnServer1 = new SilentProxy().Start();
+        using var vpnServer2 = new SilentProxy().Start();
+        using var proxy1 = new TestSocks5Proxy().Start();
+        using var proxy2 = new TestSocks5Proxy().Start();
+        TestSocks5Proxy[] proxies = [proxy1, proxy2];
+        var store = await CreateStore();
+        await Upsert(store, proxies
+            .Select(x => new ProxyEndPointRecord {
+                EndPoint = ToProxyEndPoint(x.EndPoint),
+                Status = new ProxyEndPointStatus { FailedCount = 1, LastFailed = DateTime.UtcNow }
+            })
+            .ToArray());
+
+        await using var connector = await ManagedProxyConnector.Create(TlsCheckOptions, store, socketFactory: null,
+            serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+
+        connector.SearchHandshakePlaces.Dispose();
+        connector.SearchHandshakePlaces = new SemaphoreSlim(2);
+        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
+
+        // the first server's two checks hold both places, and the second server's two close their dials to wait
+        var connecting1 = connector.ConnectAsync(new TestSocketFactory(), vpnServer1.EndPoint, hostName: null,
+            serverCertificateValidation: null, onAttempt: null, connectCts.Token);
+
+        await AssertEqualsWait(2, () => vpnServer1.HelloCount, "The first server's checks did not take both places.");
+        var connecting2 = connector.ConnectAsync(new TestSocketFactory(), vpnServer2.EndPoint, hostName: null,
+            serverCertificateValidation: null, onAttempt: null, connectCts.Token);
+
+        await AssertEqualsWait(2, () => proxies.Sum(x => x.BareCloseCount),
+            "The second server's checks did not wait for a place.");
+
+        await Task.Delay(TimeSpan.FromSeconds(1), TestCt);
+        Assert.AreEqual(0, vpnServer2.HelloCount,
+            "The second server's checks went around the places the first's hold.");
+
+        // one of the first server's checks fails, as its server closes its connection, and one of the second's makes
+        // its handshake in its place
+        var failingConnection = await vpnServer1.TakeConnection(TestCt);
+        failingConnection.Dispose();
+        await AssertEqualsWait(1, () => vpnServer2.HelloCount,
+            "No check that waits took the place of the one that ended.");
+
+        Assert.AreEqual(1, vpnServer1.HelloCount, "The first server's other handshake ended.");
+        Assert.IsFalse(connecting1.IsCompleted || connecting2.IsCompleted, "A connection's check ended.");
+
+        await connectCts.CancelAsync();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => connecting1);
+        await Assert.ThrowsAsync<OperationCanceledException>(() => connecting2);
     }
 
     // Each check beside the session had three handshakes of its own on iOS and tvOS, so two connections' own checks to
@@ -2119,8 +2306,8 @@ public class ManagedProxyConnectorTest : TestBase
         var connecting2 = connector.ConnectAsync(new TestSocketFactory(), vpnServer2.EndPoint, hostName: null,
             serverCertificateValidation: null, onAttempt: null, connectCts2.Token);
 
-        // each of the four checks dialed its proxy alone, and the one with the place dialed again
-        await AssertEqualsWait(5, () => proxy1.ConnectionCount + proxy2.ConnectionCount,
+        // each of the four checks dialed its proxy, and the one with the place went on through its dial
+        await AssertEqualsWait(4, () => proxy1.ConnectionCount + proxy2.ConnectionCount,
             "Not every check dialed its proxy.");
 
         await AssertEqualsWait(1, () => vpnServer1.HelloCount + vpnServer2.HelloCount, "No handshake began.");
@@ -2150,8 +2337,9 @@ public class ManagedProxyConnectorTest : TestBase
         using var proxy = new TestSocks5Proxy().Start();
         using var proxy1 = new TestSocks5Proxy().Start();
         using var proxy2 = new TestSocks5Proxy().Start();
+        var socketFactory = new RecordingSocketFactory();
         await using var connector = await CreateConnectorWithAWorkingProxy(proxy, TimeSpan.FromSeconds(30));
-        using var connection = await connector.ConnectAsync(new TestSocketFactory(), vpnServer.EndPoint,
+        using var connection = await connector.ConnectAsync(socketFactory, vpnServer.EndPoint,
             hostName: null, serverCertificateValidation: null, onAttempt: null, TestCt);
 
         using var appStore = await CreateStore(ToProxyEndPoint(proxy1.EndPoint), ToProxyEndPoint(proxy2.EndPoint));
@@ -2166,7 +2354,13 @@ public class ManagedProxyConnectorTest : TestBase
         Assert.AreEqual(1, new[] { proxy1, proxy2 }.Count(x => x.Destinations.IsEmpty),
             "A check that waits for its turn asked its proxy for the server.");
 
-        // the user turns the waiting one off, and the first check's end gives it its turn
+        // the other check closed its dial to wait for its turn, as one that dialed after the first check's end would
+        // take the place free at once
+        await AssertEqualsWait(1, () => waiting.BareCloseCount, "The other check does not wait for its turn.");
+
+        // the user turns the waiting one off, and the first check's end gives it its turn, which makes it no socket,
+        // as its making may take long and hold the place
+        var socketCount = socketFactory.TcpClients.Count;
         await Upsert(appStore,
             [new ProxyEndPointRecord { EndPoint = ToProxyEndPoint(waiting.EndPoint, isEnabled: false) }]);
 
@@ -2174,6 +2368,8 @@ public class ManagedProxyConnectorTest : TestBase
         vpnServer.CloseHelloConnections();
         await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay, "The check did not end.");
         Assert.IsTrue(waiting.Destinations.IsEmpty, "A check asked a proxy turned off while it waited for its turn.");
+        Assert.AreEqual(socketCount, socketFactory.TcpClients.Count,
+            "A check made a socket for a proxy turned off while it waited for its turn.");
     }
 
     // A connection's success gave the checks behind the session its server where no check had passed, and kept it there
@@ -2229,7 +2425,8 @@ public class ManagedProxyConnectorTest : TestBase
 
         await connector.UpdateOptions(TlsCheckOptions, TestCt);
 
-        // the test holds the connections' only place: the own check dials the proxy alone, then waits for it
+        // the test holds the connections' only place: the own check dials the proxy alone, then waits for it, where the
+        // list's check went on through its dial
         var connectionPlaces = connector.ConnectionHandshakePlaces ??
                                throw new InvalidOperationException("The connector has no places for connections.");
 
@@ -2237,7 +2434,7 @@ public class ManagedProxyConnectorTest : TestBase
         var connecting = connector.ConnectAsync(new TestSocketFactory(), vpnServer.EndPoint, hostName: null,
             serverCertificateValidation: null, onAttempt: null, TestCt);
 
-        await AssertEqualsWait(3, () => listProxy.ConnectionCount, "The connection's own check did not dial alone.");
+        await AssertEqualsWait(2, () => listProxy.ConnectionCount, "The connection's own check did not dial alone.");
         await Task.Delay(TimeSpan.FromSeconds(0.5), TestCt);
         Assert.IsFalse(connecting.IsCompleted, "The connection's own check went around its place.");
         Assert.AreEqual(0, vpnServer.HelloTimes.Count, "The connection's own check made its handshake without its place.");
@@ -2333,16 +2530,50 @@ public class ManagedProxyConnectorTest : TestBase
         await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay, "The check did not end.");
         var status = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == lockedProxy.EndPoint.Port).Status;
         Assert.IsTrue(status.IsLastUsedSucceeded, "The check did not take the password given while it waited.");
-        return;
-
-        static ProxyEndPoint WithPassword(IPEndPoint endPoint, string password) => new() {
-            Protocol = ProxyProtocol.Socks5,
-            Host = endPoint.Address.ToString(),
-            Port = endPoint.Port,
-            Username = "user",
-            Password = password
-        };
     }
+
+    // A check that found its place at the handshakes free went on with the credentials its proxy had when the check
+    // began, where one that waited for its place took those given meanwhile: a password corrected during its dial kept
+    // the wrong one's failure. It takes those the proxy has once it has its place, either way
+    [TestMethod]
+    public async Task A_check_that_finds_a_place_free_takes_the_credentials_given_during_its_dial()
+    {
+        using var vpnServer = new PausingTlsServer().Start();
+        using var proxy = new TestSocks5Proxy().Start();
+        using var lockedProxy = new TestSocks5Proxy { Username = "user", Password = "new" }.Start();
+        var socketFactory = new HeldSocketFactory(TestCt);
+        await using var connector = await CreateConnectorWithAWorkingProxy(proxy, TimeSpan.FromSeconds(30));
+        using var connection = await connector.ConnectAsync(socketFactory, vpnServer.EndPoint, hostName: null,
+            serverCertificateValidation: null, onAttempt: null, TestCt);
+
+        // the app adds the locked proxy with its old password, and its check behind the session is held in the making
+        // of its socket, before its dial, while the user corrects the password; then it goes on, its place free
+        socketFactory.IsHolding = true;
+        using var appStore = await CreateStore(WithPassword(lockedProxy.EndPoint, "old"));
+        try {
+            await connector.UpdateOptions(TlsCheckOptions, TestCt);
+            await socketFactory.Held.Task.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+            await Upsert(appStore, [new ProxyEndPointRecord { EndPoint = WithPassword(lockedProxy.EndPoint, "new") }]);
+            await connector.UpdateOptions(TlsCheckOptions, TestCt);
+        }
+        finally {
+            socketFactory.IsHolding = false;
+            socketFactory.Release();
+        }
+
+        await AssertEqualsWait(false, () => connector.IsConnectCheckUnderWay, "The check did not end.");
+        var status = connector.GetEndPointInfos().Single(x => x.EndPoint.Port == lockedProxy.EndPoint.Port).Status;
+        Assert.IsTrue(status.IsLastUsedSucceeded, "The check did not take the password given during its dial.");
+    }
+
+    // a SOCKS5 endpoint whose proxy asks for "user" and the password given
+    private static ProxyEndPoint WithPassword(IPEndPoint endPoint, string password) => new() {
+        Protocol = ProxyProtocol.Socks5,
+        Host = endPoint.Address.ToString(),
+        Port = endPoint.Port,
+        Username = "user",
+        Password = password
+    };
 
     // A check that came before a proxy reached a server took no turn for the rest of its run, though the checks that came
     // after went beside the session: the server search's other probes went on 50 at a time. The gate reads it as each
@@ -2352,7 +2583,7 @@ public class ManagedProxyConnectorTest : TestBase
     {
         using var places = new SemaphoreSlim(1);
         var isServerReached = false;
-        var gate = new HandshakeGate(places, isBesideSession: false, () => isServerReached);
+        var gate = new HandshakeGate(places, placesBeforeServer: null, isBesideSession: false, () => isServerReached);
         Assert.IsNull(await gate.Enter(TestCt), "A check took a turn before any server was reached.");
 
         isServerReached = true;
@@ -2363,6 +2594,46 @@ public class ManagedProxyConnectorTest : TestBase
         Assert.IsFalse(next.IsCompleted, "Two checks had a turn at once.");
         places.Release();
         Assert.AreSame(places, await next);
+        places.Release();
+    }
+
+    // A check that waited for its place before a server, when a proxy reached one meanwhile, made its handshake with
+    // the place it got there, beside the turns of the checks that came then: on iOS and tvOS beside their 3 places. It
+    // takes its turn where they take theirs, and goes on at once where they take none
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task A_check_still_waiting_when_a_server_is_reached_takes_its_turn_where_the_checks_that_come_then_do(
+        bool hasPlaces)
+    {
+        using var places = new SemaphoreSlim(1);
+        using var placesBeforeServer = new SemaphoreSlim(1);
+        var isServerReached = false;
+        var gate = new HandshakeGate(hasPlaces ? places : null, placesBeforeServer, isBesideSession: false,
+            () => isServerReached);
+
+        // a check holds the only place before a server, and another waits for it
+        Assert.AreSame(placesBeforeServer, await gate.Enter(TestCt));
+        var waiting = gate.Enter(TestCt);
+
+        // a proxy reaches a server, and a check that comes then holds the only place beside the session
+        isServerReached = true;
+        if (hasPlaces)
+            Assert.AreSame(places, await gate.Enter(TestCt));
+
+        // the first check's end leaves the waiting one no place before a server
+        placesBeforeServer.Release();
+        await AssertEqualsWait(1, () => placesBeforeServer.CurrentCount,
+            "The waiting check kept its place before a server.");
+
+        if (!hasPlaces) {
+            Assert.IsNull(await waiting, "The waiting check took a place where those that come take none.");
+            return;
+        }
+
+        Assert.IsFalse(waiting.IsCompleted, "The waiting check went on beside the turns of the checks that came.");
+        places.Release();
+        Assert.AreSame(places, await waiting);
         places.Release();
     }
 
@@ -2621,6 +2892,42 @@ public class ManagedProxyConnectorTest : TestBase
         }
     }
 
+    // the system's sockets, the one of the number given made only after the time given, as a VPN's factory may take
+    // long to keep a socket out of the VPN
+    private sealed class SlowSocketFactory(TimeSpan delay, int slowSocketNumber) : TestSocketFactory
+    {
+        private int _socketCount;
+
+        public override TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
+        {
+            if (Interlocked.Increment(ref _socketCount) == slowSocketNumber)
+                Thread.Sleep(delay);
+
+            return base.CreateTcpClient(ipEndPoint, options);
+        }
+    }
+
+    // the system's sockets, each made, while it holds, only once the test lets them: a window before a check's dial
+    private sealed class HeldSocketFactory(CancellationToken cancellationToken) : TestSocketFactory
+    {
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool IsHolding { get; set; }
+        public TaskCompletionSource Held { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public void Release() => _release.TrySetResult();
+
+        public override TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
+        {
+            if (IsHolding) {
+                Held.TrySetResult();
+                _release.Task.Wait(cancellationToken);
+            }
+
+            return base.CreateTcpClient(ipEndPoint, options);
+        }
+    }
+
     [TestMethod]
     public async Task A_canceled_check_keeps_the_failures_that_came_before_its_cancellation()
     {
@@ -2654,10 +2961,13 @@ public class ManagedProxyConnectorTest : TestBase
         Assert.AreEqual(0, infos.Single(x => x.EndPoint.Port == silentEndPoint.Port).Status.FailedCount);
     }
 
+    // A cancellation during the last attempt read as a failure of every proxy: no network. Given a check time with no
+    // end, every cancellation counted against the proxy, as none came within that time
     [TestMethod]
-    public async Task A_cancellation_during_the_last_attempt_is_thrown_as_one()
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task A_cancellation_during_the_last_attempt_is_thrown_as_one(bool isCheckTimeEndless)
     {
-        // it read as a failure of every proxy: no network
         using var silentProxy = new TcpListener(IPAddress.Loopback, 0); // it takes a connection and answers nothing
         silentProxy.Start();
         var store = await CreateStore();
@@ -2667,8 +2977,8 @@ public class ManagedProxyConnectorTest : TestBase
                 Status = new ProxyEndPointStatus { SucceededCount = 1, LastSucceeded = DateTime.UtcNow }
             }
         ]);
-        await using var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store,
-            socketFactory: null, serverCheckTimeout: TimeSpan.FromSeconds(30), TestCt);
+        await using var connector = await ManagedProxyConnector.Create(new ProxyOptions(), store, socketFactory: null,
+            serverCheckTimeout: isCheckTimeEndless ? Timeout.InfiniteTimeSpan : TimeSpan.FromSeconds(30), TestCt);
 
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         var connectTask = connector.ConnectAsync(new TestSocketFactory(), new IPEndPoint(IPAddress.Loopback, 443),

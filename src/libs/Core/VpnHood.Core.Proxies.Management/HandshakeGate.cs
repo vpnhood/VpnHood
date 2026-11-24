@@ -2,21 +2,46 @@ using VpnHood.Net.Toolkit.Extensions;
 
 namespace VpnHood.Core.Proxies.Management;
 
-// A run of checks' way to the connector's places for TLS handshakes: open until the run goes beside the session, from
-// its start, or once a proxy reached a server, which it reads as each check comes, as a pass elsewhere counts too. Then
-// a place for each check that comes; those under way go on beside them. Always open where the connector has no places
-internal sealed class HandshakeGate(SemaphoreSlim? places, bool isBesideSession, Func<bool> isServerReached)
+// A run of checks' way to the connector's places for TLS handshakes: those beside the session (places) once the run
+// goes beside it, from its start, or once a proxy reached a server, which a pass elsewhere gives too and a failed
+// connection takes back; before that, those of the checks before a server (placesBeforeServer). It reads which as each
+// check comes, and again as one that waited gets its place. A place for each check that comes; those under way go on
+// beside them. Open where the connector gives no places for the case
+internal sealed class HandshakeGate(
+    SemaphoreSlim? places,
+    SemaphoreSlim? placesBeforeServer,
+    bool isBesideSession,
+    Func<bool> isServerReached)
 {
     // whether a check that comes now takes a place
-    public bool IsLimited => places != null && (isBesideSession || isServerReached());
+    public bool IsLimited => GetPlaces() != null;
+
+    // a place free now, taken at once, or null where the gate is open now: true for both; false where the check is to
+    // wait for one
+    public bool TryEnter(out SemaphoreSlim? place)
+    {
+        place = GetPlaces();
+        if (place == null || place.Wait(0))
+            return true;
+
+        place = null;
+        return false;
+    }
 
     // a place, which the caller releases, or null where the gate is open
     public async Task<SemaphoreSlim?> Enter(CancellationToken cancellationToken)
     {
-        if (places == null || !(isBesideSession || isServerReached()))
-            return null;
+        while (GetPlaces() is { } currentPlaces) {
+            await currentPlaces.WaitAsync(cancellationToken).Vhc();
+            if (GetPlaces() == currentPlaces)
+                return currentPlaces;
 
-        await places.WaitAsync(cancellationToken).Vhc();
-        return places;
+            // a server reached, or taken back, while it waited: it takes its turn where the checks that come now do
+            currentPlaces.Release();
+        }
+
+        return null;
     }
+
+    private SemaphoreSlim? GetPlaces() => isBesideSession || isServerReached() ? places : placesBeforeServer;
 }

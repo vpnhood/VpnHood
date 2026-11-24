@@ -1,8 +1,7 @@
 # <img src="https://www.vpnhood.com/assets/images/favicon.svg" width="40" alt="" align="absmiddle"> VpnHood!
 
 An open-source VPN, from the engine to the apps and the server, written in C# on .NET. It resists deep packet
-inspection: it looks like ordinary browsing, for more privacy and a way past censorship, firewalls and network
-restrictions.
+inspection: it looks like ordinary browsing, for more privacy.
 
 [![Latest release](https://img.shields.io/github/v/release/vpnhood/vpnhood?label=Release)](https://github.com/vpnhood/VpnHood/releases/latest)
 [![NuGet version](https://img.shields.io/nuget/v/VpnHood.Core.Client?label=NuGet)](https://www.nuget.org/packages/VpnHood.Core.Client)
@@ -105,6 +104,10 @@ goes through each layer and the contracts between them.
 
 ### Run your own VPN
 
+| <a href="https://www.vpnhood.com/vpnhood-server/docs/install/linux/"><img src="https://www.vpnhood.com/assets/images/github/linux-logo.webp" width="32" height="32" alt=""></a> | <a href="https://www.vpnhood.com/vpnhood-server/docs/install/windows/"><img src="https://www.vpnhood.com/assets/images/github/windows-logo.webp" width="32" height="32" alt=""></a> |
+| :---: | :---: |
+| [Linux](https://www.vpnhood.com/vpnhood-server/docs/install/linux/) | [Windows](https://www.vpnhood.com/vpnhood-server/docs/install/windows/) |
+
 [Install VpnHood! SERVER](https://www.vpnhood.com/vpnhood-server/docs/install/) with one command on Linux, Windows or Docker, then add its
 access key to [VpnHood! CLIENT](download/vpnhood-client.md), on Android and Android TV, iPhone, iPad and Apple TV,
 Windows or Linux.
@@ -165,6 +168,8 @@ Include Security audited VpnHood for the Open Technology Fund's Red Team Lab.
 [Read the report](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/) or
 [what it means for you](https://www.vpnhood.com/security-audit/).
 
+To report a vulnerability, follow the [security policy](SECURITY.md).
+
 ## Support and community
 
 - Questions and ideas: [GitHub Discussions](https://github.com/vpnhood/VpnHood/discussions)
@@ -173,7 +178,7 @@ Include Security audited VpnHood for the Open Technology Fund's Red Team Lab.
 - Follow us: [LinkedIn](https://www.linkedin.com/company/vpnhood), [Facebook](https://www.facebook.com/vpnhood),
   [Instagram](https://www.instagram.com/vpnhood) and [X](https://x.com/vpnhood)
 
-Contributions, feedback and stars are welcome.
+Contributions, feedback and stars are welcome: [how to contribute](CONTRIBUTING.md).
 
 ## License
 

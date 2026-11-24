@@ -173,6 +173,28 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_listener_address_the_OS_refuses_is_reported_and_the_rest_still_changes()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.OsOptions.AddListenerIpsToNetwork = "*";
+        var osConfigurationProvider = new TestOsConfigurationProvider {
+            AddIpAddressException = new NotSupportedException("No IP tool here.")
+        };
+        await using var server =
+            await TestHelper.CreateServer(accessManager, osConfigurationProvider: osConfigurationProvider);
+
+        // the address is left and told to the access manager; the settings after it change
+        var address = accessManager.ServerConfig.TcpEndPointsValue.Single().Address;
+        Assert.IsEmpty(osConfigurationProvider.IpAddresses);
+        Assert.AreEqual("bbr", osConfigurationProvider.TcpCongestionControl);
+        var osStatus = accessManager.LastServerStatus?.OsStatus ??
+                       throw new InvalidOperationException("No OS status was sent.");
+        CollectionAssert.AreEqual(
+            new[] { $"{nameof(OsOptions.AddListenerIpsToNetwork)}: {address}: No IP tool here." },
+            osStatus.Errors.ToArray());
+    }
+
+    [TestMethod]
     public async Task A_server_host_close_past_its_limit_leaves_the_rest_of_the_close_to_run()
     {
         using var accessManager = await TestHelper.CreateAccessManager();
@@ -371,14 +393,13 @@ public class ServerTest : TestBase
     public async Task An_address_added_after_the_close_is_removed_at_once()
     {
         var osConfigurationProvider = new TestOsConfigurationProvider { AddHold = { IsHeld = true } };
-        var osConfigurationService = new OsConfigurationService(osConfigurationProvider, TestHelper.WorkingPath,
-            isPrivilegedProcess: true);
+        var listenerIpAddresses = new ListenerIpAddresses(osConfigurationProvider);
 
         // an add under way, held at the provider, when the close runs
-        var add = osConfigurationService.AddIpAddress(IPAddress.Parse("10.10.0.1"), "eth0", TestCt);
+        var add = listenerIpAddresses.Add(IPAddress.Parse("10.10.0.1"), "eth0", TestCt);
         await VhTestUtil.AssertEqualsWait(1, () => osConfigurationProvider.AddHold.HeldCount,
             "The add should be under way.", cancellationToken: TestCt);
-        osConfigurationService.Dispose();
+        listenerIpAddresses.Dispose();
         osConfigurationProvider.AddHold.Release();
 
         await add.WaitAsync(TimeSpan.FromSeconds(5), TestCt);

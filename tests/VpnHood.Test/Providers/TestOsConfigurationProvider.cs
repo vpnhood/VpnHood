@@ -10,6 +10,7 @@ public class TestOsConfigurationProvider : IOsConfigurationProvider
 
     public ConcurrentDictionary<IPAddress, string> IpAddresses { get; } = new();
     public TestHold AddHold { get; } = new();
+    public Exception? AddIpAddressException { get; set; }
 
     // null where the machine lacks it, as Linux's own values
     public string? TcpCongestionControl { get; set; } = "cubic";
@@ -43,6 +44,9 @@ public class TestOsConfigurationProvider : IOsConfigurationProvider
     public async Task AddIpAddress(IPAddress ipAddress, string interfaceName, CancellationToken cancellationToken)
     {
         await AddHold.WaitIfHeld(cancellationToken);
+        if (AddIpAddressException != null)
+            throw AddIpAddressException;
+
         IpAddresses.TryAdd(ipAddress, interfaceName);
         Interlocked.Increment(ref _changeCount);
     }

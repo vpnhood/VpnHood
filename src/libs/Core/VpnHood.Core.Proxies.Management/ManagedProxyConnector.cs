@@ -8,6 +8,8 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
+using VpnHood.Core.Proxies.Management.Checks;
+using VpnHood.Core.Proxies.Management.EndPoints;
 using VpnHood.Net.Proxies;
 using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Jobs;

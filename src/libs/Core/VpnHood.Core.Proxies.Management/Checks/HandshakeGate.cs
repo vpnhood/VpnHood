@@ -1,6 +1,6 @@
 using VpnHood.Net.Toolkit.Extensions;
 
-namespace VpnHood.Core.Proxies.Management;
+namespace VpnHood.Core.Proxies.Management.Checks;
 
 // A run of checks' way to the connector's places for TLS handshakes: those beside the session (places) once the run
 // goes beside it, from its start, or once a proxy reached a server, which a pass elsewhere gives too and a failed

@@ -6,7 +6,7 @@ using VpnHood.Net.Toolkit.Extensions;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.Core.Proxies.Management;
+namespace VpnHood.Core.Proxies.Management.EndPoints;
 
 // The HTTP client of a list's downloads. With a socket factory, as under the kill switch's block, which lets only the
 // VPN's own traffic out and leaves the system's resolver, asking from a process of its own, without an answer: over its

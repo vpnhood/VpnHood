@@ -14,6 +14,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Proxies.Management;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
+using VpnHood.Core.Proxies.Management.Checks;
 using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Core.Server.Access;
 using VpnHood.Net.Proxies.HttpProxyClients;

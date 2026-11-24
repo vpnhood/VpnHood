@@ -3,7 +3,7 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Utils;
 
-namespace VpnHood.Core.Proxies.Management;
+namespace VpnHood.Core.Proxies.Management.EndPoints;
 
 internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
 {

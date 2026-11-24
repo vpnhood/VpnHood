@@ -1,7 +1,7 @@
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Net.Toolkit.Generics;
 
-namespace VpnHood.Test.Providers;
+namespace VpnHood.Test.Providers.Proxies;
 
 // A proxy endpoint store whose status updates can be held until released, or made to fail, as can its resets and its
 // list's reads; its list's reads, a reload's first step, and its reads of the queue position, the last, can be held too

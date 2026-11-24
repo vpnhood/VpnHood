@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace VpnHood.Test.Providers;
+namespace VpnHood.Test.Providers.Proxies;
 
 // A SOCKS5 proxy, with no authentication unless given credentials, that records the destination of each connection
 // asked of it, and counts the connections it takes. It relays to this machine alone, so a test of code that sends a

@@ -27,11 +27,12 @@ using VpnHood.Net.Toolkit.Utils;
 using VpnHood.Test.Device;
 using VpnHood.Test.Dom;
 using VpnHood.Test.Providers;
+using VpnHood.Test.Providers.Proxies;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
 
-namespace VpnHood.Test.Tests;
+namespace VpnHood.Test.Tests.Proxies;
 
 [TestClass]
 public class ManagedProxyConnectorTest : TestBase

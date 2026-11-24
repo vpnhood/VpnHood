@@ -65,7 +65,14 @@ internal class ClientSessionConfig
     public required AdRequirement AdRequirement { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether the app's ads can show over the VPN (<see cref="ClientOptions.CanShowAdOverVpn"/>).
+    /// Gets a value indicating whether a flexible ad's last try may go over the VPN
+    /// (<see cref="ClientOptions.CanShowFlexibleAdOverVpn"/>).
     /// </summary>
-    public required bool CanShowAdOverVpn { get; init; }
+    public required bool CanShowFlexibleAdOverVpn { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether a rewarded ad's last try may go over the VPN
+    /// (<see cref="ClientOptions.CanShowRewardedAdOverVpn"/>).
+    /// </summary>
+    public required bool CanShowRewardedAdOverVpn { get; init; }
 }

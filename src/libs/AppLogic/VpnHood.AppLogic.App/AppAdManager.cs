@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLogic.Api.Exceptions;
 using VpnHood.AppLogic.Abstractions.Ads;
@@ -47,7 +48,7 @@ internal class AppAdManager(
             return;
         }
 
-        await adService.LoadInterstitialAd(uiContext, useFallback: false, cancellationToken).Vhc();
+        await adService.LoadInterstitialAd(uiContext, cancellationToken).Vhc();
     }
 
     // the ad network's consent form again, for the person to change their answer
@@ -62,17 +63,26 @@ internal class AppAdManager(
         return consentProvider.ShowPrivacyOptions(uiContext, cancellationToken);
     }
 
-    // uiContext: the window, or null where none is open: a build without ads refuses the server either
-    // way, and one with ads throws ShowAdNoUiException.
-    public async Task ShowAd(
+    // Shows the ad the session waits for, on its route, and again on each route the session moves to after a failed
+    // try (AdRoute): the session owns their order and decides what a failure means, a stop ending a connect at once.
+    // Returns the failure, which the session has been told, or null where an ad showed. Throws what the session was
+    // not told: no window (uiContext null, where none is open), so the session keeps waiting for one, or a result that
+    // never reached it, which the app's caller ends the connection for
+    public Task<Exception?> ShowAd(
         IUiContext? uiContext,
         string sessionId,
         AdRequirement adRequirement,
-        bool useFallback,
         CancellationToken cancellationToken)
     {
+        return ShowAd(uiContext, sessionId, adRequirement, isExtension: false, cancellationToken);
+    }
+
+    // isExtension: an ad that extends the session, whose wait nothing else ends
+    private async Task<Exception?> ShowAd(IUiContext? uiContext, string sessionId, AdRequirement adRequirement,
+        bool isExtension, CancellationToken cancellationToken)
+    {
         if (adRequirement == AdRequirement.None)
-            return;
+            return null;
 
         // check if ad is already showing
         if (IsShowing)
@@ -86,8 +96,8 @@ internal class AppAdManager(
         if (!IsAdSupported) {
             var notSupportedException = new AdException("This app does not support servers that require ads.");
             await SetWaitForAd(cancellationToken).Vhc();
-            await vpnServiceManager.SetAdFailed(notSupportedException, cancellationToken).Vhc();
-            throw notSupportedException;
+            await vpnServiceManager.SetAdFailed(notSupportedException, tryNextRoute: false, cancellationToken).Vhc();
+            return notSupportedException;
         }
 
         // let's throw an exception if context is not set
@@ -98,56 +108,125 @@ internal class AppAdManager(
 
         try {
             IsShowing = true;
-
-            // the ad network's consent form first, where one is due: the person reads it for as long as
-            // they need, as the ad's timed load starts only after it
-            if (consentProvider != null)
-                await consentProvider.GatherConsent(uiContext, cancellationToken).Vhc();
-
-            // flexible ad
-            var adResult = adRequirement switch {
-                AdRequirement.Flexible when adService.CanShowInterstitial =>
-                    await adService.ShowInterstitial(uiContext, sessionId, useFallback, cancellationToken).Vhc(),
-                AdRequirement.Rewarded when adService.CanShowRewarded =>
-                    await adService.ShowRewarded(uiContext, sessionId, useFallback, cancellationToken).Vhc(),
-                _ => throw new AdException("The requested ad is not supported in this app.")
-            };
-
-            // rewarded ad
-            VhLogger.Instance.LogDebug("Successfully loaded ad. AdResult: {NetworkName}", adResult.NetworkName);
-
-            // wait for ad post delay
-            var ignoreTimeSpan = TimeSpan.FromSeconds(3);
-            var delay1 = showAdPostDelay.Subtract(ignoreTimeSpan);
-            if (delay1 < TimeSpan.Zero) delay1 = TimeSpan.Zero;
-            await Task.Delay(delay1, cancellationToken).Vhc();
-
-            IsWaitingForPostDelay = true;
-            await Task.Delay(showAdPostDelay - delay1, cancellationToken).Vhc();
-
-            // track tell the VpnService to disable ad mode
-            await vpnServiceManager.SetAdOk(adResult,
-                isRewarded: adRequirement == AdRequirement.Rewarded,
-                cancellationToken).Vhc();
+            return await ShowOnRoutes(uiContext, sessionId, adRequirement, cancellationToken).Vhc();
         }
-        catch (ShowAdNoUiException) {
-            // if ad is not shown because of no UI context just throw exception and let core
-            // remain in WaitingForAd state
-            throw;
-        }
-        catch (Exception ex) {
-            await VerifyAdBlocker(ex, cancellationToken).Vhc();
-            await vpnServiceManager.SetAdFailed(ex, cancellationToken).Vhc();
-            if (adRequirement == AdRequirement.Flexible) {
-                VhLogger.Instance.LogDebug(ex, "Could not show any flexible ad.");
-                return;
-            }
-
+        catch (Exception ex) when (isExtension) {
+            // no window comes back for it, and its wait would keep the session's new traffic around the tunnel
+            await TryStopWait(ex).Vhc();
             throw;
         }
         finally {
             IsWaitingForPostDelay = false;
             IsShowing = false;
+        }
+    }
+
+    // The session moves to its next route as it takes a failure, so the answer to the failure shows the route to try
+    // next; one it has not reached, as the routes after the VPN starts, comes with a state change of its own. A session
+    // still on the route the try failed on never got the result, as one lost between the two processes
+    private async Task<Exception?> ShowOnRoutes(IUiContext uiContext, string sessionId, AdRequirement adRequirement,
+        CancellationToken cancellationToken)
+    {
+        if (vpnServiceManager.ConnectionInfo.SessionStatus is not { AdRoute: { } route } sessionStatus)
+            throw new InvalidOperationException("The session waits for no ad.");
+
+        var isLastRoute = sessionStatus.IsLastAdRoute;
+        while (true) {
+            var failure = await TryShowOnRoute(uiContext, sessionId, adRequirement, route, isLastRoute,
+                cancellationToken).Vhc();
+
+            if (failure == null)
+                return null;
+
+            if (vpnServiceManager.ConnectionInfo is not {
+                    ClientState: ClientState.WaitingForAd, SessionStatus: { AdRoute: { } nextRoute } nextStatus
+                })
+                return failure;
+
+            if (nextRoute == route)
+                ExceptionDispatchInfo.Throw(failure);
+
+            route = nextRoute;
+            isLastRoute = nextStatus.IsLastAdRoute;
+        }
+    }
+
+    // One try: null where the ad showed and the session took it; else the ad's failure, which the session has been
+    // told, or the session's refusal of an ad that showed, as a rewarded ad's server refused, which it knows already
+    private async Task<Exception?> TryShowOnRoute(IUiContext uiContext, string sessionId,
+        AdRequirement adRequirement, AdRoute route, bool isLastRoute, CancellationToken cancellationToken)
+    {
+        try {
+            var adResult = await ShowOnRoute(uiContext, sessionId, adRequirement, route, isLastRoute, cancellationToken)
+                .Vhc();
+
+            return await TryReportShown(adResult, adRequirement, cancellationToken).Vhc();
+        }
+        catch (ShowAdNoUiException) {
+            // the session keeps waiting, for a window to show it in
+            throw;
+        }
+        catch (Exception ex) {
+            // an ad blocker the app refuses fails every route: a stop, which ends a connect too
+            var adBlockerException = GetAdBlockerException();
+            if (adBlockerException != null) {
+                await vpnServiceManager.SetAdFailed(adBlockerException, tryNextRoute: false, cancellationToken).Vhc();
+                return adBlockerException;
+            }
+
+            VhLogger.Instance.LogDebug(ex, "Could not show an ad on its route. Route: {Route}", route);
+            await vpnServiceManager.SetAdFailed(ex, tryNextRoute: true, cancellationToken).Vhc();
+            return ex;
+        }
+    }
+
+    // The ad from the networks the route takes, and its post delay, during which the app shows the connection as made
+    // while the session still routes for the ad (IsWaitingForPostDelay)
+    private async Task<AdResult> ShowOnRoute(IUiContext uiContext, string sessionId, AdRequirement adRequirement,
+        AdRoute route, bool isLastRoute, CancellationToken cancellationToken)
+    {
+        // the ad network's consent form first, where one is due: the person reads it for as long as
+        // they need, as the ad's timed load starts only after it
+        if (consentProvider != null)
+            await consentProvider.GatherConsent(uiContext, cancellationToken).Vhc();
+
+        var adResult = adRequirement switch {
+            AdRequirement.Flexible when adService.CanShowInterstitial =>
+                await adService.ShowInterstitial(uiContext, sessionId, route, isLastRoute, cancellationToken).Vhc(),
+            AdRequirement.Rewarded when adService.CanShowRewarded =>
+                await adService.ShowRewarded(uiContext, sessionId, route, isLastRoute, cancellationToken).Vhc(),
+            _ => throw new AdException("The requested ad is not supported in this app.")
+        };
+
+        VhLogger.Instance.LogDebug("Successfully loaded ad. AdResult: {NetworkName}, Route: {Route}",
+            adResult.NetworkName, route);
+
+        // wait for ad post delay
+        var ignoreTimeSpan = TimeSpan.FromSeconds(3);
+        var delay1 = showAdPostDelay.Subtract(ignoreTimeSpan);
+        if (delay1 < TimeSpan.Zero) delay1 = TimeSpan.Zero;
+        await Task.Delay(delay1, cancellationToken).Vhc();
+
+        IsWaitingForPostDelay = true;
+        await Task.Delay(showAdPostDelay - delay1, cancellationToken).Vhc();
+        return adResult;
+    }
+
+    // The session's answer to an ad that showed. A refusal ended its wait already, so it is returned and never told
+    // again: a failure told later could end the session's next wait
+    private async Task<Exception?> TryReportShown(AdResult adResult, AdRequirement adRequirement,
+        CancellationToken cancellationToken)
+    {
+        try {
+            await vpnServiceManager.SetAdOk(adResult,
+                isRewarded: adRequirement == AdRequirement.Rewarded,
+                cancellationToken).Vhc();
+
+            return null;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(ex, "The session refused an ad that showed.");
+            return ex;
         }
     }
 
@@ -159,7 +238,7 @@ internal class AppAdManager(
                 connectionInfo.SessionStatus is { CanExtendByRewardedAd: true } &&
                 connectionInfo.SessionStatus.SessionExpirationTime >
                 FastDateTime.UtcNow + extendByRewardedAdThreshold &&
-                AdService.CanShowRewarded;
+                AdService.CanShowRewardedInRegion;
         }
     }
 
@@ -178,8 +257,11 @@ internal class AppAdManager(
             throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
 
         // set wait for ad state
-        await ShowAd(uiContext, connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, useFallback: false,
-            cancellationToken: cancellationToken).Vhc();
+        var failure = await ShowAd(uiContext, connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded,
+            isExtension: true, cancellationToken).Vhc();
+
+        if (failure != null)
+            ExceptionDispatchInfo.Throw(failure);
     }
 
     // the core takes an ad's failure only while it waits for one; sent outside that, it is lost
@@ -189,32 +271,40 @@ internal class AppAdManager(
             await vpnServiceManager.SetWaitForAd(cancellationToken).Vhc();
     }
 
-    private async Task VerifyAdBlocker(Exception ex, CancellationToken cancellationToken)
+    // A stop for the session's wait, its own failure told; a failed request, as the one before it may have, leaves only
+    // a log. A deadline of its own, as the caller's token may be canceled already: 30 seconds ends only a request the
+    // service never answers, which has no limit of its own
+    private async Task TryStopWait(Exception ex)
     {
-        if (!rejectAdBlocker)
-            return;
-
-        if (await IsUnallowedPrivateDnsBySystemPrivateDns(ex, cancellationToken).Vhc())
-            throw new AdBlockerException("Private DNS is not supported in free version.") {
-                IsPrivateDns = true
-            };
+        try {
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await vpnServiceManager.SetAdFailed(ex, tryNextRoute: false, timeoutCts.Token).Vhc();
+        }
+        catch (Exception stopException) {
+            VhLogger.Instance.LogWarning(stopException, "Could not end the session's wait for the ad.");
+        }
     }
 
-    private Task<bool> IsUnallowedPrivateDnsBySystemPrivateDns(Exception ex, CancellationToken cancellationToken)
+    // the failed ad's cause where the app refuses it: a private DNS that may block ads, or null
+    private AdBlockerException? GetAdBlockerException()
     {
-        _ = cancellationToken;
-        _ = ex;
+        if (!rejectAdBlocker || !IsUnallowedPrivateDns())
+            return null;
 
+        return new AdBlockerException("Private DNS is not supported in free version.") {
+            IsPrivateDns = true
+        };
+    }
+
+    private bool IsUnallowedPrivateDns()
+    {
         // check if private DNS is active and is in allowed list.
         // A null provider means the opportunistic mode, which is the platform default and just upgrades the
         // network's own resolver to DoT; it can not be an ad blocker, so only a chosen provider is checked.
         var privateDns = uiProvider.GetPrivateDns();
-        var isUnallowedPrivateDns =
-            privateDns is { IsActive: true, Provider: not null } &&
-            allowedPrivateDnsProviders != null &&
-            !allowedPrivateDnsProviders.Contains(privateDns.Provider, StringComparer.OrdinalIgnoreCase);
-
-        return Task.FromResult(isUnallowedPrivateDns);
+        return privateDns is { IsActive: true, Provider: not null } &&
+               allowedPrivateDnsProviders != null &&
+               !allowedPrivateDnsProviders.Contains(privateDns.Provider, StringComparer.OrdinalIgnoreCase);
     }
 
     // ReSharper disable once UnusedMember.Local

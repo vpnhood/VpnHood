@@ -18,14 +18,15 @@ public class AppAdProviderItem
     public required IAdProvider AdProvider { get; init; }
 
     /// <summary>
-    /// Gets a value indicating whether the network can show its ads while the VPN is connected, their traffic going
-    /// through it. Where every network of the app can, the VPN connects before the ad a connect needs, and the traffic
-    /// keeps its routing while an ad shows (<see cref="VpnHood.Core.Client.Abstractions.ClientOptions.CanShowAdOverVpn"/>):
-    /// the ad's goes as the rest does, by the splits, and an ad preloaded before a connect came through the device's own
-    /// network. Otherwise the ad a connect needs comes before the VPN starts, and the traffic goes around the tunnel while
-    /// a later one shows. The default is <see langword="false"/>, for networks that refuse VPN traffic.
+    /// Gets or sets a value indicating whether the network can show its ads while the VPN is connected, their traffic
+    /// going through it. An ad is tried before the VPN starts, then around the tunnel, then through it where a network
+    /// for that kind of ad can where the person is (<see cref="VpnHood.Core.Client.Abstractions.AdRoute"/>): only those
+    /// networks load that last try, the house ad too (<see cref="IsFallback"/>). The app's remote settings
+    /// (<see cref="AppOptions.RemoteSettingsUrl"/>) set it at the app's start where they list the networks that can, by
+    /// name, as <c>"OverVpnAdProviders": ["name"]</c>. The default is <see langword="false"/>, for networks that refuse
+    /// VPN traffic.
     /// </summary>
-    public bool CanShowOverVpn { get; init; }
+    public bool CanShowOverVpn { get; set; }
 
     /// <summary>
     /// Gets the only countries the network's ads are loaded in, by their codes, or empty for every country. An item may
@@ -45,8 +46,15 @@ public class AppAdProviderItem
     public bool IsEnabled { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the network is tried only where its caller asks for the fallbacks too.
-    /// The default is <see langword="false"/>.
+    /// Gets or sets a value indicating whether the network is a fallback, as a house ad that always shows: it is tried
+    /// only on an ad's last route (<see cref="VpnHood.Core.Client.Abstractions.AdRoute"/>), after the other networks
+    /// wherever the head lists it, so a paid ad gets every try first; through the tunnel only where it is marked, as any
+    /// network (<see cref="CanShowOverVpn"/>). The default is <see langword="false"/>.
     /// </summary>
     public bool IsFallback { get; set; }
+
+    // the item's own name or its network's, as the remote settings name it
+    internal bool HasName(string name) =>
+        string.Equals(ProviderName, name, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(AdProvider.NetworkName, name, StringComparison.OrdinalIgnoreCase);
 }

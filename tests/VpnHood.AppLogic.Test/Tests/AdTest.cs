@@ -1,10 +1,12 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using VpnHood.AppLogic.Api.Exceptions;
 using VpnHood.AppLogic.Abstractions.Ads;
 using VpnHood.AppLogic.Api.App;
 using VpnHood.AppLogic.App;
 using VpnHood.AppLogic.App.Services.Ads;
+using VpnHood.AppLogic.App.Settings;
 using VpnHood.AppLogic.Test.Dom;
 using VpnHood.AppLogic.Test.Providers;
 using VpnHood.Core.Client;
@@ -15,9 +17,11 @@ using VpnHood.Core.Common.Tokens;
 using ConnectPlanId = VpnHood.AppLogic.Api.App.ConnectPlanId;
 using VpnHood.AppLogic.Abstractions.Ads.AdExceptions;
 using VpnHood.AppLogic.Abstractions.Device;
+using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 using VpnHood.AppLogic.Abstractions.UiContexts;
+using AdRoute = VpnHood.Core.Client.Abstractions.AdRoute;
 
 namespace VpnHood.AppLogic.Test.Tests;
 
@@ -378,65 +382,414 @@ public class AdTest : TestAppBase
 
     }
 
+    // A connect's ad: before the VPN, then around the tunnel, then through it where a network can show over the VPN. Only
+    // such networks load through the tunnel, and the house ad only on the last route
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
-    public async Task A_connects_ad_waits_for_the_VPN_where_every_network_can_show_over_it(bool canOtherShowOverVpn)
+    public async Task A_connects_ad_tries_its_routes_in_order_each_with_its_networks(bool isMarked)
     {
         using var accessManager = await TestAppHelper.CreateAccessManager();
         await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
         var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
-
-        // the network that fills the ad can show over the VPN; the one after it, as AdMob, may not
-        var adProvider = new TestAdProvider(accessManager, AdType.InterstitialAd);
-        var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.AdOptions.PreloadAd = false;
-        appOptions.AdProviderItems = [
-            new AppAdProviderItem { AdProvider = adProvider, CanShowOverVpn = true },
-            new AppAdProviderItem {
-                AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd),
-                CanShowOverVpn = canOtherShowOverVpn
-            }
-        ];
-
-        // the ad's load sees whether the VPN is up
         VpnHoodClient? client = null;
-        bool? isAdapterStartedAtLoad = null;
         var device = new TestDevice(TestAppHelper, _ => new TestVpnAdapter(TestAppHelper.CreateTestVpnAdapterOptions())) {
             ClientCreated = x => client = x
         };
 
-        adProvider.LoadAdCallback = () => {
-            isAdapterStartedAtLoad ??= client?.Session?.Status.IsAdapterStarted;
-            return Task.CompletedTask;
-        };
-        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
+        // the paid networks fail; the house ad shows
+        var unmarkedRoutes = new List<AdRoute?>();
+        var markedRoutes = new List<AdRoute?>();
+        var houseRoutes = new List<AdRoute?>();
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem {
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, unmarkedRoutes, () => client, canShow: false),
+                ProviderName = "unmarked"
+            },
+            new AppAdProviderItem {
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, markedRoutes, () => client, canShow: false),
+                ProviderName = "marked",
+                CanShowOverVpn = isMarked
+            },
+            new AppAdProviderItem {
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, houseRoutes, () => client, canShow: true),
+                ProviderName = "house",
+                IsFallback = true,
+                CanShowOverVpn = true
+            }
+        ];
 
-        // one load, after the VPN came up only where every network can show over it
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
         var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
-        Assert.AreEqual(canOtherShowOverVpn, isAdapterStartedAtLoad);
-        Assert.AreEqual(1, adProvider.LoadAdCount);
+
+        CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough }, unmarkedRoutes);
+        if (isMarked) {
+            CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough, AdRoute.OverVpn },
+                markedRoutes);
+
+            CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.OverVpn }, houseRoutes);
+        }
+        else {
+            CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough }, markedRoutes);
+            CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.Passthrough }, houseRoutes);
+        }
+    }
+
+    // A house ad goes through the tunnel only where it is marked, as any network: an unmarked one, as a fork's network
+    // made the fallback may be, loaded there on the last try
+    [TestMethod]
+    public async Task A_house_ad_goes_through_the_tunnel_only_where_marked()
+    {
+        using var accessManager = await TestAppHelper.CreateAccessManager();
+        await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+        VpnHoodClient? client = null;
+        var device = new TestDevice(TestAppHelper, _ => new TestVpnAdapter(TestAppHelper.CreateTestVpnAdapterOptions())) {
+            ClientCreated = x => client = x
+        };
+
+        var markedRoutes = new List<AdRoute?>();
+        var houseRoutes = new List<AdRoute?>();
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem {
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, markedRoutes, () => client, canShow: false),
+                ProviderName = "marked",
+                CanShowOverVpn = true
+            },
+            new AppAdProviderItem {
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, houseRoutes, () => client, canShow: true),
+                ProviderName = "house",
+                IsFallback = true
+            }
+        ];
+
+        // the flexible ad's last try, through the tunnel, finds no network: the connect goes on without it
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+
+        CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough, AdRoute.OverVpn },
+            markedRoutes);
+
+        Assert.IsEmpty(houseRoutes);
+    }
+
+    // An ad tries the tunnel only where a network for that kind of ad can show there, where the person is: one marked
+    // network of any kind gave every ad a try through the tunnel, an empty one, so the try around it was not its last
+    [TestMethod]
+    [DataRow(false, false)]
+    [DataRow(true, true)]
+    [DataRow(true, false)]
+    public async Task An_ad_tries_the_tunnel_only_where_a_network_for_it_can_show_there(bool isMarked,
+        bool isExcludedHere)
+    {
+        using var accessManager = await TestAppHelper.CreateAccessManager();
+        await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Rewarded);
+        VpnHoodClient? client = null;
+        var device = new TestDevice(TestAppHelper, _ => new TestVpnAdapter(TestAppHelper.CreateTestVpnAdapterOptions())) {
+            ClientCreated = x => client = x
+        };
+
+        // the rewarded networks fail; one records each try's route and whether it is the last
+        var routes = new List<AdRoute?>();
+        var lastRoutes = new List<bool>();
+        var recordingProvider = new TestAdProvider(accessManager);
+        recordingProvider.LoadAdCallback = () => {
+            var status = client?.Session?.Status;
+            routes.Add(status?.AdRoute);
+            lastRoutes.Add(status?.IsLastAdRoute ?? false);
+            throw new LoadAdException("The load fails for the test.");
+        };
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem {
+                AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd),
+                ProviderName = "interstitial",
+                CanShowOverVpn = true
+            },
+            new AppAdProviderItem { AdProvider = recordingProvider, ProviderName = "recording" },
+            new AppAdProviderItem {
+                AdProvider = new TestAdProvider(accessManager) { FailLoad = true },
+                ProviderName = "rewarded",
+                CanShowOverVpn = isMarked,
+                ExcludeCountryCodes = isExcludedHere ? [AppRegionInfo.CurrentRegion.Name] : []
+            }
+        ];
+
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        var ex = await Assert.ThrowsAsync<Exception>(() =>
+            app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt));
+
+        var isTunnelTried = isMarked && !isExcludedHere;
+        CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough }, routes);
+        CollectionAssert.AreEqual(new[] { false, !isTunnelTried }, lastRoutes);
+
+        // the session's last failure comes back as the app's own exception, where it was the service's ApiException
+        Assert.AreEqual(typeof(LoadAdException), ex.GetType());
+    }
+
+    // A network whose ad loaded but did not show took every try, the networks after it never asked
+    [TestMethod]
+    public async Task A_network_whose_ad_does_not_show_gives_its_turn_to_the_next()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+        var failingProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) { FailShow = true };
+        var nextProvider = new TestAdProvider(accessManager, AdType.InterstitialAd);
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem { AdProvider = failingProvider, ProviderName = "failing" },
+            new AppAdProviderItem { AdProvider = nextProvider, ProviderName = "next" }
+        ];
+
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+
+        // the first try, before the VPN, shows the next network's ad
+        Assert.AreEqual(1, failingProvider.LoadAdCount);
+        Assert.AreEqual(1, nextProvider.LoadAdCount);
+    }
+
+    // The house ad, listed before a paid network, took the last try before it
+    [TestMethod]
+    public async Task The_house_ad_comes_after_the_paid_networks_wherever_the_head_lists_it()
+    {
+        using var accessManager = await TestAppHelper.CreateAccessManager();
+        await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+        VpnHoodClient? client = null;
+        var device = new TestDevice(TestAppHelper, _ => new TestVpnAdapter(TestAppHelper.CreateTestVpnAdapterOptions())) {
+            ClientCreated = x => client = x
+        };
+
+        var houseRoutes = new List<AdRoute?>();
+        var paidRoutes = new List<AdRoute?>();
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem {
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, houseRoutes, () => client, canShow: true),
+                ProviderName = "house",
+                IsFallback = true
+            },
+            new AppAdProviderItem {
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, paidRoutes, () => client, canShow: false),
+                ProviderName = "paid"
+            }
+        ];
+
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
+
+        CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough }, paidRoutes);
+        CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.Passthrough }, houseRoutes);
+    }
+
+    // The extension was offered where no rewarded network serves the person's country, and failed there every time
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task The_extension_is_offered_only_where_a_rewarded_network_serves_the_person(bool isExcludedHere)
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        accessManager.CanExtendPremiumByAd = true;
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem {
+                AdProvider = new TestAdProvider(accessManager),
+                ExcludeCountryCodes = isExcludedHere ? [AppRegionInfo.CurrentRegion.Name] : []
+            }
+        ];
+
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateNullDevice());
+        var token = await accessManager.CreateToken(TestCt);
+        token.IsPublic = true;
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, TestCt, ConnectPlanId.PremiumByTrial);
+
+        // the server offers it in both: the network alone decides
+        Assert.AreEqual(!isExcludedHere, app.State.SessionStatus?.CanExtendByRewardedAd);
+    }
+
+    // An extension's ad whose window went during its try left the session waiting, its new traffic around the tunnel:
+    // nothing shows an extension's ad later
+    [TestMethod]
+    public async Task A_window_gone_during_an_extensions_ad_ends_its_wait()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        accessManager.CanExtendPremiumByAd = true;
+
+        var adProvider = new TestAdProvider(accessManager);
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdProviderItems = [new AppAdProviderItem { AdProvider = adProvider }];
+        VpnHoodClient? client = null;
+        var device = new TestDevice(TestAppHelper, _ => new TestVpnAdapter(TestAppHelper.CreateTestVpnAdapterOptions())) {
+            ClientCreated = x => client = x
+        };
+
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
+        var token = await accessManager.CreateToken(TestCt);
+        token.IsPublic = true;
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, TestCt, ConnectPlanId.PremiumByTrial);
+
+        // the person leaves the app while the ad loads
+        adProvider.LoadAdCallback = () => throw new UiContextNotAvailableException();
+        await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Api.App.ExtendByRewardedAd(TestCt));
+        var session = (ClientSession)(client?.Session ?? throw new InvalidOperationException("No session."));
+        Assert.IsFalse(session.AdHandler.IsWaitingForAd);
+        Assert.IsFalse(session.PassthroughState.PassthroughForAd);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
+    }
+
+    // A reward the server refused before the VPN was followed by a second rewarded ad once the VPN was up
+    [TestMethod]
+    public async Task A_reward_the_server_refuses_asks_for_no_second_ad()
+    {
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        appDom.AccessManager.CanExtendPremiumByAd = true;
+        appDom.AccessManager.RejectAllAds = true;
+
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
+            appDom.Connect(ConnectPlanId.NormalByRewardedAd));
+
+        Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
+        Assert.AreEqual(1, appDom.TestAdProvider.LoadAdCount);
+    }
+
+    // A rewarded connect's ad that failed before the VPN made the app disconnect, while the session went on to try it
+    // once the VPN was up: the person never got the next try. The session alone decides what a failure means
+    [TestMethod]
+    public async Task A_rewarded_connects_ad_that_fails_before_the_VPN_is_tried_again_after_it()
+    {
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        appDom.AccessManager.CanExtendPremiumByAd = true;
+        var adProvider = appDom.TestAdProvider;
+        adProvider.LoadAdCallback = () => adProvider.LoadAdCount == 1
+            ? throw new LoadAdException("The first load fails for the test.")
+            : Task.CompletedTask;
+
+        await appDom.Connect(ConnectPlanId.PremiumByRewardedAd);
+        Assert.AreEqual(2, adProvider.LoadAdCount);
+        Assert.IsNull(appDom.App.State.SessionStatus?.SessionExpirationTime, "The reward must be granted.");
+    }
+
+    // An ad blocker the app refuses, met by an ad during a session, left the session waiting for the ad, its new traffic
+    // around the tunnel. No route helps it, so the wait ends at once
+    [TestMethod]
+    public async Task An_ad_blocker_met_during_a_session_ends_its_wait_for_the_ad()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        accessManager.CanExtendPremiumByAd = true;
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) { FailLoad = true } }
+        ];
+        appOptions.DeviceUiProvider = new TestDeviceUiProvider {
+            SystemPrivateDns = new PrivateDns { Provider = "adblocker.test", IsActive = true }
+        };
+
+        VpnHoodClient? client = null;
+        var device = new TestDevice(TestAppHelper, _ => new TestVpnAdapter(TestAppHelper.CreateTestVpnAdapterOptions())) {
+            ClientCreated = x => client = x
+        };
+
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
+        var token = await accessManager.CreateToken(TestCt);
+        token.IsPublic = true;
+        var vpnProfile = app.VpnProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(vpnProfile.VpnProfileId, TestCt, ConnectPlanId.PremiumByTrial);
+
+        await Assert.ThrowsExactlyAsync<AdBlockerException>(() => app.Api.App.ExtendByRewardedAd(TestCt));
+        var session = (ClientSession)(client?.Session ?? throw new InvalidOperationException("No session."));
+        Assert.IsFalse(session.AdHandler.IsWaitingForAd);
+        Assert.IsFalse(session.PassthroughState.PassthroughForAd);
+        await app.WaitForState(AppConnectionState.Connected, TestCt);
     }
 
     [TestMethod]
     public async Task The_ads_over_the_VPN_follow_the_networks_the_app_started_with()
     {
-        // The builder's list loses its first network, one that may not show over the VPN, after the start: the
-        // loaders still try it first, from their own copies, while the session would have been told the ads show over it
+        // The builder's list loses its one network that can show over the VPN after the start: the loaders still have
+        // it, from their own copies, so the session is still told an ad can go through the tunnel
         using var accessManager = await TestAppHelper.CreateAccessManager();
-        var unmarkedItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) };
-        var adProviderItems = new List<AppAdProviderItem> {
-            unmarkedItem,
-            new() { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd), CanShowOverVpn = true }
+        var markedItem = new AppAdProviderItem {
+            AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd),
+            CanShowOverVpn = true
         };
+
+        var adProviderItems = new List<AppAdProviderItem> {
+            new() { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) },
+            markedItem
+        };
+
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdProviderItems = adProviderItems;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
-        adProviderItems.Remove(unmarkedItem);
-        Assert.IsFalse(app.AdManager.AdService.CanShowOverVpn);
+        adProviderItems.Remove(markedItem);
+        Assert.IsTrue(app.AdManager.AdService.CanShowInterstitialOverVpn);
+    }
+
+    // the house ad, though it may show over the VPN, is no paid ad to try the tunnel for
+    [TestMethod]
+    public async Task A_house_ad_alone_is_no_reason_to_try_the_tunnel()
+    {
+        using var accessManager = await TestAppHelper.CreateAccessManager();
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdProviderItems = [
+            new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) },
+            new AppAdProviderItem { AdProvider = new InternalInAdProvider(), IsFallback = true, CanShowOverVpn = true }
+        ];
+
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        Assert.IsFalse(app.AdManager.AdService.CanShowInterstitialOverVpn);
+    }
+
+    // A white-label app's owner names the networks that show over the VPN in the app's remote settings, in place of the
+    // head's marks: one the head left out, or none, even where the head marked one
+    [TestMethod]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    public async Task The_remote_settings_name_the_networks_that_show_over_the_VPN_in_place_of_the_heads_marks(
+        bool isMarked, bool isNamed)
+    {
+        using var accessManager = await TestAppHelper.CreateAccessManager();
+        var item = new AppAdProviderItem {
+            AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd),
+            ProviderName = "network",
+            CanShowOverVpn = isMarked
+        };
+
+        // the copy the app downloaded at an earlier start; their address answers nothing, so no download replaces it
+        var appOptions = TestAppHelper.CreateAppOptions();
+        Directory.CreateDirectory(appOptions.StorageFolderPath);
+        File.WriteAllText(Path.Combine(appOptions.StorageFolderPath, "remote_settings.json"),
+            JsonSerializer.Serialize(new RemoteSettings { OverVpnAdProviders = isNamed ? ["network"] : [] }));
+
+        appOptions.RemoteSettingsUrl = new Uri("http://127.0.0.1:9/remote_settings.json");
+        appOptions.AdProviderItems = [item];
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        Assert.AreEqual(isNamed, app.AdManager.AdService.CanShowInterstitialOverVpn);
+        Assert.AreEqual(isNamed, item.CanShowOverVpn, "The loaders read the mark on the route through the tunnel.");
     }
 
     [TestMethod]
@@ -582,5 +935,18 @@ public class AdTest : TestAppBase
 
         app.AdManager.AdService.InternalAdDismiss(ShowAdResult.Clicked);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
+    }
+
+    // a network that records the route of each of its loads, which fail where it may not show
+    private static TestAdProvider CreateRouteRecordingAdProvider(TestAccessManager accessManager,
+        List<AdRoute?> routes, Func<VpnHoodClient?> getClient, bool canShow)
+    {
+        var adProvider = new TestAdProvider(accessManager, AdType.InterstitialAd);
+        adProvider.LoadAdCallback = () => {
+            routes.Add(getClient()?.Session?.Status.AdRoute);
+            return canShow ? Task.CompletedTask : throw new LoadAdException("The load fails for the test.");
+        };
+
+        return adProvider;
     }
 }

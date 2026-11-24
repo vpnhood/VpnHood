@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.ConnectorServices;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Net.Toolkit.ApiClients;
@@ -59,5 +60,7 @@ internal class ClientSessionStatus(
     public bool IsIpV6SupportedByServer => packetHandler.IsIpV6SupportedByServer;
     public bool IsIpV6SupportedByClient => packetHandler.IsIpV6SupportedByClient;
     public bool IsAdapterStarted => session.IsAdapterStarted;
+    public AdRoute? AdRoute => session.AdRoute;
+    public bool IsLastAdRoute => session.IsLastAdRoute;
     public ApiError? Error => session.LastException?.ToApiError();
 }

@@ -399,7 +399,8 @@ internal class ClientSessionBuilder(
                     HostQuicEndPoint = hostQuicEndPoint,
                     IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
                     AdRequirement = helloResponse.AdRequirement,
-                    CanShowAdOverVpn = config.CanShowAdOverVpn,
+                    CanShowFlexibleAdOverVpn = config.CanShowFlexibleAdOverVpn,
+                    CanShowRewardedAdOverVpn = config.CanShowRewardedAdOverVpn,
                     MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
                         ? Math.Min(config.Transport.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)
                         : config.Transport.MaxPacketChannelCount

@@ -9,6 +9,12 @@ internal static class AppExceptionConverter
 {
     public static Exception? ApiErrorToException(ApiError apiError)
     {
+        return ApiErrorToAppException(apiError) ?? ClientExceptionConverter.ApiErrorToException(apiError);
+    }
+
+    // the app's own exceptions alone, as an ad's, which the client's converter does not know
+    public static Exception? ApiErrorToAppException(ApiError apiError)
+    {
         Exception? exception = null;
 
         // ad
@@ -24,6 +30,9 @@ internal static class AppExceptionConverter
         if (apiError.Is<LoadAdException>())
             exception = new LoadAdException(apiError.Message);
 
+        if (apiError.Is<AdBlockerException>())
+            exception = new AdBlockerException(apiError.Message);
+
         // app
         if (apiError.Is<NoInternetException>())
             exception = new NoInternetException();
@@ -34,6 +43,6 @@ internal static class AppExceptionConverter
         if (exception != null)
             apiError.ExportData(exception.Data);
 
-        return exception ?? ClientExceptionConverter.ApiErrorToException(apiError);
+        return exception;
     }
 }

@@ -7,8 +7,9 @@ namespace VpnHood.AppLogic.App.Services.Ads;
 public class AppAdOptions
 {
     /// <summary>
-    /// Gets or sets how long the app waits after an ad closes before it tells the VPN service the ad was shown; the
-    /// state reads as connected for the last three seconds of it. The default is three seconds.
+    /// Gets or sets how long the app waits after an ad closes before it tells the VPN service the ad was shown, so the
+    /// ad network's tracking of it still leaves outside the VPN; the state reads as connected for the last three seconds
+    /// of it. The default is three seconds.
     /// </summary>
     public TimeSpan ShowAdPostDelay { get; set; } = TimeSpan.FromSeconds(3);
 

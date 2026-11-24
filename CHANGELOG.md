@@ -1,5 +1,10 @@
 # Latest
 
+* Fix: A rewarded ad that fails before the VPN connects is tried again once the VPN is up, where the connect stopped at the first failure #android #ios #connect
+* Fix: When the server does not accept the ad you watched, the app tells you so and asks for no second one #android #ios #connect
+* Fix: With a Private DNS ad blocker, the connection stops before the VPN comes up, where it came up for a moment and dropped #android #connect
+* Fix: When a Private DNS ad blocker stops the ad you chose to watch for more time, or you leave the app while it loads, all your traffic goes through the VPN again at once, where new connections could keep going around it #android #connect
+* Fix: The button to watch an ad for more time shows only where an ad can play in your country #android #connect
 * Fix: Connecting right after disconnecting waits for the last connection to close, where it could start while that one was still closing and fail
 * Fix: Disconnecting while the VPN is still connecting shows no error, where the app could show the connection as canceled
 * Fix: When a connection ends with an error just as it disconnects, the app shows that error, where it could show none

@@ -30,6 +30,8 @@ internal static class DtoConverters
             CanChangeTcpForwarding = sessionStatus.CanChangeTcpForwarding,
             IsDropQuic = sessionStatus.IsDropQuic,
             IsAdapterStarted = sessionStatus.IsAdapterStarted,
+            AdRoute = sessionStatus.AdRoute,
+            IsLastAdRoute = sessionStatus.IsLastAdRoute,
             Error = sessionStatus.Error
         };
 

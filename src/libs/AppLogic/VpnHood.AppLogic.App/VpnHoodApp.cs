@@ -412,6 +412,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     : null)
         };
 
+        // the networks the remote settings name, where they name any, show over the VPN in place of the head's marks
+        if (SettingsService.RemoteSettings?.OverVpnAdProviders is { } overVpnAdProviders) {
+            foreach (var item in adProviderItems)
+                item.CanShowOverVpn = overVpnAdProviders.Any(item.HasName);
+        }
+
         // create ad service
         var adService = new AppAdService(
             adProviderItems: adProviderItems,
@@ -823,6 +829,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (clientState == ClientState.Waiting)
                 return AppConnectionState.Waiting;
 
+            // the post delay reads as connected: the person checks the result after leaving the ad, by when the delay
+            // that lets its tracking leave outside the VPN is over
             if (clientState is ClientState.WaitingForAd)
                 return AdManager.IsWaitingForPostDelay ? AppConnectionState.Connected : AppConnectionState.WaitingForAd;
 
@@ -1238,6 +1246,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (Exception) when (_connectCts.IsCancellationRequested) {
             throw new UserCanceledException("User has cancelled the connection.");
         }
+        catch (ApiException ex)
+            when (AppExceptionConverter.ApiErrorToAppException(ex.ToApiError()) is { } appException) {
+            // the session ended the connect with the app's own error, as its ad's: the app's type again, and no
+            // network check, as the network did not fail
+            throw appException;
+        }
         catch (Exception ex) {
             // check no internet connection, use the original cancellation token to avoid timeout exception; not for
             // a try its caller makes again, whose error nobody sees: the check only words that error, and holds
@@ -1295,7 +1309,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
             ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
             AccessCode = accessCode,
-            CanShowAdOverVpn = AdManager.AdService.CanShowOverVpn,
+            CanShowFlexibleAdOverVpn = AdManager.AdService.CanShowInterstitialOverVpn,
+            CanShowRewardedAdOverVpn = AdManager.AdService.CanShowRewardedOverVpn,
             AllowAnonymousTracker = isTrackerAllowed,
             AllowEndPointTracker = isTrackerAllowed && Config.AllowEndPointTracker,
             AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
@@ -1712,10 +1727,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             _connectTimeoutCts.CancelAfter(TimeSpan.FromMinutes(15));
             var connectionInfo = ConnectionInfo;
-            var useFallback = connectionInfo.SessionStatus?.IsAdapterStarted is true;
-            await AdManager.ShowAd(AppUiContext.Context,
+            var failure = await AdManager.ShowAd(AppUiContext.Context,
                 connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement,
-                useFallback: useFallback, _showAdCts.Token).Vhc();
+                _showAdCts.Token).Vhc();
+
+            // the session, told, decides: it tries the routes after the VPN starts, and its connect goes on without a
+            // flexible ad, or ends with the last failure, or at once with a stop, as a build without ads or an ad blocker
+            if (failure != null)
+                VhLogger.Instance.LogWarning(failure, "Could not show ad.");
         }
         catch (ShowAdNoUiException) when (!_isConnecting) {
             // No connect of this process is waiting for the ad: the session is the quick-settings tile's,
@@ -1725,6 +1744,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("The ad waits for a window to show it in.");
         }
         catch (Exception ex) {
+            // What the session was not told: no window for a connect, or a request or result the service did not take.
+            // The app ends the connection itself
             VhLogger.Instance.LogWarning(ex, "Could not show ad.");
             if (!_showAdCts.IsCancellationRequested) {
                 _appPersistState.LastError = ex.ToApiError();

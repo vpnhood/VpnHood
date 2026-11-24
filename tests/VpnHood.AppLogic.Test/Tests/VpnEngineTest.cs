@@ -16,7 +16,8 @@ namespace VpnHood.AppLogic.Test.Tests;
 [TestClass]
 public class VpnEngineTest : TestAppBase
 {
-    private static VpnEngineInfo CreateEngine(VpnEngineFeatures features, int minVersion = 1, int maxVersion = 1) =>
+    private static VpnEngineInfo CreateEngine(VpnEngineFeatures features,
+        int minVersion = VpnServiceContract.Version, int maxVersion = VpnServiceContract.Version) =>
         new() {
             Name = "Test engine",
             Version = "1.0.0",

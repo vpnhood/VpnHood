@@ -134,6 +134,20 @@ public class VpnServiceContractTest : TestBase
         Assert.AreEqual(1, options.ContractVersion);
     }
 
+    // An always-on start after an update runs with the options the last version saved: an engine of version 2 still
+    // takes version 1's, with no ad through the tunnel, as version 1 had no switch for it
+    [TestMethod]
+    public void An_engine_takes_the_options_an_app_of_the_first_version_saved()
+    {
+        var options = JsonSerializer.Deserialize<VpnServiceOptions>(
+            """{ "ContractVersion": 1, "ClientOptions": { "AdapterName": "a", "AccessKey": "k", "ClientId": "c" } }""");
+
+        Assert.IsNotNull(options);
+        VpnServiceContract.Verify(options.ContractVersion);
+        Assert.IsFalse(options.ClientOptions.CanShowFlexibleAdOverVpn);
+        Assert.IsFalse(options.ClientOptions.CanShowRewardedAdOverVpn);
+    }
+
     [TestMethod]
     public void This_library_s_engine_has_every_feature()
     {

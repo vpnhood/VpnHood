@@ -11,10 +11,16 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 /// </remarks>
 public static class VpnServiceContract
 {
-    /// <summary>The newest version this library speaks: 1.</summary>
-    public const int Version = 1;
+    /// <summary>
+    /// The newest version this library speaks: 2, where an ad is tried before the VPN, around the tunnel, then through
+    /// it (<see cref="VpnHood.Core.Client.Abstractions.AdRoute"/>).
+    /// </summary>
+    public const int Version = 2;
 
-    /// <summary>The oldest version this library still speaks: 1.</summary>
+    /// <summary>
+    /// The oldest version this library still speaks: 1, as an engine reads the options an app of that version saved, as
+    /// an always-on start after an update does, the switches version 2 added left off.
+    /// </summary>
     public const int MinVersion = 1;
 
     /// <summary>

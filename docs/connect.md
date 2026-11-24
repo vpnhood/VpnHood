@@ -68,10 +68,16 @@ in the same process on a phone, and over HTTP on a desktop.
    - **A refusal:** an error code, [below](#when-a-connect-fails).
 5. **The session starts** (steps 6-9). The engine starts its local TCP stack and opens its first connection for
    packets to the server. If the session needs an ad, the service waits while the app shows it, and the app tells
-   the service how it went. Then the adapter starts,
-   with its routes and DNS, and the app shows Connected. Where every ad network of the app can show its ads over the
-   VPN (`AppAdProviderItem.CanShowOverVpn`), the adapter starts first, and the ad's traffic goes as the rest does,
-   through the tunnel unless a split takes it around. A server may send a newer access key with the session, and the
+   the service how it went a few seconds after the ad ends, so the ad network's tracking of it still leaves outside
+   the VPN (`AppAdOptions.ShowAdPostDelay`). Then the adapter starts, with its routes and DNS, and the app shows
+   Connected, after an ad from the ad's end, as the person looks only once back from it. An ad that failed is tried
+   again once the adapter is up: first
+   with the session's new traffic around the tunnel, then through it, where one of the app's networks for that kind of
+   ad can show over the VPN where the person is (`AdRoute`, `AppAdProviderItem.CanShowOverVpn`, which the app's remote
+   settings can set by the networks' names). Only such networks load through the tunnel, the house ad too where it is
+   marked; the house ad comes only on the last try, after the paid networks, and a network whose ad loaded but did not
+   show gives its turn to the next. A failure no try helps, as the app's refusal of an ad blocker, or the server's of
+   a rewarded ad that showed, ends the connect at once. A server may send a newer access key with the session, and the
    app saves it.
 
 Until the adapter starts, the device's traffic goes on as before, so a connect that fails leaves the device's
@@ -106,7 +112,7 @@ A failed connect throws from `Connect`, and the app keeps the error as its state
 | Finding a server | `UnreachableServerException` | No server of the access key answered. |
 | After a redirect | `UnreachableServerLocationException` | No server for the chosen location answered. |
 | The hello | `SessionException`, with its `SessionErrorCode` | The server refused: the access has expired (`AccessExpired`), used its traffic (`AccessTrafficOverflow`) or its daily limit (`DailyLimitExceeded`), is locked (`AccessLocked`); the premium code was refused (`AccessCodeRejected`); the server is in maintenance (`Maintenance`); or the app is too old for it (`UnsupportedClient`). With `NoServerAvailable` or `PremiumLocation`, the app also sets the location back to auto. |
-| The ad | The ad's error | A rewarded ad must be watched to the end, so a failed one ends the connect. A failed flexible ad does not. |
+| The ad | The ad's error | A rewarded ad must be watched to the end, so one that failed on its last try ends the connect. A failed flexible ad does not, unless the app refuses to go on: a build without ads (`AdException`), or an ad blocker (`AdBlockerException`). |
 | Anywhere | `ConnectionTimeoutException` | The connect took longer than `AppOptions.ConnectTimeout`, 4 minutes by default. |
 
 Before the error reaches the UI, the app tries two things:

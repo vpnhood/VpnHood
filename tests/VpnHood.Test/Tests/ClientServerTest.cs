@@ -22,6 +22,7 @@ using VpnHood.Test.Device;
 using VpnHood.Test.Dom;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
+using AdRoute = VpnHood.Core.Client.Abstractions.AdRoute;
 using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
 using SplitDnsMode = VpnHood.Core.Client.Abstractions.SplitDnsMode;
 // ReSharper disable ShortLivedHttpClient
@@ -575,28 +576,146 @@ public class ClientServerTest : TestBase
         Assert.IsNull(client.LastException);
     }
 
+    // The connect's ad went through the tunnel at once where the app's networks could, and before the VPN otherwise. It
+    // goes before the VPN first, for the better-paying ad, then around the tunnel, then through it where the app allows
+    // it
     [TestMethod]
-    public async Task A_connects_ad_that_can_show_over_the_VPN_waits_for_the_adapter_and_loads_through_the_tunnel()
+    public async Task A_connects_ad_goes_before_the_VPN_then_around_the_tunnel_then_through_it()
     {
         using var accessManager = await TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
         var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+
         var options = TestHelper.CreateClientOptions(accessManager.GetToken(accessToken));
-        options.CanShowAdOverVpn = true;
+        options.CanShowFlexibleAdOverVpn = true;
+        await using var client = await TestHelper.CreateClient(options, autoConnect: false);
+        var connectTask = client.Connect(TestCt);
+
+        // before the VPN
+        await client.WaitForState(ClientState.WaitingForAd, TestCt);
+        var session = (ClientSession)client.RequiredSession;
+        Assert.AreEqual(AdRoute.BeforeVpn, session.Status.AdRoute);
+        Assert.IsFalse(session.Status.IsLastAdRoute, "The routes after the VPN follow it.");
+        Assert.IsFalse(session.Status.IsAdapterStarted);
+
+        // around the tunnel, once the VPN is up
+        session.AdHandler.SetAdFailed(new InvalidOperationException("The first try fails for the test."),
+            tryNextRoute: true);
+
+        await AssertEqualsWait(AdRoute.Passthrough, () => session.Status.AdRoute);
+        Assert.IsTrue(session.Status.IsAdapterStarted);
+        Assert.IsFalse(session.Status.IsLastAdRoute);
+        Assert.IsTrue(session.PassthroughState.PassthroughForAd);
+
+        // through the tunnel, last: the try's traffic goes in it
+        session.AdHandler.SetAdFailed(new InvalidOperationException("The second try fails for the test."),
+            tryNextRoute: true);
+
+        Assert.AreEqual(AdRoute.OverVpn, session.Status.AdRoute);
+        Assert.IsTrue(session.Status.IsLastAdRoute);
+        Assert.IsFalse(session.PassthroughState.PassthroughForAd);
+        var passthruCount = session.Status.StreamPassthruCount;
+        await TestHelper.Test_Https();
+        Assert.AreEqual(passthruCount, session.Status.StreamPassthruCount);
+
+        // the ad's outcome ends the connect
+        session.AdHandler.SetAdOk();
+        await connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
+        Assert.AreEqual(ClientState.Connected, client.State);
+    }
+
+    // where the app does not allow it, the try around the tunnel is the last
+    [TestMethod]
+    public async Task A_connects_ad_goes_through_the_tunnel_only_where_the_app_allows_it()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+
+        var options = TestHelper.CreateClientOptions(accessManager.GetToken(accessToken));
+        options.CanShowFlexibleAdOverVpn = false;
         await using var client = await TestHelper.CreateClient(options, autoConnect: false);
         var connectTask = client.Connect(TestCt);
         await client.WaitForState(ClientState.WaitingForAd, TestCt);
+        var session = (ClientSession)client.RequiredSession;
+        Assert.IsFalse(session.Status.IsLastAdRoute, "The routes after the VPN follow it.");
+        session.AdHandler.SetAdFailed(new InvalidOperationException("The first try fails for the test."),
+            tryNextRoute: true);
 
-        // the VPN is up before the ad, whose traffic goes through the tunnel: the ad came before the adapter
-        Assert.IsTrue(client.RequiredSession.Status.IsAdapterStarted);
-        await TestHelper.Test_Https();
-        Assert.IsGreaterThan(0, client.RequiredSession.Status.StreamTunnelledCount);
-        Assert.AreEqual(0, client.RequiredSession.Status.StreamPassthruCount);
+        await AssertEqualsWait(AdRoute.Passthrough, () => session.Status.AdRoute);
+        Assert.IsTrue(session.Status.IsLastAdRoute);
 
-        // the ad's outcome ends the connect
-        ((ClientSession)client.RequiredSession).AdHandler.SetAdOk();
+        // a flexible ad's last failure: the connect goes on without it
+        session.AdHandler.SetAdFailed(new InvalidOperationException("The last try fails for the test."),
+            tryNextRoute: true);
+
         await connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt);
         Assert.AreEqual(ClientState.Connected, client.State);
+        Assert.IsFalse(session.PassthroughState.PassthroughForAd);
+    }
+
+    // a required ad's last failure ends the connect, with it
+    [TestMethod]
+    public async Task A_required_ads_last_failure_ends_the_connect()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Rewarded);
+
+        var options = TestHelper.CreateClientOptions(accessManager.GetToken(accessToken));
+        options.CanShowRewardedAdOverVpn = true;
+        await using var client = await TestHelper.CreateClient(options, autoConnect: false);
+        var connectTask = client.Connect(TestCt);
+        await client.WaitForState(ClientState.WaitingForAd, TestCt);
+        var session = (ClientSession)client.RequiredSession;
+
+        session.AdHandler.SetAdFailed(new InvalidOperationException("Before the VPN."), tryNextRoute: true);
+        await AssertEqualsWait(AdRoute.Passthrough, () => session.Status.AdRoute);
+        session.AdHandler.SetAdFailed(new InvalidOperationException("Around the tunnel."), tryNextRoute: true);
+        Assert.AreEqual(AdRoute.OverVpn, session.Status.AdRoute);
+        session.AdHandler.SetAdFailed(new TimeoutException("Through the tunnel."), tryNextRoute: true);
+
+        var ex = await Assert.ThrowsExactlyAsync<TimeoutException>(() =>
+            connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+
+        Assert.AreEqual("Through the tunnel.", ex.Message);
+    }
+
+    // A failure no route helps, as the app's refusal of an ad blocker, ends a connect, its ad flexible too: before the
+    // VPN, the routes after it went on, and the VPN came up only for the app to end it; after it, a flexible connect
+    // went on to Connected
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task A_failure_no_route_helps_ends_the_connect(bool isBeforeVpn)
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt, adRequirement: AdRequirement.Flexible);
+        var token = accessManager.GetToken(accessToken);
+
+        using var vpnAdapter = new StartingVpnAdapter();
+        var isAdapterStarted = false;
+        vpnAdapter.Starting += (_, _) => isAdapterStarted = true;
+        await using var client = await TestHelper.CreateClient(token, vpnAdapter, autoConnect: false);
+        var connectTask = client.Connect(TestCt);
+        await client.WaitForState(ClientState.WaitingForAd, TestCt);
+        var session = (ClientSession)client.RequiredSession;
+        if (!isBeforeVpn) {
+            session.AdHandler.SetAdFailed(new InvalidOperationException("The first try fails for the test."),
+                tryNextRoute: true);
+
+            await AssertEqualsWait(AdRoute.Passthrough, () => session.Status.AdRoute);
+        }
+
+        session.AdHandler.SetAdFailed(new NotSupportedException("The app refuses the ad blocker."),
+            tryNextRoute: false);
+
+        var ex = await Assert.ThrowsExactlyAsync<NotSupportedException>(() =>
+            connectTask.WaitAsync(TimeSpan.FromSeconds(10), TestCt));
+
+        Assert.AreEqual("The app refuses the ad blocker.", ex.Message);
+        Assert.AreEqual(!isBeforeVpn, isAdapterStarted);
     }
 
     [TestMethod]

@@ -1,24 +1,26 @@
 ﻿namespace VpnHood.Core.Client;
 
 /// <summary>
-/// Represents a session's wait for an ad: while it waits, the session sends its new traffic around the tunnel, but the
-/// DNS and pings it carries as packets, so the ad loads through the device's own network, until the app tells it the
-/// ad's outcome. Where the app's ads can show over the VPN (<see cref="Abstractions.ClientOptions.CanShowAdOverVpn"/>),
-/// its traffic keeps its routing, and the ad's goes as the rest does.
+/// Represents a session's wait for an ad, which it tries on one route after another
+/// (<see cref="Abstractions.AdRoute"/>) until the app tells it the ad showed, or the last route failed. While a try goes
+/// around the tunnel, the session sends its new traffic that way, but the DNS and pings it carries as packets.
 /// </summary>
 /// <remarks>Disposing it cancels a wait under way.</remarks>
 public interface ISessionAdHandler : IDisposable
 {
     internal event EventHandler? IsWaitingForChanged;
     internal bool IsWaitingForAd { get; }
-    internal Task<Exception?> TryWaitForAd(CancellationToken cancellationToken);
 
-    /// <summary>Starts a wait for an ad, or joins the one under way, until the app tells the ad's outcome.</summary>
+    /// <summary>
+    /// Starts a wait for a rewarded ad during the session, or joins the one under way: around the tunnel first, then
+    /// through it where the app allows it (<see cref="Abstractions.ClientOptions.CanShowRewardedAdOverVpn"/>).
+    /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that completes once the ad has been shown.</returns>
     /// <remarks>
-    /// The connections of the moment stay as they go when a wait starts. Once a wait it started ends, the session drops
-    /// its TCP connections and forwarded ones, so the new ones follow the splits again; a wait over the VPN drops none.
+    /// The connections of the moment stay as they go when a wait starts. Once a try around the tunnel ends, the session
+    /// drops its TCP connections and forwarded ones, so the new ones follow the splits again; a try through the tunnel
+    /// drops none.
     /// </remarks>
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was canceled; the caller that started the wait this one joined canceled it,
@@ -38,7 +40,8 @@ public interface ISessionAdHandler : IDisposable
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that completes once the server has taken the ad.</returns>
     /// <remarks>
-    /// A failure fails the wait for the ad with the same error, unless the session's shutdown has canceled it already.
+    /// A failure fails the wait for the ad with the same error, unless the session's shutdown has canceled it already:
+    /// no route after it tries the ad again, and a connect ends with it.
     /// </remarks>
     /// <exception cref="ObjectDisposedException">The session is disposed.</exception>
     /// <exception cref="OperationCanceledException">
@@ -51,8 +54,15 @@ public interface ISessionAdHandler : IDisposable
     /// <exception cref="UnauthorizedAccessException">The server refused the request's proof.</exception>
     Task SendRewardedAdData(string rewardedAdData, CancellationToken cancellationToken);
 
-    /// <summary>Ends the wait for an ad with its failure.</summary>
-    /// <param name="ex">The failure, which the wait throws.</param>
+    /// <summary>
+    /// Ends the ad's try on its route with a failure: the wait moves to its next route at once, where one is left and
+    /// <paramref name="tryNextRoute"/> is <see langword="true"/>, or else ends with the failure.
+    /// </summary>
+    /// <param name="ex">The failure, which the wait throws where it ends.</param>
+    /// <param name="tryNextRoute">
+    /// <see langword="false"/> for a failure no route helps, as the app's refusal of the device's ad blocker: a connect
+    /// ends with it, its routes after the VPN untried, though its ad is flexible.
+    /// </param>
     /// <exception cref="ArgumentNullException"><paramref name="ex"/> is <see langword="null"/>.</exception>
-    void SetAdFailed(Exception ex);
+    void SetAdFailed(Exception ex, bool tryNextRoute);
 }

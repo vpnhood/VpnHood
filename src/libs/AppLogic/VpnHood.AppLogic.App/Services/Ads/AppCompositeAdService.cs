@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLogic.Api.Exceptions;
 using VpnHood.AppLogic.Abstractions.Ads;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Abstractions.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Net.Toolkit.Extensions;
@@ -64,36 +65,65 @@ internal class AppCompositeAdService
         return true;
     }
 
+    // A route's networks: through the tunnel only those that can show over the VPN, the house ad too, and the house ad
+    // only on the last route, as it always shows and would leave a paid ad after it no turn
+    private static bool CanFillRoute(AppAdProviderItem adProviderItem, AdRoute route, bool isLastRoute)
+    {
+        return (route != AdRoute.OverVpn || adProviderItem.CanShowOverVpn) &&
+               (!adProviderItem.IsFallback || isLastRoute);
+    }
+
+    // the networks that may fill a route where the person is, in the head's order but the house ad last
+    private IEnumerable<AppAdProviderItem> GetRouteItems(AdRoute route, bool isLastRoute, string? countryCode)
+    {
+        return _adProviderItems
+            .Where(x => x.IsEnabled)
+            .Where(x => countryCode is null || IsCountrySupported(x, countryCode))
+            .Where(x => CanFillRoute(x, route, isLastRoute))
+            .OrderBy(x => x.IsFallback);
+    }
+
+    // whether a network may fill the route where the person is: on a route that is not the last, a paid one
+    public bool CanFill(AdRoute route, bool isLastRoute, string? countryCode)
+    {
+        return GetRouteItems(route, isLastRoute, countryCode).Any();
+    }
+
     private readonly AsyncLock _loadAdLock = new();
 
-    public async Task LoadAd(IUiContext uiContext,
-        bool isPreload, string? countryCode, bool forceReload, bool useFallback,
+    // the next ad, ahead of its try
+    public Task PreloadAd(IUiContext uiContext, string? countryCode, AdRoute route, bool isLastRoute,
         CancellationToken cancellationToken)
+    {
+        return LoadAd(uiContext, isPreload: true, countryCode, route, isLastRoute, failures: [], cancellationToken);
+    }
+
+    // Loads the route's first network that loads, but those that failed in the try (failures, which its own failures
+    // join), whose errors the exception lists where none loads
+    private async Task LoadAd(IUiContext uiContext, bool isPreload, string? countryCode, AdRoute route,
+        bool isLastRoute, Dictionary<AppAdProviderItem, Exception> failures, CancellationToken cancellationToken)
     {
         if (_adProviderItems.Length == 0)
             throw new Exception("There is no AdService registered in this app.");
 
+        var routeItems = GetRouteItems(route, isLastRoute, countryCode)
+            .Where(x => !failures.ContainsKey(x))
+            .ToArray();
+
+        // an ad loaded before, by a preload say, serves only a route its network may fill
         using var lockAsync = await _loadAdLock.LockAsync(cancellationToken).Vhc();
-        if (!forceReload && !ShouldLoadAd())
+        if (!ShouldLoadAd() && _loadedAdProviderItem != null && routeItems.Contains(_loadedAdProviderItem))
             return;
 
         IsPreload = isPreload;
         _loadedAdProviderItem = null;
-        var providerExceptions = new List<(string, Exception)>();
-
-        // filter ad services by country code
-        var filteredAdProviderItems = _adProviderItems
-            .Where(x => x.IsEnabled)
-            .Where(x => countryCode is null || IsCountrySupported(x, countryCode))
-            .Where(x => useFallback || !x.IsFallback)
-            .ToArray();
 
         _progressMonitor = new ProgressMonitor(
-            totalTaskCount: filteredAdProviderItems.Count(x => !x.IsFallback),
+            totalTaskCount: routeItems.Count(x => !x.IsFallback),
             taskTimeout: _loadAdTimeout == Timeout.InfiniteTimeSpan ? NetworkLoadAdTimeout : _loadAdTimeout);
 
         try {
-            foreach (var adProviderItem in filteredAdProviderItems) {
+            foreach (var adProviderItem in routeItems) {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // find first successful ad network
@@ -126,7 +156,7 @@ internal class AppCompositeAdService
                                 isPreload: isPreload),
                             cancellationToken).Vhc();
 
-                    providerExceptions.Add((adProviderItem.Name, ex));
+                    failures[adProviderItem] = ex;
                     VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
                         adProviderItem.Name);
                 }
@@ -136,9 +166,9 @@ internal class AppCompositeAdService
             _progressMonitor = null;
         }
 
-        var providerMessages = filteredAdProviderItems.Any()
-            ? string.Join(", ", providerExceptions.Select(x => $"{x.Item1}:{x.Item2.Message}"))
-            : "There is no provider for this country";
+        var providerMessages = failures.Count > 0
+            ? string.Join(", ", failures.Select(x => $"{x.Key.Name}:{x.Value.Message}"))
+            : "There is no provider for this route and country";
 
         throw new LoadAdException(
             $"Could not load any Ad. " +
@@ -146,7 +176,53 @@ internal class AppCompositeAdService
             $"Cancelled: {cancellationToken.IsCancellationRequested}.");
     }
 
-    public async Task<ShowLoadedAdResult> ShowLoadedAd(IUiContext uiContext, string? customData,
+    // Loads and shows the route's first network that does both, the house ad last: a network whose ad loaded but did
+    // not show gives its turn to the next. loadAdPostDelay: the wait between a load and its show
+    public async Task<ShowLoadedAdResult> LoadAndShowAd(IUiContext uiContext, string customData, string? countryCode,
+        AdRoute route, bool isLastRoute, TimeSpan loadAdPostDelay, CancellationToken cancellationToken)
+    {
+        var failures = new Dictionary<AppAdProviderItem, Exception>();
+        while (true) {
+            await LoadAd(uiContext, isPreload: false, countryCode, route, isLastRoute, failures, cancellationToken)
+                .Vhc();
+
+            // apply delay to prevent showing ads immediately after loading
+            await Task.Delay(loadAdPostDelay, cancellationToken).Vhc();
+
+            var result = await TryShowLoadedAd(uiContext, customData, countryCode, failures, cancellationToken).Vhc();
+            if (result != null)
+                return result.Value;
+        }
+    }
+
+    // The loaded ad shown, or null where its network failed to show it, which joins the try's failures; no window, or
+    // the caller's cancel, ends the try
+    private async Task<ShowLoadedAdResult?> TryShowLoadedAd(IUiContext uiContext, string customData,
+        string? countryCode, Dictionary<AppAdProviderItem, Exception> failures,
+        CancellationToken cancellationToken)
+    {
+        var adProviderItem = _loadedAdProviderItem ?? throw new LoadAdException("There is no loaded ad.");
+        try {
+            return await ShowLoadedAd(uiContext, customData, cancellationToken).Vhc();
+        }
+        catch (ShowAdException ex) when (!cancellationToken.IsCancellationRequested) {
+            if (_tracker != null)
+                await _tracker.TryTrack(AppTrackerBuilder.BuildShowAdFailed(adNetwork: adProviderItem.Name,
+                        errorMessage: ex.Message, countryCode: countryCode, isPreload: IsPreload),
+                    cancellationToken).Vhc();
+
+            if (ex is ShowAdNoUiException)
+                throw;
+
+            VhLogger.Instance.LogWarning(ex,
+                "The ad did not show, so the next network is tried. ProviderName: {ProviderName}.", adProviderItem.Name);
+
+            failures[adProviderItem] = ex;
+            return null;
+        }
+    }
+
+    private async Task<ShowLoadedAdResult> ShowLoadedAd(IUiContext uiContext, string? customData,
         CancellationToken cancellationToken)
     {
         if (_loadedAdProviderItem == null)

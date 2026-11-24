@@ -651,8 +651,10 @@ public class VpnServiceManager : IDisposable
         var connectionInfo = _status.ConnectionInfo;
         
         // check if the state has changed
-        if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState || 
-            _lastConnectionInfo.SessionStatus?.IsAdapterStarted != connectionInfo.SessionStatus?.IsAdapterStarted) {
+        // an ad that moved to its next route keeps the state: the app shows it again from that route's networks
+        if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState ||
+            _lastConnectionInfo.SessionStatus?.IsAdapterStarted != connectionInfo.SessionStatus?.IsAdapterStarted ||
+            _lastConnectionInfo.SessionStatus?.AdRoute != connectionInfo.SessionStatus?.AdRoute) {
             VhLogger.Instance.LogDebug("The VpnService state has been changed. {OldSate} => {NewState}",
                 _lastConnectionInfo?.ClientState, connectionInfo.ClientState);
 
@@ -756,8 +758,13 @@ public class VpnServiceManager : IDisposable
             cancellationToken);
     }
 
-    /// <summary>Tells the VPN service the ad the session waits for could not be shown.</summary>
+    /// <summary>
+    /// Tells the VPN service the ad the session waits for could not be shown on its route: the session moves to its next
+    /// route at once, where one is left and <paramref name="tryNextRoute"/> is <see langword="true"/>, which the
+    /// connection's info shows once this returns (<see cref="SessionStatus.AdRoute"/>), or else ends its wait.
+    /// </summary>
     /// <param name="ex">The error the ad failed with.</param>
+    /// <param name="tryNextRoute"><see langword="false"/> for a failure no route helps, as an ad blocker's.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that completes once the service took it.</returns>
     /// <exception cref="Exception">The service refused it: its error, as <see cref="ClientExceptionConverter"/> makes it.</exception>
@@ -766,10 +773,11 @@ public class VpnServiceManager : IDisposable
     /// <exception cref="OperationCanceledException">
     /// <paramref name="cancellationToken"/> was canceled, or a stop (<see cref="TryStop"/>) ended the request.
     /// </exception>
-    public Task SetAdFailed(Exception ex, CancellationToken cancellationToken)
+    public Task SetAdFailed(Exception ex, bool tryNextRoute, CancellationToken cancellationToken)
     {
         return SendRequest(new ApiAdFailedRequest {
-            ApiError = ex.ToApiError()
+            ApiError = ex.ToApiError(),
+            TryNextRoute = tryNextRoute
         }, cancellationToken);
     }
 

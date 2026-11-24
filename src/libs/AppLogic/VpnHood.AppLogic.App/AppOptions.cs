@@ -309,7 +309,8 @@ public class AppOptions(AppOptionsContext context, bool isDebugMode)
     public bool AllowRecommendUserReviewByServer { get; set; }
 
     /// <summary>
-    /// Gets or sets the address of the settings the app reads from the web at each start, such as its promotion, or
+    /// Gets or sets the address of the settings the app reads from the web at each start, such as its promotion and the
+    /// ad networks that can show over the VPN (<see cref="AppAdProviderItem.CanShowOverVpn"/>), or
     /// <see langword="null"/> for none.
     /// </summary>
     public Uri? RemoteSettingsUrl { get; set; }

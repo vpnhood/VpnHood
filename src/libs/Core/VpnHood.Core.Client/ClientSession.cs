@@ -40,6 +40,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly IClientTcpHost _clientTcpHost;
     private readonly RequestSender _requestSender;
     private readonly ClientSessionStatus _status;
+    private readonly SessionAdHandler _adHandler;
     private readonly Job _cleanupJob;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AsyncLock _disposeLock = new();
@@ -85,7 +86,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public ClientSessionConfig Config { get; }
     public VpnEndPoint VpnEndPoint => _requestSender.ConnectorService.VpnEndPoint;
     public SessionInfo Info { get; }
-    public ISessionAdHandler AdHandler { get; }
+    public ISessionAdHandler AdHandler => _adHandler;
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
     // UDP is on and its socket open, so it carries the session's packets
@@ -95,6 +96,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     internal ClientPacketHandler PacketHandler => _packetHandler;
     internal ClientUdpPacketChannel? UdpChannel => _udpChannel;
     internal bool IsAdapterStarted => _vpnAdapter.IsStarted;
+    internal AdRoute? AdRoute => _adHandler.Route;
+    internal bool IsLastAdRoute => _adHandler.IsLastRoute;
     internal PassthroughState PassthroughState { get; } = new();
 
     public ClientSession(
@@ -210,8 +213,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             _clientUsageTracker = new ClientUsageTracker(_status, options.Tracker);
 
         // Ad
-        AdHandler = new SessionAdHandler(this);
-        AdHandler.IsWaitingForChanged += (_, _) => StateChanged?.Invoke(this, EventArgs.Empty);
+        _adHandler = new SessionAdHandler(this);
+        _adHandler.IsWaitingForChanged += (_, _) => StateChanged?.Invoke(this, EventArgs.Empty);
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -246,12 +249,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // we can start managing datagram channels but lets wait for it after ad
         var manageChannelsTask = ManagePacketChannels(waitForLock: false, cancellationToken);
 
-        // wait for ad before adapter, so the ad network sees no VPN; an ad that can show over the VPN waits for the
-        // adapter instead, below, and goes as the session's other traffic does
-        var waitForAdAfterAdapter = false;
-        if (Config.AdRequirement != AdRequirement.None)
-            waitForAdAfterAdapter = Config.CanShowAdOverVpn ||
-                                    await AdHandler.TryWaitForAd(cancellationToken).Vhc() != null;
+        // the ad's first try comes before the adapter, so its network sees no VPN; the routes after it follow below, but
+        // after a stop, which ends the start here
+        var isAdShown = Config.AdRequirement == AdRequirement.None ||
+                        await _adHandler.TryShowBeforeVpn(cancellationToken).Vhc();
 
         // manage datagram channels
         await manageChannelsTask.Vhc();
@@ -283,12 +284,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             ThrowIfClosing();
         }
 
-        // the ad after the adapter started: one that can show over the VPN, or one that failed before it, tried again
-        if (waitForAdAfterAdapter) {
-            var ex = await AdHandler.TryWaitForAd(cancellationToken).Vhc();
-            if (ex != null && Config.AdRequirement is not AdRequirement.Flexible)
-                throw ex;
-        }
+        // an ad that failed before the adapter, on the routes after it
+        if (!isAdShown)
+            await _adHandler.ShowAfterVpn(cancellationToken).Vhc();
 
         // closed while the adapter started or the ad was retried: the caller must not take it for connected
         ThrowIfClosing();

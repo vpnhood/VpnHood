@@ -168,13 +168,18 @@ public class ClientOptions
     public ConnectPlanId PlanId { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the app's ads can show over the VPN: the ad a connect needs waits for the
-    /// VPN adapter to start, and a wait for any ad leaves the session's routing as it is, so the ad's traffic goes as the
-    /// rest does, through the tunnel unless a split takes it around. The default is <see langword="false"/>, for ad
-    /// networks that refuse VPN traffic: the ad a connect needs comes before the adapter starts, and the session sends
-    /// its traffic around the tunnel while it waits for a later one.
+    /// Gets or sets a value indicating whether the last try of an ad the session requires as flexible may go through
+    /// the tunnel (<see cref="AdRoute.OverVpn"/>): set it where one of the app's networks for that ad can show over the
+    /// VPN. The default is <see langword="false"/>, for ad networks that refuse VPN traffic.
     /// </summary>
-    public bool CanShowAdOverVpn { get; set; }
+    public bool CanShowFlexibleAdOverVpn { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a rewarded ad's last try may go through the tunnel
+    /// (<see cref="AdRoute.OverVpn"/>), a connect's and one during the session alike: set it where one of the app's
+    /// rewarded ad networks can show over the VPN. The default is <see langword="false"/>.
+    /// </summary>
+    public bool CanShowRewardedAdOverVpn { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the client reads and logs the domain names of the device's flows even

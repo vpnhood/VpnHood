@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Net.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
@@ -109,6 +110,18 @@ public class SessionStatus
 
     /// <summary>Gets a value indicating whether the session's VPN adapter has started.</summary>
     public required bool IsAdapterStarted { get; init; }
+
+    /// <summary>
+    /// Gets the route of the ad the session waits for, or <see langword="null"/> where it waits for none: the app shows
+    /// the ad from the networks that route takes.
+    /// </summary>
+    public required AdRoute? AdRoute { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the route of the ad the session waits for is its last: a failure there ends the
+    /// wait.
+    /// </summary>
+    public required bool IsLastAdRoute { get; init; }
 
     /// <summary>Gets the protocol of the session's packet channels now.</summary>
     public required ChannelProtocol ChannelProtocol { get; init; }

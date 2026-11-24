@@ -125,8 +125,11 @@ public class ClientSettingsTest : TestBase
         Assert.IsFalse(session.PassthroughState.PassthroughForAd);
     }
 
+    // An ad during a session went through the tunnel at once where the app's networks could, and around it otherwise. It
+    // goes around the tunnel first, then through it where the app allows it; the try through the tunnel resets no
+    // connection
     [TestMethod]
-    public async Task A_wait_for_an_ad_over_the_VPN_keeps_the_traffic_and_its_connections_in_the_tunnel()
+    public async Task An_ad_during_a_session_goes_around_the_tunnel_then_through_it()
     {
         // a server that keeps its connection open
         var localEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(TestHelper.TestIps.LocalNsTestIp);
@@ -134,12 +137,32 @@ public class ClientSettingsTest : TestBase
         listener.Start();
         var remoteEndPoint = new IPEndPoint(TestHelper.TestIps.RemoteNsTestIp, localEndPoint.Port);
 
-        await using var server = await TestHelper.CreateServer();
-        var options = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
-        options.CanShowAdOverVpn = true;
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt);
+        var options = TestHelper.CreateClientOptions(accessManager.GetToken(accessToken));
+        options.CanShowRewardedAdOverVpn = true;
         await using var client = await TestHelper.CreateClient(options);
 
-        // a connection open before the ad
+        // around the tunnel first
+        var session = (ClientSession)client.RequiredSession;
+        var wait = session.AdHandler.WaitForAd(TestCt);
+        Assert.AreEqual(AdRoute.Passthrough, session.Status.AdRoute);
+        Assert.IsFalse(session.Status.IsLastAdRoute);
+        Assert.IsTrue(session.PassthroughState.PassthroughForAd);
+
+        // then through it, last: the try's traffic goes in the tunnel
+        session.AdHandler.SetAdFailed(new InvalidOperationException("The first try fails for the test."),
+            tryNextRoute: true);
+
+        Assert.AreEqual(AdRoute.OverVpn, session.Status.AdRoute);
+        Assert.IsTrue(session.Status.IsLastAdRoute);
+        Assert.IsFalse(session.PassthroughState.PassthroughForAd);
+        var passthruCount = session.Status.StreamPassthruCount;
+        await TestHelper.Test_Https();
+        Assert.AreEqual(passthruCount, session.Status.StreamPassthruCount);
+
+        // a connection made during the try through the tunnel stays after the ad
         using var ioCts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
         ioCts.CancelAfter(TimeSpan.FromSeconds(20));
         using var tcpClient = new TcpClient();
@@ -148,20 +171,38 @@ public class ClientSettingsTest : TestBase
         using var accepted = await listener.AcceptTcpClientAsync(ioCts.Token);
         await accepted.GetStream().ReadExactlyAsync(new byte[1], ioCts.Token);
 
-        // the ad's traffic goes through the tunnel, where it went around it
-        var session = (ClientSession)client.RequiredSession;
-        var wait = session.AdHandler.WaitForAd(TestCt);
-        Assert.IsFalse(session.PassthroughState.PassthroughForAd);
-        await TestHelper.Test_Https();
-        Assert.AreEqual(0, session.Status.StreamPassthruCount);
-
-        // the ad's end reset none of the connections, which never left the tunnel
         session.AdHandler.SetAdOk();
         await wait.WaitAsync(TimeSpan.FromSeconds(5), TestCt);
+        Assert.IsNull(session.Status.AdRoute);
         await tcpClient.GetStream().WriteAsync(new byte[] { 2 }, ioCts.Token);
         var received = new byte[1];
         await accepted.GetStream().ReadExactlyAsync(received, ioCts.Token);
         Assert.AreEqual(2, received[0]);
+    }
+
+    // a failure no route helps, as an ad blocker the app refuses, ends the wait where a route was left
+    [TestMethod]
+    public async Task An_ad_failure_no_route_helps_ends_the_wait_at_once()
+    {
+        using var accessManager = await TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var accessToken = await accessManager.AccessTokenService.Create(TestCt);
+        var options = TestHelper.CreateClientOptions(accessManager.GetToken(accessToken));
+        options.CanShowRewardedAdOverVpn = true;
+        await using var client = await TestHelper.CreateClient(options);
+
+        var session = (ClientSession)client.RequiredSession;
+        var wait = session.AdHandler.WaitForAd(TestCt);
+        Assert.IsFalse(session.Status.IsLastAdRoute);
+
+        var failure = new InvalidOperationException("An ad blocker for the test.");
+        session.AdHandler.SetAdFailed(failure, tryNextRoute: false);
+        var ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            wait.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
+
+        Assert.AreSame(failure, ex);
+        Assert.IsNull(session.Status.AdRoute);
+        Assert.IsFalse(session.PassthroughState.PassthroughForAd);
     }
 
     [TestMethod]
@@ -228,11 +269,11 @@ public class ClientSettingsTest : TestBase
         await using var client = await TestHelper.CreateClient(
             TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server)));
 
-        var adHandler = ((ClientSession)client.RequiredSession).AdHandler;
+        var adHandler = (SessionAdHandler)((ClientSession)client.RequiredSession).AdHandler;
 
         // it came back as a failed ad, which the session's start tries again
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestCt);
-        var wait = adHandler.TryWaitForAd(cts.Token);
+        var wait = adHandler.TryShowBeforeVpn(cts.Token);
         await cts.CancelAsync();
         await Assert.ThrowsAsync<OperationCanceledException>(() => wait.WaitAsync(TimeSpan.FromSeconds(5), TestCt));
     }

@@ -165,7 +165,9 @@ internal class ApiController : IDisposable
     {
         _ = cancellationToken;
         var adHandler = VpnHoodClient.RequiredSession.AdHandler;
-        adHandler.SetAdFailed(request.ApiError?.ToException() ?? new Exception("Failed to load ad."));
+        adHandler.SetAdFailed(request.ApiError?.ToException() ?? new Exception("Failed to load ad."),
+            request.TryNextRoute);
+
         return Task.CompletedTask;
     }
 

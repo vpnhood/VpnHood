@@ -36,6 +36,6 @@ Currently here:
 - [vpnhood-manager-terms-of-use.md](vpnhood-manager-terms-of-use.md) — VpnHood! MANAGER terms of use
 - [vpnhood-id-privacy-policy.md](vpnhood-id-privacy-policy.md) — the VpnHood ID, the account people sign in to VpnHood's services with (id.vpnhood.com); its sign-in pages link to it
 - [vpnhood-id-terms-of-use.md](vpnhood-id-terms-of-use.md) — VpnHood ID account and acceptable-use terms
-- [vpnhood-store-privacy-policy.md](vpnhood-store-privacy-policy.md) — VpnHood! STORE, the hosted service for running a store (store.vpnhood.com), for the people who own a store or work in one; a store's own customers are under that store's policy
-- [vpnhood-store-terms-of-use.md](vpnhood-store-terms-of-use.md) — VpnHood! STORE terms for a store's owner and team, with the data-processing terms for what a store holds about its customers
+- [vpnhood-seller-privacy-policy.md](vpnhood-seller-privacy-policy.md) — VpnHood! SELLER, the hosted service for running a seller account (seller.vpnhood.com), for the people who own an account or work in one; a seller's own customers are under that seller's policy. Until 2026-11-24 it was VpnHood! STORE's, in `vpnhood-store-privacy-policy.md`
+- [vpnhood-seller-terms-of-use.md](vpnhood-seller-terms-of-use.md) — VpnHood! SELLER terms for an account's owner and team, with the data-processing terms for what an account holds about its customers. Until 2026-11-24 they were VpnHood! STORE's, in `vpnhood-store-terms-of-use.md`
 - [website-privacy-policy.md](website-privacy-policy.md) — the VpnHood website, www.vpnhood.com (analytics, delivery, email)

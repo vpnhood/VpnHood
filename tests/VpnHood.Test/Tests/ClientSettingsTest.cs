@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Ads;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
 

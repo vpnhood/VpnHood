@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Ads;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Net.Packets;

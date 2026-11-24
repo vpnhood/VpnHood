@@ -1,5 +1,6 @@
 # Latest
 
+* Breaking: ISessionAdHandler (VpnHood.Core.Client) is in the namespace VpnHood.Core.Client.Ads, beside the session's other ad types.
 * Fix: VpnHoodServer.Start (VpnHood.Core.Server) throws its caller's cancellation, and a cancel during the first configuration leaves the server Waiting, so its next run configures it, where Start returned as if it had gone well and the server stayed Configuring. The server refuses settings that turn off AllowTcpForwarding where it has no VPN adapter, and its anonymous report of its settings hides QuicEndPoints too.
 * Breaking: VpnHoodServer's constructor (VpnHood.Core.Server) throws ArgumentException for a VPN adapter with no NAT for IPv4, where it threw InvalidProgramException.
 * Fix: SessionOptions.TcpIdleTimeout (VpnHood.Core.Server.Access), 1 hour by default, closes a forwarded TCP connection that passed no bytes either way for that long, where one whose destination never answered, or whose client went without a close, stayed open as long as its session; the server sets it through TunnelOptions.StreamForwardingIdleTimeout (VpnHood.Core.Tunneling), which has no limit by default.

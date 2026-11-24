@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client;
+﻿namespace VpnHood.Core.Client.Ads;
 
 /// <summary>
 /// Represents a session's wait for an ad, which it tries on one route after another

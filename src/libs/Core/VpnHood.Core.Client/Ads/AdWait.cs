@@ -1,6 +1,6 @@
 using VpnHood.Core.Client.Abstractions;
 
-namespace VpnHood.Core.Client;
+namespace VpnHood.Core.Client.Ads;
 
 // A wait for an ad and the routes it tries in turn; it moves on only under its handler's lock (SessionAdHandler).
 // isFollowed: a later wait tries the ad again, as a connect's routes after the VPN follow its try before it, so the

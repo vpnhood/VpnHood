@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Client;
+namespace VpnHood.Core.Client.Ads;
 
 internal class PassthroughState
 {

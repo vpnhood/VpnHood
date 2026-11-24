@@ -7,7 +7,7 @@ using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 
-namespace VpnHood.Core.Client;
+namespace VpnHood.Core.Client.Ads;
 
 // The order of an ad's tries is this class's alone (AdRoute): a connect's ad before the adapter, then around the
 // tunnel, then through it where the app can show that kind of ad over the VPN (ClientOptions); an ad during a session,

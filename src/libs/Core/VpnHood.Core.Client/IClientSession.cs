@@ -1,4 +1,5 @@
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Ads;
 
 namespace VpnHood.Core.Client;
 

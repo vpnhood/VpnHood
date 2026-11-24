@@ -78,6 +78,7 @@ public class TestProxyEndPointStore(IProxyEndPointStore store) : IProxyEndPointS
     public Task DisableAllFailed(CancellationToken cancellationToken) => store.DisableAllFailed(cancellationToken);
     public Task SetCountryCode(string id, string? countryCode, CancellationToken cancellationToken) =>
         store.SetCountryCode(id, countryCode, cancellationToken);
+
     public async Task ResetStatuses(CancellationToken cancellationToken)
     {
         if (FailResets)

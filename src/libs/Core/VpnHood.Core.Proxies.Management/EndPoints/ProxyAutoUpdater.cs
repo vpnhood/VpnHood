@@ -41,10 +41,9 @@ internal sealed class ProxyAutoUpdater(
     // whether a connection waits for the list, which checks what a reload brings itself
     public bool IsWaitedFor => Volatile.Read(ref _endPointWaiterCount) > 0;
 
-    // The job again, with its download at once, for a new url or interval alone, as an app sends the options at every
-    // settings save; or where the reload took the last enabled endpoint, or left none with no job to download the list,
-    // as for a list with no interval, whose one download ran already. A first download still coming for the same list
-    // goes on: a new one in its place would only start it again
+    // Restarts the job for a new URL or interval alone, as an app sends the options at every save; for the same list,
+    // where the reload took the last enabled endpoint, or left none and no job, as after a list's one download, unless
+    // its first download is still coming, which a new job would only start again
     public void ApplyOptions(ProxyAutoUpdateOptions newOptions, bool hadEnabledEndPoint)
     {
         bool isFirstDownloadPending;
@@ -72,12 +71,10 @@ internal sealed class ProxyAutoUpdater(
         }
     }
 
-    // The old job stops, and a new one starts where the options ask for one: its first download at once rather than at
-    // the job runner's next check, up to 10 seconds away, as a connection waits for it while no endpoint is enabled; then
-    // one every interval. With no interval, as the app's "never", the first download alone, and only while no endpoint
-    // is enabled: the app leaves that one to the connector. The new job is in place before the old one stops, so the old
-    // one's waiters, which its stop wakes, find the new one and wait for it. The first download goes over the factory
-    // given, Create's, as the connect's tunnel is not up yet; new options come once the session is
+    // A first download at once, not at the job runner's next check up to 10 seconds away, as a connection may wait for
+    // it; then one every interval, or with none, the app's "never", only while no endpoint is enabled. The new job is
+    // in place before the old one stops, so the old one's waiters find it. Only Create's gives a factory: the tunnel is
+    // not up yet
     public void Restart(ISocketFactory? firstRunSocketFactory)
     {
         lock (_autoUpdateLock) {
@@ -92,8 +89,8 @@ internal sealed class ProxyAutoUpdater(
                 _firstListUpdate = null;
             }
             else {
-                // a job's runs come one at a time, the first by RunFirstListUpdate before the job starts. Its URL is its
-                // own: an old job's run under way when new options come takes none of theirs
+                // a job's runs come one at a time, the first by RunFirstListUpdate before the job starts. Its URL is
+                // its own: an old job's run under way when new options come takes none of theirs
                 var runCount = 0;
                 var firstListUpdate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 var autoUpdateJob = new Job(
@@ -141,14 +138,9 @@ internal sealed class ProxyAutoUpdater(
         }
     }
 
-    // A connection waiting for the list goes on once it is merged, as the reload wakes it, and the first download is
-    // over for new options then: they would otherwise find it still coming, and start no other where the user turned
-    // off the endpoints it brought. A job's first run checks nothing beside the connect it was made for, which checks
-    // the list before its server search, as do its connections, each against its own server until one passes: the
-    // check before the connect takes what it brought, or, where that check ended before it, a check of its own takes
-    // those never rated, behind the session. A later run checks the whole list against the last server a proxy reached,
-    // in the place of the check before a connect, whose next call stops it; where that check is under way, it takes those
-    // never rated that the run brought
+    // The first download is over at the merge, as new options would otherwise find it still coming and start no other
+    // where the user turned off what it brought. A first run leaves the check to its connect, or, where that one ended,
+    // checks those never rated; a later run the whole list, unless a check is under way, which takes what it brought
     private async ValueTask UpdateFromUrlAsync(Uri url, bool isFirstRun, ISocketFactory? firstRunSocketFactory,
         TaskCompletionSource firstListUpdate, CancellationToken cancellationToken)
     {
@@ -156,9 +148,8 @@ internal sealed class ProxyAutoUpdater(
             using var listUpdateScope = await UpdateLock.LockAsync(cancellationToken).Vhc();
             VhLogger.Instance.LogInformation("Downloading proxy list from {Url}...", url);
 
-            // The first run, which a connect may wait for, over the factory given for it and for 30 seconds at most. The
-            // later runs go the platform's way, as the system's sockets do, with HttpClient's own time. A new client
-            // each time, as the downloads are far apart
+            // the first run, which a connect may wait for, over its factory for 30 seconds at most; the later ones the
+            // platform's way, with HttpClient's time. A new client each time, as the downloads are far apart
             using var httpClient = isFirstRun
                 ? ProxyListHttpClient.Create(firstRunSocketFactory, FirstListDownloadTimeout)
                 : ProxyListHttpClient.Create(socketFactory: null, timeout: null);

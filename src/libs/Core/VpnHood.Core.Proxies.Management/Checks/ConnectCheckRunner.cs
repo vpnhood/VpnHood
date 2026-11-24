@@ -10,16 +10,16 @@ using VpnHood.Net.Toolkit.Sockets;
 namespace VpnHood.Core.Proxies.Management.Checks;
 
 // The check before a connect, which lets the connect go on at its first pass and goes on behind it, and the checks
-// behind the session that take its place: one run at a time, which the next check before a connect stops
+// behind the session: one run in charge at a time, as the next check before a connect stops the last one, which may
+// still be ending
 internal sealed class ConnectCheckRunner(ProxyChecker checker, ProxyEndPointList list, ProxyConnectorClose close)
 {
-    // The run under way, under its lock, which has a stop of its own beside the close's, which the next check before a
-    // connect gives. Not disposed: it has no timer, and a stop may come at any time
+    // The run under way's stop, under its lock, which the next check before a connect gives, beside the close's. Not
+    // disposed: it has no timer, and a stop may come at any time
     private readonly Lock _stopLock = new();
     private CancellationTokenSource? _connectCheckStop;
 
-    // whether a run of the check before a connect is under way, which takes the endpoints a reload brings; a test's to
-    // look at
+    // a run under way takes the endpoints a reload brings; a test's to look at
     public bool IsConnectCheckUnderWay {
         get {
             lock (_stopLock)
@@ -51,12 +51,11 @@ internal sealed class ConnectCheckRunner(ProxyChecker checker, ProxyEndPointList
         close.ThrowIfClosed();
     }
 
-    // Puts a run of the check before a connect in place, with the entries it takes, its first pass and its stop, and
-    // starts it: in place of the last one, which stops, or, without replace, only where none is under way, as it
-    // returns. The close stops it, as it stops every check
+    // Starts a run in place of the last one, which stops, or, without replace, only where none is under way, as it
+    // returns. The close stops it, as every check
     public bool StartConnectCheck(ISocketFactory socketFactory, CheckTarget target,
-        Func<IReadOnlyList<ProxyEndPointEntry>> getEntries, TaskCompletionSource firstPass, CancellationTokenSource stop,
-        bool replace)
+        Func<IReadOnlyList<ProxyEndPointEntry>> getEntries, TaskCompletionSource firstPass,
+        CancellationTokenSource stop, bool replace)
     {
         CancellationTokenSource? oldStop;
         lock (_stopLock) {
@@ -73,8 +72,8 @@ internal sealed class ConnectCheckRunner(ProxyChecker checker, ProxyEndPointList
     }
 
     // The endpoints a reload brought or turned on that no check rated, as a first download's or the app's, get a check
-    // behind the session, where none is under way, which takes them, and a server is known; a reset that changed no
-    // endpoint brings none. Where a connection waited for the list, it checks them itself, against its own server
+    // behind the session where a server is known and none is under way, which takes them; never those on before, as a
+    // reset leaves every endpoint unrated. Where a connection waited for the list, it checks them itself
     public void StartAddedCheck(IReadOnlySet<(ProxyProtocol, string, int)> enabledBefore, bool isWaitedFor)
     {
         if (!isWaitedFor && checker.LastCheck is { } lastCheck)
@@ -85,8 +84,8 @@ internal sealed class ConnectCheckRunner(ProxyChecker checker, ProxyEndPointList
                 CreatePassed(), new CancellationTokenSource(), replace: false);
     }
 
-    // A later download's check of the whole list, behind the session, in the place of the check before a connect: one
-    // under way takes what the download brought, and the next check before a connect stops this one
+    // A later download's check of the whole list, behind the session: one under way takes what the download brought,
+    // and the next check before a connect stops this one
     public void StartListCheck()
     {
         if (checker.LastCheck is { } lastCheck)
@@ -102,13 +101,10 @@ internal sealed class ConnectCheckRunner(ProxyChecker checker, ProxyEndPointList
         return passed;
     }
 
-    // The check before a connect, which ends the connect's wait at its first pass, or at its end where none passes, and
-    // goes on behind it through the rest as the check after a list's update does: the connections then take every
-    // endpoint that works, where those its pass stopped stayed unrated, and the list's later downloads, which check it
-    // again, may never come. A reload during the run, as by the list's first download, may bring endpoints it never
-    // saw: it goes on over those never rated, until a run of it sees no reload. Once a pass came, its TLS handshakes
-    // take their turns at HandshakePlaces, as it goes beside the session; a run nobody waits for, from its start. Nobody
-    // waits for its end but the close, so it logs a failure
+    // Ends the connect's wait at its first pass, then goes on through the rest, which that pass left unrated and the
+    // list's later downloads may never check: the connections then take every endpoint that works. It goes on over what
+    // a reload brought, until a run sees no reload. Handshakes take turns at HandshakePlaces once a pass came, from the
+    // start in a run nobody waits for. Nobody but the close waits for its end, so it logs a failure
     private async Task RunConnectCheck(ISocketFactory socketFactory, CheckTarget target,
         Func<IReadOnlyList<ProxyEndPointEntry>> getEntries, TaskCompletionSource firstPass,
         CancellationTokenSource stop)

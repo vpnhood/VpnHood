@@ -61,8 +61,8 @@ internal sealed class ProxyEndPointList(IProxyEndPointStore store)
             new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).TrySetResult();
     }
 
-    // The enabled states not saved yet, as a duplicate's success turned an endpoint off, with the counts a reset of the
-    // statuses cleared: the caller holds the flush lock
+    // After a reset of the statuses: the enabled states not saved yet, as a duplicate's success turns one off, with no
+    // counts. The caller holds FlushLock
     public async Task SaveEnabledStates(CancellationToken cancellationToken)
     {
         var dirtyEntries = _entries.Where(x => x.IsDirty).ToArray();
@@ -110,7 +110,7 @@ internal sealed class ProxyEndPointList(IProxyEndPointStore store)
         if (dirtyEntries.Length == 0)
             return;
 
-        // copies, which clear the flags, before the write: cleared after it, they took with them a change made during it
+        // copies that clear the flags, before the write: cleared after it, a change made during it would be lost
         var infos = dirtyEntries.Select(x => x.TakeForFlush()).ToArray();
         try {
             await store.UpdateStatuses(infos, cancellationToken).Vhc();
@@ -133,9 +133,8 @@ internal sealed class ProxyEndPointList(IProxyEndPointStore store)
         .OrderBy(x => x.Status.Quality)
         .ToArray();
 
-    // those that succeeded last first, the best rated first, as the connect waits for the first to pass; then those
-    // never used, then those that failed last. The quality's own order puts the never used first. Once 10 have passed,
-    // the check skips every one already rated
+    // Succeeded last first, the best rated first, as the connect waits for the first pass; then never used, then failed
+    // last, which the quality's own order would not give, as it puts the never used first
     public IReadOnlyList<ProxyEndPointEntry> GetEnabledEntriesForConnectCheck() => _entries
         .Where(x => x.EndPoint.IsEnabled)
         .OrderBy(x => x.Status.IsLastUsedSucceeded ? 0 : x.Status.Quality is StatusQuality.Unknown ? 1 : 2)
@@ -166,10 +165,9 @@ internal sealed class ProxyEndPointList(IProxyEndPointStore store)
     public static (ProxyProtocol, string, int) GetAddress(ProxyEndPointEntry entry) =>
         (entry.EndPoint.Protocol, entry.EndPoint.Host, entry.EndPoint.Port);
 
-    // Turns off the other enabled endpoints of the host and protocol of one whose connection succeeded, those the
-    // connection did not take too, where it is still on itself, in one step: two connections through duplicates at once
-    // would otherwise turn off each other, and the host with them. One read of the list: the winner and its duplicates
-    // from the same one
+    // Turns off the other enabled endpoints of the winner's host and protocol, where the winner is still on, in one
+    // step: two connections through duplicates at once would otherwise turn each other off, leaving the host none. One
+    // read of the list for the winner and its duplicates
     public void DisableDuplicates(ProxyEndPointEntry entry)
     {
         lock (_duplicateLock) {

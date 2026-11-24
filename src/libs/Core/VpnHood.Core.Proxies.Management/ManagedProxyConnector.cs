@@ -24,44 +24,50 @@ namespace VpnHood.Core.Proxies.Management;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A connection tries the enabled endpoints that succeeded last first, then the rest, each group in turn, the one whose
-/// turn comes soonest first: an endpoint's next turn moves back by 3 for each point of its penalty; where all those
-/// fail, it tries the ones that passed a check since it took them; it skips one turned off or dropped since. Where none
-/// it may take succeeded last, the endpoints are checked first against the connection's own server, until one
-/// succeeds. The connections to one server wait for its one check; those to other servers check beside it, as a server
-/// that is down takes the check's whole time. A connection made while no endpoint is enabled waits for the first
-/// download of the list's update, and fails where it brings none: a connection goes through a proxy or not at all.
+/// A connection tries the enabled endpoints that succeeded last first, then the rest, each group in turn: an
+/// endpoint's next turn moves back by 3 for each point of its penalty. Where all those fail, it tries the ones that
+/// passed a check since it took them, and skips one turned off or dropped since. Where none it may take succeeded last,
+/// the endpoints are first checked against the connection's own server, until one passes; the connections to one
+/// server wait for its one check, and those to other servers check beside it, as a down server takes a check's whole
+/// time. While no endpoint is enabled, a connection waits for the first download of the list's update, and fails where
+/// it brings none: a connection goes through a proxy or not at all.
 /// </para>
 /// <para>
-/// A check connects through each enabled endpoint, up to 50 at a time, to the VPN server's endpoint the caller gives,
-/// with <see cref="ProxyOptions.VerifyTls"/> also through a TLS handshake with it, whose certificate the caller's check
-/// takes, the VPN connection's own; no certificate is downloaded for its chain. It records each outcome as it comes; a
-/// check that a pass elsewhere stopped records nothing, and one of an endpoint turned off or gone meanwhile is no pass.
-/// The device reaches no one else through the proxies. A check before a connect
+/// A check connects through each enabled endpoint, up to 50 at a time, to the VPN server the caller gives, and with
+/// <see cref="ProxyOptions.VerifyTls"/> makes a TLS handshake with it, under the caller's check of its certificate, the
+/// VPN connection's own, with none downloaded for its chain. The device reaches no one else through the proxies. Each
+/// outcome is recorded as it comes; a check that a pass elsewhere stopped records nothing, and one of an endpoint
+/// turned off or gone meanwhile is no pass.
+/// </para>
+/// <para>
+/// The check before a connect
 /// (<see cref="CheckServers(ISocketFactory, IPEndPoint, string?, RemoteCertificateValidationCallback?, CancellationToken)"/>)
-/// lets the connect go on at the first endpoint that passes, those that succeeded last first, and goes on behind it as
-/// the one that follows a list's update does: through every enabled endpoint, and once 10 have succeeded, only those
-/// never rated, then through those never rated that a reload brought meanwhile. The next check before a connect stops
-/// it. A connection's own check ends at its first pass, and what it left is then checked behind it in the same way,
-/// where no such check is under way; so are the endpoints a list's first download brings, or the app adds or turns on,
-/// after such a check ended, unless a connection waits for the list, and a later download's check of the whole list
-/// takes its place, so the next one stops it. On
-/// iOS and tvOS the checks beside the session make TLS handshakes 3 at a time, an HTTPS proxy's own among them: every
-/// check that comes once a proxy reached a server, and those nobody waits for from their start. The connections' own
-/// checks have 3 places of their own, so a connection never waits behind a check nobody waits for, whose checks may
-/// hold theirs for their whole time. Before any proxy reached a server, on every platform, the connections' own checks
-/// share 50 places, one check's width: the server search probes up to 10 servers at once, 8 of whose connections are
-/// made at once, 3 on iOS and tvOS, each with a check of its own. A check still waiting when a proxy reaches a server
-/// takes its turn where those that come then take theirs. A check that takes turns dials as many at once as one that
-/// takes none: it dials its proxy first, so a proxy that never answers takes no place, and goes on through that
-/// connection where a place is free; otherwise it closes it, waits for its place with nothing open, which the proxy or
-/// the server would close, and dials again. The close stops every check and a connection's dial, and waits for the
-/// checks before its save. A SOCKS endpoint
-/// whose check fails with a <see cref="VpnHood.Net.Proxies.ProxyClientException"/> of
+/// lets the connect go on at the first endpoint that passes, those that succeeded last first, and goes on behind it:
+/// through every enabled endpoint, only those never rated once 10 passed, then those never rated that a reload brought
+/// meanwhile. The next check before a connect stops it. A connection's own check ends at its first pass, and what it
+/// left is then checked behind it the same way, where no such check is under way. So are the endpoints the list's first
+/// download brings, or the app adds or turns on, where a proxy reached a server, unless a connection waits for the
+/// list. A later download checks the whole list where no check is under way and a proxy reached a server; the next
+/// check before a connect stops that one too.
+/// </para>
+/// <para>
+/// On iOS and tvOS the checks beside the session make TLS handshakes 3 at a time, an HTTPS proxy's own among them:
+/// every check that comes once a proxy reached a server, and those nobody waits for from their start. The connections'
+/// own checks have 3 places of their own, so a connection never waits behind a check nobody waits for. Before any proxy
+/// reached a server, on every platform, the connections' own checks share 50 places: the server search probes up to 10
+/// servers at once, 8 of whose connections are made at once, 3 on iOS and tvOS, each with a check of its own. A check
+/// still waiting when a proxy reaches a server takes its turn where those that come then take theirs. A check that
+/// takes turns dials as many at once as one that takes none: it dials its proxy first, so a proxy that never answers
+/// takes no place, and goes on through that connection where a place is free; otherwise it closes it, waits with
+/// nothing open, which the proxy or the server would close, and dials again.
+/// </para>
+/// <para>
+/// A SOCKS endpoint whose check fails with a <see cref="VpnHood.Net.Proxies.ProxyClientException"/> of
 /// <see cref="System.Net.Sockets.SocketError.ProtocolNotSupported"/>, as one that is no proxy of its kind, is disabled;
 /// any other failure, which may be the server's, is recorded alone, as is that one of an HTTP or HTTPS endpoint, which
 /// also stands for its refusal of the server, as of a port other than 443. The statuses are saved to the store every
-/// 10 seconds, after a check, and at the disposal.
+/// 10 seconds, after a check, and at the close, which stops every check and a connection's dial, and waits for the
+/// checks before its save.
 /// </para>
 /// </remarks>
 public class ManagedProxyConnector : IProxyConnector
@@ -155,11 +161,13 @@ public class ManagedProxyConnector : IProxyConnector
     /// The factory of the sockets of the first download of the update this call starts, which it starts at once, off
     /// the caller's thread, before the connect's tunnel is up: its sockets may still open after the tunnel is up, where
     /// the connect does not wait for it, as it does while no endpoint is enabled. The list's host name is asked of the
-    /// network's resolvers over them, as under a kill switch that lets only the VPN's own traffic out. Or <see langword="null"/> for the system's sockets and resolver. The update's later downloads,
-    /// and those of an update that <see cref="UpdateOptions"/> starts, take the system's in any case, which the platform
-    /// routes.
+    /// network's resolvers over them, as under a kill switch that lets only the VPN's own traffic out. Or
+    /// <see langword="null"/> for the system's sockets and resolver. The update's later downloads, and those of an
+    /// update that <see cref="UpdateOptions"/> starts, take the system's in any case, which the platform routes.
     /// </param>
-    /// <param name="serverCheckTimeout">How long a check of an endpoint may take, or <see langword="null"/> for 7 seconds.</param>
+    /// <param name="serverCheckTimeout">
+    /// How long a check of an endpoint may take, or <see langword="null"/> for 7 seconds.
+    /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task whose result is the connector.</returns>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -178,8 +186,6 @@ public class ManagedProxyConnector : IProxyConnector
 
         // load the working set from the shared store; the store list is authoritative
         await connector._list.Reload(cancellationToken).Vhc();
-
-        // Start auto-update if configured
         connector._autoUpdater.Restart(socketFactory);
 
         return connector;
@@ -210,17 +216,17 @@ public class ManagedProxyConnector : IProxyConnector
 
     /// <inheritdoc/>
     /// <remarks>
-    /// It saves the statuses not saved yet, or, with <see cref="ProxyOptions.ResetStates"/>, clears the stored counts and
-    /// saves the enabled states not saved yet alone, which the reset keeps: the app resets the store before it asks,
-    /// and no count held is written back over it. A failed reset, which it logs, changes nothing, and the statuses are
-    /// saved as without one. It then loads the endpoints from the store again; where that fails after a reset, it clears
-    /// the counts it holds too. Endpoints the reload brought or turned on that no check rated, as the app's, are checked
-    /// behind the session against the last server a check reached, unless a connection waits for the list, which checks
-    /// them itself. The update from a URL starts again, with a download at
-    /// once, when its URL or interval changed, or where the reload takes the last enabled endpoint, or leaves none with
-    /// nothing to download the list, but not while the list's first download is still coming. A connection waiting for
-    /// the list goes on where the reload brings an enabled endpoint. The downloads of the new update take the system's
-    /// sockets, which the platform routes, through the tunnel where it is up.
+    /// It saves the statuses not saved yet, or, with <see cref="ProxyOptions.ResetStates"/>, clears the stored counts
+    /// and saves the enabled states not saved yet alone, which the reset keeps: the app resets the store before it
+    /// asks, and no count held is written back over it. A failed reset, which it logs, changes nothing, and the
+    /// statuses are saved as without one. It then loads the endpoints from the store again; where that fails after a
+    /// reset, it clears the counts it holds too. Endpoints the reload brought or turned on that no check rated, as the
+    /// app's, are checked behind the session against a server a proxy reached, unless a connection waits for the list,
+    /// which checks them itself. The update from a URL starts again, with a download at once, when its URL or interval
+    /// changed, even during the list's first download. Otherwise it starts again where the reload takes the last
+    /// enabled endpoint, or leaves none with nothing to download the list, unless the list's first download is still
+    /// coming. A connection waiting for the list goes on where the reload brings an enabled endpoint. The downloads of
+    /// the new update take the system's sockets, which the platform routes, through the tunnel where it is up.
     /// </remarks>
     /// <exception cref="ObjectDisposedException">The connector was disposed.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -239,17 +245,15 @@ public class ManagedProxyConnector : IProxyConnector
             enabledBefore = _list.GetEnabledAddresses();
             isWaitedFor = _autoUpdater.IsWaitedFor;
 
-            // The app resets the shared store before it asks for this, so no count held is written back over the reset:
-            // the enabled states alone, which the reset keeps, go to the store after it. A failed reset changes nothing,
-            // and the statuses are saved as without one
+            // The app resets the store before it asks, so no held count goes back over the reset, only the enabled
+            // states, which it keeps. A failed reset changes nothing, and the statuses are saved as without one
             var isReset = proxyOptions.ResetStates &&
                           await VhInvoker.TryInvokeAsync("reset the proxy endpoints' statuses", LogLevel.Warning,
                               ResetStatuses, defaultValue: false).Vhc();
 
-            // Counted before the reload, whose entries carry the count: a connection that took a success before them
-            // takes none back. The held entries stay until the reload's swap, so a success during its read lands on an
-            // entry it drops, and no later success pays for it; where the save or the read fails before the swap, they
-            // are cleared as the store's are, rather than written back over the reset
+            // Counted before the reload, whose entries carry the count, so a success taken before is taken back no
+            // more; one during the reload's read lands on an entry it drops. Where the save or the read fails before
+            // the swap, the held entries are cleared as the store's are, not written back over the reset
             if (isReset)
                 _list.CountStatusReset();
             else
@@ -289,8 +293,8 @@ public class ManagedProxyConnector : IProxyConnector
 
     /// <inheritdoc/>
     /// <remarks>
-    /// It saves the changed statuses and enabled states, and the queue position, one flush at a time. A change made while
-    /// it writes is saved by the next flush, and a failed write leaves its changes for the next one too. Once the
+    /// It saves the changed statuses and enabled states, and the queue position, one flush at a time. A change made
+    /// while it writes is saved by the next flush, and a failed write leaves its changes for the next one too. Once the
     /// connector is closed, it saves nothing: the close saved, and closed the store.
     /// </remarks>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -319,14 +323,13 @@ public class ManagedProxyConnector : IProxyConnector
     /// then those that failed last. Its task ends at the first that passes, or at the check's end where none does: a
     /// connect waits for it, and one slow proxy among many would hold the connect for its whole time. The check goes on
     /// behind it, as the one after a list's update does, then through those never rated that a reload brought
-    /// meanwhile, as the list's first download does, so the connections that follow take every endpoint that works;
-    /// on iOS and tvOS, once one passed, its TLS handshakes take their turns with those of the other checks nobody waits
+    /// meanwhile, as the list's first download does, so the connections that follow take every endpoint that works; on
+    /// iOS and tvOS, once one passed, its TLS handshakes take their turns with those of the other checks nobody waits
     /// for, 3 at a time, and it dials as many at once as before. A cancellation before the first pass stops it, as do
-    /// the
-    /// next call and the close, which waits for its end; a call canceled already starts nothing, and stops no check.
-    /// What it found is recorded as it comes and saved at its end, a stopped check's too; once the connector is closed,
-    /// the close's own save takes it. The checks behind the session, as the update from a URL's, then take the factory
-    /// and server of the last check through which a proxy reached the server.
+    /// the next call and the close, which waits for its end; a call canceled already starts nothing, and stops no
+    /// check. What it found is recorded as it comes and saved at its end, a stopped check's too; once the connector is
+    /// closed, the close's own save takes it. The checks behind the session, as the update from a URL's, then take the
+    /// factory and server of the last check through which a proxy reached the server.
     /// </remarks>
     /// <exception cref="ObjectDisposedException">The connector was disposed.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
@@ -334,11 +337,10 @@ public class ManagedProxyConnector : IProxyConnector
         RemoteCertificateValidationCallback? serverCertificateValidation, CancellationToken cancellationToken) =>
         _checkRunner.CheckServers(socketFactory, ipEndPoint, hostName, serverCertificateValidation, cancellationToken);
 
-    // A connection takes the endpoints that succeeded last first, and checks nothing while it has one. A check whenever
-    // the first in turn had not succeeded ran at every connection: a pass ends a check, so the one at the head stayed
-    // unrated, and at the head. Where it has to check, the rest of the list is checked behind its pass, as behind a
-    // connect, where no such check is under way: after a change of network, say, every endpoint failed, and the
-    // connections would stay on the one its check passed
+    // The endpoints that succeeded last first, with no check while one has: checked whenever the first in turn had not
+    // succeeded, every connection would check, as a pass ends a check and leaves the head unrated. Where it checks, the
+    // rest is checked behind its pass: after a change of network every endpoint failed, and the connections would stay
+    // on the one its check passed
     private async Task<IReadOnlyList<ProxyEndPointEntry>> GetOrderedEntries(ISocketFactory socketFactory,
         CheckTarget target,
         CancellationToken cancellationToken)
@@ -356,16 +358,15 @@ public class ManagedProxyConnector : IProxyConnector
         if (endPointEntries.Any(x => x.Status.IsLastUsedSucceeded))
             return ProxyEndPointList.SucceededFirst(endPointEntries);
 
-        // None it may take succeeded last: they are checked against this connection's server, until one succeeds, as a
-        // check against another, which may be down, rated them all failed. Where only the endpoints that succeeded
-        // lately may be taken and none has, all the enabled ones are checked
+        // against this connection's own server, as a check against another, which may be down, rated them all failed;
+        // all the enabled ones where only recent successes may be taken and none is
         var entriesToCheck = endPointEntries.Count > 0
             ? endPointEntries
             : _list.Entries.Where(x => x.EndPoint.IsEnabled).ToArray();
 
-        // It takes turns at the connections' own handshake places once a proxy reached a server, never behind the checks
-        // nobody waits for. Before, as for a key known by name alone, it runs within the server search's short probe,
-        // which three handshakes that hang would outlast: it shares one check's width with the other servers' probes
+        // Its handshakes take turns at the connections' own places once a proxy reached a server, never behind the
+        // checks nobody waits for; before, within the server search's short probe, which 3 hanging handshakes would
+        // outlast, at one check's width shared with the other servers' probes
         var rated = new HashSet<(ProxyProtocol, string, int)>();
         var isPassed = false;
         await _checker.CheckServers(socketFactory, target, entriesToCheck, satisfiedSuccessCount: 1,
@@ -414,12 +415,10 @@ public class ManagedProxyConnector : IProxyConnector
         _close.ThrowIfClosed();
         var target = new CheckTarget(ipEndPoint, hostName, serverCertificateValidation);
 
-        // A list with no enabled endpoint waits for its first download, which starts with the connector: the connection
-        // goes through a proxy or fails, never straight to the server. A caller that waited already (WaitForEndPoints)
-        // goes on at once
+        // a list with no enabled endpoint waits for its first download: the connection goes through a proxy or fails,
+        // never straight to the server. A caller that waited already goes on at once
         await WaitForEndPoints(cancellationToken).Vhc();
 
-        // get ordered endpoints
         var entries = await GetOrderedEntries(socketFactory, target, cancellationToken).Vhc();
 
         // Those that pass behind the connect after the connection took its list come after it: one limited to the
@@ -463,7 +462,6 @@ public class ManagedProxyConnector : IProxyConnector
                     "Connecting via a {ProxyType} proxy server {ProxyServer}...",
                     entry.EndPoint.Protocol, VhLogger.FormatHostName(entry.EndPoint.Host));
 
-                // create proxy client
                 var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint, dialCts.Token).Vhc();
                 tcpClient = socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
 
@@ -472,7 +470,6 @@ public class ManagedProxyConnector : IProxyConnector
                 connection = ProxyClientFactory.GetConnection(proxyClient, tcpClient);
                 _close.ThrowIfClosed();
 
-                // find the fastest server
                 var latency = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
                 if (!listEntries.Contains(_fastestEntry) ||
                     latency < _fastestEntry?.Status.Latency)
@@ -484,8 +481,8 @@ public class ManagedProxyConnector : IProxyConnector
                 var currentEntry = _list.GetCurrentEntry(entry);
                 RecordSuccess(currentEntry, latency: latency, fastestLatency: _fastestEntry?.Status.Latency);
 
-                // a server a proxy reached, for the checks behind the session, where no check gave one; this connection's
-                // failure takes it back, as the VPN's TLS comes after it
+                // a server a proxy reached, for the checks behind the session, where no check gave one; this
+                // connection's failure takes it back, as the VPN's TLS comes after it
                 _checker.OfferServerReached(new LastCheck(socketFactory, target, tcpClient));
 
                 // timed no later than the attempt callback, which may restart the caller's timeout
@@ -563,11 +560,11 @@ public class ManagedProxyConnector : IProxyConnector
     /// <inheritdoc/>
     /// <remarks>
     /// It counts once per connection: the endpoint's success is taken back and a failure recorded; after a reset of the
-    /// statuses by <see cref="ProxyOptions.ResetStates"/>, which dropped that success, the failure alone. A connection it
-    /// did not hand out changes nothing; an <see cref="OperationCanceledException"/> within the check timeout after the
-    /// connection was made records nothing, and leaves the connection for a failure that comes after it. Where no check
-    /// had passed and this connection gave the checks behind the session their server, they take it no more, after a
-    /// cancellation too.
+    /// statuses by <see cref="ProxyOptions.ResetStates"/>, which dropped that success, the failure alone. A connection
+    /// it did not hand out changes nothing; an <see cref="OperationCanceledException"/> within the check timeout after
+    /// the connection was made records nothing, and leaves the connection for a failure that comes after it. Where no
+    /// check had passed and this connection gave the checks behind the session their server, they take it no more,
+    /// after a cancellation too.
     /// </remarks>
     public void RecordFailed(TcpClient tcpClient, Exception ex)
     {
@@ -587,8 +584,8 @@ public class ManagedProxyConnector : IProxyConnector
         if (!_handedOutConnections.Remove(tcpClient))
             return;
 
-        // its success is taken back, as its connection failed, but where a reset of the statuses since dropped it, and a
-        // later connection's would go in its place
+        // its success is taken back, as its connection failed, but where a reset of the statuses since dropped it, and
+        // a later connection's would go in its place
         var entry = _list.GetCurrentEntry(handedOut.Entry);
         if (handedOut.StatusResetCount == _list.StatusResetCount)
             entry.TakeBackSuccess();

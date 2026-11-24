@@ -13,9 +13,8 @@ using VpnHood.Net.Toolkit.Sockets;
 
 namespace VpnHood.Core.Proxies.Management.Checks;
 
-// Runs of checks of the endpoints against a VPN server, CheckWidth at a time, each a connection through its proxy to the
-// server and, with VerifyTls, a TLS handshake with it, which takes its turn at the places given. It records what each
-// check found, keeps the server a proxy last reached, and counts the runs under way for the close
+// Runs of checks against a VPN server: through each proxy to the server and, with VerifyTls, a TLS handshake with it,
+// which takes its turn at the places given. It records each outcome and keeps the last server a proxy reached
 internal sealed class ProxyChecker(
     ProxyEndPointList list,
     ProxyConnectorClose close,
@@ -24,15 +23,13 @@ internal sealed class ProxyChecker(
 {
     private const int CheckServerMaxDegreeOfParallelism = 50;
 
-    // The factory and VPN server of the last check through which a proxy reached the server, the VPN's TLS with
-    // VerifyTls, which the checks behind the session take, as they have no caller of their own. Not the last call's: a
-    // server search's probe of a server that is down would rate every proxy they check failed. Where no check passed,
-    // the first connection's that reached its server, whose TLS comes after it: a key known by name alone may never
-    // check in a session; that connection's failure takes it back. One object, so a reader takes one's whole
+    // The server the checks behind the session take, having no caller: the last one a check reached through a proxy,
+    // not the last one asked, as a down server would rate every proxy failed. Where no check passed, as for a key known
+    // by name alone, the first one a connection reached, which its failure takes back. One object, read whole
     private volatile LastCheck? _lastCheck;
 
     private ProgressMonitor? _progressMonitor;
-    // The runs under way, counted under their lock, which the close stops at once and waits for before its save
+    // the runs under way, counted under their lock, which the close stops and waits for before its save
     private readonly Lock _checkLock = new();
     private int _checkCount;
     private TaskCompletionSource? _checksEnded;
@@ -47,22 +44,17 @@ internal sealed class ProxyChecker(
     // how many endpoints a check dials at once, one beside the session too; a test's to change
     public int CheckWidth { get; set; } = CheckServerMaxDegreeOfParallelism;
 
-    // The places for the TLS handshakes of the checks beside the session that nobody waits for, which they share: the
-    // check behind a connect once a pass came, and the list's and the app's. On iOS and tvOS 3, as the tunnel's own
-    // connects there (ConnectorService's gate): each handshake costs native memory outside every managed budget, against
-    // an extension's limit of about 50 MB. A dial is no handshake, so a list whose proxies mostly never answer goes as
-    // fast as elsewhere. Null elsewhere, where the dials' width is the only one. A test's to change; the close disposes it
+    // TLS handshake places shared by the checks nobody waits for. 3 on iOS and tvOS, as their tunnel's own connects:
+    // each handshake costs native memory against an extension's limit of about 50 MB. A check's first dial takes none,
+    // so dead proxies hold none. Null elsewhere. The places are settable for tests
     public SemaphoreSlim? HandshakePlaces { get; set; } = CreateHandshakePlaces();
 
-    // The places for the TLS handshakes of the connections' own checks beside the session, which they share: apart from
-    // those of the checks nobody waits for, which may hold theirs for a check's whole time while a connection waits. On
-    // iOS and tvOS 3, so 6 at most beside the session. A test's to change; the close disposes it
+    // The connections' own checks' places beside the session, apart from the checks nobody waits for, which may hold
+    // theirs a check's whole time while a connection waits. 3 on iOS and tvOS, null elsewhere
     public SemaphoreSlim? ConnectionHandshakePlaces { get; set; } = CreateHandshakePlaces();
 
-    // The places for the TLS handshakes of the connections' own checks before any proxy reached a server, which they
-    // share on every platform: the server search probes up to 10 servers at once, 8 of whose connections are made at
-    // once, 3 on iOS and tvOS (ConnectorService's gate), and each probe's check made as many handshakes as one check
-    // alone, so up to 400, or 150. As wide as one check. A test's to change; the close disposes it
+    // The connections' own checks' places before any proxy reached a server, on every platform: the server search runs
+    // up to 8 of them at once, 3 on iOS and tvOS (ConnectorService's gate), which made up to 400 handshakes, or 150
     public SemaphoreSlim SearchHandshakePlaces { get; set; } = new(CheckServerMaxDegreeOfParallelism);
 
     private static SemaphoreSlim? CreateHandshakePlaces() =>
@@ -87,7 +79,8 @@ internal sealed class ProxyChecker(
         TaskCompletionSource? checksEnded = null;
         lock (_checkLock) {
             if (_checkCount > 0)
-                checksEnded = _checksEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                checksEnded = _checksEnded =
+                    new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         return checksEnded?.Task;
@@ -101,12 +94,10 @@ internal sealed class ProxyChecker(
         SearchHandshakePlaces.Dispose();
     }
 
-    // With stopWhenSatisfied, the run ends at its successes: the checks under way end, and count for nothing. Each
-    // outcome is recorded as it comes, the endpoint's address put in rated, and each pass then reported to onPass, as a
-    // connect may go on at the first. It dials CheckWidth at a time. A check with a TLS handshake ahead, an HTTPS
-    // proxy's own or the server's, takes its turn at the handshake places given, beside those that started before:
-    // those beside the session from the run's start or once a proxy reached a server, those before a server until then.
-    // The close stops the run, which then throws ObjectDisposedException
+    // Each outcome is recorded as it comes and each pass reported, as a connect may go on at the first; with
+    // stopWhenSatisfied it ends at its successes, and the checks under way count for nothing. Handshakes take turns at
+    // handshakePlaces beside the session, else at handshakePlacesBeforeServer. The close stops it, which then throws
+    // ObjectDisposedException
     public async Task CheckServers(ISocketFactory socketFactory,
         CheckTarget target,
         IEnumerable<ProxyEndPointEntry> endpoints,
@@ -119,13 +110,12 @@ internal sealed class ProxyChecker(
         ISet<(ProxyProtocol, string, int)>? rated,
         CancellationToken cancellationToken)
     {
-        // initialize progress tracker
         var progressMonitor = new ProgressMonitor(
             totalTaskCount: list.Entries.Length,
             taskTimeout: serverCheckTimeout,
             maxDegreeOfParallelism: CheckWidth);
 
-        // counted under the lock the close takes, which stops the checks under way and waits for them before its save
+        // under the lock the close reads: a run either throws here or is counted, and the close waits for it
         lock (_checkLock) {
             close.ThrowIfClosed();
             _checkCount++;
@@ -143,7 +133,6 @@ internal sealed class ProxyChecker(
                 MaxDegreeOfParallelism = CheckWidth
             };
 
-            // check all endpoints in parallel. If enough good servers found, stop checking more.
             var successCount = 0;
             TimeSpan? fastestLatency = null;
             try {
@@ -162,12 +151,11 @@ internal sealed class ProxyChecker(
                         var proxyClient = await ProxyClientFactory.CreateProxyClient(currentEntry.EndPoint, ct).Vhc();
                         isChecking = true;
 
-                        // A check with a TLS handshake ahead that takes its turn dials its proxy first, so one that
-                        // never answers takes no place, and goes on through that connection where a place is free.
-                        // Otherwise it waits for one with nothing open, which the proxy or the server would close, and
-                        // dials anew, its time from then. Either way it goes on only where the entry is still to check,
-                        // with the credentials it has then, at the address it dialed. Read once, as new options may
-                        // change it meanwhile
+                        // A check that takes its turn dials first, so a dead proxy takes no place, and keeps that
+                        // connection where a place is free; else it waits with nothing open, which the proxy or the
+                        // server would close, and dials anew, its time from then. It goes on only for an entry still to
+                        // check, with its credentials then, at the address dialed. VerifyTls is read once, as new
+                        // options may change it
                         var verifyTls = VerifyTls;
                         tcpClient = CreateCheckClient(socketFactory, proxyClient.ProxyEndPoint);
                         var startTime = Environment.TickCount64;
@@ -205,10 +193,10 @@ internal sealed class ProxyChecker(
                         handshakePlace?.Release();
                     }
 
-                    // Recorded under the flush lock, as a reload of the entries runs under it: onto the entry held then,
-                    // which no reload replaces until it is saved, and nowhere where the list lost it. Not under the run's
-                    // token: what it found is kept. The run's fastest pass so far is the bar a slow one is penalized by.
-                    // A pass of one turned off since releases no connect
+                    // Under the flush lock, as a reload takes it: onto the entry held then, which a reload saves before
+                    // it replaces it, nowhere where the list lost it, and not under the run's token, as what it found
+                    // is kept. The run's fastest pass is the bar a slow one is penalized by; a pass of one turned off
+                    // since releases no connect
                     var isPass = false;
                     using (await list.FlushLock.LockAsync(CancellationToken.None).Vhc()) {
                         if (list.TryGetCurrentEntry(entry) is { } currentEntry) {
@@ -230,8 +218,7 @@ internal sealed class ProxyChecker(
                     if (!isPass)
                         return;
 
-                    // a server a proxy reached, which the checks behind the session take, and from which the checks
-                    // take their turns at the handshakes
+                    // the checks behind the session take this server, and checks take turns at handshakes from now
                     _lastCheck = new LastCheck(socketFactory, target);
 
                     onPass?.Invoke();
@@ -240,8 +227,7 @@ internal sealed class ProxyChecker(
 
                     return;
 
-                    // one turned off or gone since the list was taken is checked no more, nor, once 10 have passed, a
-                    // rated one
+                    // not one turned off or gone since the list was taken, nor a rated one once enough passed
                     bool IsToCheck(ProxyEndPointEntry heldEntry) =>
                         heldEntry.EndPoint.IsEnabled &&
                         (successCount < satisfiedSuccessCount || heldEntry.Status.Quality is StatusQuality.Unknown);
@@ -252,15 +238,14 @@ internal sealed class ProxyChecker(
                 // the run ended at its successes, or the close stopped it
             }
             finally {
-                // What it recorded, saved, a canceled run's too. After the close, whose own save takes this lock too, the
-                // store is closed
+                // What it recorded, saved, a canceled run's too. After the close, whose own save takes this lock too,
+                // the store is closed
                 using (await list.FlushLock.LockAsync(CancellationToken.None).Vhc()) {
                     if (!close.IsClosed)
                         await list.Flush(CancellationToken.None).Vhc();
                 }
             }
 
-            // make sure throw cancellation exception if cancelled
             cancellationToken.ThrowIfCancellationRequested();
             close.ThrowIfClosed();
         }
@@ -292,10 +277,9 @@ internal sealed class ProxyChecker(
 
         list.RecordFailed(entry, error);
 
-        // Disabled only where it is no proxy of its kind, an answer the server has no part in: a refusal, as SOCKS4's
-        // "rejected or failed" is, may be for a server that is down, and a TLS failure may be the server's. An HTTP
-        // proxy's refusal of the server, as a 403 for a port other than 443, comes as the same error as an answer that
-        // is no HTTP at all, so an HTTP or HTTPS endpoint is never disabled here
+        // Disabled only where it is no proxy of its kind: a refusal may be for a server that is down, and a TLS failure
+        // may be the server's. An HTTP proxy's refusal, as a 403 for a port other than 443, comes as the same error as
+        // an answer that is no HTTP at all, so HTTP and HTTPS endpoints are never disabled here
         var isProtocolRejected = entry.EndPoint.Protocol is ProxyProtocol.Socks4 or ProxyProtocol.Socks5 &&
                                  error is ProxyClientException {
                                      SocketErrorCode: SocketError.ProtocolNotSupported
@@ -307,10 +291,9 @@ internal sealed class ProxyChecker(
         }
     }
 
-    // Connects through the proxy to the VPN server and, with VerifyTls, completes a TLS handshake with it, as the VPN's
-    // own connection would: a proxy that opens the tunnel and passes nothing fails here, and one that stands in for the
-    // server with a certificate of its own fails the server's check. VerifyTls as the check read it at its start. Its
-    // time and latency run from startTime, the start of its dial, which a socket dialed before it took its place began
+    // Through the proxy to the server and, with VerifyTls, a TLS handshake with it, as the VPN's own connection makes:
+    // a proxy that opens the tunnel and passes nothing fails, as does one whose certificate the caller's check refuses.
+    // Its time and latency run from startTime, when its socket was made, one dialed already where a place was free
     private async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient, TcpClient tcpClient,
         CheckTarget target, bool verifyTls, long startTime, CancellationToken cancellationToken)
     {
@@ -353,8 +336,7 @@ internal sealed class ProxyChecker(
         }
     }
 
-    // A check's dial of its proxy alone, within a check's time, before it takes its turn at the handshakes: a proxy
-    // that never answers takes no place
+    // before a check's turn at the handshakes, within a check's time: a proxy that never answers takes no place
     private async Task DialProxy(TcpClient tcpClient, IPEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
         using var timeoutCts = new CancellationTokenSource(serverCheckTimeout);

@@ -31,10 +31,10 @@ release in itself.
   the install script that picks the architecture (`VpnHoodServer-linux.sh`), the MsQuic installer
   (`VpnHoodServer-linux-msquic.sh`), the operating-system updates script
   (`VpnHoodServer-linux-os-updates.sh`, which the install script downloads for `-osupdate` or its question),
-  and the installer for a user without root (`VpnHoodServer-linux-user.sh`, from
-  `src/apps/Server/pub/Linux-User/`; it picks the architecture itself, and its updater downloads it from the
+  and the installer for a user without root (`VpnHoodServer-linux-noroot.sh`, from
+  `src/apps/Server/pub/Linux-NoRoot/`; it picks the architecture itself, and its updater downloads it from the
   release it installs). Each `.tar.gz` also carries that install's updater and uninstaller in `publish_info`
-  (`vhupdate-user`, `vhuninstall-user`), beside root's.
+  (`vhupdate-noroot`, `vhuninstall-noroot`), beside root's.
 - **Windows** (`win-x64`): `.zip`, install `.ps1`, update `.json`. The server package is a
   self-contained `dotnet publish` + zip with no installer, so it **cross-builds on `ubuntu-latest`**
   alongside Linux — one build job, no Windows runner.

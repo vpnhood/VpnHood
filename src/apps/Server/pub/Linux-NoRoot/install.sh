@@ -26,7 +26,7 @@ minProtocolVersion=8;
 maxProtocolVersion=15;
 
 function show_help() {
-	echo "Usage: $assemblyName-linux-user.sh [options]";
+	echo "Usage: $assemblyName-linux-noroot.sh [options]";
 	echo "Installs $productName for this user alone, in ~/$assemblyName, without root. Apps then always";
 	echo "use Cloak Mode, the server listens on a port above 1023, and it changes no operating system settings.";
 	echo "  -q                    no questions: what is not given keeps the install's choices,";
@@ -341,7 +341,7 @@ fi
 # The shared files are replaced by rename, never rewritten in place: the vhupdate running this script is still
 # reading its own file, as bash reads a script as it goes. publish.json, which switches the version, goes last.
 # The package carries a user install's updater and uninstaller (this folder's updater.sh and uninstall.sh, as
-# vhupdate-user and vhuninstall-user) beside root's, which it does not take.
+# vhupdate-noroot and vhuninstall-noroot) beside root's, which it does not take.
 echo "Updating shared files...";
 infoDir="$binDir/publish_info";
 function replace_file() {
@@ -354,8 +354,8 @@ function replace_file() {
 	fi
 }
 chmod +x "$binDir/$assemblyName";
-replace_file "$infoDir/vhupdate-user" "$destinationPath/vhupdate" 755;
-replace_file "$infoDir/vhuninstall-user" "$destinationPath/vhuninstall" 755;
+replace_file "$infoDir/vhupdate-noroot" "$destinationPath/vhupdate" 755;
+replace_file "$infoDir/vhuninstall-noroot" "$destinationPath/vhuninstall" 755;
 replace_file "$infoDir/$launcher" "$destinationPath/$launcher" 755;
 replace_file "$infoDir/publish.json" "$destinationPath/publish.json" 644;
 

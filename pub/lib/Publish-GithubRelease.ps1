@@ -90,8 +90,8 @@ if ($assetSet -eq "server") {
 		"$packageDir/linux-any/$packageFileTitle-linux-msquic.sh",
 		"$packageDir/linux-any/$packageFileTitle-linux-os-updates.sh",
 		"$packageDir/linux-any/$packageFileTitle-linux.sh",
-		# its updater downloads it from the release it installs (src/apps/Server/pub/Linux-User/updater.sh)
-		"$packageDir/linux-any/$packageFileTitle-linux-user.sh",
+		# its updater downloads it from the release it installs (src/apps/Server/pub/Linux-NoRoot/updater.sh)
+		"$packageDir/linux-any/$packageFileTitle-linux-noroot.sh",
 
 		"$packageDir/linux-x64/$packageFileTitle-linux-x64.json",
 		"$packageDir/linux-x64/$packageFileTitle-linux-x64.sh",

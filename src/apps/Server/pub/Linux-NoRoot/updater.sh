@@ -84,7 +84,7 @@ fi
 echo "Installing the latest version";
 runDir=$(mktemp -d) || exit 1;
 trap 'rm -rf "$runDir"' EXIT;
-installerUrl="${onlinePackageUrl%/*}/$assemblyName-linux-user.sh";
+installerUrl="${onlinePackageUrl%/*}/$assemblyName-linux-noroot.sh";
 if ! download "$installerUrl" "$runDir/install.sh"; then
 	echo "Could not download the install script! Url: $installerUrl";
 	exit 1;

@@ -89,19 +89,19 @@ if ($installTemplate -eq "install") {
     (Get-Content $osUpdatesSrc -Raw) -replace "`r", "" | Out-File -FilePath $osUpdatesDst -Encoding ASCII -Force -NoNewline
 }
 
-# The server's installer for a user without root, from the server's own Linux-User folder: one for both CPUs, as
-# it picks the package itself; with its release's values. Its updater downloads <app>-linux-user.sh from the
+# The server's installer for a user without root, from the server's own Linux-NoRoot folder: one for both CPUs,
+# as it picks the package itself; with its release's values. Its updater downloads <app>-linux-noroot.sh from the
 # release it installs.
 if ($installTemplate -eq "install") {
-    Write-Host "Preparing the user installer script..." -ForegroundColor Green
-    $userInstallContent = Get-Content -Path "$solutionDir/src/apps/Server/pub/Linux-User/install.sh" -Raw;
-    $userInstallContent = $userInstallContent.Replace('$(releaseUrlParam)', "$releaseUrl");
-    $userInstallContent = $userInstallContent.Replace('$(versionTagParam)', "$versionTag");
-    $userInstallContent = $userInstallContent.Replace('$(productNameParam)', "$productName");
-    $userInstallContent = $userInstallContent.Replace('$(assemblyNameParam)', "$assemblyName");
-    $userInstallContent = $userInstallContent.Replace('$(launcherNameParam)', "$launcherName");
-    $userInstallContent = $userInstallContent -replace "`r`n", $lineEnding;
-    $userInstallContent | Out-File -FilePath "$moduleDir/$assemblyName-$os-user.$shellExt" -Encoding ASCII -Force -NoNewline;
+    Write-Host "Preparing the installer script without root..." -ForegroundColor Green
+    $noRootInstallContent = Get-Content -Path "$solutionDir/src/apps/Server/pub/Linux-NoRoot/install.sh" -Raw;
+    $noRootInstallContent = $noRootInstallContent.Replace('$(releaseUrlParam)', "$releaseUrl");
+    $noRootInstallContent = $noRootInstallContent.Replace('$(versionTagParam)', "$versionTag");
+    $noRootInstallContent = $noRootInstallContent.Replace('$(productNameParam)', "$productName");
+    $noRootInstallContent = $noRootInstallContent.Replace('$(assemblyNameParam)', "$assemblyName");
+    $noRootInstallContent = $noRootInstallContent.Replace('$(launcherNameParam)', "$launcherName");
+    $noRootInstallContent = $noRootInstallContent -replace "`r`n", $lineEnding;
+    $noRootInstallContent | Out-File -FilePath "$moduleDir/$assemblyName-$os-noroot.$shellExt" -Encoding ASCII -Force -NoNewline;
 }
 
 # Copy the installer script to latest

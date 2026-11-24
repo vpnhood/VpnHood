@@ -151,15 +151,15 @@ if ($installTemplate -eq "install-client") {
 }
 
 # the updater and the uninstaller of a Linux server installed by a user without root, from the server's own
-# Linux-User folder, whose install.sh places them as vhupdate and vhuninstall
+# Linux-NoRoot folder, whose install.sh places them as vhupdate and vhuninstall
 if ($installTemplate -eq "install" -and $os -ieq "linux") {
-	Write-Output "Creating the user install's updater and uninstaller scripts...";
-	foreach ($userScript in @(@("updater", "vhupdate-user"), @("uninstall", "vhuninstall-user"))) {
-		$installScript = Get-Content -Path "$SolutionDir/src/apps/Server/pub/Linux-User/$($userScript[0]).sh" -Raw;
+	Write-Output "Creating the updater and uninstaller scripts of an install without root...";
+	foreach ($noRootScript in @(@("updater", "vhupdate-noroot"), @("uninstall", "vhuninstall-noroot"))) {
+		$installScript = Get-Content -Path "$SolutionDir/src/apps/Server/pub/Linux-NoRoot/$($noRootScript[0]).sh" -Raw;
 		$installScript = $installScript.Replace('$(productNameParam)', "$productName");
 		$installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");
 		$installScript = $installScript -replace "`r`n", $lineEnding;
-		$installScript  | Out-File -FilePath "$publish_infoDir/$($userScript[1])" -Encoding ASCII -Force -NoNewline;
+		$installScript  | Out-File -FilePath "$publish_infoDir/$($noRootScript[1])" -Encoding ASCII -Force -NoNewline;
 	}
 }
 

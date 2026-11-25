@@ -80,7 +80,7 @@ internal static class Program
                 Website = new Uri("https://www.vpnhood.com/"),
                 WhatsNew = new Uri("https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md"),
                 Feedback = new Uri("https://docs.google.com/forms/d/e/1FAIpQLSd5AQesTSbDo23_4CkNiKmSPtPBaZIuFjAFnjqLo6XGKG5gyg/viewform?usp=sf_link"),
-                PersonalServer = new Uri("https://github.com/vpnhood/VpnHood/wiki/VpnHood-Manager"),
+                PersonalServer = new Uri("https://www.vpnhood.com/self-hosted-vpn/"),
                 LinkedIn = new Uri("https://www.linkedin.com/company/vpnhood"),
                 Facebook = new Uri("https://www.facebook.com/vpnhood"),
                 Instagram = new Uri("https://www.instagram.com/vpnhood/"),

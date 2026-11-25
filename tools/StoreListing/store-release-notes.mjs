@@ -15,6 +15,9 @@
  *   #store                             marks the line for Google Play's short per-release note
  *                                      (Play caps a changelog at 500 characters — the full
  *                                      section does not fit; iOS gets the full note, cap 4000)
+ *   #nostore                           keeps the line out of every store's note: it stays in the
+ *                                      CHANGELOG and the GitHub release, so a section too long for
+ *                                      iOS's 4000 characters picks what the stores show
  *
  * Two subcommands, run in this order with vhtranslator between them (the store repo's
  * update-release-notes.yml drives all three):
@@ -76,7 +79,7 @@ const product = argValue('--product', null);
 if (!PRODUCTS.includes(product)) throw new Error(`--product must be one of: ${PRODUCTS.join(', ')}.`);
 const skipIos = args.includes('--no-ios');
 const PLATFORMS = ['android', 'ios', 'windows', 'linux'];
-const KNOWN_TAGS = new Set([...PRODUCTS, ...PLATFORMS, 'store']);
+const KNOWN_TAGS = new Set([...PRODUCTS, ...PLATFORMS, 'store', 'nostore']);
 
 /** Store limits count characters, not code units; a trailing newline is layout, not content. */
 const charCount = (text) => [...text.replace(/\n$/, '')].length;
@@ -135,6 +138,14 @@ async function extract() {
 
     const products = tags.filter(t => PRODUCTS.includes(t));
     if (products.length && !products.includes(product)) continue; // the other product's line
+    if (tags.includes('nostore')) {
+      if (tags.includes('store'))
+        throw new Error(`CHANGELOG line "${rawLine.trim()}": #store and #nostore contradict each other.`);
+      continue; // the GitHub release's alone: no store shows it, so it is not translated either
+    }
+    // Neither note would show it either: Play's takes only #store lines, and iOS's none for another platform.
+    const platforms = tags.filter(t => PLATFORMS.includes(t));
+    if (!tags.includes('store') && platforms.length && !platforms.includes('ios')) continue;
 
     const key = 'n_' + createHash('sha1').update(text, 'utf8').digest('hex').slice(0, 10);
     const clash = entries.find(e => e.key === key);
@@ -142,7 +153,7 @@ async function extract() {
       throw new Error(clash.text === text
         ? `CHANGELOG: duplicate line "${text}" in the current section.`
         : `hash collision between "${clash.text}" and "${text}" — widen the key length.`);
-    entries.push({ key, text, platforms: tags.filter(t => PLATFORMS.includes(t)), store: tags.includes('store') });
+    entries.push({ key, text, platforms, store: tags.includes('store') });
   }
   if (!entries.length)
     throw new Error(`the CHANGELOG's first H1 section has no lines for product "${product}".`);

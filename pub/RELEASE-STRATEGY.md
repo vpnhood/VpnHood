@@ -112,7 +112,11 @@ Considered and not adopted. Revisit one only if its pain grows.
    NuGet packages must change in `CHANGELOG.Packages.md`). Lines route themselves with
    **trailing tags**: `#client` / `#connect` pick the product; `#android #ios #windows #linux` limit
    platforms (inclusive — no platform tag = every platform, `#android #ios` ships to both); `#store`
-   marks the few lines for Google Play's short per-release note (Play caps it at 500 characters).
+   marks the few lines for Google Play's short per-release note (Play caps it at 500 characters);
+   `#nostore` keeps a line out of every store's note, so a section longer than the App Store's 4,000
+   characters, in every language, chooses what the stores show (the GitHub release keeps it).
+   When a release goes out, rename `# Latest` to its version, as `# v9.1.879`, so the next release's
+   section starts empty.
    CI never rewrites the changelog — at release time the first H1 (`#`) section becomes the GitHub
    release note (the other product's lines dropped, tags stripped), and the **store release notes**
    are generated from the same section by each store repo's `update-release-notes.yml` (extract →

@@ -50,6 +50,7 @@ CHANGELOG.md — and their own refresh workflow, but ride the same translation a
 vpnhood/VpnHood CHANGELOG.md    first H1 section ("# Latest"), hand-written EN, line tags:
         │                       #client/#connect (product) · #android #ios #windows #linux
         │                       (platforms, inclusive; none = all) · #store (Play's short note)
+        │                       · #nostore (the GitHub release only, never extracted)
         ▼ store-release-notes.mjs extract     runs in update-release-notes.yml (store repo)
 store-i18n/en-US/release-notes.json   one key per line (content-hashed: an edited line is
 store-i18n/release-notes.map.json     retranslated, the rest reused) + order/routing map
@@ -202,7 +203,8 @@ forced run (`-f force=true`) must yield all jobs green with the App Store leg ~1
   translates, compiles, commits; the gate picks up the change on the next listing publish.
 - **Update release notes for a release**: edit the monorepo CHANGELOG's `# Latest` section
   (tags: `#client`/`#connect`, `#android #ios #windows #linux`, `#store` for Play's 500-char
-  note — all trailing, per line), then run `update-release-notes.yml` in each store repo. iOS
+  note, `#nostore` for a line the stores leave out when the section is past iOS's 4000 characters
+  in some language — all trailing, per line), then run `update-release-notes.yml` in each store repo. iOS
   notes ship with the next listing publish; the Play note ships with the next release's AAB.
   When an app's FIRST App Store version goes live, drop `--no-ios` from its workflows.
 - **Add a store (e.g. Microsoft)**: new `_publish_listing_<store>.yml` module in main following

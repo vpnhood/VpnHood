@@ -60,7 +60,10 @@ public enum SessionErrorCode
     /// <summary>The ad the session required failed.</summary>
     AdError,
 
-    /// <summary>The rewarded ad was not accepted.</summary>
+    /// <summary>
+    /// An extension's rewarded ad was not accepted, so it extends nothing: the session goes on with the time it has. A
+    /// refused ad that the session's connect required ends the session with <see cref="AdError"/> instead.
+    /// </summary>
     RewardedAdRejected,
 
     /// <summary>The server is under maintenance.</summary>

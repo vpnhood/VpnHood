@@ -249,11 +249,13 @@ internal class Session : IDisposable
 
     // a closed session keeps its code: a reply to a request sent before the close cannot reopen it. A reply that
     // leaves it open is stale if its request went before the applied one's, as a status upload's that crossed an ad;
-    // a close always applies, since the access managers close for good
+    // a close always applies, since the access managers close for good. An extension's refused ad closes nothing:
+    // the app keeps its session on that code, so the session goes on with the time it has
     internal bool ApplyResponse(SessionResponse sessionResponse, long requestTimestamp)
     {
         lock (_stateLock) {
-            if (Response.ErrorCode != SessionErrorCode.Ok)
+            if (Response.ErrorCode != SessionErrorCode.Ok ||
+                sessionResponse.ErrorCode == SessionErrorCode.RewardedAdRejected)
                 return false;
 
             if (sessionResponse.ErrorCode == SessionErrorCode.Ok && requestTimestamp < _responseRequestTimestamp)
@@ -558,7 +560,10 @@ internal class Session : IDisposable
         var sessionResponse = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData, cancellationToken).Vhc();
         ApplyResponse(sessionResponse, requestTimestamp);
-        await streamConnection.DisposeAsync(Response, cancellationToken).Vhc();
+
+        // an extension's refusal goes to the ad's request alone, as the session goes on unchanged
+        var reply = sessionResponse.ErrorCode == SessionErrorCode.RewardedAdRejected ? sessionResponse : Response;
+        await streamConnection.DisposeAsync(reply, cancellationToken).Vhc();
     }
 
     internal async Task ProcessTcpForwardingChannelRequest(TcpForwardingChannelRequest request, IStreamConnection streamConnection,

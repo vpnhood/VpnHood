@@ -277,6 +277,64 @@ public class SessionUsageTest : TestBase
     }
 
     [TestMethod]
+    public async Task A_refused_extension_leaves_the_session_its_time()
+    {
+        using var accessManager = await CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // a trial session ends at a time a reward would extend
+        var clientOptions = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
+        clientOptions.PlanId = ConnectPlanId.PremiumByTrial;
+        await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: new TestNullVpnAdapter());
+        var session = server.GetSession(client);
+        var expirationTime = session.Response.AccessUsage?.ExpirationTime;
+        Assert.IsNotNull(expirationTime);
+
+        // the access manager knows nothing of the ad and refuses it: the ad's request alone hears of it
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
+            client.RequiredSession.AdHandler.SendRewardedAdData("rewarded-ad", TestCt));
+
+        Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.Ok, session.Response.ErrorCode);
+
+        // the access manager keeps it open too, so a sync leaves it its time, and the session still answers
+        AddTraffic(session, sent: 1000, received: 2000);
+        await server.SessionManager.Sync(true, TestCt);
+        Assert.AreEqual(SessionErrorCode.Ok, GetAccessManagerErrorCode(accessManager, session));
+        Assert.AreEqual(SessionErrorCode.Ok, session.Response.ErrorCode);
+        Assert.AreEqual(expirationTime, session.Response.AccessUsage?.ExpirationTime);
+        await client.UpdateSessionStatus(TestCt);
+    }
+
+    [TestMethod]
+    public async Task A_refused_ad_that_the_connect_required_ends_the_session()
+    {
+        using var accessManager = await CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // the connect waits for a rewarded ad
+        var clientOptions = TestHelper.CreateClientOptions(await TestHelper.CreateAccessToken(server));
+        clientOptions.PlanId = ConnectPlanId.PremiumByRewardedAd;
+        await using var client = await TestHelper.CreateClient(clientOptions, vpnAdapter: new TestNullVpnAdapter(),
+            autoConnect: false);
+
+        var connectTask = client.Connect(TestCt);
+        await client.WaitForState(ClientState.WaitingForAd, TestCt);
+        var session = server.GetSession(client);
+
+        // the access manager knows nothing of the ad and refuses it, which ends the session there, on the server and
+        // on the client, with AdError, on which every app ends its session
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
+            client.RequiredSession.AdHandler.SendRewardedAdData("rewarded-ad", TestCt));
+
+        Assert.AreEqual(SessionErrorCode.AdError, ex.SessionResponse.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AdError, session.Response.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AdError, GetAccessManagerErrorCode(accessManager, session));
+        var connectEx = await Assert.ThrowsExactlyAsync<SessionException>(() => connectTask);
+        Assert.AreEqual(SessionErrorCode.AdError, connectEx.SessionResponse.ErrorCode);
+    }
+
+    [TestMethod]
     public async Task Close_after_a_failed_request_waits_for_the_status_upload()
     {
         using var accessManager = await CreateAccessManager();

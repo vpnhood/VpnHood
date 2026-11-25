@@ -160,6 +160,7 @@ public class SessionService : IDisposable
 
         // outside the unit-test mode only the normal plan comes this far, whose ad is the key's
         var adRequirement = ProcessPlanId(session, accessTokenData, sessionRequestEx.PlanId);
+        session.IsRewardedAdPending = adRequirement == AdRequirement.Rewarded;
 
         // create the response, and add the session, as one admission of the key
         lock (GetAdmissionLock(session.TokenId)) {
@@ -225,8 +226,9 @@ public class SessionService : IDisposable
             // the key's limits too: a restarted server takes a session's from its recovery's look-ups
             ret.AccessInfo = BuildAccessInfo(accessTokenData);
 
-            // update session status
-            if (session.EndTime == null && ret.ErrorCode != SessionErrorCode.Ok) {
+            // an error ends the session, but an extension's refused ad, after which it goes on with the time it has
+            if (session.EndTime == null &&
+                ret.ErrorCode is not (SessionErrorCode.Ok or SessionErrorCode.RewardedAdRejected)) {
                 session.ErrorCode = ret.ErrorCode;
                 session.EndTime = DateTime.UtcNow;
                 Save(session);
@@ -272,8 +274,10 @@ public class SessionService : IDisposable
         bool? isValidAd = null)
     {
         // check if the ad is valid. MUST before access usage
-        if (isValidAd == true)
+        if (isValidAd == true) {
             session.ExpirationTime = null;
+            session.IsRewardedAdPending = false;
+        }
 
         // Build access usage: the session's own end, and the key's traffic, which is all of it, as this manager has no
         // cycles. Not the key's end, which the session's start tells (AccessInfo): the session's end ends a session as
@@ -290,9 +294,13 @@ public class SessionService : IDisposable
         };
 
 
+        // a refused ad that the connect required ends the session, with AdError, as apps keep their session on
+        // RewardedAdRejected; an extension's refusal only extends nothing
         if (isValidAd == false)
             return new SessionResponseEx {
-                ErrorCode = SessionErrorCode.RewardedAdRejected,
+                ErrorCode = session.IsRewardedAdPending
+                    ? SessionErrorCode.AdError
+                    : SessionErrorCode.RewardedAdRejected,
                 ErrorMessage = "Could not validate the RewardedAd.",
                 AccessUsage = accessUsage
             };

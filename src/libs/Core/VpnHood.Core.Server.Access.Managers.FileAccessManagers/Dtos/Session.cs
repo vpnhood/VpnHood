@@ -17,6 +17,7 @@ internal class Session
     public DateTime LastUsedTime { get; private set; } = FastDateTime.UtcNow;
     public DateTime? EndTime { get; set; }
     public DateTime? ExpirationTime { get; set; }
+    public bool IsRewardedAdPending { get; set; }
     public bool IsAlive => EndTime == null;
     public SessionSuppressType SuppressedBy { get; set; }
     public SessionSuppressType SuppressedTo { get; set; }

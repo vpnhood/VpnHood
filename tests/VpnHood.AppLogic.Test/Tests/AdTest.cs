@@ -155,7 +155,7 @@ public class AdTest : TestAppBase
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
                 appDom.Connect(ConnectPlanId.PremiumByRewardedAd));
-            Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
+            Assert.AreEqual(SessionErrorCode.AdError, ex.SessionResponse.ErrorCode);
         }
     }
 
@@ -178,7 +178,7 @@ public class AdTest : TestAppBase
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
                 appDom.Connect(ConnectPlanId.NormalByRewardedAd));
-            Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
+            Assert.AreEqual(SessionErrorCode.AdError, ex.SessionResponse.ErrorCode);
         }
     }
 
@@ -669,7 +669,7 @@ public class AdTest : TestAppBase
         var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
             appDom.Connect(ConnectPlanId.NormalByRewardedAd));
 
-        Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AdError, ex.SessionResponse.ErrorCode);
         Assert.AreEqual(1, appDom.TestAdProvider.LoadAdCount);
     }
 

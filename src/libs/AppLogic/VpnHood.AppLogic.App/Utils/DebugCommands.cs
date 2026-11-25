@@ -42,9 +42,6 @@ public static class DebugCommands
     /// </summary>
     public const string DisableWebSocket = "/disable-websocket";
 
-    /// <summary>A command nothing reads.</summary>
-    public const string OsTcpStack = "/os-tcp-stack";
-
     /// <summary>
     /// Reports the device as a TV (<see cref="VpnHood.AppLogic.Api.App.AppDescriptor.IsTv"/>), so the TV layout can be
     /// worked on from a phone or a desktop.
@@ -73,7 +70,6 @@ public static class DebugCommands
         WinDivert,
         RemoteAccess,
         DisableWebSocket,
-        OsTcpStack,
         TvMode,
         Starlink
     ];

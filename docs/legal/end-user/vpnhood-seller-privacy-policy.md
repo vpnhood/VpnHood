@@ -1,6 +1,6 @@
 # VpnHood! SELLER - Privacy Policy
 
-*Effective: 2026-11-24.*
+*Effective: 2026-11-25.*
 
 **OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to **VpnHood! SELLER**: the hosted service for making and running a seller account, and its pages at **seller.vpnhood.com**. It is for the people who use it: whoever owns a seller account, and whoever works in an account's team.
 
@@ -13,7 +13,7 @@ We never sell your data, and VpnHood! SELLER shows no ads.
 - **Your account** — you sign in with your VpnHood ID, which tells us the identifier of your account there, your email address, whether it has been confirmed, and your name. We keep them, with the time your account here was made. We never get your password. The VpnHood ID has its own [Privacy Policy](https://www.vpnhood.com/legal/vpnhood-id/privacy-policy/).
 - **Your seller accounts** — the seller accounts you own or work in, what you are in each and when you first came to it, and what you put there, such as an account's name. An account's keys to outside services are kept encrypted and are never shown again.
 - **Someone adds you to an account's team** — they type your email address, and we keep it so that you get into that seller account when you sign in with it. Until you come to it, its team sees only the address they typed.
-- **A record of what was done** — who made or changed a seller account, its team, its owner or its keys, and when, including the version of the terms that an account's owner accepted. It holds no IP address, and never a key.
+- **A record of what was done** — who made or changed a seller account, its team, its owner, its keys, or what it sells and at which prices, and when, including the version of the terms that an account's owner accepted. It holds no IP address, and never a key.
 - **Your device and connection** — your IP address and the details of each request, such as the page and the time, are used for a short while to deliver the pages and to protect accounts. Our service does not store them with your account.
 
 ## Cookies

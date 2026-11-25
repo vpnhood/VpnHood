@@ -289,8 +289,6 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable
                 ? serverConfig.UpdateStatusIntervalValue // update status interval must be less than sync interval
                 : serverConfig.SessionOptions.SyncIntervalValue;
 
-            ServerUtils.ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
-            ServerUtils.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             var allServerIps = serverInfo.PublicIpAddresses
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? []);

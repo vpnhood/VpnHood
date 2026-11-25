@@ -14,7 +14,6 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.OsConfiguration;
-using VpnHood.Core.Server.Utils;
 using VpnHood.Net.Toolkit.Logging;
 using VpnHood.Net.Toolkit.Net;
 using VpnHood.Net.Toolkit.Utils;
@@ -102,30 +101,6 @@ public class ServerTest : TestBase
         accessManager.ServerConfigureException = null;
         await server.ConfigureAndSendStatus(TestCt);
         await VhTestUtil.AssertEqualsWait(ServerState.Ready, () => server.State, cancellationToken: TestCt);
-    }
-
-    // The default least I/O completion threads were 30 times the pool's minimum of the moment, so each configuration
-    // multiplied the last one's
-    [TestMethod]
-    [DoNotParallelize] // the thread pool is the process's
-    public void A_configuration_sets_the_default_least_io_threads_it_set_before()
-    {
-        ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
-        ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var maxCompletionPortThreads);
-        try {
-            // room for a multiple of a multiple, so a second one would show
-            ThreadPool.SetMaxThreads(maxWorkerThreads, 0xFFFF);
-            ThreadPool.SetMinThreads(minWorkerThreads, 2);
-            ServerUtils.ConfigMinIoThreads(null);
-            ThreadPool.GetMinThreads(out _, out var first);
-            ServerUtils.ConfigMinIoThreads(null);
-            ThreadPool.GetMinThreads(out _, out var second);
-            Assert.AreEqual(first, second);
-        }
-        finally {
-            ThreadPool.SetMinThreads(minWorkerThreads, minCompletionPortThreads);
-            ThreadPool.SetMaxThreads(maxWorkerThreads, maxCompletionPortThreads);
-        }
     }
 
     // the anonymous report of the configuration hid the TCP and UDP endpoints, not the QUIC ones
@@ -856,8 +831,6 @@ public class ServerTest : TestBase
         var oldServerConfig = new ServerConfig();
         var newServerConfig = new ServerConfig {
             LogAnonymizer = true,
-            MaxCompletionPortThreads = 10,
-            MinCompletionPortThreads = 11,
             UpdateStatusInterval = TimeSpan.FromHours(11),
             OsOptions = new OsOptions {
                 TcpCongestionControl = "cubic",
@@ -936,6 +909,24 @@ public class ServerTest : TestBase
         Assert.AreEqual(15, json["SwapMemorySizeMb"]?.GetValue<int>());
         Assert.AreEqual("eth2", json["AddListenerIpsToNetwork"]?.GetValue<string>());
         Assert.AreEqual(15, json["Os"]?["SwapMemorySizeMb"]?.GetValue<int>());
+    }
+
+    // older settings files hold the I/O completion threads' settings, gone as .NET ignores them
+    [TestMethod]
+    public void A_settings_file_with_the_io_thread_settings_still_loads()
+    {
+        var oldJson = """
+                      {
+                        "MinCompletionPortThreads": 30,
+                        "MaxCompletionPortThreads": 65535,
+                        "LogAnonymizer": false
+                      }
+                      """;
+
+        var serverConfig = JsonSerializer.Deserialize<ServerConfig>(oldJson) ??
+                           throw new InvalidOperationException("No configuration was read.");
+
+        Assert.IsFalse(serverConfig.LogAnonymizer);
     }
 
     [TestMethod]

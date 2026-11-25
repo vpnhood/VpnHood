@@ -5,7 +5,7 @@
 * Fix: A VpnHoodServer serves files from its downloads folder alone, where a request could climb into a folder beside it whose name begins the same, such as downloads-private
 * Fix: A self-hosted VpnHoodServer restarted with sessions under way keeps their keys' speed limits, where it ran them with none
 * Fix: A VpnHoodServer with no VPN adapter refuses settings that turn off AllowTcpForwarding, with an error at its configuration, where its users' sessions connected and then had no way for TCP
-* Fix: A VpnHoodServer that its access manager configures again no longer raises its least I/O threads 30-fold each time, and logs a value the system refuses
+* Update: MinCompletionPortThreads and MaxCompletionPortThreads in a server's settings are gone, as .NET has ignored both numbers since .NET 7; a settings file that has them still loads
 * Fix: A Windows VpnHoodServer that cannot read its memory reports it as unknown, where it reported 0
 * Update: With LogAnonymizer on, a VpnHoodServer's log of its settings hides its QUIC endpoints too, as it does its TCP and UDP ones
 * Fix: A VpnHoodServer closes a forwarded TCP connection that passed nothing either way for an hour, where one whose destination never answered, or whose phone changed networks, stayed open as long as its session; TcpIdleTimeout in its SessionOptions sets the time

@@ -100,18 +100,6 @@ public class ServerConfig
     /// </summary>
     public string ConfigCode { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the thread pool's least I/O completion threads: <see langword="null"/> for 30 times the pool's own
-    /// minimum, as the server's process started, and 0 to leave it.
-    /// </summary>
-    public int? MinCompletionPortThreads { get; set; }
-
-    /// <summary>
-    /// Gets or sets the thread pool's most I/O completion threads: <see langword="null"/> for 65,535, chosen so I/O
-    /// rather slows together than waits in a queue, and 0 to leave the runtime's.
-    /// </summary>
-    public int? MaxCompletionPortThreads { get; set; }
-
     /// <summary>Gets or sets <see cref="OsOptions.SwapMemorySizeMb"/> by its name outside <see cref="OsOptions"/>.</summary>
     /// <remarks>
     /// Compatibility (2026-11): servers before the <c>Os</c> group read it here, and older settings files hold it
@@ -224,8 +212,6 @@ public class ServerConfig
         if (obj.DnsServers != null) DnsServers = obj.DnsServers;
         if (obj.LogAnonymizer != null) LogAnonymizer = obj.LogAnonymizer;
         if (obj.ServerSecret != null) ServerSecret = obj.ServerSecret;
-        if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
-        if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
         if (obj.EnableHttp01Challenge != null) EnableHttp01Challenge = obj.EnableHttp01Challenge;
     }
 

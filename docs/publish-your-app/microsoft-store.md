@@ -114,6 +114,10 @@ a PNG.
 7. **Additional Testing Information** (under **Supplemental info**): the notes for certification —
    how a tester adds the key and connects — and the key itself under **Credentials**, never in the
    notes, which Partner Center asks to hold none. A stored credential shows masked from then on.
+   Open the notes with who publishes the app (the company, its address, website and support email,
+   the privacy policy and terms, the app's pages on other stores) and why it needs
+   `networkingVpnProvider`. With that and the app's own support info (step 2), this project's CLIENT
+   passed on its third try, the same package that was refused twice.
 
 Then **Submit for certification** on the product's page.
 
@@ -149,8 +153,8 @@ handle cards to PCI DSS.
    For a refusal, write to `reportapp@microsoft.com`, the address the product's page gives for
    certification questions, and name the app's Store ID and your Seller ID (**Account settings** ›
    **Legal info**), or the first reply only asks for them. CLIENT's answer came three business days
-   later and named the field the reviewers check (step 2, Support info). Its support request had no
-   answer after a week.
+   later and named the field the reviewers check (step 2, Support info). Its support request was
+   answered after two weeks, when the app had already passed.
 2. **The publish waits for you** (step 5, Submission options): once certified, **Publish now** on the
    product's page releases it.
 3. **Usage data asks first.** Microsoft wants the person's opt-in, in the app, before personal

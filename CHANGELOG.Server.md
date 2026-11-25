@@ -8,6 +8,7 @@
 * Update: MinCompletionPortThreads and MaxCompletionPortThreads in a server's settings are gone, as .NET has ignored both numbers since .NET 7; a settings file that has them still loads
 * Fix: A Windows VpnHoodServer that cannot read its memory reports it as unknown, where it reported 0
 * Update: With LogAnonymizer on, a VpnHoodServer's log of its settings hides its QUIC endpoints too, as it does its TCP and UDP ones
+* Fix: With LogAnonymizer on, a VpnHoodServer's log hides the destination in a rare UDP forwarding error, where it showed its address
 * Fix: A VpnHoodServer closes a forwarded TCP connection that passed nothing either way for an hour, where one whose destination never answered, or whose phone changed networks, stayed open as long as its session; TcpIdleTimeout in its SessionOptions sets the time
 * Update: TcpTimeout in a server's SessionOptions is gone, as nothing read it; a settings file that has it still loads, and to keep a time set there, set TcpIdleTimeout
 * Fix: Where a VpnHoodServer forwards UDP and pings through sockets of its own, as for an IP version its VPN adapter's NAT does not take, its net-scan protection holds for them: a destination it refused is checked again at the next packet, where that packet went through unchecked

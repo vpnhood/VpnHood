@@ -192,7 +192,7 @@ internal class UdpForwarderPool : PassthroughPacketTransport, IPacketForwarderPo
         // Do not dispose the worker on failure; it is shared with other connections
         var mapping = new TimeoutItem<IPEndPoint>(sourceEndPoint);
         if (!udpForwarder.DestinationEndPointMap.TryAdd(destinationEndPoint, mapping))
-            throw new Exception($"Could not add {destinationEndPoint}.");
+            throw new Exception($"Could not add {VhLogger.Format(destinationEndPoint)}.");
 
         // it is just for speed.
         _connectionMap.AddOrUpdate(connectionKey,

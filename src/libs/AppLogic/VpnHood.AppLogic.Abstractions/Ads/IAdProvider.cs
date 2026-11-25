@@ -12,6 +12,13 @@ public interface IAdProvider : IDisposable
     /// <summary>Gets the kind of ad the provider shows.</summary>
     AdType AdType { get; }
 
+    /// <summary>
+    /// Gets a value indicating whether the provider shows the app's own ad, which loads from no ad network and always
+    /// shows: the app tries it only on an ad's last route, after the networks, so a paid ad gets every try first. The
+    /// default is <see langword="false"/>.
+    /// </summary>
+    bool IsInternal => false;
+
     /// <summary>Loads an ad, to show it later.</summary>
     /// <param name="uiContext">The app's UI context.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>

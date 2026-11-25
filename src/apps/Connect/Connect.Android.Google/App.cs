@@ -157,8 +157,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         // the internal ad: CONNECT's film where the build packed it, else the still page the UI shows
         items.Add(new AppAdProviderItem {
             AdProvider = InternalVideoAdProvider.IsPacked() ? new InternalVideoAdProvider() : new InternalInAdProvider(),
-            ProviderName = "InternalAd",
-            IsFallback = true
+            ProviderName = "InternalAd"
         });
 
 

@@ -15,6 +15,7 @@ public class TestAdProvider(TestAccessManager accessManager, AdType adType = AdT
     public bool FailLoad { get; set; }
     public string NetworkName => "UnitTestNetwork";
     public AdType AdType => adType;
+    public bool IsInternal { get; init; }
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan { get; } = TimeSpan.FromMinutes(60);
     public TaskCompletionSource<ShowAdResult>? ShowAdCompletionSource { get; set; }

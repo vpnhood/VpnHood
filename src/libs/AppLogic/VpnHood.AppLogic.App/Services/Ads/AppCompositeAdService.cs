@@ -65,22 +65,22 @@ internal class AppCompositeAdService
         return true;
     }
 
-    // A route's networks: through the tunnel only those that can show over the VPN, the house ad too, and the house ad
-    // only on the last route, as it always shows and would leave a paid ad after it no turn
+    // A route's networks: through the tunnel only those that can show over the VPN, the internal ad too, and the
+    // internal ad only on the last route, as it always shows and would leave a paid ad after it no turn
     private static bool CanFillRoute(AppAdProviderItem adProviderItem, AdRoute route, bool isLastRoute)
     {
         return (route != AdRoute.OverVpn || adProviderItem.CanShowOverVpn) &&
-               (!adProviderItem.IsFallback || isLastRoute);
+               (!adProviderItem.AdProvider.IsInternal || isLastRoute);
     }
 
-    // the networks that may fill a route where the person is, in the head's order but the house ad last
+    // the networks that may fill a route where the person is, in the head's order but the internal ad last
     private IEnumerable<AppAdProviderItem> GetRouteItems(AdRoute route, bool isLastRoute, string? countryCode)
     {
         return _adProviderItems
             .Where(x => x.IsEnabled)
             .Where(x => countryCode is null || IsCountrySupported(x, countryCode))
             .Where(x => CanFillRoute(x, route, isLastRoute))
-            .OrderBy(x => x.IsFallback);
+            .OrderBy(x => x.AdProvider.IsInternal);
     }
 
     // whether a network may fill the route where the person is: on a route that is not the last, a paid one
@@ -119,7 +119,7 @@ internal class AppCompositeAdService
         _loadedAdProviderItem = null;
 
         _progressMonitor = new ProgressMonitor(
-            totalTaskCount: routeItems.Count(x => !x.IsFallback),
+            totalTaskCount: routeItems.Count(x => !x.AdProvider.IsInternal),
             taskTimeout: _loadAdTimeout == Timeout.InfiniteTimeSpan ? NetworkLoadAdTimeout : _loadAdTimeout);
 
         try {
@@ -132,7 +132,7 @@ internal class AppCompositeAdService
                     using var timeoutCts = new CancellationTokenSource(_loadAdTimeout);
                     using var linkedCts =
                         CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-                    if (adProviderItem.IsFallback) _progressMonitor = null; // do not track fallback ads
+                    if (adProviderItem.AdProvider.IsInternal) _progressMonitor = null; // do not track the internal ad
                     await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                     _loadedAdProviderItem = adProviderItem;
                     return;
@@ -176,7 +176,7 @@ internal class AppCompositeAdService
             $"Cancelled: {cancellationToken.IsCancellationRequested}.");
     }
 
-    // Loads and shows the route's first network that does both, the house ad last: a network whose ad loaded but did
+    // Loads and shows the route's first network that does both, the internal ad last: a network whose ad loaded but did
     // not show gives its turn to the next. loadAdPostDelay: the wait between a load and its show
     public async Task<ShowLoadedAdResult> LoadAndShowAd(IUiContext uiContext, string customData, string? countryCode,
         AdRoute route, bool isLastRoute, TimeSpan loadAdPostDelay, CancellationToken cancellationToken)

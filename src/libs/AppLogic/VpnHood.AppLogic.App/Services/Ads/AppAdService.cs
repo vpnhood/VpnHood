@@ -47,8 +47,8 @@ internal class AppAdService(
     public bool CanShowInterstitial => adProviderItems.Any(x => x.AdProvider.AdType == AdType.InterstitialAd);
     public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd);
 
-    // Over the VPN where a network but the house ad can show that kind of ad where the person is: the session's last try
-    // then goes through the tunnel, and only such networks load there (AdRoute.OverVpn). Asked of the loaders, with
+    // Over the VPN where a network but the internal ad can show that kind of ad where the person is: the session's last
+    // try then goes through the tunnel, and only such networks load there (AdRoute.OverVpn). Asked of the loaders, with
     // their own copies of the list, so the session is told what they load
     public bool CanShowInterstitialOverVpn =>
         _compositeInterstitialAdService.CanFill(AdRoute.OverVpn, isLastRoute: false, CountryCode);
@@ -56,7 +56,7 @@ internal class AppAdService(
     public bool CanShowRewardedOverVpn =>
         _compositeRewardedAdService.CanFill(AdRoute.OverVpn, isLastRoute: false, CountryCode);
 
-    // a rewarded ad where the person is: a network that serves their country, the house ad too
+    // a rewarded ad where the person is: a network that serves their country, the internal ad too
     public bool CanShowRewardedInRegion =>
         _compositeRewardedAdService.CanFill(AdRoute.Passthrough, isLastRoute: true, CountryCode);
 

@@ -15,7 +15,7 @@ using VpnHood.AppLogic.Abstractions.UiContexts;
 namespace VpnHood.App.Connect.Android.Google;
 
 // The internal ad as CONNECT's film, played full screen by AssetVideoActivity the way a network shows
-// its interstitial: the fallback when no network has an ad, where the remote settings turn it on. The
+// its interstitial, shown when no network has an ad, where the remote settings turn it on. The
 // build packs the film only when the Connect repo sits beside this one (the csproj). Once the film
 // has run, Close ends it and Go premium opens the purchase page.
 internal sealed class InternalVideoAdProvider : IAdProvider
@@ -29,6 +29,7 @@ internal sealed class InternalVideoAdProvider : IAdProvider
 
     public string NetworkName => "InternalAd";
     public AdType AdType => AdType.InterstitialAd;
+    public bool IsInternal => true;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan => TimeSpan.FromMinutes(5);
 

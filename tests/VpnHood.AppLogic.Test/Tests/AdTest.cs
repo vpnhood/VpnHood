@@ -383,7 +383,7 @@ public class AdTest : TestAppBase
     }
 
     // A connect's ad: before the VPN, then around the tunnel, then through it where a network can show over the VPN. Only
-    // such networks load through the tunnel, and the house ad only on the last route
+    // such networks load through the tunnel, and the internal ad only on the last route
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
@@ -398,10 +398,10 @@ public class AdTest : TestAppBase
             ClientCreated = x => client = x
         };
 
-        // the paid networks fail; the house ad shows
+        // the paid networks fail; the internal ad shows
         var unmarkedRoutes = new List<AdRoute?>();
         var markedRoutes = new List<AdRoute?>();
-        var houseRoutes = new List<AdRoute?>();
+        var internalRoutes = new List<AdRoute?>();
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdProviderItems = [
@@ -415,9 +415,9 @@ public class AdTest : TestAppBase
                 CanShowOverVpn = isMarked
             },
             new AppAdProviderItem {
-                AdProvider = CreateRouteRecordingAdProvider(accessManager, houseRoutes, () => client, canShow: true),
-                ProviderName = "house",
-                IsFallback = true,
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, internalRoutes, () => client, canShow: true,
+                    isInternal: true),
+                ProviderName = "internal",
                 CanShowOverVpn = true
             }
         ];
@@ -431,18 +431,18 @@ public class AdTest : TestAppBase
             CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough, AdRoute.OverVpn },
                 markedRoutes);
 
-            CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.OverVpn }, houseRoutes);
+            CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.OverVpn }, internalRoutes);
         }
         else {
             CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough }, markedRoutes);
-            CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.Passthrough }, houseRoutes);
+            CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.Passthrough }, internalRoutes);
         }
     }
 
-    // A house ad goes through the tunnel only where it is marked, as any network: an unmarked one, as a fork's network
-    // made the fallback may be, loaded there on the last try
+    // An internal ad goes through the tunnel only where it is marked, as any network: an unmarked one, as a fork's own
+    // may be, loaded there on the last try
     [TestMethod]
-    public async Task A_house_ad_goes_through_the_tunnel_only_where_marked()
+    public async Task An_internal_ad_goes_through_the_tunnel_only_where_marked()
     {
         using var accessManager = await TestAppHelper.CreateAccessManager();
         await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
@@ -453,7 +453,7 @@ public class AdTest : TestAppBase
         };
 
         var markedRoutes = new List<AdRoute?>();
-        var houseRoutes = new List<AdRoute?>();
+        var internalRoutes = new List<AdRoute?>();
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdProviderItems = [
@@ -463,9 +463,9 @@ public class AdTest : TestAppBase
                 CanShowOverVpn = true
             },
             new AppAdProviderItem {
-                AdProvider = CreateRouteRecordingAdProvider(accessManager, houseRoutes, () => client, canShow: true),
-                ProviderName = "house",
-                IsFallback = true
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, internalRoutes, () => client, canShow: true,
+                    isInternal: true),
+                ProviderName = "internal"
             }
         ];
 
@@ -477,7 +477,7 @@ public class AdTest : TestAppBase
         CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough, AdRoute.OverVpn },
             markedRoutes);
 
-        Assert.IsEmpty(houseRoutes);
+        Assert.IsEmpty(internalRoutes);
     }
 
     // An ad tries the tunnel only where a network for that kind of ad can show there, where the person is: one marked
@@ -563,9 +563,9 @@ public class AdTest : TestAppBase
         Assert.AreEqual(1, nextProvider.LoadAdCount);
     }
 
-    // The house ad, listed before a paid network, took the last try before it
+    // The internal ad, listed before a paid network, took the last try before it
     [TestMethod]
-    public async Task The_house_ad_comes_after_the_paid_networks_wherever_the_head_lists_it()
+    public async Task The_internal_ad_comes_after_the_paid_networks_wherever_the_head_lists_it()
     {
         using var accessManager = await TestAppHelper.CreateAccessManager();
         await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
@@ -575,15 +575,15 @@ public class AdTest : TestAppBase
             ClientCreated = x => client = x
         };
 
-        var houseRoutes = new List<AdRoute?>();
+        var internalRoutes = new List<AdRoute?>();
         var paidRoutes = new List<AdRoute?>();
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdProviderItems = [
             new AppAdProviderItem {
-                AdProvider = CreateRouteRecordingAdProvider(accessManager, houseRoutes, () => client, canShow: true),
-                ProviderName = "house",
-                IsFallback = true
+                AdProvider = CreateRouteRecordingAdProvider(accessManager, internalRoutes, () => client, canShow: true,
+                    isInternal: true),
+                ProviderName = "internal"
             },
             new AppAdProviderItem {
                 AdProvider = CreateRouteRecordingAdProvider(accessManager, paidRoutes, () => client, canShow: false),
@@ -596,7 +596,7 @@ public class AdTest : TestAppBase
         await app.Connect(vpnProfile.VpnProfileId, cancellationToken: TestCt);
 
         CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.BeforeVpn, AdRoute.Passthrough }, paidRoutes);
-        CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.Passthrough }, houseRoutes);
+        CollectionAssert.AreEqual(new AdRoute?[] { AdRoute.Passthrough }, internalRoutes);
     }
 
     // The extension was offered where no rewarded network serves the person's country, and failed there every time
@@ -749,15 +749,21 @@ public class AdTest : TestAppBase
         Assert.IsTrue(app.AdManager.AdService.CanShowInterstitialOverVpn);
     }
 
-    // the house ad, though it may show over the VPN, is no paid ad to try the tunnel for
+    // the internal ad, though it may show over the VPN, is no paid ad to try the tunnel for: its provider says so, with
+    // no mark of the head's
     [TestMethod]
-    public async Task A_house_ad_alone_is_no_reason_to_try_the_tunnel()
+    public async Task An_internal_ad_alone_is_no_reason_to_try_the_tunnel()
     {
         using var accessManager = await TestAppHelper.CreateAccessManager();
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdProviderItems = [
             new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) },
-            new AppAdProviderItem { AdProvider = new InternalInAdProvider(), IsFallback = true, CanShowOverVpn = true }
+            // a name of its own, as the app turns one named InternalAd off where its remote settings show none
+            new AppAdProviderItem {
+                AdProvider = new InternalInAdProvider(),
+                ProviderName = "TestInternalAdProvider",
+                CanShowOverVpn = true
+            }
         ];
 
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
@@ -893,8 +899,9 @@ public class AdTest : TestAppBase
         Assert.AreEqual(2, appDom.TestAdProvider.LoadAdCount, "Once before the tunnel is up and once after.");
     }
 
+    // the internal provider waits for the last route with no mark of the head's, the failing network tried on each
     [TestMethod]
-    public async Task Internal_Ad_provider_with_fallback()
+    public async Task An_unmarked_internal_ad_shows_on_the_last_route()
     {
         // create server
         using var accessManager = await TestHelper.CreateAccessManager();
@@ -917,7 +924,6 @@ public class AdTest : TestAppBase
             },
             new AppAdProviderItem {
                 AdProvider = new InternalInAdProvider(),
-                IsFallback = true,
                 ProviderName = "TestInternalAdProvider"
             }
         ];
@@ -931,7 +937,7 @@ public class AdTest : TestAppBase
         await app.WaitForState(AppConnectionState.WaitingForAd, TestCt);
         await AssertEqualsWait(true, () => app.State.IsWaitingForInternalAd);
         await AssertEqualsWait(2, () => testAdProvider.LoadAdCount,
-            "two times must be tried to reach fallback.");
+            "two times must be tried to reach the internal ad.");
 
         app.AdManager.AdService.InternalAdDismiss(ShowAdResult.Clicked);
         await app.WaitForState(AppConnectionState.Connected, TestCt);
@@ -939,9 +945,9 @@ public class AdTest : TestAppBase
 
     // a network that records the route of each of its loads, which fail where it may not show
     private static TestAdProvider CreateRouteRecordingAdProvider(TestAccessManager accessManager,
-        List<AdRoute?> routes, Func<VpnHoodClient?> getClient, bool canShow)
+        List<AdRoute?> routes, Func<VpnHoodClient?> getClient, bool canShow, bool isInternal = false)
     {
-        var adProvider = new TestAdProvider(accessManager, AdType.InterstitialAd);
+        var adProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) { IsInternal = isInternal };
         adProvider.LoadAdCallback = () => {
             routes.Add(getClient()?.Session?.Status.AdRoute);
             return canShow ? Task.CompletedTask : throw new LoadAdException("The load fails for the test.");

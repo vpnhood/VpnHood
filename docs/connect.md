@@ -74,11 +74,11 @@ in the same process on a phone, and over HTTP on a desktop.
    again once the adapter is up: first
    with the session's new traffic around the tunnel, then through it, where one of the app's networks for that kind of
    ad can show over the VPN where the person is (`AdRoute`, `AppAdProviderItem.CanShowOverVpn`, which the app's remote
-   settings can set by the networks' names). Only such networks load through the tunnel, the house ad too where it is
-   marked; the house ad comes only on the last try, after the paid networks, and a network whose ad loaded but did not
-   show gives its turn to the next. A failure no try helps, as the app's refusal of an ad blocker, or the server's of
-   a rewarded ad that showed, ends the connect at once. A server may send a newer access key with the session, and the
-   app saves it.
+   settings can set by the networks' names). Only such networks load through the tunnel, the internal ad too where it
+   is marked; the internal ad (`IAdProvider.IsInternal`) comes only on the last try, after the paid networks, and a
+   network whose ad loaded but did not show gives its turn to the next. A failure no try helps, as the app's refusal
+   of an ad blocker, or the server's of a rewarded ad that showed, ends the connect at once. A server may send a newer
+   access key with the session, and the app saves it.
 
 Until the adapter starts, the device's traffic goes on as before, so a connect that fails leaves the device's
 internet as it was. The kill switch is the exception: when the person has turned it on, it blocks the device's

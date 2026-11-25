@@ -25,6 +25,10 @@ public class InternalInAdProvider : IAdProvider
     /// <value><see cref="AdType.InterstitialAd"/>.</value>
     public AdType AdType => AdType.InterstitialAd;
 
+    /// <inheritdoc/>
+    /// <value><see langword="true"/>.</value>
+    public bool IsInternal => true;
+
     /// <summary>Gets a value indicating whether an ad is showing and waits for the UI to end it.</summary>
     public bool IsWaitingForAd => _showAdTask?.Task.IsCompleted is false;
 

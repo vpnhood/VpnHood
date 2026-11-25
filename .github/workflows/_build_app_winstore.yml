@@ -1,0 +1,99 @@
+name: _build_app_winstore (reusable)
+
+# Builds the Microsoft Store edition's upload package (client/connect): the head <Prefix>.Windows.Microsoft and its
+# VPN host, packed by pub/lib/Publish-WinStoreApp.ps1 -store into an unsigned MSIX under the identity Partner Center
+# gave the app; Partner Center signs it. Called by publish_app.yml, which hands the `<app>-winstore` artifact to
+# Partner Center. The .user files are the website edition's (_build_app_windows.yml): the Store edition is ad-free
+# too, so Connect embeds the 'premium' key. Secrets arrive via `secrets: inherit`.
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "client | connect"
+        type: string
+        required: true
+      code_ref:
+        type: string
+        required: false
+        default: ""
+
+env:
+  CODE_REPO: vpnhood/VpnHood
+
+jobs:
+  build-winstore:
+    # The packing tools (MakeAppx, MakePri) and the VPN host's C#/WinRT component need Windows and its SDK.
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      PKG: ${{ inputs.app == 'connect' && 'VpnHoodConnect' || 'VpnHoodClient' }}
+      PREFIX: ${{ inputs.app == 'connect' && 'Connect' || 'Client' }}
+      ACCESS_KEY_PREMIUM: ${{ secrets.ACCESS_KEY_PREMIUM }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v7
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      # The look's package (VpnHood.AppUi.Assets.Classic) is a submodule whose targets every head
+      # imports; fastlane/, the other submodule, stays out.
+      - name: Check out the asset submodule
+        run: git -C code submodule update --init --depth 1 src/libs/AppUi/VpnHood.AppUi.Assets.Classic
+      # The SDK global.json names, by its version: setup-dotnet reads that file's rollForward
+      # latestMajor as the LTS channel and installs .NET 10 instead.
+      - name: Read the SDK version global.json names
+        id: sdk
+        shell: pwsh
+        run: '"version=$((Get-Content code/global.json -Raw | ConvertFrom-Json).sdk.version)" >> $env:GITHUB_OUTPUT'
+      - uses: actions/setup-dotnet@v6
+        with: { dotnet-version: "${{ steps.sdk.outputs.version }}" }
+      # Connect's default server, as in _build_app_windows.yml: with publish.json present and no key, the strict
+      # guard (Assert-DefaultAccessKey) fails the build.
+      - name: Write default access key (connect)
+        if: inputs.app == 'connect'
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY_PREMIUM)) { return }
+          $d = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $d -Force | Out-Null
+          $env:ACCESS_KEY_PREMIUM | Out-File (Join-Path $d "access_key_premium.txt") -Encoding ascii -Force -NoNewline
+      - name: Write publish.json
+        if: vars.PUBLISH != ''
+        shell: pwsh
+        env: { PUBLISH: "${{ vars.PUBLISH }}" }
+        run: |
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
+      - name: Write appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: "${{ vars.APPSETTINGS }}"
+          PUBLISH: "${{ vars.PUBLISH }}"
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            if (-not [string]::IsNullOrWhiteSpace($env:PUBLISH)) {
+              throw "APPSETTINGS variable is not set, but a strict publish (publish.json present) requires .user/$env:PKG/appsettings.json."
+            }
+            Write-Host "::warning::APPSETTINGS not set and no publish.json; building the Store package with default appsettings."
+            return
+          }
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+      - name: Place the browser page (built once by publish_app's build-browser job)
+        uses: actions/download-artifact@v8
+        with:
+          name: browser-page
+          path: code/src/libs/AppUi/VpnHood.AppUi.Avalonia.Classic/buildTransitive
+      - name: Build the Store package (MSIX)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/src/apps/$env:PREFIX/$env:PREFIX.Windows.Microsoft/_publish.ps1" -configuration Release -store
+          if (-not $?) { throw "The Store package's publish failed." }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.app }}-winstore
+          if-no-files-found: error
+          retention-days: 1
+          path: code/src/apps/${{ env.PREFIX }}/${{ env.PREFIX }}.Windows.Microsoft/bin/Publish-microsoft-store/*.msix

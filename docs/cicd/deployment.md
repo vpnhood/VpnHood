@@ -51,6 +51,7 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `GOOGLE_PLAY_API_KEY` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`), `_publish_listing_play.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → the AAB is published to Play, the Play-signed APK is attached to the release, and the store LISTING can be pushed. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
 | `AZURE_SIGNING_CREDENTIAL` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent **together with** `AZURE_SIGNING_TARGET` → the setup builds unsigned with a warning; present without it → the build **fails** (see the pair rule below). |
 | `AZURE_SIGNING_TARGET` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (Windows signing) | Single JSON in Azure Trusted Signing's `metadata.json` schema: `Endpoint`, `CodeSigningAccountName`, `CertificateProfileName`. Not secret and not part of the Azure credential file; required alongside it for signing to run. Store it as an org/repository **Variable**. These two are an all-or-nothing **pair**: both set → signed, neither set → unsigned + warning, exactly one set → the build **fails**, because a half-configured signer ships an unsigned installer from a green run. |
+| `MSSTORE_TENANT_ID` / `MSSTORE_SELLER_ID` / `MSSTORE_CLIENT_ID` / `MSSTORE_CLIENT_SECRET` (+ `MSSTORE_PRODUCT_ID` **Variable**) | `publish_app.yml` (`build-winstore`, `publish-msstore`) | Optional (Microsoft Store) | An Entra app with the Manager role in your Partner Center account: its tenant, client ID and client secret, and your Seller ID. The variable, the app's Store ID, turns the Store edition's build on; with it and the secrets, a stable release submits the package to certification. Without the secrets the package is built and not submitted, with a warning. See [Microsoft Store](#microsoft-store--publish_appyml-via-the-apps-repo). |
 | `ANDROID_KEYSTORE_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (Android signing) | Base64 of the keystore that signs the Google AAB, plus its store password. Same secret NAME on either app's repo — the workflow routes it per app. The key alias is auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `ANDROID_KEYSTORE_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (Android signing) | Base64 of the keystore that signs the Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. ONE cert signs every app of the team — set it as an **organization** secret visible to both app repos (or repeat it per repo). Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
@@ -259,6 +260,22 @@ The NSIS script itself carries no signer. To enable it under **your own organiza
 
 Do not reuse a third-party/previous signer — the published identity comes from the
 certificate profile, so verify it resolves to **your** organization before shipping.
+
+### Microsoft Store — `publish_app.yml` (via the app's repo)
+The Store edition (`<Prefix>.Windows.Microsoft`, a sandboxed MSIX with a VPN plug-in) is built by
+`_build_app_winstore.yml` on a `windows-latest` runner, whose Windows SDK has the packing tools, when the
+app's repository has the variable `MSSTORE_PRODUCT_ID`: on every publish, prereleases too, so a change that
+breaks the package shows before a release. It needs the same `.user` files as the Windows setup above
+(`ACCESS_KEY_PREMIUM` for Connect, as the Store edition is ad-free). The package is unsigned: Partner Center
+signs it.
+
+On a stable release, `publish-msstore` submits it with Microsoft's Store Developer CLI (`msstore`, a fixed
+version checked against its published SHA-256): a new submission made from the last published one, with the
+new package in place of the old, sent to certification. It needs the four `MSSTORE_*` secrets; without them
+it warns and submits nothing. The first submission is made by hand, and the Store's part of the pipeline
+works only after it is published ([the Store guide](../publish-your-app/microsoft-store.md), step 9). Neither
+job holds the GitHub release back. Set `build_winstore` or `publish_msstore` to false in a caller of
+`publish_app.yml` to leave either out.
 
 ### iOS (Client and Connect)
 `publish_client.yml` (in `Vpnhood.App.Client`) and `connect_publish.yml` (in `Vpnhood.App.Connect`) each drive a

@@ -5,7 +5,7 @@ name: publish_app (reusable)
 # This is the public entry point: forkers pin it (e.g. @v1) — no leading underscore (that marks the
 # internal _build_app_* sub-modules this orchestrates).
 #
-# Orchestrates the small per-platform build modules (_build_app_{linux,windows,android,ios}.yml) and
+# Orchestrates the small per-platform build modules (_build_app_{linux,windows,winstore,android,ios}.yml) and
 # adds the store-publish + GitHub-release jobs. A reusable workflow runs in the CALLER's context, so
 # github.repository / vars / secrets resolve to whichever repo invoked it: client releases to
 # vpnhood/VpnHood with the monorepo fastlane; connect releases to the Connect repo with the Connect
@@ -59,6 +59,16 @@ on:
         type: string
         required: false
         default: "100"
+      # The Microsoft Store edition: built when the caller's repo names its Store product in the MSSTORE_PRODUCT_ID
+      # variable, and handed to Partner Center on a stable release.
+      build_winstore:
+        type: boolean
+        required: false
+        default: true
+      publish_msstore:
+        type: boolean
+        required: false
+        default: true
       # The channel the CALLER intends to ship on. The channel that actually gets used is derived from
       # pub/PubVersion.json (Play track, TestFlight-vs-App-Store lane, and the GitHub release flag all
       # read it) — this input does not set it, it ASSERTS it, so a dispatch that disagrees with the
@@ -79,6 +89,9 @@ jobs:
   # wrong-channel release. See the release_type input above for why it is an assertion, not a setting.
   verify-release-type:
     runs-on: ubuntu-latest
+    # the channel pub/PubVersion.json gives, for the jobs that act on a stable release alone
+    outputs:
+      prerelease: ${{ steps.channel.outputs.prerelease }}
     steps:
       - name: Checkout the version file (${{ env.CODE_REPO }})
         uses: actions/checkout@v7
@@ -89,6 +102,7 @@ jobs:
           sparse-checkout-cone-mode: false
           path: code
       - name: Verify the declared release type matches pub/PubVersion.json
+        id: channel
         shell: bash
         env:
           DECLARED: ${{ inputs.release_type }}
@@ -98,6 +112,7 @@ jobs:
           VERSION=$(jq -r '.Version' code/pub/PubVersion.json)
           PRERELEASE=$(jq -r '.Prerelease' code/pub/PubVersion.json)
           case "$PRERELEASE" in true|True) ACTUAL=prerelease ;; *) ACTUAL=release ;; esac
+          if [ "$ACTUAL" = prerelease ]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
           if [ -z "$DECLARED" ]; then
             echo "::warning title=Release type not declared::No release_type was passed; shipping as '$ACTUAL' per pub/PubVersion.json (v$VERSION). Pass release_type to have this checked."
             exit 0
@@ -188,6 +203,15 @@ jobs:
     needs: [verify-release-type, build-browser, test-app-api-types]
     if: ${{ inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_windows.yml
+    with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
+    secrets: inherit
+
+  # The Microsoft Store edition, for a caller whose repo names its Store product (MSSTORE_PRODUCT_ID). Built on a
+  # prerelease too, so a change that breaks the package fails before the stable release.
+  build-winstore:
+    needs: [verify-release-type, build-browser, test-app-api-types]
+    if: ${{ inputs.build_winstore != false && inputs.only_aab != true && vars.MSSTORE_PRODUCT_ID != '' }}
+    uses: ./.github/workflows/_build_app_winstore.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
 
@@ -405,6 +429,64 @@ jobs:
               fi
             fi
           fi
+
+  # Hands the Store package to Partner Center on a stable release, by Microsoft's Store Developer CLI (msstore): a
+  # new submission made from the last published one, whose old package it replaces, sent to certification. The
+  # listing, the notes for certification and the publish mode stay as Partner Center has them; the notes are the
+  # product's (Supplemental info), not a submission's. The caller's credentials are an Entra app of the Partner
+  # Center account's tenant with the Manager role (docs/publish-your-app/microsoft-store.md).
+  publish-msstore:
+    needs: [verify-release-type, build-winstore]
+    if: needs.build-winstore.result == 'success' && inputs.publish_msstore != false && needs.verify-release-type.outputs.prerelease == 'false'
+    runs-on: windows-latest
+    # msstore waits while Partner Center takes the commit in; certification itself is not waited for
+    timeout-minutes: 60
+    env:
+      MSSTORE_TENANT_ID: ${{ secrets.MSSTORE_TENANT_ID }}
+      MSSTORE_SELLER_ID: ${{ secrets.MSSTORE_SELLER_ID }}
+      MSSTORE_CLIENT_ID: ${{ secrets.MSSTORE_CLIENT_ID }}
+      MSSTORE_CLIENT_SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+      MSSTORE_PRODUCT_ID: ${{ vars.MSSTORE_PRODUCT_ID }}
+      MSSTORE_TELEMETRY_OPTOUT: "1"
+      # a fixed release of the CLI, checked against its published SHA-256
+      MSSTORE_CLI_VERSION: v0.4.4
+    steps:
+      - name: Warn if the Partner Center credentials are missing
+        if: env.MSSTORE_CLIENT_SECRET == ''
+        run: echo "::warning title=Microsoft Store publish skipped::MSSTORE_CLIENT_SECRET is not set; the Store package was built but NOT submitted to Partner Center."
+      - name: Download the Store package
+        if: env.MSSTORE_CLIENT_SECRET != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.app }}-winstore
+          path: winstore
+      - name: Install the Microsoft Store Developer CLI
+        if: env.MSSTORE_CLIENT_SECRET != ''
+        shell: pwsh
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "msstore"
+          gh release download $env:MSSTORE_CLI_VERSION -R microsoft/msstore-cli -p "MSStoreCLI-win-x64.zip*" -D $dir
+          if ($LASTEXITCODE -ne 0) { throw "Could not download msstore $env:MSSTORE_CLI_VERSION." }
+          $want = ((Get-Content (Join-Path $dir "MSStoreCLI-win-x64.zip.sha256.txt") -Raw).Trim() -split '\s+')[0]
+          $have = (Get-FileHash (Join-Path $dir "MSStoreCLI-win-x64.zip") -Algorithm SHA256).Hash
+          if ($want -ne $have) { throw "msstore's SHA-256 is $have, where its release says $want." }
+          Expand-Archive (Join-Path $dir "MSStoreCLI-win-x64.zip") -DestinationPath (Join-Path $dir "cli")
+          Join-Path $dir "cli" | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Submit to Partner Center
+        if: env.MSSTORE_CLIENT_SECRET != ''
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:MSSTORE_TENANT_ID) -or [string]::IsNullOrWhiteSpace($env:MSSTORE_SELLER_ID) -or [string]::IsNullOrWhiteSpace($env:MSSTORE_CLIENT_ID)) {
+            throw "MSSTORE_CLIENT_SECRET is set but MSSTORE_TENANT_ID, MSSTORE_SELLER_ID or MSSTORE_CLIENT_ID is not."
+          }
+          $package = @(Get-ChildItem winstore -Filter *.msix)
+          if ($package.Count -ne 1) { throw "Expected one .msix in the Store package's artifact, found $($package.Count)." }
+          msstore reconfigure --tenantId $env:MSSTORE_TENANT_ID --sellerId $env:MSSTORE_SELLER_ID --clientId $env:MSSTORE_CLIENT_ID --clientSecret $env:MSSTORE_CLIENT_SECRET
+          if ($LASTEXITCODE -ne 0) { throw "msstore could not sign in to Partner Center (exit $LASTEXITCODE)." }
+          msstore publish $package[0].FullName -id $env:MSSTORE_PRODUCT_ID
+          if ($LASTEXITCODE -ne 0) { throw "msstore could not submit $($package[0].Name) to product $env:MSSTORE_PRODUCT_ID (exit $LASTEXITCODE)." }
+          msstore submission status $env:MSSTORE_PRODUCT_ID
 
   # Goes out when Linux, which every release has, succeeded and nothing else failed or was cancelled; a
   # skipped job only leaves its platform off. Cancelled counts because GitHub can cancel one job and run

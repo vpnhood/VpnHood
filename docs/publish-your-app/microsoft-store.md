@@ -2,7 +2,8 @@
 
 Everything on this page happens in a browser, by hand, in **your** Microsoft Partner Center account,
 except building the package. The Store edition of the Windows app is an MSIX package with a VPN
-plug-in; this page takes it from an account to a first submission.
+plug-in; this page takes it from an account to a first submission. After the first release, the
+pipeline builds and submits each release's package (step 9).
 
 Work through it in order. Come back to [start here](README.md) when you are done.
 
@@ -46,8 +47,8 @@ your app's own identifier (`VhAppIdBase`), which stays what it is on every platf
 
 ## 4. Build the upload package
 
-The pipeline does not build the Store package yet. On Windows, with the .NET SDK and the Windows SDK,
-run the Store head's script from your committed code (for the Connect app,
+The first package is yours to build; the pipeline builds the later ones (step 9). On Windows, with the
+.NET SDK and the Windows SDK, run the Store head's script from your committed code (for the Connect app,
 `src/apps/Connect/Connect.Windows.Microsoft`):
 
     ./_publish.ps1 -store
@@ -211,5 +212,23 @@ app takes as no update. To watch them:
 ## 9. Afterwards
 
 Each release is a new submission with a higher version, its last part still 0 (step 4); a submission
-that changes only the package keeps the rest. The pipeline does not publish to the Microsoft Store
-yet.
+that changes only the package keeps the rest. Once the first release is live, the pipeline does this
+for you:
+
+1. **Give the pipeline its own sign-in.** In Partner Center, **Account settings** › **User
+   management** › **Microsoft Entra applications** › **Add Microsoft Entra application**: create one, or
+   add an app registration of the account's tenant, with the **Manager** role. Note its tenant ID and
+   client ID, make it a client secret (in the Entra admin center, the app's **Certificates & secrets**),
+   and take your Seller ID (**Account settings** › **Legal info**).
+2. **Hand them to your app's repository:** the secrets `MSSTORE_TENANT_ID`, `MSSTORE_SELLER_ID`,
+   `MSSTORE_CLIENT_ID` and `MSSTORE_CLIENT_SECRET`, and the variable `MSSTORE_PRODUCT_ID`, the app's
+   Store ID (**Product identity**). The variable turns the Store's part of the pipeline on; remove it to
+   turn it off.
+
+Then each publish builds the Store package, and each stable release sends it to certification: a new
+submission made from the last published one, with the new package in place of the old. A prerelease
+only builds it. Everything else stays as Partner Center has it: the listing, the publish mode (step 5),
+so a manual one still waits for your **Publish now**, and the notes for the testers, which belong to
+the product (**Supplemental info**), not to one submission. Microsoft's tool for this updates free
+apps only; an app with a price takes its submissions by hand. [Deployment](../cicd/deployment.md)
+lists what each secret does.

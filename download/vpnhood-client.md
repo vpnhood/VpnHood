@@ -6,12 +6,12 @@
 VpnHood! CLIENT has no servers of its own. It connects with an access key, also called a server key, from whoever runs
 the server: you, or someone you trust. [How to get an access key](https://www.vpnhood.com/vpnhood-client/docs/first-key/).
 
-<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://www.vpnhood.com/assets/images/github/google-play.webp" width="200" alt="Get it on Google Play"></a>
-<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web-arm64.apk"><img src="https://www.vpnhood.com/assets/images/github/github-apk.webp" width="200" alt="Get the APK from GitHub"></a>
-<a href="https://apt.izzysoft.de/packages/com.vpnhood.client.android.web"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" width="200" alt="Get it at IzzyOnDroid"></a>
-<a href="https://apps.apple.com/app/id6788176050"><img src="https://www.vpnhood.com/assets/images/github/app-store.webp" width="200" alt="Download on the App Store"></a>
-<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.exe"><img src="https://www.vpnhood.com/assets/images/github/windows.webp" width="200" alt="Download for Windows"></a>
-<a href="#linux"><img src="https://www.vpnhood.com/assets/images/github/linux.webp" width="200" alt="Get it on Linux"></a>
+<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="../docs/images/stores/google-play.webp" width="200" alt="Get it on Google Play"></a>
+<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web-arm64.apk"><img src="../docs/images/stores/github-apk.webp" width="200" alt="Get the APK from GitHub"></a>
+<a href="https://apt.izzysoft.de/packages/com.vpnhood.client.android.web"><img src="../docs/images/stores/izzyondroid.webp" width="200" alt="Get it at IzzyOnDroid"></a>
+<a href="https://apps.apple.com/app/id6788176050"><img src="../docs/images/stores/app-store.webp" width="200" alt="Download on the App Store"></a>
+<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.exe"><img src="../docs/images/stores/windows.webp" width="200" alt="Download for Windows"></a>
+<a href="#linux"><img src="../docs/images/stores/linux.webp" width="200" alt="Get it on Linux"></a>
 
 ## Android and Android TV
 

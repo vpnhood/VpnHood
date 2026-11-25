@@ -1,4 +1,4 @@
-# <img src="https://www.vpnhood.com/assets/images/favicon.svg" width="40" alt="" align="absmiddle"> VpnHood!
+# <img src="docs/images/logo.svg" width="40" alt="" align="absmiddle"> VpnHood!
 
 An open-source VPN, from the engine to the apps and the server, written in C# on .NET. It resists deep packet
 inspection: it looks like ordinary browsing, for more privacy.
@@ -17,17 +17,17 @@ inspection: it looks like ordinary browsing, for more privacy.
 
 ## Get VpnHood! CLIENT
 
-<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://www.vpnhood.com/assets/images/github/google-play.webp" width="160" alt="Get it on Google Play"></a>
-<a href="https://apps.apple.com/app/id6788176050"><img src="https://www.vpnhood.com/assets/images/github/app-store.webp" width="160" alt="Download on the App Store"></a>
-<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.exe"><img src="https://www.vpnhood.com/assets/images/github/windows.webp" width="160" alt="Download for Windows"></a>
-<a href="download/vpnhood-client.md#linux"><img src="https://www.vpnhood.com/assets/images/github/linux.webp" width="160" alt="Get it on Linux"></a>
+<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="docs/images/stores/google-play.webp" width="160" alt="Get it on Google Play"></a>
+<a href="https://apps.apple.com/app/id6788176050"><img src="docs/images/stores/app-store.webp" width="160" alt="Download on the App Store"></a>
+<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.exe"><img src="docs/images/stores/windows.webp" width="160" alt="Download for Windows"></a>
+<a href="download/vpnhood-client.md#linux"><img src="docs/images/stores/linux.webp" width="160" alt="Get it on Linux"></a>
 
 For Android and Android TV, iPhone, iPad and Apple TV, Windows and Linux. [All downloads](download/vpnhood-client.md),
 the APK from GitHub and IzzyOnDroid included.
 
 ## How it fits together
 
-![On your device, VpnHood! CLIENT or your own app is built on AppUi, AppHosting, AppLogic, Core and Net; on your server, VpnHood! SERVER or your own server is built on Core and Net; an encrypted tunnel that looks like web traffic joins the two Cores](https://www.vpnhood.com/assets/images/github/how-it-fits-together.svg)
+![On your device, VpnHood! CLIENT or your own app is built on AppUi, AppHosting, AppLogic, Core and Net; on your server, VpnHood! SERVER or your own server is built on Core and Net; an encrypted tunnel that looks like web traffic joins the two Cores](docs/images/how-it-fits-together.svg)
 
 Each layer is a set of NuGet packages that builds only on the layers under it, through contracts. Take only the parts
 you need, or replace any of them: your own look, your own host, your own ads and billing, another VPN engine under the
@@ -104,7 +104,7 @@ goes through each layer and the contracts between them.
 
 ### Run your own VPN
 
-| <a href="https://www.vpnhood.com/vpnhood-server/docs/install/linux/"><img src="https://www.vpnhood.com/assets/images/github/linux-logo.webp" width="32" height="32" alt=""></a> | <a href="https://www.vpnhood.com/vpnhood-server/docs/install/windows/"><img src="https://www.vpnhood.com/assets/images/github/windows-logo.webp" width="32" height="32" alt=""></a> |
+| <a href="https://www.vpnhood.com/vpnhood-server/docs/install/linux/"><img src="docs/images/platforms/linux-logo.webp" width="32" height="32" alt=""></a> | <a href="https://www.vpnhood.com/vpnhood-server/docs/install/windows/"><img src="docs/images/platforms/windows-logo.webp" width="32" height="32" alt=""></a> |
 | :---: | :---: |
 | [Linux](https://www.vpnhood.com/vpnhood-server/docs/install/linux/) | [Windows](https://www.vpnhood.com/vpnhood-server/docs/install/windows/) |
 

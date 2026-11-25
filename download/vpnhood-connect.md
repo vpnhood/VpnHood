@@ -6,11 +6,11 @@
 VpnHood! CONNECT is the ready-to-use VPN app, with servers of its own, so it needs no access key and takes none. To
 connect to your own server, use [VpnHood! CLIENT](vpnhood-client.md).
 
-<a href="https://play.google.com/store/apps/details?id=com.vpnhood.connect.android"><img src="https://www.vpnhood.com/assets/images/github/google-play.webp" width="200" alt="Get it on Google Play"></a>
-<a href="https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-android-web-arm64.apk"><img src="https://www.vpnhood.com/assets/images/github/github-apk.webp" width="200" alt="Get the APK from GitHub"></a>
-<a href="https://apps.apple.com/app/id6788259880"><img src="https://www.vpnhood.com/assets/images/github/app-store.webp" width="200" alt="Download on the App Store"></a>
-<a href="https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.exe"><img src="https://www.vpnhood.com/assets/images/github/windows.webp" width="200" alt="Download for Windows"></a>
-<a href="#linux"><img src="https://www.vpnhood.com/assets/images/github/linux.webp" width="200" alt="Get it on Linux"></a>
+<a href="https://play.google.com/store/apps/details?id=com.vpnhood.connect.android"><img src="../docs/images/stores/google-play.webp" width="200" alt="Get it on Google Play"></a>
+<a href="https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-android-web-arm64.apk"><img src="../docs/images/stores/github-apk.webp" width="200" alt="Get the APK from GitHub"></a>
+<a href="https://apps.apple.com/app/id6788259880"><img src="../docs/images/stores/app-store.webp" width="200" alt="Download on the App Store"></a>
+<a href="https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.exe"><img src="../docs/images/stores/windows.webp" width="200" alt="Download for Windows"></a>
+<a href="#linux"><img src="../docs/images/stores/linux.webp" width="200" alt="Get it on Linux"></a>
 
 The free plan is only in the Android app from Google Play. It is funded by ads, so it is not available in China, Russia
 or other countries where ads are not served. The other versions, the Android app from GitHub included, have no free

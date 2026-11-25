@@ -47,8 +47,8 @@ your app's own identifier (`VhAppIdBase`), which stays what it is on every platf
 ## 4. Build the upload package
 
 The pipeline does not build the Store package yet. On Windows, with the .NET SDK and the Windows SDK,
-run the Store head's script from your committed code (for the Client app,
-`src/apps/Client/Client.Windows.Microsoft`):
+run the Store head's script from your committed code (for the Connect app,
+`src/apps/Connect/Connect.Windows.Microsoft`):
 
     ./_publish.ps1 -store
 
@@ -56,6 +56,12 @@ It writes `bin/Publish-microsoft-store/<name>.msix`: the Release build, under th
 with a version ending in `.0` (the Store keeps the last part for itself), and **unsigned** — Partner
 Center signs it. Its logos are drawn from the app's icon, `app.ico`, whose 256-pixel picture must be
 a PNG.
+
+**Try it as the testers will** before you submit. The same script without `-store` writes
+`bin/Publish-microsoft/<name>.msix`, signed with a development certificate, `dev-certificate.cer`,
+beside it. On a clean Windows 11 PC or virtual machine, trust that certificate (Local Machine ›
+Trusted People), install the package, and walk your notes for certification (step 5) against your
+production servers, the code included. Remove it afterwards.
 
 ---
 
@@ -79,9 +85,9 @@ a PNG.
      refused this project's CLIENT app for lacking "a valid support contact or a developer website
      URL", while the account's details already held both (step 7).
    - **Product declarations:** untick **"Windows can include this product's data in automatic backups
-     to OneDrive"**, on by default: the app's data holds the access keys people add. For Connect, tick
-     **"This product allows users to make purchases, but does not use the Microsoft Store commerce
-     system"** (step 6).
+     to OneDrive"**, on by default: the app's data holds its access keys. If the app sells premium,
+     tick **"This product allows users to make purchases, but does not use the Microsoft Store
+     commerce system"** (step 6).
 3. **Age ratings:** if the app already has an IARC certificate — Google Play shows its ID under **App
    content → Content ratings** — Partner Center requires it: **I have already completed the
    questionnaire for this app elsewhere**, the ID, **Search**, then **Save**. Otherwise, answer the
@@ -98,6 +104,13 @@ a PNG.
    search — no prices or other publishers' product names among them (10.1.3). Describe the Windows
    edition: it has no per-app split tunneling. An app that works only with something it does not
    include, such as a VPN server and its access key, says so at the start of its description (10.2.4).
+   - **Show the edition's own offer.** The Store head connects with the key it embeds
+     (`access_key_premium.txt` in your private settings folder) and shows no ads, so locations that
+     need an ad are not free here. With a key whose locations are all premium, as this project's
+     Connect's, the Store edition is premium-only: neither the description nor a screenshot may
+     promise free locations (10.1). Draw its screenshots from a premium-only location list, as the
+     App Store's are: a platform's `patchFile` in the
+     [store screenshots](../../tools/StoreScreenshots/README.md) tool.
    - **A screenshot is kept once uploaded**, before **Save** and through a reload: remove a stray one
      with its tile's delete icon.
 6. **Submission options:** **Don't publish this submission until I select Publish now**, so a
@@ -111,9 +124,14 @@ a PNG.
      listing that already showed the account's website and support email. The reason alone is not
      enough either: rewritten to name the company, the website and the support email, it was
      refused again in the same words. Set the app's own support info too (step 2).
+   - **Asked once per account.** After Microsoft approved the capability for this project's CLIENT,
+     its Connect showed neither the Packages page's warning nor this box. Explain the capability in
+     the notes for certification all the same (step 7).
 7. **Additional Testing Information** (under **Supplemental info**): the notes for certification —
-   how a tester adds the key and connects — and the key itself under **Credentials**, never in the
-   notes, which Partner Center asks to hold none. A stored credential shows masked from then on.
+   how a tester gets premium and connects: **Go Premium**, **I have a Premium Code**, the code,
+   **Activate** — and a premium code from your billing portal under **Credentials**, never in the
+   notes, which Partner Center asks to hold none. A stored credential shows masked from then on. If
+   your access policy grants a trial, say so: a tester who skips the code sees it.
    Open the notes with who publishes the app (the company, its address, website and support email,
    the privacy policy and terms, the app's pages on other stores) and why it needs
    `networkingVpnProvider`. With that and the app's own support info (step 2), this project's CLIENT
@@ -128,11 +146,21 @@ Then **Submit for certification** on the product's page.
 Skip if your app sells nothing.
 
 Microsoft lets a non-game app on PCs sell digital goods and subscriptions through its own payment
-system as well as through the Store's (Store Policies 10.8.1 and 10.8.6). So Connect's Store edition
-sells as its website edition does: a premium code, or the portal's checkout in the browser, after the
-person signs in. Partner Center wants it declared (step 5, Properties), and the policy's conditions
-fall on the checkout: it must name the payment provider, sign the person in, have them confirm, and
-handle cards to PCI DSS.
+system as well as through the Store's (Store Policies 10.8.1 and 10.8.6), and takes no share of what it
+sells that way. The Store edition does not use the Store's commerce system, so it has no add-ons in
+Partner Center: it sells as the website edition does, through your billing portal.
+
+- **Two ways in:** **Purchase via Web** opens your portal's checkout in the browser, after the person
+  signs in; **I have a Premium Code** takes a code your portal issued. The code is also what the
+  testers get (step 5).
+- **Declare it** in Properties (step 5).
+- **The checkout carries the policy's conditions:** it names the payment provider, signs the person
+  in, has them confirm the purchase, and handles cards to PCI DSS.
+- **No payout account or tax profile** in Partner Center for this: those serve sales through the
+  Store, and a free app with its own checkout makes none.
+- **The trial** your access policy grants shows here as in the other editions
+  ([connection options](../connection-options.md)); there is no ad-paid free tier, as the Windows
+  edition shows no ads (step 5, Store listings).
 
 ---
 

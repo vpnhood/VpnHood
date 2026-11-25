@@ -87,6 +87,10 @@ removed.
    [App Store territories](../legal/developer/APP_STORE_TERRITORIES.md).
 7. **Encryption paperwork applies to you.** It is routine and free, but it is not optional:
    [export compliance](../legal/developer/APP_STORE_EXPORT_COMPLIANCE.md).
+8. **Microsoft approves the VPN permission by hand.** The Microsoft Store edition's tunnel needs a
+   restricted capability, and Microsoft grants it only to a publisher it can reach: the app's own
+   support details and notes for the testers that say who you are and why the app needs it
+   ([Microsoft Store](microsoft-store.md), step 5).
 
 Details and the reasoning behind each: [App Store privacy & policy
 checkpoints](../legal/developer/APP_STORE_PRIVACY.md).
@@ -236,6 +240,11 @@ Selling is a separate project from shipping. You need:
 3. **The subscription products themselves**, created in each store console, priced, described, and
    given a review screenshot. Our tooling audits this and tells you exactly what is missing; see
    [the Apple page](apple-app-store.md#6-subscriptions).
+
+The **Microsoft Store** edition sells nothing through the Store: it opens your billing portal's
+checkout in the browser or takes a premium code your portal issued, as Microsoft allows apps on PCs.
+It needs no store products there and no payout account
+([Microsoft Store](microsoft-store.md#6-purchases)).
 
 What the user sees for each option — free, trial, ad-supported, paid — is explained in
 [connection options](../connection-options.md).

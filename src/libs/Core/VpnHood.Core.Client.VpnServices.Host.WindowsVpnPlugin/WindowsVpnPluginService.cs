@@ -166,7 +166,7 @@ internal sealed class WindowsVpnPluginService : IVpnServiceHandler
     {
     }
 
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
         var channel = _channel ?? throw new InvalidOperationException("Windows has not supplied a VpnChannel.");
         var adapter = new WindowsVpnPluginAdapter(channel, adapterSettings);

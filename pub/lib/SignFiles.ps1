@@ -83,8 +83,8 @@ function Invoke-VhSign([string[]]$files, [switch]$recurseContainers) {
 	# An empty set is a legitimate no-op (everything was already signed); the CLI would error on it.
 	if (-not $signEnabled -or -not $files) { return; }
 
-	# NEVER re-sign. Anything that already carries a signature — Microsoft's runtime, WinDivert.dll,
-	# or our own output from an earlier run of this script — is dropped HERE rather than at the call
+	# NEVER re-sign. Anything that already carries a signature — Microsoft's runtime or our own
+	# output from an earlier run of this script — is dropped HERE rather than at the call
 	# site, so no caller can forget: overwriting a vendor's identity with ours buys nothing and burns
 	# signing quota. Callers may therefore hand over a whole publish folder.
 	$pending = @($files | Where-Object { -not (Get-AuthenticodeSignature $_).SignerCertificate });

@@ -336,7 +336,7 @@ public class VpnServiceHost : IVpnTunnelHolder, IDisposable
             // handler ready-made
             var vpnAdapter = clientOptions.UseNullCapture
                 ? new NullVpnAdapter(blocking: false)
-                : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1);
+                : _vpnServiceHandler.CreateAdapter(adapterSetting);
 
             var client = await CreateClient(vpnAdapter, serviceOptions, knownHostAddresses, sessionId,
                 cancellationToken).Vhc();

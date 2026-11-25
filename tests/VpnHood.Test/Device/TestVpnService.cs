@@ -123,7 +123,7 @@ public class TestVpnService
         return _vpnServiceHost.RevokeTunnel();
     }
 
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
         CurrentVpnAdapter = _vpnAdapterFactory(adapterSettings);
         CurrentVpnAdapter.Disposed += (_, _) => CurrentVpnAdapter = null;

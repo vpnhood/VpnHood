@@ -11,15 +11,12 @@ public interface IVpnServiceHandler
 {
     /// <summary>Makes the VPN adapter for a connection.</summary>
     /// <param name="adapterSettings">The adapter's settings.</param>
-    /// <param name="debugData">
-    /// The developer's debug switches (<see cref="VpnHood.Core.Client.Abstractions.ClientOptions.DebugData1"/>), or <see langword="null"/>.
-    /// </param>
     /// <returns>
     /// The adapter, which the client disposes with itself where
     /// <see cref="VpnHood.Core.Client.Abstractions.ClientOptions.AutoDisposeVpnAdapter"/> says so, the default.
     /// </returns>
     /// <exception cref="InvalidOperationException">Windows has given the VPN plug-in no channel yet.</exception>
-    IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData);
+    IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings);
 
     /// <summary>
     /// Names the factory that builds the VpnHoodClient for each connection. Return

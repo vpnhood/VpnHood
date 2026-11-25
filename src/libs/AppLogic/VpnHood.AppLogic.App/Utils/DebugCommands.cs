@@ -6,12 +6,6 @@
 /// </summary>
 public static class DebugCommands
 {
-    /// <summary>Makes the library's awaits come back on the captured context by default.</summary>
-    public const string CaptureContext = "/capture-context";
-
-    /// <summary>Drops the tunnel's UDP, as the person's own setting can.</summary>
-    public const string DropUdp = "/drop-udp";
-
     /// <summary>Logs at the debug level.</summary>
     public const string LogDebug = "/log:debug";
 
@@ -25,9 +19,6 @@ public static class DebugCommands
 
     /// <summary>Makes the client open a new channel for each connection.</summary>
     public const string NoChannelReuse = "/no-channel-reuse";
-
-    /// <summary>Makes the Windows VPN service capture with WinDivert.</summary>
-    public const string WinDivert = "/windivert";
 
     /// <summary>Asks for a review after the next session, as a server's recommendation does.</summary>
     public const string UserReview = "/user-review";
@@ -60,14 +51,11 @@ public static class DebugCommands
 
     /// <summary>Gets every command, a new array at each read.</summary>
     public static string[] All => [
-        CaptureContext,
-        DropUdp,
         LogDebug,
         LogTrace,
         NoChannelReuse,
         NullCapture,
         UserReview,
-        WinDivert,
         RemoteAccess,
         DisableWebSocket,
         TvMode,

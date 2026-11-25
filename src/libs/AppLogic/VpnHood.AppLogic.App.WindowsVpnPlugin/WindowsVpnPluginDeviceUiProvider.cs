@@ -2,7 +2,7 @@ using VpnHood.AppLogic.Abstractions.Device;
 
 namespace VpnHood.AppLogic.App.WindowsVpnPlugin;
 
-// WindowsDeviceUiProvider's proxy reader, copied: its project brings WinTun and WinDivert.
+// WindowsDeviceUiProvider's proxy reader, copied: its project brings WinTun.
 internal class WindowsVpnPluginDeviceUiProvider : NullDeviceUiProvider
 {
     public override bool IsProxySettingsSupported => true;

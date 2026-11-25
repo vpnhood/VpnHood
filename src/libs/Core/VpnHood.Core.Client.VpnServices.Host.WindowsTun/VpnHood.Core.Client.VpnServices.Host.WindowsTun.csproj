@@ -13,7 +13,6 @@
 		<ProjectReference Include="..\VpnHood.Core.Client.Devices.WindowsTun\VpnHood.Core.Client.Devices.WindowsTun.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
 		<ProjectReference Include="..\..\Net\VpnHood.Net.Quic.MsQuic\VpnHood.Net.Quic.MsQuic.csproj" />
-		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.WinDivert\VpnHood.Net.VpnAdapters.WinDivert.csproj" />
 		<ProjectReference Include="..\..\Net\VpnHood.Net.VpnAdapters.WinTun\VpnHood.Net.VpnAdapters.WinTun.csproj" />
 	</ItemGroup>
 </Project>

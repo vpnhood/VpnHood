@@ -3,7 +3,6 @@ using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Net.Quic.MsQuic;
 using VpnHood.Net.Toolkit.Sockets;
 using VpnHood.Net.VpnAdapters.Abstractions;
-using VpnHood.Net.VpnAdapters.WinDivert;
 using VpnHood.Net.VpnAdapters.WinTun;
 
 namespace VpnHood.Core.Client.VpnServices.Host.WindowsTun;
@@ -72,25 +71,14 @@ internal class WindowsVpnService : IVpnServiceHandler, IDisposable
     public bool CanReconnect => true;
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// It is WinTun's, or WinDivert's where the debug switches have <c>/windivert</c>, which leaves the local networks
-    /// out but for the DNS queries to them, as it simulates the DNS servers.
-    /// </remarks>
+    /// <remarks>It is WinTun's.</remarks>
     /// <exception cref="ArgumentOutOfRangeException">The settings' queue capacity is less than 1.</exception>
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
-        IVpnAdapter vpnAdapter = debugData?.Contains("/windivert", StringComparison.OrdinalIgnoreCase) is true
-            ? new WinDivertVpnAdapter(new WinDivertVpnAdapterSettings(adapterSettings) {
-                AdapterName = adapterSettings.AdapterName,
-                Blocking = adapterSettings.Blocking,
-                ExcludeLocalNetwork = true
-            })
-            : new WinTunVpnAdapter(new WinTunVpnAdapterSettings(adapterSettings) {
-                AdapterName = adapterSettings.AdapterName,
-                Blocking = adapterSettings.Blocking
-            });
-
-        return vpnAdapter;
+        return new WinTunVpnAdapter(new WinTunVpnAdapterSettings(adapterSettings) {
+            AdapterName = adapterSettings.AdapterName,
+            Blocking = adapterSettings.Blocking
+        });
     }
 
     /// <inheritdoc/>

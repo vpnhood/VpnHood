@@ -16,7 +16,7 @@ sequenceDiagram
     participant Session as ClientSession
     participant Server as VpnHood server
 
-    Host->>Adapter: CreateAdapter()<br/>Android, iOS, WinTun, WinDivert,<br/>Linux TUN, Windows VPN plug-in
+    Host->>Adapter: CreateAdapter()<br/>Android, iOS, WinTun,<br/>Linux TUN, Windows VPN plug-in
     Host->>Client: new VpnHoodClient(adapter, socketFactory, ...)
     Note over Client: wraps the socket factory: every socket it makes<br/>calls adapter.ProtectSocket, so its own traffic<br/>to the server never loops back into the TUN
     Client->>Server: hello (ClientSessionBuilder)

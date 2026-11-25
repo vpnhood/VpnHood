@@ -105,10 +105,10 @@ if ($doPublish) {
 	# self-contained and NOT single-file, so "$assemblyName.exe" is only the apphost stub: all of our own
 	# code lives in the sibling VpnHood*.dll files. Signing the exe alone made the installer look signed
 	# while every managed assembly it loads stayed unverifiable.
-	# User-mode binaries only. Kernel drivers (WinDivert64.sys and its catalog) must KEEP their Microsoft
+	# User-mode binaries only. A kernel driver (a .sys and its catalog) must KEEP its Microsoft
 	# attestation signature: re-signing a driver with our cert makes Windows refuse to load it. Do not
 	# widen this list to "*" or add .sys/.cat. Already-signed files are dropped inside Invoke-VhSign,
-	# so the vendor-signed .NET runtime and WinDivert.dll pass straight through untouched.
+	# so the vendor-signed .NET runtime passes straight through untouched.
 	Invoke-VhSign (Get-ChildItem $publishDir, $launchersDir -File -Recurse -Include "*.exe", "*.dll" |
 		Select-Object -ExpandProperty FullName);
 

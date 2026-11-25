@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using TaskExtensions = VpnHood.Net.Toolkit.Extensions.TaskExtensions;
 using VpnHood.AppLogic.Abstractions.Ads;
 using VpnHood.AppLogic.Abstractions.Ads.AdExceptions;
 using VpnHood.AppLogic.Abstractions.Device;
@@ -550,10 +549,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 if (reconnectRequired)
                     SetReconnectRequired();
             }
-
-            // set default ContinueOnCapturedContext
-            TaskExtensions.DefaultContinueOnCapturedContext =
-                HasDebugCommand(DebugCommands.CaptureContext);
 
             // Only where the window makes its views again for it (MainView.Recreate): a phone's stay as they
             // were made, and would be half in the TV layout until the next launch.
@@ -1305,7 +1300,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
             UseTcpForwarding = UserSettings.UseTcpForwarding,
             DropQuic = UserSettings.DropQuic,
-            DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
+            DropUdp = UserSettings.DropUdp,
             ChannelProtocol = UserSettings.ChannelProtocol.ToEngine(),
             ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
             AccessCode = accessCode,

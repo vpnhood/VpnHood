@@ -326,7 +326,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     /// logging is on, it also starts the memory diagnostics.
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException">The settings' queue capacity is less than 1.</exception>
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
         // Diagnostics hooks — no-ops unless debug logging is on (the gates follow VhLogger.MinLogLevel,
         // set by the host's LogService from vpn.config just before this per-(re)connect call).

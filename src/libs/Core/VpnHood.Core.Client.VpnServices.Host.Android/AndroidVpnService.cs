@@ -186,7 +186,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     /// <inheritdoc/>
     /// <remarks>It is AndroidTun's, on this service.</remarks>
     /// <exception cref="ArgumentOutOfRangeException">The settings' queue capacity is less than 1.</exception>
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
         return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings(adapterSettings) {
             AdapterName = adapterSettings.AdapterName,

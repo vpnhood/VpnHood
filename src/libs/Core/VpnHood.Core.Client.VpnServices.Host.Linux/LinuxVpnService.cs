@@ -74,7 +74,7 @@ internal class LinuxVpnService : IVpnServiceHandler, IDisposable
     /// <inheritdoc/>
     /// <remarks>It is LinuxTun's, its name made one the kernel takes, as a debug build's is too long.</remarks>
     /// <exception cref="ArgumentOutOfRangeException">The settings' queue capacity is less than 1.</exception>
-    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
+    public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings)
     {
         var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings(adapterSettings) {
             AdapterName = LinuxTunVpnAdapter.GetValidAdapterName(adapterSettings.AdapterName),

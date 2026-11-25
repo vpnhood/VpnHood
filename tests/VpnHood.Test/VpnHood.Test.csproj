@@ -23,6 +23,7 @@
 		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
 		<ProjectReference Include="..\..\src\libs\Core\VpnHood.Core.Client.VpnServices.Host.WindowsTun\VpnHood.Core.Client.VpnServices.Host.WindowsTun.csproj" />
 		<ProjectReference Include="..\..\src\libs\Net\VpnHood.Net.VpnAdapters.LinuxTun\VpnHood.Net.VpnAdapters.LinuxTun.csproj" />
+		<ProjectReference Include="..\..\src\libs\Net\VpnHood.Net.VpnAdapters.WinDivert\VpnHood.Net.VpnAdapters.WinDivert.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

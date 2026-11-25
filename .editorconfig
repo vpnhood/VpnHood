@@ -97,8 +97,8 @@ dotnet_style_object_initializer = true:suggestion
 dotnet_style_collection_initializer = true:suggestion
 
 # VH0001 (above) is for library and background code. VH0002 is for code that runs on a UI thread:
-# no .Vhc() there, which the CaptureContext debug switch flips, but a fixed ConfigureAwait. The looks and their
-# hosts, which run on the UI thread.
+# no .Vhc() there, which TaskExtensions.DefaultContinueOnCapturedContext flips, but a fixed ConfigureAwait. The
+# looks and their hosts, which run on the UI thread.
 [src/libs/{AppUi,AppHosting}/**.cs]
 dotnet_diagnostic.VH0001.severity = none
 dotnet_diagnostic.VH0002.severity = warning

@@ -8,7 +8,7 @@ namespace VpnHood.Net.Toolkit.Analyzers;
 
 // VH0002: .Vhc() in code that runs on a UI thread. There an await continues where it must, fixed -
 // ConfigureAwait(false) to leave the UI thread, a bare await or ConfigureAwait(true) to come back to it -
-// while .Vhc() follows the CaptureContext debug switch (TaskExtensions.DefaultContinueOnCapturedContext).
+// while .Vhc() follows TaskExtensions.DefaultContinueOnCapturedContext, which a host may turn on.
 // Where it applies is .editorconfig's.
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class VhcInUiCodeAnalyzer : DiagnosticAnalyzer
@@ -18,7 +18,7 @@ public sealed class VhcInUiCodeAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: ".Vhc() in UI code",
-        messageFormat: "UI code needs a fixed continuation: ConfigureAwait(false) to leave the UI thread, a bare await to come back to it; .Vhc() follows the CaptureContext debug switch",
+        messageFormat: "UI code needs a fixed continuation: ConfigureAwait(false) to leave the UI thread, a bare await to come back to it; .Vhc() follows TaskExtensions.DefaultContinueOnCapturedContext",
         category: "Reliability",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);

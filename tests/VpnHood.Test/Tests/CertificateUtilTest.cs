@@ -52,18 +52,6 @@ public class CertificateUtilTest : TestBase
             CertificateUtil.GetCertificateFromDomain("localhost", cancellationToken: cancellationTokenSource.Token));
     }
 
-    // its made-up authority ended on 8 March 2027, so the 5 years of its default certificate threw
-    [TestMethod]
-    public void CreateChained_makes_its_default_certificate()
-    {
-        using var rsa = RSA.Create();
-        using var certificate = CertificateUtil.CreateChained(rsa);
-
-        StringAssert.Contains(certificate.Issuer, "DigiCert SHA2 Secure Server CA");
-        Assert.IsTrue(certificate.NotAfter > DateTime.Now.AddYears(4));
-        Assert.IsTrue(certificate.HasPrivateKey);
-    }
-
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]

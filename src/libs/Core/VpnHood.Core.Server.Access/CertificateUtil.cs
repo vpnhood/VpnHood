@@ -3,7 +3,6 @@ using System.Formats.Asn1;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Net.Toolkit.Extensions;
@@ -138,35 +137,6 @@ public static class CertificateUtil
     }
 
     /// <summary>
-    /// Makes a self-signed copy of a certificate's subject and extensions, SHA-256 with a new RSA key.
-    /// </summary>
-    /// <param name="originalCert">The certificate to copy.</param>
-    /// <param name="noBefore">The start of its validity, or <see langword="null"/> for the original's.</param>
-    /// <param name="notAfter">The end of its validity, or <see langword="null"/> for the original's.</param>
-    /// <returns>The certificate, with its private key, which can be exported.</returns>
-    /// <remarks>On Windows, it takes the original's friendly name too.</remarks>
-    public static X509Certificate2 CreateSelfSigned(X509Certificate2 originalCert, DateTime? noBefore = null,
-        DateTime? notAfter = null)
-    {
-        using var rsa = RSA.Create();
-        var request = new CertificateRequest(originalCert.SubjectName, rsa, HashAlgorithmName.SHA256,
-            RSASignaturePadding.Pkcs1);
-
-        // Copy all extensions from the original certificate
-        foreach (var extension in originalCert.Extensions)
-            request.CertificateExtensions.Add(extension);
-
-        // Use the same validity period as the original certificate
-        noBefore ??= originalCert.NotBefore;
-        notAfter ??= originalCert.NotAfter;
-
-        var selfSignedCert = request.CreateSelfSigned(noBefore.Value, notAfter.Value);
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            selfSignedCert.FriendlyName = originalCert.FriendlyName;
-        return CreateExportable(selfSignedCert);
-    }
-
-    /// <summary>
     /// Makes a copy of a certificate with a key of its own: the original's subject, issuer, serial number, dates and
     /// extensions as they are, a new key of the same kind and size, and a signature of the same algorithm, made with a
     /// throwaway key.
@@ -274,62 +244,5 @@ public static class CertificateUtil
         var certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         var rootCertificate = certRequest.CreateSelfSigned(DateTimeOffset.UtcNow, notAfter.Value);
         return CreateExportable(rootCertificate);
-    }
-
-    /// <summary>
-    /// Makes a certificate with a given RSA key under a made-up chain of two authorities that bear DigiCert's names,
-    /// valid from now.
-    /// </summary>
-    /// <param name="rsa">The key.</param>
-    /// <param name="subjectName">
-    /// The subject, or <see langword="null"/> for <c>CN=</c> and a made-up host name (<see cref="CreateRandomDns"/>).
-    /// </param>
-    /// <param name="notAfter">The end of its validity, or <see langword="null"/> for 5 years from now.</param>
-    /// <returns>
-    /// The certificate alone, with its private key, which can be exported; the made-up authorities are not part of it.
-    /// </returns>
-    /// <remarks>A made-up authority cannot sign as the real one, so the chain passes no check of its signatures.</remarks>
-    public static X509Certificate2 CreateChained(RSA rsa, string? subjectName = null,
-        DateTimeOffset? notAfter = null)
-    {
-        subjectName ??= $"CN={CreateRandomDns()}";
-        var notBefore = DateTimeOffset.UtcNow;
-        notAfter ??= notBefore.AddYears(5);
-
-        // the authorities' dates cover the certificate's, as an issuer must outlast what it signs
-        using var rootRsa = RSA.Create();
-        using var rootCertificate = CreateAuthorityRequest(
-                "CN = DigiCert Global Root CA, OU = www.digicert.com, O = DigiCert Inc, C = US", rootRsa)
-            .CreateSelfSigned(notBefore.AddYears(-10), notAfter.Value.AddYears(10));
-
-        using var authorityRsa = RSA.Create();
-        using var authorityPublicCertificate = CreateAuthorityRequest(
-                "CN = DigiCert SHA2 Secure Server CA, O = DigiCert Inc, C = US", authorityRsa)
-            .Create(rootCertificate, notBefore.AddYears(-5), notAfter.Value.AddYears(5), CreateSerialNumber());
-
-        using var authorityCertificate = authorityPublicCertificate.CopyWithPrivateKey(authorityRsa);
-        using var publicCertificate =
-            new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
-                .Create(authorityCertificate, notBefore, notAfter.Value, CreateSerialNumber());
-
-        using var certificate = publicCertificate.CopyWithPrivateKey(rsa);
-        return CreateExportable(certificate);
-    }
-
-    private static CertificateRequest CreateAuthorityRequest(string subjectName, RSA rsa)
-    {
-        var request = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
-        request.CertificateExtensions.Add(new X509KeyUsageExtension(
-            X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.DigitalSignature, true));
-
-        return request;
-    }
-
-    private static byte[] CreateSerialNumber()
-    {
-        var serialNumber = new byte[20];
-        Random.Shared.NextBytes(serialNumber);
-        return serialNumber;
     }
 }

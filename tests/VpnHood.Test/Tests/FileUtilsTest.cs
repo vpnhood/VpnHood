@@ -44,6 +44,59 @@ public class FileUtilsTest : TestBase
         Assert.IsEmpty(Directory.GetFiles(Path.GetDirectoryName(filePath)!));
     }
 
+    // Windows refuses to replace a file while something has it open, as a scanner or the system may for a moment
+    [TestMethod]
+    public async Task An_atomic_write_waits_out_a_moments_hold_of_the_file()
+    {
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "old", TestCt);
+        await using var holder = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var writeTask = FileUtils.WriteAllTextAtomicAsync(filePath, "new", TestCt);
+
+        await Task.Delay(200, TestCt);
+        await holder.DisposeAsync();
+        await writeTask;
+
+        Assert.AreEqual("new", await File.ReadAllTextAsync(filePath, TestCt));
+    }
+
+    [TestMethod]
+    public async Task A_sync_atomic_write_waits_out_a_moments_hold_of_the_file()
+    {
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "old", TestCt);
+        var holder = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var releaseTask = Task.Run(async () => {
+            await Task.Delay(200, TestCt);
+            await holder.DisposeAsync();
+        }, TestCt);
+
+        FileUtils.WriteAllTextAtomic(filePath, "new");
+        await releaseTask;
+
+        Assert.AreEqual("new", await File.ReadAllTextAsync(filePath, TestCt));
+    }
+
+    // the wait for a held file ends at a cancel, as a write's other steps do
+    [TestMethod]
+    public async Task A_cancel_while_the_file_is_held_leaves_the_old_file()
+    {
+        if (!OperatingSystem.IsWindows())
+            Assert.Inconclusive("Only Windows refuses to replace an open file.");
+
+        var filePath = CreateFilePath();
+        await File.WriteAllTextAsync(filePath, "old", TestCt);
+        await using var holder = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            FileUtils.WriteAllTextAtomicAsync(filePath, "new", cancellationTokenSource.Token));
+
+        await holder.DisposeAsync();
+        Assert.AreEqual("old", await File.ReadAllTextAsync(filePath, TestCt));
+        Assert.HasCount(1, Directory.GetFiles(Path.GetDirectoryName(filePath)!));
+    }
+
     [TestMethod]
     public async Task A_missing_file_reads_as_null()
     {

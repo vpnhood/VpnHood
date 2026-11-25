@@ -1,5 +1,6 @@
 # Latest
 
+* Fix: On Windows, a VpnHoodServer that keeps its access keys in files no longer refuses one of a key's connects made at the same moment, where Windows refused to save the key's usage while the file was held for a moment
 * Feature: VpnHoodServer installs on Linux without root, for one user in their home folder, by its release's `VpnHoodServer-linux-noroot.sh`, and starts at boot and updates itself as an install by root does, through the user's own systemd services or, where those cannot run at boot, cron. Its apps always use Cloak Mode, as only root can make the server's VPN adapter, and it listens on a port above 1023, 8443 unless set
 * Fix: A key made with `gen -maxTraffic` above 2,147 MB, such as the guide's 50000, gets that quota, where it wrapped round to a negative one and the key was refused at its first connect
 * Fix: A VpnHoodServer serves files from its downloads folder alone, where a request could climb into a folder beside it whose name begins the same, such as downloads-private

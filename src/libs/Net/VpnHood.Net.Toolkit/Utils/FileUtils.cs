@@ -14,6 +14,10 @@ public static class FileUtils
     // the links one path may pass before it counts as a loop, as Linux has it
     private const int MaxLinkCount = 40;
 
+    // how long a replace waits for a file something holds, as a scanner or the system may for a moment: Windows refuses
+    // to replace a file while it is open
+    private static readonly TimeSpan ReplaceHoldTimeout = TimeSpan.FromSeconds(1);
+
     /// <summary>
     /// Moves a file or a folder to a new place, unless the new place has one already, which is then the one in use, so the
     /// old one is deleted.
@@ -281,7 +285,8 @@ public static class FileUtils
 
     /// <summary>
     /// Replaces a file's text, in UTF-8: the text goes to a file beside it, which is then moved over the file, so a write
-    /// that fails or is canceled leaves the old file, not a part of the new one. The move is not canceled, and nothing is
+    /// that fails or is canceled leaves the old file, not a part of the new one. A move Windows refuses, as while
+    /// something holds the file for a moment, is tried again for up to a second, a cancel ending that wait; nothing is
     /// flushed to the disk first.
     /// </summary>
     /// <param name="filePath">The file's path.</param>
@@ -289,7 +294,9 @@ public static class FileUtils
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="IOException">The write or the move failed.</exception>
-    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
+    /// <exception cref="UnauthorizedAccessException">
+    /// The process may not write the file, or something still holds it after a second.
+    /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static Task WriteAllTextAtomicAsync(string filePath, string content, CancellationToken cancellationToken)
     {
@@ -302,7 +309,9 @@ public static class FileUtils
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="IOException">The write or the move failed.</exception>
-    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
+    /// <exception cref="UnauthorizedAccessException">
+    /// The process may not write the file, or something still holds it after a second.
+    /// </exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was canceled.</exception>
     public static async Task WriteAllBytesAtomicAsync(string filePath, byte[] bytes,
         CancellationToken cancellationToken)
@@ -310,7 +319,10 @@ public static class FileUtils
         var tempFilePath = CreateAtomicTempFilePath(filePath);
         try {
             await File.WriteAllBytesAsync(tempFilePath, bytes, cancellationToken).Vhc();
-            File.Move(tempFilePath, filePath, overwrite: true);
+            await WaitOutSharingAsync(() => {
+                File.Move(tempFilePath, filePath, overwrite: true);
+                return Task.CompletedTask;
+            }, ReplaceHoldTimeout, cancellationToken).Vhc();
         }
         catch {
             VhUtils.TryDeleteFile(tempFilePath);
@@ -320,22 +332,41 @@ public static class FileUtils
 
     /// <summary>
     /// Replaces a file's text through a file beside it, synchronously, for a write behind a setter: a write that fails,
-    /// as on a full disk, leaves the old file.
+    /// as on a full disk, leaves the old file. A held file is waited for as <see cref="WriteAllTextAtomicAsync"/> does,
+    /// on the caller's thread.
     /// </summary>
     /// <param name="filePath">The file's path.</param>
     /// <param name="content">The text.</param>
     /// <exception cref="IOException">The write or the move failed.</exception>
-    /// <exception cref="UnauthorizedAccessException">The process may not write the file.</exception>
+    /// <exception cref="UnauthorizedAccessException">
+    /// The process may not write the file, or something still holds it after a second.
+    /// </exception>
     public static void WriteAllTextAtomic(string filePath, string content)
     {
         var tempFilePath = CreateAtomicTempFilePath(filePath);
         try {
             File.WriteAllText(tempFilePath, content);
-            File.Move(tempFilePath, filePath, overwrite: true);
+            ReplaceWaitingOutHold(tempFilePath, filePath);
         }
         catch {
             VhUtils.TryDeleteFile(tempFilePath);
             throw;
+        }
+    }
+
+    // the replace of a sync write, which waits for a held file as WaitOutSharingAsync does
+    private static void ReplaceWaitingOutHold(string tempFilePath, string filePath)
+    {
+        // don't use fast date time, it's not accurate enough
+        var startTime = DateTime.UtcNow;
+        while (true) {
+            try {
+                File.Move(tempFilePath, filePath, overwrite: true);
+                return;
+            }
+            catch (Exception ex) when (IsSharingConflict(ex) && DateTime.UtcNow - startTime < ReplaceHoldTimeout) {
+                Thread.Sleep(50);
+            }
         }
     }
 

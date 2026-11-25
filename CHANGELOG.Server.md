@@ -1,4 +1,4 @@
-# Latest
+# v9.1.878
 
 * Fix: A session goes on with the time it had when its access manager refuses the rewarded ad of an extension, where the server ended it while the app still showed it connected
 * Fix: On Windows, a VpnHoodServer that keeps its access keys in files no longer refuses one of a key's connects made at the same moment, where Windows refused to save the key's usage while the file was held for a moment

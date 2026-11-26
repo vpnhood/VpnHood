@@ -38,8 +38,8 @@ The design and code rules agreed while building are in
 - `download/` is the GitHub copy of the CLIENT and CONNECT download pages, for readers who cannot reach the website;
   it changes together with its website page. The pictures GitHub shows for this repo, in the README and
   `download/`, are in `docs/images/`, never loaded from the website.
-- The wiki (`..\VpnHood.wiki`) is retired: its pages only point to their new places until it is switched off.
-  Never add or move content there.
+- The wiki (`..\VpnHood.wiki`) is retired: its pages only point to their new places. Never add or move content
+  there.
 
 ## Naming
 

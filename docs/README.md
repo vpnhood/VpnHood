@@ -11,6 +11,7 @@ you are trying to do.
 | Run a VPN server from my own code, with access keys kept in files | [run-a-server.md](run-a-server.md) |
 | Know what my app's head writes at start - who the app is, its options, its store's providers - and what VpnHood builds from them | [app-startup.md](app-startup.md) |
 | Know what happens from a tap on Connect to Connected, what the app shows meanwhile, and why a connect fails | [connect.md](connect.md) |
+| Know how ads pay for free servers: who decides a session needs one, where it loads, what a rewarded ad earns, and which ad networks to add | [ads.md](ads.md) |
 | Publish my own branded VPN app to the stores | [publish-your-app/](publish-your-app/README.md) |
 | Know which component talks to which, and in which direction | [topology.md](topology.md) |
 | Know how a client is built - a head over five layers: the UI, its host, the app's logic, the VPN engine, networking - and the two contracts that let you replace any of them; how the app and its VPN service fit together, and which project is which half | [client-architecture.md](client-architecture.md) |
@@ -53,6 +54,7 @@ Store policy and legal checkpoints a publisher must clear:
 | Document | What it covers |
 | --- | --- |
 | [connection-options.md](connection-options.md) | What a user is offered per location: free, ad-unlocked, trial, purchase, code; and where an app shows premium, or never does. |
+| [ads.md](ads.md) | How ads work, for the business: the server's side decides when a session needs an ad and what it earns, the app which ads it shows; where an ad loads, before the VPN, beside it or through it, and why; what ads through the VPN risk; more time for a rewarded ad, and how the server checks one; adding an ad network, and the networks that do not accept VPN apps. |
 | [accounts/account-lifecycle.md](accounts/account-lifecycle.md) | Sign-in, subscriptions, access codes, renewals, refunds — the business flow end to end. |
 
 ## Engineering notes

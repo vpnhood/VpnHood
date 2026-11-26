@@ -126,6 +126,8 @@ Before the error reaches the UI, the app tries two things:
 
 ## See also
 
+- [How Ads Work in a VpnHood App](ads.md) — the ad's step for the business: who decides it, where it loads, and what
+  a rewarded ad earns
 - [How a VpnHood App Starts](app-startup.md) — what starts the app, before any connect
 - [VpnHood Client Architecture](client-architecture.md) — the app and its VPN service, and where each runs
 - [How the VPN Engine Works](vpn-engine.md) — the engine after Connected: how a packet travels to the server

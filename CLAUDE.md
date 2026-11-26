@@ -30,9 +30,16 @@ The design and code rules agreed while building are in
 
 ## Documentation
 
-- The wiki repo is a separate repository located at `..\VpnHood.wiki` relative to this repo (i.e.
-  `$(SolutionDir)/../VpnHood.wiki`). It holds end-user documentation, not development/internal docs. Update
-  it only when I request; keep developer docs inside this repo.
+- User and server-operator documentation lives on the website, in the separate repository `..\VpnHood.www`
+  (`vpnhood-client/docs/`, `vpnhood-server/docs/`, `vpnhood-manager/docs/`, `self-hosted-vpn/docs/`), in all 13
+  languages. A change to what a user or an operator sees or does updates it in the same work.
+- `docs/` in this repo is developer documentation, published on the developer site; development and internal docs
+  stay here.
+- `download/` is the GitHub copy of the CLIENT and CONNECT download pages, for readers who cannot reach the website;
+  it changes together with its website page. The pictures GitHub shows for this repo, in the README and
+  `download/`, are in `docs/images/`, never loaded from the website.
+- The wiki (`..\VpnHood.wiki`) is retired: its pages only point to their new places until it is switched off.
+  Never add or move content there.
 
 ## Naming
 

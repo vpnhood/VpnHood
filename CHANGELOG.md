@@ -1,5 +1,7 @@
 # Latest
 
+# v9.1.880
+
 * Fix: A rewarded ad that fails before the VPN connects is tried again once the VPN is up, where the connect stopped at the first failure #android #ios #connect
 * Fix: When the server does not accept the ad you watched, the app tells you so and asks for no second one #android #ios #connect
 * Fix: With a Private DNS ad blocker, the connection stops before the VPN comes up, where it came up for a moment and dropped #android #connect

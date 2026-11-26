@@ -243,7 +243,7 @@ Selling is a separate project from shipping. You need:
 
 The **Microsoft Store** edition sells nothing through the Store: it opens your billing portal's
 checkout in the browser or takes a premium code your portal issued, as Microsoft allows apps on PCs.
-It needs no store products there and no payout account
+It needs no store products there, and Microsoft takes no fee on those sales
 ([Microsoft Store](microsoft-store.md#6-purchases)).
 
 What the user sees for each option — free, trial, ad-supported, paid — is explained in

@@ -147,18 +147,20 @@ Then **Submit for certification** on the product's page.
 Skip if your app sells nothing.
 
 Microsoft lets a non-game app on PCs sell digital goods and subscriptions through its own payment
-system as well as through the Store's (Store Policies 10.8.1 and 10.8.6), and takes no share of what it
-sells that way. The Store edition does not use the Store's commerce system, so it has no add-ons in
-Partner Center: it sells as the website edition does, through your billing portal.
+system as well as through the Store's (Store Policies 10.8.1 and 10.8.6), and "purchases made on a
+third-party commerce engine are not subject to the Store Fee" (App Developer Agreement 5(e)). The
+Store edition does not use the Store's commerce system, so it has no add-ons in Partner Center: it
+sells as the website edition does, through your billing portal.
 
 - **Two ways in:** **Purchase via Web** opens your portal's checkout in the browser, after the person
   signs in; **I have a Premium Code** takes a code your portal issued. The code is also what the
   testers get (step 5).
-- **Declare it** in Properties (step 5).
+- **Declare it** in Properties (step 5), and **say so in the description**: an app that sells within
+  it must disclose that prominently in its product description (App Developer Agreement 5(e)).
 - **The checkout carries the policy's conditions:** it names the payment provider, signs the person
   in, has them confirm the purchase, and handles cards to PCI DSS.
-- **No payout account or tax profile** in Partner Center for this: those serve sales through the
-  Store, and a free app with its own checkout makes none.
+- **Your payment provider pays you,** not Microsoft: its payouts cover sales through its own
+  commerce engine only (App Developer Agreement 6(c)).
 - **The trial** your access policy grants shows here as in the other editions
   ([connection options](../connection-options.md)); there is no ad-paid free tier, as the Windows
   edition shows no ads (step 5, Store listings).

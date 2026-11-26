@@ -208,7 +208,16 @@ public partial class Http3FrontTest
 
     [TestMethod]
     [TestCategory("Http3Framing")]
-    [DataRow("increasing-goaway", new byte[] { 7, 1, 1, 7, 1, 2 })]
+    public async Task An_increasing_goaway_identifier_closes_like_the_reference()
+    {
+        // GOAWAY's own close is the result, so no DATA frame follows: the reference closes from its accept
+        // loop on another thread, and under load that close won the race against a later frame's error.
+        await AssertControlEnding("increasing-goaway", [0, 4, 0, 7, 1, 1, 7, 1, 2], finish: false,
+            TestContext.CancellationToken);
+    }
+
+    [TestMethod]
+    [TestCategory("Http3Framing")]
     [DataRow("decreasing-max-push-id", new byte[] { 0x0d, 1, 2, 0x0d, 1, 1 })]
     [DataRow("cancel-unpromised-push", new byte[] { 3, 1, 0 })]
     public async Task Control_identifier_order_matches_the_reference(string name, byte[] sequence)

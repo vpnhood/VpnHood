@@ -211,7 +211,8 @@ try {
 			InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$packageFileTitle-android.apk";
 			ReleaseDate = "$releaseDate";
 			DeprecatedVersion = "$deprecatedVersion";
-			NotificationDelay = "7.00:00:00";
+			# the time Play has to review the release and update the app, before the app's own notice comes
+			NotificationDelay = "15.00:00:00";
 			Rollout = $rolloutRatio;
 			GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
 		};

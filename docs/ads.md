@@ -20,7 +20,7 @@ session needs first:
 
 These rules live on the server's side, so they change without a new release of the app. In VpnHood MANAGER, an access
 key's settings say whether its ordinary connections show an ad, and the client policies say, country by country, which
-choices the person gets and how long each lasts ([Connection Options & Plans](connection-options.md)).
+choices the person gets and how long each lasts ([Connection Options](connection-options.md)).
 
 ## What the person sees
 
@@ -84,6 +84,29 @@ the person's country. The ad loads beside the VPN first, then through it.
 
 The server's side decides how much time an ad adds. If it does not accept the ad, the session goes on with the time it
 had.
+
+## A rewarded ad is the person's choice
+
+Ad networks set rules for rewarded ads. Google's AdMob shows one only after the person has chosen to watch it, knowing
+what it earns, and saying no must leave the app usable
+([AdMob's policies for ad units that offer rewards](https://support.google.com/admob/answer/7313578)). So a free
+connection must never depend on a rewarded ad: the person must be able to connect without one. We recommend one of two
+ways:
+
+- **A short free connection first.** The person connects with an ordinary ad, for a limited time, and can watch a
+  rewarded ad during the session for more ([More time for an ad](#more-time-for-an-ad)).
+- **A choice at Connect.** A short free connection, or a longer one for a rewarded ad. Where a connect has two options,
+  the app asks the person which, and either way they connect.
+
+A rewarded ad can buy one of two things: premium for a while, or more time on the free servers, where the connection
+stays free.
+
+These are the server's rules. In VpnHood MANAGER they are the client policies, set country by country: how long a free
+connection lasts, how long one that a rewarded ad starts lasts, and how much premium a rewarded ad buys
+([Connection Options](connection-options.md)). Keep the free connection on wherever a rewarded ad is offered:
+without it, the rewarded ad would be the only way to connect. In MANAGER, each rewarded ad during a connection that a
+rewarded ad started adds that connection's time again; during a plain free connection, it buys premium, where the
+policy offers premium for a rewarded ad.
 
 ## How the server checks a rewarded ad
 
@@ -161,4 +184,4 @@ to start from.
 ## See also
 
 - [What Happens on Connect](connect.md) — the ad's step among the others, and the errors a connect can end with
-- [Connection Options & Plans](connection-options.md) — the choices a person is offered, and what each costs them
+- [Connection Options in a VpnHood App](connection-options.md) — the choices a person gets, and what each costs them

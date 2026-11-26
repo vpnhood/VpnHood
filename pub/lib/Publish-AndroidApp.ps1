@@ -118,6 +118,17 @@ $runtimeIdentifierNodes = $projectXml.SelectNodes("/*[local-name()='Project']/*[
 foreach ($runtimeIdentifierNode in $runtimeIdentifierNodes) {
 	$runtimeIdentifierNode.InnerText = $archs
 }
+
+# The head alone writes to the package's folder. As a global /p:OutputPath, every library wrote there too,
+# and a library built after the Avalonia one could take its .aar, whose theme needs AppCompat, without
+# AppCompat: a random APT2260 Theme.AppCompat.NoActionBar in VpnServices.Host.Android.
+$outputGroup = $projectXml.CreateElement("PropertyGroup", $projectXml.DocumentElement.NamespaceURI)
+foreach ($property in @(@("OutputPath", '$(VhAndroidOutputPath)'), @("AppendTargetFrameworkToOutputPath", "false"))) {
+	$node = $projectXml.CreateElement($property[0], $projectXml.DocumentElement.NamespaceURI)
+	$node.InnerText = $property[1]
+	[void]$outputGroup.AppendChild($node)
+}
+[void]$projectXml.DocumentElement.AppendChild($outputGroup)
 $projectXml.Save($tempProjectFile)
 
 Write-Host;
@@ -129,8 +140,6 @@ try {
 	{
 		# not-sure about RestoreDisableParallel yet
 		$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
-		# OutputPath is global, so every project writes here, and an earlier publish's .aar files would be
-		# taken as library imports by the projects built before them (APT2260): it starts empty
 		if (Test-Path $outputPath) { Remove-Item $outputPath -Recurse -Force; }
 		$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
 		dotnet build $tempProjectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
@@ -138,7 +147,7 @@ try {
 			/p:Configuration=Release `
 			/p:ApplicationId=$packageId `
 			/p:Version=$versionParam `
-			/p:OutputPath=$outputPath `
+			/p:VhAndroidOutputPath=$outputPath `
 			/p:ArchiveOnBuild=true `
 			/p:AndroidPackageFormat="apk" `
 			/p:VhAppNoUpdate=$($noUpdate.IsPresent) `
@@ -191,7 +200,7 @@ try {
 			/p:Configuration=Release `
 			/p:ApplicationId=$packageId `
 			/p:Version=$versionParam `
-			/p:OutputPath=$outputPath `
+			/p:VhAndroidOutputPath=$outputPath `
 			/p:ArchiveOnBuild=true `
 			/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 			/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `

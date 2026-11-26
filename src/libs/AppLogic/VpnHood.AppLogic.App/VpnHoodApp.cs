@@ -494,8 +494,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     // 8.2 moved them under Temp/WebRoot/<hash>, and WebRoot cleans only that root, so on a machine
     // that upgraded the old folder would sit there for good. Temp itself stays: a head may keep data
     // of its own in it.
-    [Obsolete("Migration (2026-09): delete once DeprecatedVersion (pub/PubVersion.json) passes 8.2 - no " +
-              "install that old can still be upgrading - with its call in OnStartup.")]
+    [Obsolete("Migration (2026-09): delete on or after 2026-12-25, with its call in OnStartup. The 8.x installs " +
+              "that DeprecatedVersion 9.0.0 (pub/PubVersion.json) warns upgrade with the release after it.")]
     private void MigrateLegacyTempFolder()
     {
         var folderPath = Path.Combine(TempFolderPath, "SPA");

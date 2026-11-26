@@ -44,8 +44,7 @@ the ad in up to three ways, in this order, and stops at the first that shows:
    risks).
 
 In each try, the app's networks take turns in the order the app lists them, and a network with no ad to show passes
-its turn to the next. On the last try, an app can show an ad of its own, such as a screen that offers its premium plan.
-It always shows, so it comes only after every paid network has had its turn.
+its turn to the next. On the last try, after every network, comes [the app's own ad](#the-apps-own-ad).
 
 ## Ads through the VPN
 
@@ -60,6 +59,22 @@ networks it marks.
   suspend or close your account.
 
 Mark a network as serving VPN users only when its policy, or its support in writing, accepts ads loaded through a VPN.
+
+## The app's own ad
+
+An app can have an ad of its own, which loads from no ad network: a page of the app's, such as an offer of its premium
+plan. VpnHood's UI shows it full screen with a short countdown, then a Close button and a Learn more button that leads
+to the purchase page. It is an ordinary ad's last try, after every network has had its turn, and it always shows. That
+does two things for you:
+
+- **Blocking ads gains the person nothing.** Someone who blocks the networks' ads, with an ad blocker or a private DNS
+  that drops them, still watches an ad before connecting: the app's own. So there is nothing to win by blocking ads,
+  and the app need not refuse ad blockers ([When no ad can show](#when-no-ad-can-show)).
+- **Every ordinary ad shows.** Where no network serves the person's country, or none has an ad to give, the connect
+  still shows an ad, and one that sells your premium plan, instead of skipping it.
+
+It earns nothing from a network, so it never takes a paid ad's turn: it comes only when no network's ad showed. It
+stands in for ordinary ads only. A rewarded ad must come from a network, as the server checks it with that network.
 
 ## More time for an ad
 
@@ -96,7 +111,8 @@ lines; for another network, a developer writes a small provider over its SDK, as
    the account and keep what it earned. Read its publisher policy on VPN, proxy and similar apps before you sign up;
    where the policy says nothing, ask its support, and keep the answer.
 2. **Sign up and make the ad units** the app needs. The network gives each an id, which the app is built with.
-3. **Add it to the app**, with the countries it shows in and its place in the order.
+3. **Add it to the app**, with the countries it shows in and its place in the order
+   ([In your app's code](#in-your-apps-code)).
 4. **Add its lines to your app-ads.txt**, the file at the root of the website your store listing names, which tells ad
    buyers that the network may sell your app's ads. Buyers may skip an app whose file does not list it.
 5. **Decide whether it loads ads through the VPN**: only where it accepts that traffic
@@ -113,6 +129,34 @@ Don't try these. Their policies, last reviewed on 2026-11-25, do not allow VPN a
   apps that provide a VPN, a proxy or a similar service.
 
 Policies change, so read a network's own before you sign up.
+
+## In your app's code
+
+The head gives the app its ad networks in its options, `AppOptions.AdProviderItems`, in the order they take turns
+([How a VpnHood App Starts](app-startup.md) says where a head writes its options). Each network's provider comes from
+its package: AdMob's from `AdMobInterstitialAdProvider.Create` and `AdMobRewardedAdProvider.Create`, with your ad unit's
+id; [Chartboost's](https://github.com/vpnhood/VpnHood.AppLogic.Ads.Chartboost.Android#use) and
+[InMobi's](https://github.com/vpnhood/VpnHood.AppLogic.Ads.InMobi.Android#use) as their READMEs show.
+
+```csharp Snippet:AdsInTheHead
+// in the head's AppOptionsFactory, with the providers made by their packages' Create;
+// the networks take turns in this order
+options.AdProviderItems = [
+    new AppAdProviderItem { AdProvider = adMobInterstitial },
+    new AppAdProviderItem { AdProvider = chartboost },
+    // only in the countries listed, here an example's
+    new AppAdProviderItem { AdProvider = inMobi, IncludeCountryCodes = ["BR", "MX", "AR"] },
+    new AppAdProviderItem { AdProvider = adMobRewarded },
+    // the app's own ad, which the UI shows: it always comes after the networks
+    new AppAdProviderItem { AdProvider = new InternalInAdProvider() }
+];
+```
+
+A network loads its ads through the VPN only where its item sets `CanShowOverVpn`, or the app's remote settings name
+it, and only where its policy accepts that ([Ads through the VPN](#ads-through-the-vpn)). For a network VpnHood has no
+package for, the app takes any `IAdProvider` over that network's SDK: AdMob's
+[interstitial provider](../src/libs/AppLogic/VpnHood.AppLogic.Ads.AdMob.Android/AdMobInterstitialAdProvider.cs) is one
+to start from.
 
 ## See also
 
